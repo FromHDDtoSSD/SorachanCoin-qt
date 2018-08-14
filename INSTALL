@@ -1,0 +1,11 @@
+
+## Building SorachanCoin
+
+A, SorachanCoin-qt: nice-graphical-interface
+See doc/readme-qt.rst for instructions on building SorachanCoin-qt,
+the intended-for-end-users, nice-graphical-interface, reference implementation of SorachanCoin.
+
+B, SorachanCoind: no-graphical-interface
+See doc/build-*.txt for instructions on building SorachanCoind,
+the intended-for-services, no-graphical-interface, reference implementation of SorachanCoin.
+
