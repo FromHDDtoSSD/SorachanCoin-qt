@@ -34,18 +34,19 @@ std::string CSyncCheckpoint::strMasterPrivKey = "";
 const MapCheckpoints Checkpoints::manage::mapCheckpoints = 
 		boost::assign::map_list_of
         ( 0, block_param::hashGenesisBlock )
-        ( 1275, uint256("0x000000dd7de58fad01cfa1799b5809df4c1d9c164fc49da39eb2954531e1a36c") )  // 1533654441
-        ( 4930, uint256("0x000000153d5cf5fed61add322826c8ec6f32ffe5f99a714fcbf5ac53aee09b14") )  // 1534233069
-        ( 6624, uint256("0x5130b59e93325dd0a2332f99edb763cdb4189a4e6b0cc481023d1a21fe2327c5") )  // 1534481948
+        ( 1275, uint256("0x000000dd7de58fad01cfa1799b5809df4c1d9c164fc49da39eb2954531e1a36c") )    // 1533654441
+        ( 4930, uint256("0x000000153d5cf5fed61add322826c8ec6f32ffe5f99a714fcbf5ac53aee09b14") )    // 1534233069
+        ( 6624, uint256("0x5130b59e93325dd0a2332f99edb763cdb4189a4e6b0cc481023d1a21fe2327c5") )    // 1534481948
+        ( 18370, uint256("0x00000000f02a6a28449fbec9b50f7eb9e1ccd283ee7130e3ef159111aee803e9") )   // 1536369343
         ;
 
 const MapCheckpoints Checkpoints::manage::mapCheckpointsTestnet = 
 		boost::assign::map_list_of
         ( 0, block_param::hashGenesisBlockTestNet )
-        ( 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") ) // 1533660799
+        ( 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") )    // 1533660799
         ;
 
-const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1534481948;
+const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1536369343;
 const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1533660799;
 
 //
