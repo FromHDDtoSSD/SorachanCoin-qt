@@ -175,7 +175,7 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
 				return false;
 			}
 			if (nBytes < 0) {
-				int nErr = ::WSAGetLastError();
+                int nErr = WSAGetLastError();
 				if (nErr == WSAEMSGSIZE) {
 					continue;
 				}
@@ -193,7 +193,7 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
 				return false;
 			} else {
 				// socket error
-				int nErr = ::WSAGetLastError();
+                int nErr = WSAGetLastError();
 				printf("recv failed: %d\n", nErr);
 				return false;
 			}
@@ -774,7 +774,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 		}
 		if (nSelect == SOCKET_ERROR) {
 			if (have_fds) {
-				int nErr = ::WSAGetLastError();
+                int nErr = WSAGetLastError();
 				printf("socket select error %d\n", nErr);
 				for (unsigned int i = 0; i <= hSocketMax; ++i)
 				{
@@ -820,7 +820,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 				}
 
 				if (hSocket == INVALID_SOCKET) {
-					int nErr = ::WSAGetLastError();
+                    int nErr = WSAGetLastError();
 					if (nErr != WSAEWOULDBLOCK) {
 						printf("socket error accept failed: %d\n", nErr);
 					}
@@ -900,7 +900,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 							pnode->CloseSocketDisconnect();
 						} else if (nBytes < 0) {
 							// error
-							int nErr = ::WSAGetLastError();
+                            int nErr = WSAGetLastError();
 							if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
 								if (! pnode->fDisconnect) {
 									printf("socket recv error %d\n", nErr);
@@ -931,7 +931,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 							pnode->RecordBytesSent(nBytes);
 						} else if (nBytes < 0) {
 							// error
-							int nErr = ::WSAGetLastError();
+                            int nErr = WSAGetLastError();
 							if (nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
 								printf("socket send error %d\n", nErr);
 								pnode->CloseSocketDisconnect();
@@ -1871,7 +1871,8 @@ void net_node::StartNode(void *parg)
 
 	if (shot::semOutbound == NULL) {
 		// initialize semaphore
-		int nMaxOutbound = std::min(MAX_OUTBOUND_CONNECTIONS, map_arg::GetArgInt("-maxconnections", 125));
+        int nConn = net_node::MAX_OUTBOUND_CONNECTIONS;
+        int nMaxOutbound = std::min(nConn, map_arg::GetArgInt("-maxconnections", 125));
 		shot::semOutbound = new CSemaphore(nMaxOutbound);
 	}
 

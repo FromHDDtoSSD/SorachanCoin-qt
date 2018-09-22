@@ -1,0 +1,176 @@
+# Copyright (c) 2009-2010 Satoshi Nakamoto
+# Distributed under the MIT/X11 software license, see the accompanying
+# file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#
+# CentOS 7 Makefile
+#
+
+USE_UPNP:=-
+USE_IPV6:=0
+USE_LEVELDB=1
+
+BUILD_RELEASE=1
+CC=gcc
+xOPT_LEVEL=-O3
+DEBUGFLAGS=-g
+
+ifeq (${ARCH}, i686)
+ EXT_OPTIONS=-msse2
+endif
+
+INCLUDEPATHS= \
+ -I"/opt/boost_1_55_0/include" \
+ -I"/opt/db-4.8.30/include" \
+ -I"/opt/openssl-1.0.2o/include" \
+ -I"leveldb/include" \
+ -I"leveldb/helpers" \
+
+LIBPATHS= \
+ -L"/opt/boost_1_55_0/lib" \
+ -L"/opt/db-4.8.30/lib" \
+ -L"/opt/openssl-1.0.2o/lib" \
+
+LIBS= \
+ -l pthread \
+ -l boost_system \
+ -l boost_filesystem \
+ -l boost_program_options \
+ -l boost_thread \
+ -l boost_chrono \
+ -l ssl \
+ -l crypto \
+ -l db_cxx \
+
+ifneq (${USE_IPV6}, -)
+ DEFS += -DUSE_IPV6=$(USE_IPV6)
+endif
+
+ifneq (${USE_LEVELDB}, -)
+ DEFS += -DUSE_LEVELDB=$(USE_LEVELDB)
+endif
+
+ifneq (${USE_UPNP}, -)
+ DEF += -DUSE_UPNP=$(USE_UPNP)
+endif
+
+LIBS+= \
+ -l z \
+ -l dl \
+
+# Hardening
+# Make some classes of vulnerabilities unexploitable in case one is discovered.
+#
+    # This is a workaround for Ubuntu bug #691722, the default -fstack-protector causes
+    # -fstack-protector-all to be ignored unless -fno-stack-protector is used first.
+    # see: https://bugs.launchpad.net/ubuntu/+source/gcc-4.5/+bug/691722
+    HARDENING=-fno-stack-protector
+
+    # Stack Canaries
+    # Put numbers at the beginning of each stack frame and check that they are the same.
+    # If a stack buffer if overflowed, it writes over the canary number and then on return
+    # when that number is checked, it won't be the same and the program will exit with
+    # a "Stack smashing detected" error instead of being exploited.
+    HARDENING+=-fstack-protector-all -Wstack-protector
+
+    # Make some important things such as the global offset table read only as soon as
+    # the dynamic linker is finished building it. This will prevent overwriting of addresses
+    # which would later be jumped to.
+    LDHARDENING+=-Wl,-z,relro -Wl,-z,now
+
+    # Build position independent code to take advantage of Address Space Layout Randomization
+    # offered by some kernels.
+    # see doc/build-unix.txt for more information.
+    ifdef PIE
+        HARDENING+=-fPIE
+        LDHARDENING+=-pie
+    endif
+
+    # -D_FORTIFY_SOURCE=2 does some checking for potentially exploitable code patterns in
+    # the source such overflowing a statically defined buffer.
+    HARDENING+=-D_FORTIFY_SOURCE=2
+#
+
+# CXXFLAGS
+CXXFLAGS= --std=c++11 $(INCLUDEPATHS) $(DEFS) 
+
+# CXXFLAGS can be specified on the make command line, so we use xCXXFLAGS that only
+# adds some defaults in front. Unfortunately, CXXFLAGS=... $(CXXFLAGS) does not work.
+xCXXFLAGS=$(xOPT_LEVEL) $(EXT_OPTIONS) $(DEBUGFLAGS) $(DEFS) $(HARDENING) $(CXXFLAGS)
+
+# LDFLAGS can be specified on the make command line, so we use xLDFLAGS that only
+# adds some defaults in front. Unfortunately, LDFLAGS=... $(LDFLAGS) does not work.
+xLDFLAGS=$(LDHARDENING) $(LDFLAGS)
+
+OBJS= \
+ obj/alert.o \
+ obj/version.o \
+ obj/checkpoints.o \
+ obj/netbase.o \
+ obj/addrman.o \
+ obj/crypter.o \
+ obj/key.o \
+ obj/db.o \
+ obj/init.o \
+ obj/irc.o \
+ obj/keystore.o \
+ obj/main.o \
+ obj/miner.o \
+ obj/net.o \
+ obj/protocol.o \
+ obj/bitcoinrpc.o \
+ obj/rpcdump.o \
+ obj/rpcnet.o \
+ obj/rpcmining.o \
+ obj/rpcwallet.o \
+ obj/rpcblockchain.o \
+ obj/rpcrawtransaction.o \
+ obj/script.o \
+ obj/sync.o \
+ obj/util.o \
+ obj/wallet.o \
+ obj/walletdb.o \
+ obj/noui.o \
+ obj/kernel.o \
+ obj/pbkdf2.o \
+ obj/scrypt.o \
+ obj/scrypt-x86.o \
+ obj/scrypt-x86_64.o \
+ obj/ntp.o \
+ obj/stun.o \
+ obj/rpccrypt.o \
+ obj/base58.o \
+ obj/kernel_worker.o \
+ obj/ecies.o \
+ obj/cryptogram.o \
+ obj/ipcollector.o \
+
+all: SorachanCoind
+
+ifneq (${USE_LEVELDB}, -)
+ LIBS += "leveldb/libleveldb.a" "leveldb/libmemenv.a"
+ DEFS += $(addprefix -I,"leveldb/include") -DUSE_LEVELDB
+ DEFS += $(addprefix -I,"leveldb/helpers")
+ OBJS += obj/txdb-leveldb.o
+ obj/txdb-leveldb.o: leveldb/libleveldb.a
+else
+ OBJS += obj/txdb-bdb.o
+endif
+
+obj/%.o: %.cpp $(HEADERS)
+	g++ -c $(CXXFLAGS) -o $@ $<
+
+obj/scrypt-x86.o: scrypt-x86.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
+obj/scrypt-x86_64.o: scrypt-x86_64.S
+	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+
+SorachanCoind: $(OBJS:obj/%=obj/%)
+	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+
+clean:
+	rm -rf SorachanCoind
+	rm -rf obj/*
+
+FORCE:
