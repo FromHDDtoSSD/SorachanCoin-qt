@@ -54,7 +54,7 @@ std::string irc::EncodeAddress(const CService &addr)
 {
 	struct ircaddr tmp;
 	if (addr.GetInAddr(&tmp.ip)) {
-		tmp.port = ::htons(addr.GetPort());
+        tmp.port = htons(addr.GetPort());
 
 		std::vector<unsigned char> vch(UBEGIN(tmp), UEND(tmp));
 		return std::string("u") + base58::manage::EncodeBase58Check(vch);

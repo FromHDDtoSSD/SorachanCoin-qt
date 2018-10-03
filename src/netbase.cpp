@@ -1197,7 +1197,7 @@ bool CService::GetSockAddr(struct sockaddr *paddr, socklen_t *addrlen) const
 		}
 
 		paddrin6->sin6_family = AF_INET6;
-        paddrin6->sin6_port = ::htons(port);
+        paddrin6->sin6_port = htons(port);
 		return true;
 	}
 #endif

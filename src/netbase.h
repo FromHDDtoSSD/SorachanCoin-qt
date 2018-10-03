@@ -207,7 +207,7 @@ public:
 	(
 		CService *pthis = const_cast<CService *>(this);
 		READWRITE(FLATDATA(this->ip));
-		unsigned short portN = ::htons(this->port);
+        unsigned short portN = htons(this->port);
 		READWRITE(portN);
 		if (fRead) {
 			pthis->port = ntohs(portN);

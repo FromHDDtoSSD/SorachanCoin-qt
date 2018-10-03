@@ -211,7 +211,7 @@ void trace::LogStackTrace()
 {
 	printf("\n\n******* exception encountered *******\n");
 	if (trace::_fileout) {
-#if !defined(WIN32) && !defined(ANDROID)
+#if !defined(WIN32) && !defined(ANDROID) && !defined(__unix__)
 		void *pszBuffer[32];
 		size_t size;
 		size = ::backtrace(pszBuffer, 32);

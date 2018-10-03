@@ -160,8 +160,8 @@ void ntp::Ntp2Unix(const uint32_t &n, time_t &u)
 
 void ntp::ntohl_fp(l_fp *n, l_fp *h)
 {
-	(h)->Ul_i.Xl_ui = ::ntohl((n)->Ul_i.Xl_ui);
-	(h)->Ul_f.Xl_uf = ::ntohl((n)->Ul_f.Xl_uf);
+    (h)->Ul_i.Xl_ui = ntohl((n)->Ul_i.Xl_ui);
+    (h)->Ul_f.Xl_uf = ntohl((n)->Ul_f.Xl_uf);
 }
 
 bool ntp::InitWithHost(const std::string &strHostName, SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr)
@@ -176,7 +176,7 @@ bool ntp::InitWithHost(const std::string &strHostName, SOCKET &sockfd, socklen_t
 
 	struct sockaddr_in servaddr;
 	servaddr.sin_family = AF_INET;
-	servaddr.sin_port = ::htons(123);
+    servaddr.sin_port = htons(123);
 
 	bool found = false;
 	for(unsigned int i = 0; i < vIP.size(); ++i)

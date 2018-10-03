@@ -156,7 +156,7 @@ int stun::stun_handle_packet(int s, struct sockaddr_in *src, unsigned char *data
 
 	len -= sizeof(struct stun_header);
 	data += sizeof(struct stun_header);
-	x = ::ntohs(hdr->msglen); /* len as advertised in the message */
+    x = ntohs(hdr->msglen); /* len as advertised in the message */
 	if(x < len) {
 		len = x;
 	}
@@ -222,8 +222,8 @@ int stun::StunRequest2(int sock, struct sockaddr_in *server, struct sockaddr_in 
 	unsigned short reqlen = 0;
 	req->msgtype = 0;
 	req->msglen = 0;
-	req->msglen = ::htons(reqlen);
-	req->msgtype = ::htons(STUN_BINDREQ);
+    req->msglen = htons(reqlen);
+    req->msgtype = htons(STUN_BINDREQ);
 
 	unsigned char reply_buf[1024];
 	fd_set rfds;
