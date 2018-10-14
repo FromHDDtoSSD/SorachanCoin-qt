@@ -1117,10 +1117,10 @@ int64_t diff::reward::GetProofOfWorkReward(unsigned int nBits, int64_t nFees /*=
             }
         }
     }
-    //printf("diff::reward::GetProofOfWork nSubsidy_%"PRId64"\n", nSubsidy);
+    //printf("diff::reward::GetProofOfWork nSubsidy_%" PRId64 "\n", nSubsidy);
 
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcreation")) {
-		printf("diff::reward::GetProofOfWorkReward() : create=%s nSubsidy=%"PRId64"\n", bitstr::FormatMoney(nSubsidy).c_str(), nSubsidy);
+        printf("diff::reward::GetProofOfWorkReward() : create=%s nSubsidy=%" PRId64 "\n", bitstr::FormatMoney(nSubsidy).c_str(), nSubsidy);
 	}
     return nSubsidy + nFees;
 }
@@ -1147,12 +1147,12 @@ int64_t diff::reward::GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits
             break;
         }
     }
-    //printf("diff::reward::GetProofOfStakeReward nReward_%"PRId64"\n", nReward);
+    //printf("diff::reward::GetProofOfStakeReward nReward_%" PRId64 "\n", nReward);
 
     int64_t nSubsidy = nCoinAge * nReward * 33 / (365 * 33 + 8);
 
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcreation")) {
-		printf("diff::reward::GetProofOfStakeReward(): create=%s nCoinAge=%"PRId64"\n", bitstr::FormatMoney(nSubsidy).c_str(), nCoinAge);
+        printf("diff::reward::GetProofOfStakeReward(): create=%s nCoinAge=%" PRId64 "\n", bitstr::FormatMoney(nSubsidy).c_str(), nCoinAge);
 	}
     return nSubsidy;
 }
