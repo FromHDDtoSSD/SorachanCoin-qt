@@ -58,6 +58,11 @@ private:
 	 * OS-dependent memory page locking/unlocking.
 	 * Defined as policy class to make stubbing for test possible.
 	 */
+#ifndef WIN32
+ #if __GNUC__ <= 5
+public:
+ #endif
+#endif
 	class MemoryPageLocker
 	{
 	private:

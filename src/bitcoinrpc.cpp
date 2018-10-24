@@ -975,11 +975,14 @@ void bitrpc::ThreadRPCServer3(void *parg)
 {
     //printf("ThreadRPCServer3 started\n");
 
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+
     // Make this thread recognisable as the RPC handler
 	bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
 
 	{
-		LOCK(cs_THREAD_RPCHANDLER);
+        //LOCK(cs_THREAD_RPCHANDLER);
 		net_node::vnThreadsRunning[THREAD_RPCHANDLER]++;
 	}
 	AcceptedConnection *conn = (AcceptedConnection *)parg;
@@ -992,7 +995,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
 			delete conn;
 
 			{
-				LOCK(cs_THREAD_RPCHANDLER);
+                //LOCK(cs_THREAD_RPCHANDLER);
 				--net_node::vnThreadsRunning[THREAD_RPCHANDLER];
 			}
 			return;
@@ -1068,9 +1071,11 @@ void bitrpc::ThreadRPCServer3(void *parg)
 
 	delete conn;
 	{
-		LOCK(cs_THREAD_RPCHANDLER);
+        //LOCK(cs_THREAD_RPCHANDLER);
 		net_node::vnThreadsRunning[THREAD_RPCHANDLER]--;
 	}
+
+    } // LOCK(cs_THREAD_RPCHANDLER)
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
