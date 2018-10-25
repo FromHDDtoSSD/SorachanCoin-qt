@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.0.2
+VERSION = 1.0.3
 
 INCLUDEPATH += src src/json src/qt
 
@@ -19,9 +19,9 @@ BITCOIN_NEED_QT_PLUGINS=0
 
 USE_O3=1
 USE_LEVELDB=1
-USE_UPNP=0
+USE_UPNP=1
 USE_IPV6=-
-USE_QRENCODE=0
+USE_QRCODE=1
 
 freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
 linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
@@ -43,10 +43,10 @@ win32 {
 	BDB_LIB_PATH=E:/cointools/db-4.8.30/build_unix
 	OPENSSL_INCLUDE_PATH=E:/cointools/openssl-1.0.2o/include
 	OPENSSL_LIB_PATH=E:/cointools/openssl-1.0.2o
-	QRENCODE_INCLUDE_PATH=E:/cointools/qrencode-3.4.4
-	QRENCODE_LIB_PATH=E:/cointools/qrencode-3.4.4/libs
+        QRENCODE_INCLUDE_PATH=E:/cointools/qrencode-4.0.2/include
+        QRENCODE_LIB_PATH=E:/cointools/qrencode-4.0.2/lib
 	UPNP_INC_PATH=E:/cointools/miniupnpc-1.6
-	UPNP_LIBS_PATH=E:/cointools/miniupnpc-1.6
+        UPNP_LIBS_PATH=E:/cointools/miniupnpc-1.6/libminiupnpc.a
 } else {
 	message(UNIX INCLUDE and LIBRARY PATH)
 	BOOST_LIB_SUFFIX=-mgw63-mt-1_55
@@ -57,10 +57,10 @@ win32 {
         BDB_LIB_PATH=/opt/db-4.8.30/build_unix
         OPENSSL_INCLUDE_PATH=/opt/openssl-1.0.2o/include
         OPENSSL_LIB_PATH=/opt/openssl-1.0.2o
-        QRENCODE_INCLUDE_PATH=/opt/qrencode-3.4.4
-        QRENCODE_LIB_PATH=/opt/qrencode-3.4.4/libs
-        UPNP_INC_PATH=/opt/miniupnpc-1.6
-        UPNP_LIBS_PATH=/opt/miniupnpc-1.6
+        QRENCODE_INCLUDE_PATH=/opt/qrencode-4.0.2/include
+        QRENCODE_LIB_PATH=/opt/qrencode-4.0.2/lib
+        UPNP_INC_PATH=/opt/miniupnpc-2.1
+        UPNP_LIBS_PATH=/opt/miniupnpc-2.1/libminiupnpc.a
 }
 
 OBJECTS_DIR = build
@@ -101,9 +101,9 @@ win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 #
 # libqrencode (https://fukuchi.org/works/qrencode/index.html) must be installed for support
 #
-contains(USE_QRENCODE, 1) {
+contains(USE_QRCODE, 1) {
 	message(Building with QRCode support)
-	DEFINES += USE_QRCODE
+        DEFINES += USE_QRCODE
 	LIBS += -lqrencode
 }
 contains(USE_DBUS, 1) {
@@ -166,8 +166,8 @@ contains(USE_LEVELDB, 1) {
 #
 contains(USE_UPNP, 1) {
 	message(Building with UPNP support)
-	INCLUDEPATH += UPNP_INC_PATH
-	LIBS += UPNP_LIBS_PATH
+        INCLUDEPATH += $$UPNP_INC_PATH
+        LIBS += $$UPNP_LIBS_PATH
 }
 
 # regenerate src/build.h
@@ -188,7 +188,7 @@ contains(USE_O3, 1) {
 	QMAKE_CFLAGS += -O3
 }
 
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter -Wstack-protector
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 
 # Input
 DEPENDPATH += src src/json src/qt
