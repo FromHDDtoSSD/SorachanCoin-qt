@@ -955,7 +955,6 @@ void config::createConf()
 			+ "\ntestnet=0"
 			+ "\n\nlisten=1"
 			+ "\nirc=0"
-			+ "\nupnp=0"
 			+ "\n\nrpcallowip=127.0.0.1"
 			+ "\n";
 	pConf.close();

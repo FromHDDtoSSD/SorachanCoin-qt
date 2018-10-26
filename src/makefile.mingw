@@ -2,12 +2,13 @@
 # Distributed under the MIT/X11 software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-USE_UPNP:=-
+USE_UPNP:=1
 USE_IPV6:=0
 USE_LEVELDB=1
 
 BUILD_RELEASE=1
 CC=gcc
+CXX=g++
 xOPT_LEVEL=-O3
 
 INCLUDEPATHS= \
@@ -44,7 +45,8 @@ endif
 ifneq (${USE_UPNP}, -)
  INCLUDEPATHS += -I"E:/cointools/miniupnpc-1.6"
  LIBPATHS += -L"E:/cointools/miniupnpc-1.6"
- LIBS += -l miniupnpc -l iphlpapi
+ LIBS += "E:/cointools/miniupnpc-1.6/libminiupnpc.a"
+ LIBS += -l iphlpapi
  DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
 endif
 
@@ -115,7 +117,7 @@ else
 endif
 
 obj/%.o: %.cpp $(HEADERS)
-	g++ -c $(CFLAGS) -o $@ $<
+	$(CXX) -c $(CFLAGS) -o $@ $<
 
 obj/scrypt-x86.o: scrypt-x86.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
@@ -124,7 +126,7 @@ obj/scrypt-x86_64.o: scrypt-x86_64.S
 	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 SorachanCoind.exe: $(OBJS:obj/%=obj/%)
-	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
 	-del /Q SorachanCoind.exe

@@ -926,7 +926,7 @@ void bitjson::JSONRequest::parse(const json_spirit::Value &valRequest)
 
     strMethod = valMethod.get_str();
 	if (strMethod != "getwork" && strMethod != "getblocktemplate") {
-		printf("ThreadRPCServer method=%s\n", strMethod.c_str());
+        //printf("ThreadRPCServer method=%s\n", strMethod.c_str());
 	}
 
 	//

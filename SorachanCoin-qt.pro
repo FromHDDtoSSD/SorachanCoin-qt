@@ -168,6 +168,9 @@ contains(USE_UPNP, 1) {
 	message(Building with UPNP support)
         INCLUDEPATH += $$UPNP_INC_PATH
         LIBS += $$UPNP_LIBS_PATH
+        win32 {
+                LIBS += -l iphlpapi
+        }
 }
 
 # regenerate src/build.h
