@@ -1,0 +1,120 @@
+
+Copyright (c) 2009-2012 Bitcoin Developers
+Copyright (c) 2013 NovaCoin Developers
+Copyright (c) 2018 SorachanCoin Developers
+
+Distributed under the MIT/X11 software license, see the accompanying
+file license.txt or http://www.opensource.org/licenses/mit-license.php.
+
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/). 
+This product includes cryptographic software written by Eric Young (eay@cryptsoft.com).
+
+LINUX BUILD NOTES
+==========================
+
+INSTALL SorachanCoind
+[gcc4.8 / gcc6.4 / gcc8.1, Confirmed of compile has completed.]
+
+----------------------------
+Download SorachanCoin-qt
+----------------------------
+cd /usr/local/src
+git clone https://github.com/FromHDDtoSSD/SorachanCoin-qt.git
+
+----------------------------
+BOOST_1_55_0
+----------------------------
+cd /usr/local/src
+wget https://sourceforge.net/projects/boost/files/boost/1.55.0/boost_1_55_0.tar.gz/download -O boost_1_55_0.tar.gz
+
+tar zxvf boost_1_55_0.tar.gz
+cd boost_1_55_0
+./bootstrap.sh
+./b2 install -j2 --toolset=gcc cxxflags="-std=c++11" --variant=release --link=static --threading=multi --with-system --with-filesystem --with-program_options --with-thread --with-chrono --prefix=/opt/boost_1_55_0
+
+----------------------------
+Berkeley DB 4.8.30
+----------------------------
+cd /usr/local/src
+wget http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
+
+tar zxvf db-4.8.30.NC.tar.gz
+cd db-4.8.30.NC/build_unix/
+../dist/configure --enable-cxx --disable-shared --with-pic --prefix=/opt/db-4.8.30
+make
+make install
+
+Note: If your system include the gcc8.1, Please execute the following before "make", "make install".
+
+cd /usr/local/src/db-4.8.30.NC/dbinc
+chmod +w atomic.h
+vi atomic.h
+__atomic_compare_exchange => __db_atomic_compare_exchange
+/* https://src.fedoraproject.org/cgit/rpms/libdb.git/commit/?id=d6841b3b46a51db98c162347211a5a64d154ea37 */
+
+----------------------------
+OpenSSL 1.0.2o
+----------------------------
+cd /usr/local/src
+wget https://www.openssl.org/source/openssl-1.0.2o.tar.gz
+
+tar zxvf openssl-1.0.2o.tar.gz
+cd openssl-1.0.2o
+./config --prefix=/opt/openssl-1.0.2o shared
+make
+make install
+
+----------------------------
+Miniupnp
+----------------------------
+cd /usr/local/src
+git clone https://github.com/miniupnp/miniupnp.git
+
+cd miniupnp/miniupnpc
+INSTALLPREFIX=/opt/miniupnpc make install
+
+----------------------------
+Leveldb
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src/leveldb
+make
+make memenv_test
+
+----------------------------
+SorachanCoind
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src
+mkdir obj
+make -f makefile.linux
+
+--------------------------------------------------------------------
+Let's Begin the SorachanCoind in Linux which is connected by SSH.
+/* "datadir" is /.sorachandata */
+--------------------------------------------------------------------
+SorachanCoind -datadir=/.sorachandata -daemon
+
+cat /.sorachandata/SorachanCoin.conf
+/* Please copy to clipbord the rpcpassword which is written in SorachanCoin.conf. */
+
+-------------------
+SorachanCoind usage
+-------------------
+HELP:
+SorachanCoind -datadir=/.sorachandata --help
+
+START:
+SorachanCoind -datadir=/.sorachandata -daemon
+
+STOP:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) stop
+
+GET INFO:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getinfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getwork
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getmininginfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getblocktemplate
+
+GET ADDRESS:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getnewaddress
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getaccountaddress ""
+

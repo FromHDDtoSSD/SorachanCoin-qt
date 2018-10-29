@@ -20,7 +20,7 @@ INCLUDEPATHS= \
  -I"/opt/boost_1_55_0/include" \
  -I"/opt/db-4.8.30/include" \
  -I"/opt/openssl-1.0.2o/include" \
- -I"/opt/miniupnpc/include" \
+ -I"/opt/miniupnpc/include/miniupnpc" \
  -I"leveldb/include" \
  -I"leveldb/helpers" \
 
