@@ -688,13 +688,34 @@ void bitrpc::ThreadRPCServer(void *parg)
 //
 // Sets up I/O resources to accept and handle a new connection.
 //
+#if BOOST_VERSION >= 106600
+template <typename Protocol>
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL)
+{
+	// Accept connection
+	AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
+	if(conn == NULL) {
+		throw std::runtime_error("RPCListen memory allocate failure.");
+	}
+
+	acceptor->async_accept(
+			conn->sslStream.lowest_layer(),
+			conn->peer,
+			boost::bind(&RPCAcceptHandler<Protocol>,
+			acceptor,
+			boost::ref(context),
+			fUseSSL,
+			conn,
+			boost::asio::placeholders::error));
+}
+#else
 template <typename Protocol, typename SocketAcceptorService>
 void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL)
 {
 	// Accept connection
 	AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
 	if(conn == NULL) {
-        throw std::runtime_error("RPCListen memory allocate failure.");
+		throw std::runtime_error("RPCListen memory allocate failure.");
 	}
 
 	acceptor->async_accept(
@@ -707,10 +728,53 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
 			conn,
 			boost::asio::placeholders::error));
 }
+#endif
 
 //
 // Accept and handle incoming connection.
 //
+#if BOOST_VERSION >= 106600
+template <typename Protocol>
+void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error)
+{
+	net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
+
+	// Immediately start accepting new connections, except when we're cancelled or our socket is closed.
+	if (error != boost::asio::error::operation_aborted && acceptor->is_open()) {
+		RPCListen(acceptor, context, fUseSSL);
+	}
+
+	AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
+	if(tcp_conn == NULL) {
+		throw std::runtime_error("RPCAcceptHandler AcceptedConnectionImpl, downcast Error.");
+	}
+
+	// TODO: Actually handle errors
+	if (error) {
+		delete conn;
+	} else if (tcp_conn && !ClientAllowed(tcp_conn->peer.address())) {
+		//
+		// Restrict callers by IP.  It is important to
+		// do this before starting client thread, to filter out
+		// certain DoS and misbehaving clients.
+		//
+		// Only send a 403 if we're not using SSL to prevent a DoS during the SSL handshake.
+		//
+		if (! fUseSSL) {
+			conn->stream() << http::HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
+		}
+		delete conn;
+	} else if (! bitthread::manage::NewThread(bitrpc::ThreadRPCServer3, conn)) {
+		//
+		// start HTTP client thread
+		//
+		printf("Failed to create RPC server client thread\n");
+		delete conn;
+	}
+
+	net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
+}
+#else
 template <typename Protocol, typename SocketAcceptorService>
 void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error)
 {
@@ -751,6 +815,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
 
 	net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
+#endif
 
 void bitrpc::ThreadRPCServer2(void *parg)
 {
@@ -787,8 +852,12 @@ void bitrpc::ThreadRPCServer2(void *parg)
 	}
 
 	const bool fUseSSL = map_arg::GetBoolArg("-rpcssl");
+#if BOOST_VERSION >= 106600
+	boost::asio::ssl::context context(boost::asio::ssl::context::sslv23);
+#else
 	boost::asio::io_service io_service;
 	boost::asio::ssl::context context(io_service, boost::asio::ssl::context::sslv23);
+#endif
 
 	if (fUseSSL) {
 		context.set_options(boost::asio::ssl::context::no_sslv2);
@@ -815,8 +884,18 @@ void bitrpc::ThreadRPCServer2(void *parg)
 		}
 
 		std::string strCiphers = map_arg::GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
-		SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+#if BOOST_VERSION >= 106600
+		SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
+#else
+                SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+#endif
 	}
+
+#if BOOST_VERSION >= 106600
+	boost::asio::io_context io_context;			
+#else
+	// already boost::asio::io_service instance
+#endif
 
 	//
 	// Try a dual IPv6/IPv4 socket, falling back to separate IPv4 and IPv6 sockets
@@ -826,7 +905,11 @@ void bitrpc::ThreadRPCServer2(void *parg)
 	boost::asio::ip::tcp::endpoint endpoint(bindAddress, map_arg::GetArg("-rpcport", GetDefaultRPCPort()));
 	boost::system::error_code v6_only_error;
 
+#if BOOST_VERSION >= 106600
+	boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor(new boost::asio::ip::tcp::acceptor(io_context));
+#else
 	boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor(new boost::asio::ip::tcp::acceptor(io_service));
+#endif
 	boost::signals2::signal<void ()> StopRequests;
 
 	bool fListening = false;
@@ -862,8 +945,11 @@ void bitrpc::ThreadRPCServer2(void *parg)
 		if (!fListening || loopback || v6_only_error) {
 			bindAddress = loopback ? boost::asio::ip::address_v4::loopback() : boost::asio::ip::address_v4::any();
 			endpoint.address(bindAddress);
-
+#if BOOST_VERSION >= 106600
+			acceptor.reset(new boost::asio::ip::tcp::acceptor(io_context));
+#else
 			acceptor.reset(new boost::asio::ip::tcp::acceptor(io_service));
+#endif
 			acceptor->open(endpoint.protocol());
 			acceptor->set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
 			acceptor->bind(endpoint);
@@ -889,9 +975,13 @@ void bitrpc::ThreadRPCServer2(void *parg)
 	}
 
 	net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-    while (! args_bool::fShutdown)
+	while (! args_bool::fShutdown)
 	{
+#if BOOST_VERSION >= 106600
+		io_context.run_one();
+#else
 		io_service.run_one();
+#endif
 	}
 	net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
 	StopRequests();
@@ -1128,10 +1218,20 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
 
 	// Connect to localhost
 	bool fUseSSL = map_arg::GetBoolArg("-rpcssl");
+#if BOOST_VERSION >= 106600
+	boost::asio::ssl::context context(boost::asio::ssl::context::sslv23);
+#else
 	boost::asio::io_service io_service;
 	boost::asio::ssl::context context(io_service, boost::asio::ssl::context::sslv23);
+#endif	
 	context.set_options(boost::asio::ssl::context::no_sslv2);
+#if BOOST_VERSION >= 106600
+	boost::asio::io_context io_context;
+	boost::asio::ssl::stream<boost::asio::ip::tcp::socket> sslStream(io_context, context);
+	// Note: template<typename Arg> boost::asio::ssl::stream(Arg && arg, context & ctx)
+#else
 	boost::asio::ssl::stream<boost::asio::ip::tcp::socket> sslStream(io_service, context);
+#endif	
 	SSLIOStreamDevice<boost::asio::ip::tcp> d(sslStream, fUseSSL);
 	boost::iostreams::stream<SSLIOStreamDevice<boost::asio::ip::tcp> > stream(d);
 	if (!d.connect(map_arg::GetArg("-rpcconnect", net_basis::strLocal), map_arg::GetArg("-rpcport", itostr(GetDefaultRPCPort())))) {

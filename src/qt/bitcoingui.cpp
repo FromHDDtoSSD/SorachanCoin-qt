@@ -1202,7 +1202,7 @@ void BitcoinGUI::showNormalIfMinimized(bool fToggleHidden)
         activateWindow();
         if(fToggleHidden)
         {
-            Sleep(1);
+            util::Sleep(1);
             if (GUIUtil::isObscured(this))
                 hide();
         }

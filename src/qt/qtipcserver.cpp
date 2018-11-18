@@ -106,7 +106,7 @@ static void ipcThread2(void* pArg)
         if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))
         {
             CClientUIInterface::uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));
-            Sleep(1000);
+            util::Sleep(1000);
         }
 
         if (args_bool::fShutdown)

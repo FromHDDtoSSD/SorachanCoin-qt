@@ -187,12 +187,21 @@ private:
 
 	static void ThreadRPCServer2(void *parg);
 	static void ThreadRPCServer3(void *parg);
-
+#if BOOST_VERSION >= 106600
+	template <typename Protocol>
+	static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error);
+#else
 	template <typename Protocol, typename SocketAcceptorService>
 	static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error);
+#endif
 
+#if BOOST_VERSION >= 106600
+	template <typename Protocol>
+	static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL);
+#else
 	template <typename Protocol, typename SocketAcceptorService>
 	static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL);
+#endif
 
 	static bool HTTPAuthorized(std::map<std::string, std::string> &mapHeaders);
 	static bool ClientAllowed(const boost::asio::ip::address &address);
