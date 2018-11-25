@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.0.3
+VERSION = 1.0.4
 
 INCLUDEPATH += src src/json src/qt
 
@@ -20,7 +20,7 @@ BITCOIN_NEED_QT_PLUGINS=0
 USE_O3=1
 USE_LEVELDB=1
 USE_UPNP=1
-USE_IPV6=-
+USE_IPV6=1
 USE_QRCODE=1
 
 freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
@@ -35,32 +35,32 @@ win32-g++-cross: QMAKE_TARGET.arch = $$TARGET_PLATFORM
 # use: BOOST_THREAD_LIB_SUFFIX=_win32-... or when linking against a specific BerkelyDB version: BDB_LIB_SUFFIX=-4.8
 win32 {
 	message(WINDOWS INCLUDE and LIBRARY PATH)
-	BOOST_LIB_SUFFIX=-mgw63-mt-1_55
+        BOOST_LIB_SUFFIX=-mgw73-mt-x32-1_68
 
-	BOOST_INCLUDE_PATH=E:/cointools/boost-1.55
-	BOOST_LIB_PATH=E:/cointools/boost-1.55/stage/lib
+        BOOST_INCLUDE_PATH=E:/cointools/boost_1_68_0
+        BOOST_LIB_PATH=E:/cointools/boost_1_68_0/stage/lib
 	BDB_INCLUDE_PATH=E:/cointools/db-4.8.30/build_unix
 	BDB_LIB_PATH=E:/cointools/db-4.8.30/build_unix
-	OPENSSL_INCLUDE_PATH=E:/cointools/openssl-1.0.2o/include
-	OPENSSL_LIB_PATH=E:/cointools/openssl-1.0.2o
+        OPENSSL_INCLUDE_PATH=E:/cointools/libressl-2.8.2/include
+        OPENSSL_LIB_PATH=E:/cointools/libressl-2.8.2
         QRENCODE_INCLUDE_PATH=E:/cointools/qrencode-4.0.2/include
         QRENCODE_LIB_PATH=E:/cointools/qrencode-4.0.2/lib
 	UPNP_INC_PATH=E:/cointools/miniupnpc-1.6
         UPNP_LIBS_PATH=E:/cointools/miniupnpc-1.6/libminiupnpc.a
 } else {
 	message(UNIX INCLUDE and LIBRARY PATH)
-	BOOST_LIB_SUFFIX=-mgw63-mt-1_55
+        BOOST_LIB_SUFFIX=
 
-        BOOST_INCLUDE_PATH=/opt/boost-1.55
-        BOOST_LIB_PATH=/opt/boost-1.55/stage/lib
-        BDB_INCLUDE_PATH=/opt/db-4.8.30/build_unix
-        BDB_LIB_PATH=/opt/db-4.8.30/build_unix
-        OPENSSL_INCLUDE_PATH=/opt/openssl-1.0.2o/include
-        OPENSSL_LIB_PATH=/opt/openssl-1.0.2o
+        BOOST_INCLUDE_PATH=/opt/boost_1_68_0/include
+        BOOST_LIB_PATH=/opt/boost_1_68_0/lib
+        BDB_INCLUDE_PATH=/opt/db-4.8.30/include
+        BDB_LIB_PATH=/opt/db-4.8.30/lib
+        OPENSSL_INCLUDE_PATH=/opt/libressl-2.8.2/include
+        OPENSSL_LIB_PATH=/opt/libressl-2.8.2/lib
         QRENCODE_INCLUDE_PATH=/opt/qrencode-4.0.2/include
         QRENCODE_LIB_PATH=/opt/qrencode-4.0.2/lib
-        UPNP_INC_PATH=/opt/miniupnpc-2.1
-        UPNP_LIBS_PATH=/opt/miniupnpc-2.1/libminiupnpc.a
+        UPNP_INC_PATH=/opt/miniupnpc/include
+        UPNP_LIBS_PATH=/opt/miniupnpc/lib/libminiupnpc.a
 }
 
 OBJECTS_DIR = build
@@ -144,14 +144,14 @@ contains(USE_LEVELDB, 1) {
                 PRE_TARGETDEPS += E:/cointools/leveldb-1.2/libleveldb.a
 		QMAKE_EXTRA_TARGETS += genleveldb
 	} else {
-                INCLUDEPATH += /opt/leveldb-1.2/include /opt/leveldb-1.2/helpers
-                LIBS += /opt/leveldb-1.2/libleveldb.a /opt/leveldb-1.2/libmemenv.a
+                INCLUDEPATH += /usr/local/src/SorachanCoin-qt/src/leveldb/include /usr/local/src/SorachanCoin-qt/src/leveldb/helpers
+                LIBS += /usr/local/src/SorachanCoin-qt/src/leveldb/libleveldb.a /usr/local/src/SorachanCoin-qt/src/leveldb/libmemenv.a
 
 		SOURCES += src/txdb-leveldb.cpp
 
-                genleveldb.target = /opt/leveldb-1.2/libleveldb.a
+                genleveldb.target = /usr/local/src/SorachanCoin-qt/src/leveldb/libleveldb.a
 		genleveldb.depends = FORCE
-                PRE_TARGETDEPS += /opt/leveldb-1.2/libleveldb.a
+                PRE_TARGETDEPS += /usr/local/src/SorachanCoin-qt/src/leveldb/libleveldb.a
 		QMAKE_EXTRA_TARGETS += genleveldb
 	}
 } else {
@@ -174,14 +174,14 @@ contains(USE_UPNP, 1) {
 }
 
 # regenerate src/build.h
-!windows|contains(USE_BUILD_INFO, 1) {
-	genbuild.depends = FORCE
-	genbuild.commands = cd $$PWD; /bin/sh share/genbuild.sh $$OUT_PWD/build/build.h
-	genbuild.target = $$OUT_PWD/build/build.h
-	PRE_TARGETDEPS += $$OUT_PWD/build/build.h
-	QMAKE_EXTRA_TARGETS += genbuild
-	DEFINES += HAVE_BUILD_INFO
-}
+#!windows|contains(USE_BUILD_INFO, 1) {
+#	genbuild.depends = FORCE
+#	genbuild.commands = cd $$PWD; /bin/sh share/genbuild.sh $$OUT_PWD/build/build.h
+#	genbuild.target = $$OUT_PWD/build/build.h
+#	PRE_TARGETDEPS += $$OUT_PWD/build/build.h
+#	QMAKE_EXTRA_TARGETS += genbuild
+#	DEFINES += HAVE_BUILD_INFO
+#}
 
 contains(USE_O3, 1) {
 	message(Building O3 optimization flag)
@@ -435,7 +435,7 @@ OTHER_FILES += \
 #
 isEmpty(BOOST_LIB_SUFFIX) {
 	windows:BOOST_LIB_SUFFIX = -mgw63-mt-1_55
-	else:BOOST_LIB_SUFFIX = -mt
+        else:BOOST_LIB_SUFFIX =
 }
 isEmpty(BOOST_THREAD_LIB_SUFFIX) {
 	BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
@@ -461,11 +461,11 @@ isEmpty(OPENSSL_INCLUDE_PATH) {
 }
 isEmpty(BOOST_LIB_PATH) {
         windows:BOOST_LIB_PATH = C:/boost-1.55/stage/lib
-        else:BOOST_LIB_PATH = /opt/boost-1.55/stage/lib
+        else:BOOST_LIB_PATH = /opt/boost_1_55_0/lib
 }
 isEmpty(BOOST_INCLUDE_PATH) {
         windows:BOOST_INCLUDE_PATH = C:/boost-1.55/include
-        else:BOOST_INCLUDE_PATH = /opt/boost-1.55/include
+        else:BOOST_INCLUDE_PATH = /opt/boost_1_55_0/include
 }
 
 windows:DEFINES += WIN32

@@ -147,7 +147,8 @@ private:
 
 #ifdef WIN32
 			// Seed random number generator with screen scrape and other hardware sources
-			RAND_screen();
+            //RAND_screen();
+            RAND_poll();
 #endif
 
 			// Seed random number generator with performance counter

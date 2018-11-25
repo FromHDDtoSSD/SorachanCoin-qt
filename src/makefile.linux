@@ -7,7 +7,7 @@
 #
 
 USE_UPNP:=1
-USE_IPV6:=0
+USE_IPV6:=1
 USE_LEVELDB=1
 
 BUILD_RELEASE=1
@@ -19,7 +19,7 @@ VERSION=4
 INCLUDEPATHS= \
  -I"/opt/boost_1_68_0/include" \
  -I"/opt/db-4.8.30/include" \
- -I"/opt/openssl-1.0.2o/include" \
+ -I"/opt/libressl-2.8.2/include" \
  -I"/opt/miniupnpc/include/miniupnpc" \
  -I"leveldb/include" \
  -I"leveldb/helpers" \
@@ -27,7 +27,7 @@ INCLUDEPATHS= \
 LIBPATHS= \
  -L"/opt/boost_1_68_0/lib" \
  -L"/opt/db-4.8.30/lib" \
- -L"/opt/openssl-1.0.2o/lib" \
+ -L"/opt/libressl-2.8.2/lib" \
  -L"/opt/miniupnpc/lib" \
 
 LIBS= \
@@ -37,8 +37,8 @@ LIBS= \
  "/opt/boost_1_68_0/lib/libboost_program_options.a" \
  "/opt/boost_1_68_0/lib/libboost_thread.a" \
  "/opt/boost_1_68_0/lib/libboost_chrono.a" \
- "/opt/openssl-1.0.2o/lib/libssl.a" \
- "/opt/openssl-1.0.2o/lib/libcrypto.a" \
+ "/opt/libressl-2.8.2/lib/libssl.a" \
+ "/opt/libressl-2.8.2/lib/libcrypto.a" \
  -l db_cxx \
 
 ifeq (${VERSION}, 4)

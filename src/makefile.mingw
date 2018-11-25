@@ -3,7 +3,7 @@
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 USE_UPNP:=1
-USE_IPV6:=0
+USE_IPV6:=1
 USE_LEVELDB=1
 
 BUILD_RELEASE=1
@@ -12,21 +12,21 @@ CXX=g++
 xOPT_LEVEL=-O3
 
 INCLUDEPATHS= \
- -I"E:/cointools/boost-1.55" \
+ -I"E:/cointools/boost_1_68_0" \
  -I"E:/cointools/db-4.8.30/build_unix" \
- -I"E:/cointools/openssl-1.0.2o/include"
+ -I"E:/cointools/libressl-2.8.2/include"
 
 LIBPATHS= \
- -L"E:/cointools/boost-1.55/stage/lib" \
+ -L"E:/cointools/boost_1_68_0/stage/lib" \
  -L"E:/cointools/db-4.8.30/build_unix" \
- -L"E:/cointools/openssl-1.0.2o"
+ -L"E:/cointools/libressl-2.8.2"
 
 LIBS= \
- -l boost_system-mgw63-mt-1_55 \
- -l boost_filesystem-mgw63-mt-1_55 \
- -l boost_program_options-mgw63-mt-1_55 \
- -l boost_thread-mgw63-mt-1_55 \
- -l boost_chrono-mgw63-mt-1_55 \
+ -l boost_system-mgw73-mt-x32-1_68 \
+ -l boost_filesystem-mgw73-mt-x32-1_68 \
+ -l boost_program_options-mgw73-mt-x32-1_68 \
+ -l boost_thread-mgw73-mt-x32-1_68 \
+ -l boost_chrono-mgw73-mt-x32-1_68 \
  -l ssl \
  -l crypto \
  -l db_cxx

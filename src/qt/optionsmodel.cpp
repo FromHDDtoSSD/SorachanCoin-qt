@@ -29,8 +29,8 @@ bool static ApplyProxySettings()
 		netbase::manage::SetProxy(netbase::NET_IPV4, addrProxy, nSocksVersion);
     if (nSocksVersion > 4) {
 #ifdef USE_IPV6
-		if (! ext_ip::IsLimited(NET_IPV6))
-            SetProxy(NET_IPV6, addrProxy, nSocksVersion);
+        if (! ext_ip::IsLimited(netbase::NET_IPV6))
+            netbase::manage::SetProxy(netbase::NET_IPV6, addrProxy, nSocksVersion);
 #endif
     }
 
