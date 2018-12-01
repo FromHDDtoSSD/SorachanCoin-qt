@@ -24,9 +24,9 @@ class SendCoinsRecipient;
  */
 namespace GUIUtil
 {
-     /* Convert QString to OS specific boost path through UTF-8 */
+    /* Convert QString to OS specific boost path through UTF-8 */
     boost::filesystem::path qstringToBoostPath(const QString &path);
-     /* Convert OS specific boost path to QString through UTF-8 */
+    /* Convert OS specific boost path to QString through UTF-8 */
     QString boostPathToQString(const boost::filesystem::path &path);
 
     // Create human-readable string from date
@@ -92,7 +92,9 @@ namespace GUIUtil
     class ToolTipToRichTextFilter : public QObject
     {
         Q_OBJECT
-
+    private:
+        ToolTipToRichTextFilter(const ToolTipToRichTextFilter &); // {}
+        ToolTipToRichTextFilter &operator=(const ToolTipToRichTextFilter &); // {}
     public:
         explicit ToolTipToRichTextFilter(int size_threshold, QObject *parent = 0);
 
@@ -110,7 +112,9 @@ namespace GUIUtil
     class HelpMessageBox : public QMessageBox
     {
         Q_OBJECT
-
+    private:
+        HelpMessageBox(const HelpMessageBox &); // {}
+        HelpMessageBox &operator=(const HelpMessageBox &); // {}
     public:
         HelpMessageBox(QWidget *parent = 0);
 
@@ -146,3 +150,4 @@ namespace GUIUtil
 } // namespace GUIUtil
 
 #endif // GUIUTIL_H
+//@

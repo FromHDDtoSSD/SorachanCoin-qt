@@ -1,4 +1,4 @@
-//
+
 #ifndef ASKPASSPHRASEDIALOG_H
 #define ASKPASSPHRASEDIALOG_H
 
@@ -49,3 +49,4 @@ private slots:
 };
 
 #endif // ASKPASSPHRASEDIALOG_H
+//@

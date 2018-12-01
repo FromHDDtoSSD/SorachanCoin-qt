@@ -13,7 +13,9 @@ class SendCoinsRecipient;
 class SendCoinsEntry : public QFrame
 {
     Q_OBJECT
-
+private:
+    SendCoinsEntry(const SendCoinsEntry &); // {}
+    SendCoinsEntry &operator=(const SendCoinsEntry &); // {}
 public:
     explicit SendCoinsEntry(QWidget *parent = 0);
     ~SendCoinsEntry();
@@ -54,3 +56,4 @@ private:
 };
 
 #endif // SENDCOINSENTRY_H
+//@

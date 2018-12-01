@@ -9,6 +9,9 @@
 class QValidatedLineEdit : public QLineEdit
 {
     Q_OBJECT
+private:
+    QValidatedLineEdit(const QValidatedLineEdit &); // {}
+    QValidatedLineEdit &operator=(const QValidatedLineEdit &); // {}
 public:
     explicit QValidatedLineEdit(QWidget *parent = 0);
     void clear();
@@ -27,3 +30,4 @@ private slots:
 };
 
 #endif // QVALIDATEDLINEEDIT_H
+//@

@@ -18,10 +18,12 @@
 class TxViewDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
+private:
+    TxViewDelegate(const TxViewDelegate &); // {}
+    TxViewDelegate &operator=(const TxViewDelegate &); // {}
 public:
     TxViewDelegate(): QAbstractItemDelegate(), unit(BitcoinUnits::BTC)
     {
-
     }
 
     inline void paint(QPainter *painter, const QStyleOptionViewItem &option,
@@ -57,22 +59,17 @@ public:
         painter->setPen(foreground);
         painter->drawText(addressRect, Qt::AlignLeft|Qt::AlignVCenter, address);
 
-        if(amount < 0)
-        {
+        if(amount < 0) {
             foreground = COLOR_NEGATIVE;
-        }
-        else if(!confirmed)
-        {
+        } else if(! confirmed) {
             foreground = COLOR_UNCONFIRMED;
-        }
-        else
-        {
+        } else {
             foreground = option.palette.color(QPalette::Text);
         }
+
         painter->setPen(foreground);
         QString amountText = BitcoinUnits::formatWithUnit(unit, amount, true);
-        if(!confirmed)
-        {
+        if(! confirmed) {
             amountText = QString("[") + amountText + QString("]");
         }
         painter->drawText(amountRect, Qt::AlignRight|Qt::AlignVCenter, amountText);
@@ -104,6 +101,10 @@ OverviewPage::OverviewPage(QWidget *parent) :
     txdelegate(new TxViewDelegate()),
     filter(0)
 {
+    if(! ui){
+        throw std::runtime_error("OverviewPage Failed to allocate memory.");
+    }
+
     ui->setupUi(this);
 
     QFont balance = QApplication::font();
@@ -129,8 +130,9 @@ OverviewPage::OverviewPage(QWidget *parent) :
 
 void OverviewPage::handleTransactionClicked(const QModelIndex &index)
 {
-    if(filter)
+    if(filter) {
         emit transactionClicked(filter->mapToSource(index));
+    }
 }
 
 OverviewPage::~OverviewPage()
@@ -182,14 +184,13 @@ void OverviewPage::setNumTransactions(int count)
 void OverviewPage::setModel(WalletModel *model)
 {
     this->model = model;
-    if(model && model->getOptionsModel())
-    {
+    if(model && model->getOptionsModel()) {
         // Set up transaction list
         filter = new TransactionFilterProxy();
         filter->setSourceModel(model->getTransactionTableModel());
         filter->setLimit(NUM_ITEMS);
         filter->setDynamicSortFilter(true);
-//        filter->setSortRole(Qt::EditRole);
+        // filter->setSortRole(Qt::EditRole);
         filter->setSortRole(TransactionTableModel::DateRole);
         filter->sort(TransactionTableModel::Status, Qt::DescendingOrder);
 
@@ -215,10 +216,10 @@ void OverviewPage::setModel(WalletModel *model)
 
 void OverviewPage::updateDisplayUnit()
 {
-    if(model && model->getOptionsModel())
-    {
-        if(currentBalanceTotal != -1)
+    if(model && model->getOptionsModel()) {
+        if(currentBalanceTotal != -1) {
             setBalance(currentBalanceTotal, currentBalanceWatchOnly, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance);
+        }
 
         // Update txdelegate->unit with the current unit
         txdelegate->unit = model->getOptionsModel()->getDisplayUnit();

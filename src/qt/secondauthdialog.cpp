@@ -22,6 +22,10 @@ SecondAuthDialog::SecondAuthDialog(QWidget *parent) :
     ui(new Ui::SecondAuthDialog),
     model(0)
 {
+    if(! ui) {
+        throw std::runtime_error("SecondAuthDialog Failed to allocate memory.");
+    }
+
     ui->setupUi(this);
 
 #if (QT_VERSION >= 0x040700)
@@ -51,12 +55,10 @@ void SecondAuthDialog::setModel(WalletModel *model)
 
 void SecondAuthDialog::on_addressBookButton_clicked()
 {
-    if (model && model->getAddressTableModel())
-    {
+    if (model && model->getAddressTableModel()) {
         AddressBookPage dlg(AddressBookPage::ForSending, AddressBookPage::ReceivingTab, this);
         dlg.setModel(model->getAddressTableModel());
-        if (dlg.exec())
-        {
+        if (dlg.exec()) {
             ui->addressIn->setText(dlg.getReturnValue());
         }
     }
@@ -73,8 +75,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     ui->signatureOut->clear();
 
     CBitcoinAddress addr(ui->addressIn->text().toStdString());
-    if (!addr.IsValid())
-    {
+    if (! addr.IsValid()) {
         ui->addressIn->setValid(false);
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("The entered address is invalid.") + QString(" ") + tr("Please check the address and try again."));
@@ -82,8 +83,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     }
 
     CKeyID keyID;
-    if (!addr.GetKeyID(keyID))
-    {
+    if (! addr.GetKeyID(keyID)) {
         ui->addressIn->setValid(false);
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("The entered address does not refer to a key.") + QString(" ") + tr("Please check the address and try again."));
@@ -91,16 +91,14 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     }
 
     WalletModel::UnlockContext ctx(model->requestUnlock());
-    if (!ctx.isValid())
-    {
+    if (! ctx.isValid()) {
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("Wallet unlock was cancelled."));
         return;
     }
 
     CKey key;
-    if (!entry::pwalletMain->GetKey(keyID, key))
-    {
+    if (! entry::pwalletMain->GetKey(keyID, key)) {
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("Private key for the entered address is not available."));
         return;
@@ -110,7 +108,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     hash.SetHex(ui->messageIn->text().toStdString());
     CTransaction tx;
     uint256 hashBlock = 0;
-	if (!block_transaction::manage::GetTransaction(hash, tx, hashBlock) || !hashBlock) {
+    if (!block_transaction::manage::GetTransaction(hash, tx, hashBlock) || !hashBlock) {
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("No information available about transaction."));
         return;
@@ -121,8 +119,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     ss << ui->messageIn->text().toStdString();
 
     std::vector<unsigned char> vchSig;
-	if (!key.SignCompact(hash_basis::Hash(ss.begin(), ss.end()), vchSig))
-    {
+    if (! key.SignCompact(hash_basis::Hash(ss.begin(), ss.end()), vchSig)) {
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(QString("<nobr>") + tr("Message signing failed.") + QString("</nobr>"));
         return;
@@ -131,7 +128,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     ui->statusLabel->setStyleSheet("QLabel { color: green; }");
     ui->statusLabel->setText(QString("<nobr>") + tr("Message signed.") + QString("</nobr>"));
 
-	ui->signatureOut->setText(QString::fromStdString(base64::EncodeBase64(&vchSig[0], vchSig.size())));
+    ui->signatureOut->setText(QString::fromStdString(base64::EncodeBase64(&vchSig[0], vchSig.size())));
 }
 
 void SecondAuthDialog::on_copySignatureButton_clicked()
@@ -157,13 +154,11 @@ bool SecondAuthDialog::eventFilter(QObject *object, QEvent *event)
 void SecondAuthDialog::keyPressEvent(QKeyEvent *event)
 {
 #ifdef ANDROID
-    if(event->key() == Qt::Key_Back)
-    {
+    if(event->key() == Qt::Key_Back) {
         close();
     }
 #else
-    if(event->key() == Qt::Key_Escape)
-    {
+    if(event->key() == Qt::Key_Escape) {
         close();
     }
 #endif

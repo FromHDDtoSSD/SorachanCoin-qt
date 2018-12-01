@@ -19,14 +19,18 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), optionsModel(optionsModel),
     cachedNumBlocks(0), cachedNumBlocksOfPeers(0), pollTimer(0)
 {
-    numBlocksAtStartup = -1;
+    try {
+        numBlocksAtStartup = -1;
 
-    pollTimer = new QTimer(this);
-    pollTimer->setInterval(MODEL_UPDATE_DELAY);
-    pollTimer->start();
-    connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
+        pollTimer = new QTimer(this);
+        pollTimer->setInterval(MODEL_UPDATE_DELAY);
+        pollTimer->start();
+        connect(pollTimer, SIGNAL(timeout()), this, SLOT(updateTimer()));
 
-    subscribeToCoreSignals();
+        subscribeToCoreSignals();
+    } catch (const std::bad_alloc &) {
+        throw std::runtime_error("ClientModel Failed to allocate memory.");
+    }
 }
 
 ClientModel::~ClientModel()
@@ -41,34 +45,42 @@ double ClientModel::getPoSKernelPS()
 
 double ClientModel::getDifficulty(bool fProofofStake)
 {
-    if (fProofofStake)
-		return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
-    else
-		return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
+    if (fProofofStake) {
+        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
+    } else {
+        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
+    }
 }
 
 int ClientModel::getNumConnections(uint8_t flags) const
 {
-	LOCK(net_node::cs_vNodes);
-    if (flags == CONNECTIONS_ALL) // Shortcut if we want total
-		return (int)(net_node::vNodes.size());
+    LOCK(net_node::cs_vNodes);
+    if (flags == CONNECTIONS_ALL) {    // Shortcut if we want total
+        return (int)(net_node::vNodes.size());
+    }
 
     int nNum = 0;
-	BOOST_FOREACH(CNode* pnode, net_node::vNodes)
-    if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT))
-        nNum++;
+    BOOST_FOREACH(CNode* pnode, net_node::vNodes)
+    {
+        if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT)) {
+            nNum++;
+        }
+    }
 
     return nNum;
 }
 
 int ClientModel::getNumBlocks() const
 {
-	return block_info::nBestHeight;
+    return block_info::nBestHeight;
 }
 
 int ClientModel::getNumBlocksAtStartup()
 {
-    if (numBlocksAtStartup == -1) numBlocksAtStartup = getNumBlocks();
+    if (numBlocksAtStartup == -1) {
+        numBlocksAtStartup = getNumBlocks();
+    }
+
     return numBlocksAtStartup;
 }
 
@@ -84,10 +96,11 @@ quint64 ClientModel::getTotalBytesSent() const
 
 QDateTime ClientModel::getLastBlockDate() const
 {
-    if (block_info::pindexBest)
+    if (block_info::pindexBest) {
         return QDateTime::fromTime_t(block_info::pindexBest->GetBlockTime());
-    else
+    } else {
         return QDateTime::fromTime_t(1360105017); // Genesis block's time
+    }
 }
 
 void ClientModel::updateTimer()
@@ -97,8 +110,7 @@ void ClientModel::updateTimer()
     int newNumBlocks = getNumBlocks();
     int newNumBlocksOfPeers = getNumBlocksOfPeers();
 
-    if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers)
-    {
+    if(cachedNumBlocks != newNumBlocks || cachedNumBlocksOfPeers != newNumBlocksOfPeers) {
         cachedNumBlocks = newNumBlocks;
         cachedNumBlocksOfPeers = newNumBlocksOfPeers;
 
@@ -116,13 +128,11 @@ void ClientModel::updateNumConnections(int numConnections)
 void ClientModel::updateAlert(const QString &hash, int status)
 {
     // Show error message notification for new alert
-    if(status == CT_NEW)
-    {
+    if(status == CT_NEW) {
         uint256 hash_256;
         hash_256.SetHex(hash.toStdString());
         CAlert alert = CAlert::getAlertByHash(hash_256);
-        if(!alert.IsNull())
-        {
+        if(! alert.IsNull()) {
             emit error(tr("Network Alert"), QString::fromStdString(alert.strStatusBar), false);
         }
     }
@@ -139,17 +149,17 @@ bool ClientModel::isTestNet() const
 
 bool ClientModel::inInitialBlockDownload() const
 {
-	return block_process::manage::IsInitialBlockDownload();
+    return block_process::manage::IsInitialBlockDownload();
 }
 
 int ClientModel::getNumBlocksOfPeers() const
 {
-	return block_process::manage::GetNumBlocksOfPeers();
+    return block_process::manage::GetNumBlocksOfPeers();
 }
 
 QString ClientModel::getStatusBarWarnings() const
 {
-	return QString::fromStdString(block_alert::manage::GetWarnings("statusbar"));
+    return QString::fromStdString(block_alert::manage::GetWarnings("statusbar"));
 }
 
 OptionsModel *ClientModel::getOptionsModel()
@@ -159,17 +169,17 @@ OptionsModel *ClientModel::getOptionsModel()
 
 QString ClientModel::formatFullVersion() const
 {
-	return QString::fromStdString(format_version::FormatFullVersion());
+    return QString::fromStdString(format_version::FormatFullVersion());
 }
 
 QString ClientModel::formatBuildDate() const
 {
-	return QString::fromStdString(version::CLIENT_DATE);
+    return QString::fromStdString(version::CLIENT_DATE);
 }
 
 QString ClientModel::clientName() const
 {
-	return QString::fromStdString(version::CLIENT_NAME);
+    return QString::fromStdString(version::CLIENT_NAME);
 }
 
 QString ClientModel::formatClientStartupTime() const

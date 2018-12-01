@@ -12,21 +12,21 @@
 template <typename T> class mruset
 {
 private:
-	// mruset(); Call by mruset(size_type nMaxSizeIn = 0).
-	mruset(const mruset &); // {}
-	mruset &operator=(const mruset &); // {}
+    // mruset(); Call by mruset(size_type nMaxSizeIn = 0).
+    mruset(const mruset &); // {}
+    mruset &operator=(const mruset &); // {}
 
 public:
-	typedef T key_type;
-	typedef T value_type;
-	typedef typename std::set<T>::iterator iterator;
-	typedef typename std::set<T>::const_iterator const_iterator;
-	typedef typename std::set<T>::size_type size_type;
+    typedef T key_type;
+    typedef T value_type;
+    typedef typename std::set<T>::iterator iterator;
+    typedef typename std::set<T>::const_iterator const_iterator;
+    typedef typename std::set<T>::size_type size_type;
 
 protected:
-	std::set<T> set;
-	std::deque<T> queue;
-	size_type nMaxSize;
+    std::set<T> set;
+    std::deque<T> queue;
+    size_type nMaxSize;
 
 public:
     mruset(size_type nMaxSizeIn = 0) { nMaxSize = nMaxSizeIn; }
@@ -38,35 +38,36 @@ public:
     iterator find(const key_type &k) const { return set.find(k); }
     size_type count(const key_type &k) const { return set.count(k); }
 
-	bool friend operator==(const mruset<T> &a, const mruset<T> &b) { return a.set == b.set; }
-	bool friend operator==(const mruset<T> &a, const std::set<T> &b) { return a.set == b; }
-	bool friend operator<(const mruset<T> &a, const mruset<T> &b) { return a.set < b.set; }
+    bool friend operator==(const mruset<T> &a, const mruset<T> &b) { return a.set == b.set; }
+    bool friend operator==(const mruset<T> &a, const std::set<T> &b) { return a.set == b; }
+    bool friend operator<(const mruset<T> &a, const mruset<T> &b) { return a.set < b.set; }
 
-	std::pair<iterator, bool> insert(const key_type &x) {
-		std::pair<iterator, bool> ret = set.insert(x);
-		if (ret.second) {
+    std::pair<iterator, bool> insert(const key_type &x) {
+        std::pair<iterator, bool> ret = set.insert(x);
+        if (ret.second) {
             if (nMaxSize && queue.size() == nMaxSize) {
                 set.erase(queue.front());
                 queue.pop_front();
-			}
+            }
             queue.push_back(x);
-		}
-		return ret;
-	}
+        }
+        return ret;
+    }
 
     size_type max_size() const { return nMaxSize; }
-	size_type max_size(size_type s)
-	{
-		if (s) {
+    size_type max_size(size_type s)
+    {
+        if (s) {
             while (queue.size() > s)
-			{
+            {
                 set.erase(this->queue.front());
                 queue.pop_front();
-			}
-		}
+            }
+        }
         nMaxSize = s;
         return nMaxSize;
-	}
+    }
 };
 
 #endif
+//@

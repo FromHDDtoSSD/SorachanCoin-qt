@@ -13,6 +13,9 @@ QT_END_NAMESPACE
 class MonitoredDataMapper : public QDataWidgetMapper
 {
     Q_OBJECT
+private:
+    MonitoredDataMapper(const MonitoredDataMapper &); // {}
+    MonitoredDataMapper &operator=(const MonitoredDataMapper &); // {}
 public:
     explicit MonitoredDataMapper(QObject *parent=0);
 
@@ -29,3 +32,4 @@ signals:
 
 
 #endif // MONITOREDDATAMAPPER_H
+//@

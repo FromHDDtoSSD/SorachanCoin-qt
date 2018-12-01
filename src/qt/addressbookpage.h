@@ -1,4 +1,4 @@
-//
+
 #ifndef ADDRESSBOOKPAGE_H
 #define ADDRESSBOOKPAGE_H
 
@@ -6,7 +6,7 @@
 
 namespace Ui
 {
-	class AddressBookPage;
+    class AddressBookPage;
 }
 
 class AddressTableModel;
@@ -25,75 +25,76 @@ QT_END_NAMESPACE
 //
 class AddressBookPage : public QDialog
 {
-	Q_OBJECT
+    Q_OBJECT
 
 private:
-	AddressBookPage(); // {}
-	AddressBookPage(const AddressBookPage &); // {}
-	AddressBookPage &operator=(const AddressBookPage &); // {}
+    AddressBookPage(); // {}
+    AddressBookPage(const AddressBookPage &); // {}
+    AddressBookPage &operator=(const AddressBookPage &); // {}
 
 public:
-	enum Tabs
-	{
-		SendingTab = 0,
-		ReceivingTab = 1
-	};
+    enum Tabs
+    {
+        SendingTab = 0,
+        ReceivingTab = 1
+    };
 
-	enum Mode
-	{
-		ForSending, /**< Open address book to pick address for sending */
-		ForEditing  /**< Open address book for editing */
-	};
+    enum Mode
+    {
+        ForSending, /**< Open address book to pick address for sending */
+        ForEditing  /**< Open address book for editing */
+    };
 
-	explicit AddressBookPage(Mode mode, Tabs tab, QWidget *parent = NULL);
-	~AddressBookPage();
+    explicit AddressBookPage(Mode mode, Tabs tab, QWidget *parent = NULL);
+    ~AddressBookPage();
 
-	void setModel(AddressTableModel *model);
+    void setModel(AddressTableModel *model);
     void setOptionsModel(OptionsModel *optionsModelIn);
-	const QString &getReturnValue() const { return returnValue; }
+    const QString &getReturnValue() const { return returnValue; }
 
 public slots:
-	void done(int retval);
-	void exportClicked();
+    void done(int retval);
+    void exportClicked();
 
 private:
-	Ui::AddressBookPage *ui;
-	AddressTableModel *model;
-	OptionsModel *optionsModel;
-	Mode mode;
-	Tabs tab;
-	QString returnValue;
-	QSortFilterProxyModel *proxyModel;
-	QMenu *contextMenu;
-	QAction *deleteAction;
-	QString newAddressToSelect;
+    Ui::AddressBookPage *ui;
+    AddressTableModel *model;
+    OptionsModel *optionsModel;
+    Mode mode;
+    Tabs tab;
+    QString returnValue;
+    QSortFilterProxyModel *proxyModel;
+    QMenu *contextMenu;
+    QAction *deleteAction;
+    QString newAddressToSelect;
 
 private slots:
-	void on_deleteButton_clicked();
-	void on_newAddressButton_clicked();
+    void on_deleteButton_clicked();
+    void on_newAddressButton_clicked();
 
-	/** Copy address of currently selected address entry to clipboard */
-	void on_copyToClipboard_clicked();
-	void on_signMessage_clicked();
-	void on_verifyMessage_clicked();
-	void selectionChanged();
-	void on_showQRCode_clicked();
+    /** Copy address of currently selected address entry to clipboard */
+    void on_copyToClipboard_clicked();
+    void on_signMessage_clicked();
+    void on_verifyMessage_clicked();
+    void selectionChanged();
+    void on_showQRCode_clicked();
 
-	/** Spawn contextual menu (right mouse menu) for address book entry */
-	void contextualMenu(const QPoint &point);
+    /** Spawn contextual menu (right mouse menu) for address book entry */
+    void contextualMenu(const QPoint &point);
 
-	/** Copy label of currently selected address entry to clipboard */
-	void onCopyLabelAction();
+    /** Copy label of currently selected address entry to clipboard */
+    void onCopyLabelAction();
 
-	/** Edit currently selected address entry */
-	void onEditAction();
+    /** Edit currently selected address entry */
+    void onEditAction();
 
-	/** New entry/entries were added to address table */
-	void selectNewAddress(const QModelIndex &parent, int begin, int end);
+    /** New entry/entries were added to address table */
+    void selectNewAddress(const QModelIndex &parent, int begin, int end);
 
 signals:
-	void signMessage(QString addr);
-	void verifyMessage(QString addr);
+    void signMessage(QString addr);
+    void verifyMessage(QString addr);
 };
 
 #endif // ADDRESSBOOKDIALOG_H
+//@

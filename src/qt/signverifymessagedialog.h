@@ -14,7 +14,9 @@ QT_END_NAMESPACE
 class SignVerifyMessageDialog : public QWidget
 {
     Q_OBJECT
-
+private:
+    SignVerifyMessageDialog(const SignVerifyMessageDialog &); // {}
+    SignVerifyMessageDialog &operator=(const SignVerifyMessageDialog &); // {}
 public:
     explicit SignVerifyMessageDialog(QWidget *parent = 0);
     ~SignVerifyMessageDialog();
@@ -48,3 +50,4 @@ private slots:
 };
 
 #endif // SIGNVERIFYMESSAGEDIALOG_H
+//@

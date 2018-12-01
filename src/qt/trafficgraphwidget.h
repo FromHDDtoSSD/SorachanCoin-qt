@@ -18,7 +18,9 @@ QT_END_NAMESPACE
 class TrafficGraphWidget : public QWidget
 {
     Q_OBJECT
-
+private:
+    TrafficGraphWidget(const TrafficGraphWidget &); // {}
+    TrafficGraphWidget &operator=(const TrafficGraphWidget &); // {}
 public:
     explicit TrafficGraphWidget(QWidget *parent = 0);
     void setClientModel(ClientModel *model);
@@ -46,3 +48,4 @@ private:
 };
 
 #endif // BITCOIN_QT_TRAFFICGRAPHWIDGET_H
+//@

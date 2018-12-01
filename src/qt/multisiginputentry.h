@@ -18,6 +18,9 @@ class MultisigInputEntry : public QFrame
 {
     Q_OBJECT;
 
+  private:
+    MultisigInputEntry(const MultisigInputEntry &); // {}
+    MultisigInputEntry &operator=(const MultisigInputEntry &); // {}
   public:
     explicit MultisigInputEntry(QWidget *parent = 0);
     ~MultisigInputEntry();
@@ -51,3 +54,4 @@ class MultisigInputEntry : public QFrame
 };
 
 #endif // MULTISIGINPUTENTRY_H
+//@

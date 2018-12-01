@@ -16,57 +16,57 @@
 #define STUN_TIMEOUT 3
 
 #ifndef _MSC_VER
-	typedef struct { unsigned int id[4]; } __attribute__((packed)) stun_trans_id;
+    typedef struct { unsigned int id[4]; } __attribute__((packed)) stun_trans_id;
 
-	struct stun_header {
-		unsigned short msgtype;
-		unsigned short msglen;
-		stun_trans_id id;
-	} __attribute__((packed));
+    struct stun_header {
+        unsigned short msgtype;
+        unsigned short msglen;
+        stun_trans_id id;
+    } __attribute__((packed));
 
-	struct stun_attr {
-		unsigned short attr;
-		unsigned short len;
-	} __attribute__((packed));
+    struct stun_attr {
+        unsigned short attr;
+        unsigned short len;
+    } __attribute__((packed));
 
-	/*
-	* The format normally used for addresses carried by STUN messages.
-	*/
+    /*
+    * The format normally used for addresses carried by STUN messages.
+    */
 
-	struct stun_addr {
-		unsigned char unused;
-		unsigned char family;
-		unsigned short port;
-		unsigned int addr;
-	} __attribute__((packed));
+    struct stun_addr {
+        unsigned char unused;
+        unsigned char family;
+        unsigned short port;
+        unsigned int addr;
+    } __attribute__((packed));
 #else
-	typedef struct { unsigned int id[4]; } stun_trans_id;
+    typedef struct { unsigned int id[4]; } stun_trans_id;
 
 #pragma pack(push, 1)    
-	struct stun_header {
-		unsigned short msgtype;
-		unsigned short msglen;
-		stun_trans_id id;
-	};
+    struct stun_header {
+        unsigned short msgtype;
+        unsigned short msglen;
+        stun_trans_id id;
+    };
 #pragma pack(pop)
 
 #pragma pack(push, 1)
-	struct stun_attr {
-		unsigned short attr;
-		unsigned short len;
-	};
+    struct stun_attr {
+        unsigned short attr;
+        unsigned short len;
+    };
 #pragma pack(pop)
 
     /*
     * The format normally used for addresses carried by STUN messages.
     */
 #pragma pack(push, 1)
-	struct stun_addr {
-		unsigned char unused;
-		unsigned char family;
-		unsigned short port;
-		unsigned int addr;
-	};
+    struct stun_addr {
+        unsigned char unused;
+        unsigned char family;
+        unsigned short port;
+        unsigned int addr;
+    };
 #pragma pack(pop)
 #endif
 
@@ -100,3 +100,5 @@
 #define STUN_ERROR_CODE  0x0009
 #define STUN_UNKNOWN_ATTRIBUTES 0x000a
 #define STUN_REFLECTED_FROM 0x000b
+
+//@

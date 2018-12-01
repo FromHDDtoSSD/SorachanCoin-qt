@@ -9,6 +9,9 @@ class QValueComboBox : public QComboBox
 {
     Q_OBJECT
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged USER true)
+private:
+    QValueComboBox(const QValueComboBox &); // {}
+    QValueComboBox &operator=(const QValueComboBox &); // {}
 public:
     explicit QValueComboBox(QWidget *parent = 0);
 
@@ -31,3 +34,4 @@ private slots:
 };
 
 #endif // QVALUECOMBOBOX_H
+//@

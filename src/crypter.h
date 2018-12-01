@@ -11,8 +11,8 @@
 
 namespace crypter_param
 {
-	const unsigned int WALLET_CRYPTO_KEY_SIZE = 32;
-	const unsigned int WALLET_CRYPTO_SALT_SIZE = 8;
+    const unsigned int WALLET_CRYPTO_KEY_SIZE = 32;
+    const unsigned int WALLET_CRYPTO_SALT_SIZE = 8;
 }
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMaterial;
 
@@ -33,44 +33,44 @@ typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMate
 class CMasterKey
 {
 private:
-	CMasterKey(const CMasterKey &); // {}
-	// CMasterKey &operator=(const CMasterKey &); // {}
+    CMasterKey(const CMasterKey &); // {}
+    // CMasterKey &operator=(const CMasterKey &); // {}
 
 public:
-	std::vector<unsigned char> vchCryptedKey;
-	std::vector<unsigned char> vchSalt;
+    std::vector<unsigned char> vchCryptedKey;
+    std::vector<unsigned char> vchSalt;
 
-	//
-	// 0 = EVP_sha512()
-	// 1 = scrypt()
-	//
-	unsigned int nDerivationMethod;
-	unsigned int nDeriveIterations;
+    //
+    // 0 = EVP_sha512()
+    // 1 = scrypt()
+    //
+    unsigned int nDerivationMethod;
+    unsigned int nDeriveIterations;
     
-	//
-	// Use this for more parameters to key derivation,
-	// such as the various parameters to scrypt
-	//
-	std::vector<unsigned char> vchOtherDerivationParameters;	// other algorithms
+    //
+    // Use this for more parameters to key derivation,
+    // such as the various parameters to scrypt
+    //
+    std::vector<unsigned char> vchOtherDerivationParameters;    // other algorithms
 
-	CMasterKey() {
-		//
-		// 25000 rounds is just under 0.1 seconds on a 1.86 GHz Pentium M
-		// ie slightly lower than the lowest hardware we need bother supporting
-		//
+    CMasterKey() {
+        //
+        // 25000 rounds is just under 0.1 seconds on a 1.86 GHz Pentium M
+        // ie slightly lower than the lowest hardware we need bother supporting
+        //
         nDeriveIterations = 25000;
         nDerivationMethod = 0;
         vchOtherDerivationParameters = std::vector<unsigned char>(0);
-	}
+    }
 
-	IMPLEMENT_SERIALIZE
-	(
-		READWRITE(this->vchCryptedKey);
-		READWRITE(this->vchSalt);
-		READWRITE(this->nDerivationMethod);
-		READWRITE(this->nDeriveIterations);
-		READWRITE(this->vchOtherDerivationParameters);
-	)
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->vchCryptedKey);
+        READWRITE(this->vchSalt);
+        READWRITE(this->nDerivationMethod);
+        READWRITE(this->nDeriveIterations);
+        READWRITE(this->vchOtherDerivationParameters);
+    )
 };
 
 //
@@ -79,49 +79,50 @@ public:
 class CCrypter
 {
 private:
-	CCrypter(const CCrypter &); // {}
-	CCrypter &operator=(const CCrypter &); // {}
+    CCrypter(const CCrypter &); // {}
+    CCrypter &operator=(const CCrypter &); // {}
 
-	unsigned char chKey[crypter_param::WALLET_CRYPTO_KEY_SIZE];
-	unsigned char chIV[crypter_param::WALLET_CRYPTO_KEY_SIZE];
-	bool fKeySet;
+    unsigned char chKey[crypter_param::WALLET_CRYPTO_KEY_SIZE];
+    unsigned char chIV[crypter_param::WALLET_CRYPTO_KEY_SIZE];
+    bool fKeySet;
 
 public:
-	bool SetKeyFromPassphrase(const SecureString &strKeyData, const std::vector<unsigned char> &chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod);
-	bool Encrypt(const CKeyingMaterial &vchPlaintext, std::vector<unsigned char> &vchCiphertext);
-	bool Decrypt(const std::vector<unsigned char> &vchCiphertext, CKeyingMaterial &vchPlaintext);
-	bool SetKey(const CKeyingMaterial &chNewKey, const std::vector<unsigned char> &chNewIV);
+    bool SetKeyFromPassphrase(const SecureString &strKeyData, const std::vector<unsigned char> &chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod);
+    bool Encrypt(const CKeyingMaterial &vchPlaintext, std::vector<unsigned char> &vchCiphertext);
+    bool Decrypt(const std::vector<unsigned char> &vchCiphertext, CKeyingMaterial &vchPlaintext);
+    bool SetKey(const CKeyingMaterial &chNewKey, const std::vector<unsigned char> &chNewIV);
 
-	void CleanKey() {
+    void CleanKey() {
         OPENSSL_cleanse(&chKey, sizeof(chKey));
         OPENSSL_cleanse(&chIV, sizeof(chIV));
         fKeySet = false;
-	}
+    }
 
-	CCrypter() {
+    CCrypter() {
         fKeySet = false;
 
-		//
-		// Try to keep the key data out of swap (and be a bit over-careful to keep the IV that we don't even use out of swap)
-		// Note that this does nothing about suspend-to-disk (which will put all our key data on disk)
-		// Note as well that at no point in this program is any attempt made to prevent stealing of keys by reading the memory of the running process.
-		//
+        //
+        // Try to keep the key data out of swap (and be a bit over-careful to keep the IV that we don't even use out of swap)
+        // Note that this does nothing about suspend-to-disk (which will put all our key data on disk)
+        // Note as well that at no point in this program is any attempt made to prevent stealing of keys by reading the memory of the running process.
+        //
         LockedPageManager::instance.LockRange(&chKey[0], sizeof(chKey));
         LockedPageManager::instance.LockRange(&chIV[0], sizeof(chIV));
-	}
+    }
 
-	~CCrypter() {
-		CleanKey();
+    ~CCrypter() {
+        CleanKey();
 
         LockedPageManager::instance.UnlockRange(&chKey[0], sizeof(chKey));
         LockedPageManager::instance.UnlockRange(&chIV[0], sizeof(chIV));
-	}
+    }
 };
 
-namespace crypter	// wallet.dat Encrypt, Decrypt
+namespace crypter    // wallet.dat Encrypt, Decrypt
 {
-	bool EncryptSecret(CKeyingMaterial &vMasterKey, const CSecret &vchPlaintext, const uint256 &nIV, std::vector<unsigned char> &vchCiphertext);
-	bool DecryptSecret(const CKeyingMaterial &vMasterKey, const std::vector<unsigned char> &vchCiphertext, const uint256& nIV, CSecret &vchPlaintext);
+    bool EncryptSecret(CKeyingMaterial &vMasterKey, const CSecret &vchPlaintext, const uint256 &nIV, std::vector<unsigned char> &vchCiphertext);
+    bool DecryptSecret(const CKeyingMaterial &vMasterKey, const std::vector<unsigned char> &vchCiphertext, const uint256& nIV, CSecret &vchPlaintext);
 }
 
 #endif
+//@

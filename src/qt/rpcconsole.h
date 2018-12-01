@@ -12,7 +12,9 @@ class ClientModel;
 class RPCConsole: public QWidget
 {
     Q_OBJECT
-
+private:
+    RPCConsole(const RPCConsole &); //{}
+    RPCConsole &operator=(const RPCConsole &); // {}
 public:
     explicit RPCConsole(QWidget *parent = 0);
     ~RPCConsole();
@@ -85,3 +87,4 @@ private:
 };
 
 #endif // RPCCONSOLE_H
+//@

@@ -10,6 +10,9 @@
 */
 class BitcoinUnits: public QAbstractListModel
 {
+private:
+    BitcoinUnits(const BitcoinUnits &); // {}
+    BitcoinUnits &operator=(const BitcoinUnits &); // {}
 public:
     explicit BitcoinUnits(QObject *parent);
 
@@ -67,3 +70,4 @@ private:
 typedef BitcoinUnits::Unit BitcoinUnit;
 
 #endif // BITCOINUNITS_H
+//@

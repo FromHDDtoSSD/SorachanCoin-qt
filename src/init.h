@@ -20,35 +20,36 @@ class entry : private no_instance
     friend class OptionsModel;
 #endif
 private:
-	static const uint16_t nSocksDefault = tcp_port::uSocksDefault;
+    static const uint16_t nSocksDefault = tcp_port::uSocksDefault;
 
-	static std::string strWalletFileName;
+    static std::string strWalletFileName;
 
-	static bool InitError(const std::string &str);
-	static bool InitWarning(const std::string &str);
-	static bool Bind(const CService &addr, bool fError = true);
+    static bool InitError(const std::string &str);
+    static bool InitWarning(const std::string &str);
+    static bool Bind(const CService &addr, bool fError = true);
 
 #ifndef WIN32
-	static void HandleSIGTERM(int);
-	static void HandleSIGHUP(int);
+    static void HandleSIGTERM(int);
+    static void HandleSIGHUP(int);
 #endif
 
-	static bool BindListenPort(const CService &addrBind, std::string &strError);
+    static bool BindListenPort(const CService &addrBind, std::string &strError);
 
 public:
-	static enum Checkpoints::CPMode CheckpointsMode;
-	static CWallet *pwalletMain;
+    static enum Checkpoints::CPMode CheckpointsMode;
+    static CWallet *pwalletMain;
 
 #if !defined(QT_GUI)
-	static bool AppInit(int argc, char *argv[]);
-	static void noui_connect();
+    static bool AppInit(int argc, char *argv[]);
+    static void noui_connect();
 #endif
 
-	static std::string HelpMessage();
+    static std::string HelpMessage();
 
-	static void ExitTimeout(void *parg);
-	static void StartShutdown();
-	static bool AppInit2();
+    static void ExitTimeout(void *parg);
+    static void StartShutdown();
+    static bool AppInit2();
 };
 
 #endif
+//@

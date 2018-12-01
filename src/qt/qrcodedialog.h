@@ -12,7 +12,9 @@ class OptionsModel;
 class QRCodeDialog : public QDialog
 {
     Q_OBJECT
-
+private:
+    QRCodeDialog(const QRCodeDialog &); // {}
+    QRCodeDialog &operator=(const QRCodeDialog &); // {}
 public:
     explicit QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent = 0);
     ~QRCodeDialog();
@@ -39,3 +41,4 @@ private:
 };
 
 #endif // QRCODEDIALOG_H
+//@

@@ -8,7 +8,8 @@
 
 namespace irc_ext
 {
-	void ThreadIRCSeed(void *parg);
+    void ThreadIRCSeed(void *parg);
 }
 
 #endif
+//@

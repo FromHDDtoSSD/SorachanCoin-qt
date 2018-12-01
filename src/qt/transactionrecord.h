@@ -15,8 +15,8 @@ class CWalletTx;
 class TransactionStatus
 {
 private:
-    //TransactionStatus(const TransactionStatus &);
-    TransactionStatus &operator =(const TransactionStatus &);
+    //TransactionStatus(const TransactionStatus &); // {}
+    TransactionStatus &operator =(const TransactionStatus &); // {}
 public:
     TransactionStatus():
             confirmed(false), sortKey(""), maturity(Mature),
@@ -66,8 +66,8 @@ public:
 class TransactionRecord
 {
 private:
-    //TransactionRecord(const TransactionRecord &);
-    TransactionRecord &operator =(const TransactionRecord &);
+    //TransactionRecord(const TransactionRecord &); // {}
+    TransactionRecord &operator =(const TransactionRecord &); // {}
 public:
     enum Type
     {
@@ -137,3 +137,4 @@ public:
 };
 
 #endif // TRANSACTIONRECORD_H
+//@

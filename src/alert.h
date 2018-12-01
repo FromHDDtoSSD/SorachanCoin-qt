@@ -28,49 +28,49 @@ class CUnsignedAlert
     // CUnsignedAlert &operator=(const CUnsignedAlert &); // {}
 
 public:
-	static CCriticalSection cs_mapAlerts;
+    static CCriticalSection cs_mapAlerts;
 
 public:
-	int nVersion;
-	int64_t nRelayUntil;				// when newer nodes stop relaying to newer nodes
-	int64_t nExpiration;
-	int nID;
-	int nCancel;
-	std::set<int> setCancel;
-	int nMinVer;						// lowest version inclusive
-	int nMaxVer;						// highest version inclusive
-	std::set<std::string> setSubVer;	// empty matches all
-	int nPriority;
+    int nVersion;
+    int64_t nRelayUntil;                // when newer nodes stop relaying to newer nodes
+    int64_t nExpiration;
+    int nID;
+    int nCancel;
+    std::set<int> setCancel;
+    int nMinVer;                        // lowest version inclusive
+    int nMaxVer;                        // highest version inclusive
+    std::set<std::string> setSubVer;    // empty matches all
+    int nPriority;
 
-	//
-	// Actions
-	//
-	std::string strComment;
-	std::string strStatusBar;
-	std::string strReserved;
+    //
+    // Actions
+    //
+    std::string strComment;
+    std::string strStatusBar;
+    std::string strReserved;
 
-	IMPLEMENT_SERIALIZE
-	(
-		READWRITE(this->nVersion);
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->nVersion);
         nVersion = this->nVersion;
 
-		READWRITE(this->nRelayUntil);
-		READWRITE(this->nExpiration);
-		READWRITE(this->nID);
-		READWRITE(this->nCancel);
-		READWRITE(this->setCancel);
-		READWRITE(this->nMinVer);
-		READWRITE(this->nMaxVer);
-		READWRITE(this->setSubVer);
-		READWRITE(this->nPriority);
+        READWRITE(this->nRelayUntil);
+        READWRITE(this->nExpiration);
+        READWRITE(this->nID);
+        READWRITE(this->nCancel);
+        READWRITE(this->setCancel);
+        READWRITE(this->nMinVer);
+        READWRITE(this->nMaxVer);
+        READWRITE(this->setSubVer);
+        READWRITE(this->nPriority);
 
-		READWRITE(this->strComment);
-		READWRITE(this->strStatusBar);
-		READWRITE(this->strReserved);
-	)
+        READWRITE(this->strComment);
+        READWRITE(this->strStatusBar);
+        READWRITE(this->strReserved);
+    )
 
-	void SetNull();
-	std::string ToString() const;
+    void SetNull();
+    std::string ToString() const;
 };
 
 /** An alert is a combination of a serialized CUnsignedAlert and a signature. */
@@ -81,43 +81,44 @@ class CAlert : public CUnsignedAlert
     // CAlert &operator=(const CAlert &); // {}
 
 private:
-	//
-	// Public keys
-	//
-	static const char *pszMainKey;
-	static const char *pszTestKey;
+    //
+    // Public keys
+    //
+    static const char *pszMainKey;
+    static const char *pszTestKey;
 
 public:
-	static std::map<uint256, CAlert> mapAlerts;
+    static std::map<uint256, CAlert> mapAlerts;
 
-	std::vector<unsigned char> vchMsg;
-	std::vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchMsg;
+    std::vector<unsigned char> vchSig;
 
-	CAlert() {
+    CAlert() {
         SetNull();
-	}
+    }
 
-	IMPLEMENT_SERIALIZE
-	(
-		READWRITE(this->vchMsg);
-		READWRITE(this->vchSig);
-	)
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->vchMsg);
+        READWRITE(this->vchSig);
+    )
 
-	void SetNull();
-	bool IsNull() const;
-	uint256 GetHash() const;
-	bool IsInEffect() const;
-	bool Cancels(const CAlert& alert) const;
-	bool AppliesTo(int nVersion, std::string strSubVerIn) const;
-	bool AppliesToMe() const;
-	bool RelayTo(CNode* pnode) const;
-	bool CheckSignature() const;
-	bool ProcessAlert();
+    void SetNull();
+    bool IsNull() const;
+    uint256 GetHash() const;
+    bool IsInEffect() const;
+    bool Cancels(const CAlert& alert) const;
+    bool AppliesTo(int nVersion, std::string strSubVerIn) const;
+    bool AppliesToMe() const;
+    bool RelayTo(CNode* pnode) const;
+    bool CheckSignature() const;
+    bool ProcessAlert();
 
-	//
-	// Get copy of (active) alert object by hash. Returns a null alert if it is not found.
-	//
-	static CAlert getAlertByHash(const uint256 &hash);
+    //
+    // Get copy of (active) alert object by hash. Returns a null alert if it is not found.
+    //
+    static CAlert getAlertByHash(const uint256 &hash);
 };
 
 #endif
+//@

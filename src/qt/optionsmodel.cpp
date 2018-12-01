@@ -17,20 +17,23 @@ bool static ApplyProxySettings()
     QSettings settings;
     CService addrProxy(settings.value("addrProxy", "127.0.0.1:9050").toString().toStdString());
     int nSocksVersion(settings.value("nSocksVersion", 5).toInt());
-    if (!settings.value("fUseProxy", false).toBool()) {
+    if (! settings.value("fUseProxy", false).toBool()) {
         addrProxy = CService();
         nSocksVersion = 0;
         return false;
     }
-    if (nSocksVersion && !addrProxy.IsValid())
+    if (nSocksVersion && !addrProxy.IsValid()) {
         return false;
+    }
 
-	if (! ext_ip::IsLimited(netbase::NET_IPV4))
-		netbase::manage::SetProxy(netbase::NET_IPV4, addrProxy, nSocksVersion);
+    if (! ext_ip::IsLimited(netbase::NET_IPV4)) {
+        netbase::manage::SetProxy(netbase::NET_IPV4, addrProxy, nSocksVersion);
+    }
     if (nSocksVersion > 4) {
 #ifdef USE_IPV6
-        if (! ext_ip::IsLimited(netbase::NET_IPV6))
+        if (! ext_ip::IsLimited(netbase::NET_IPV6)) {
             netbase::manage::SetProxy(netbase::NET_IPV6, addrProxy, nSocksVersion);
+        }
 #endif
     }
 
@@ -42,16 +45,17 @@ bool static ApplyProxySettings()
 bool static ApplyTorSettings()
 {
     QSettings settings;
-    CService addrTor(settings.value("addrTor", "127.0.0.1:9050").toString().toStdString());
-    if (!settings.value("fUseTor", false).toBool()) {
+    CService addrTor(settings.value("addrTor", "127.0.0.1:6350").toString().toStdString());
+    if (! settings.value("fUseTor", false).toBool()) {
         addrTor = CService();
         return false;
     }
-    if (!addrTor.IsValid())
+    if (! addrTor.IsValid()) {
         return false;
+    }
 
-	netbase::manage::SetProxy(netbase::NET_TOR, addrTor, 5);
-	ext_ip::SetReachable(netbase::NET_TOR);
+    netbase::manage::SetProxy(netbase::NET_TOR, addrTor, 5);
+    ext_ip::SetReachable(netbase::NET_TOR);
 
     return true;
 }
@@ -63,61 +67,67 @@ void OptionsModel::Init()
     // These are Qt-only settings:
     nDisplayUnit = settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt();
     bDisplayAddresses = settings.value("bDisplayAddresses", false).toBool();
-    if (!settings.contains("strThirdPartyTxUrls")) {
-        if(args_bool::fTestNet)
+    if (! settings.contains("strThirdPartyTxUrls")) {
+        if(args_bool::fTestNet) {
             settings.setValue("strThirdPartyTxUrls", "");
-        else
+        } else {
             settings.setValue("strThirdPartyTxUrls", "https://www.junkhdd.com:7350");
+        }
     }
     strThirdPartyTxUrls = settings.value("strThirdPartyTxUrls", "https://www.junkhdd.com:7350").toString();
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
-	block_info::nTransactionFee = settings.value("nTransactionFee").toLongLong();
+    block_info::nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
 
     // These are shared with core Bitcoin; we want
     // command-line options to override the GUI settings:
     if ( !(settings.value("fTorOnly").toBool() && settings.contains("addrTor")) ) {
-        if (settings.contains("addrProxy") && settings.value("fUseProxy").toBool())
-			map_arg::SoftSetArg("-proxy", settings.value("addrProxy").toString().toStdString());
-        if (settings.contains("nSocksVersion") && settings.value("fUseProxy").toBool())
-			map_arg::SoftSetArg("-socks", settings.value("nSocksVersion").toString().toStdString());
+        if (settings.contains("addrProxy") && settings.value("fUseProxy").toBool()) {
+            map_arg::SoftSetArg("-proxy", settings.value("addrProxy").toString().toStdString());
+        }
+        if (settings.contains("nSocksVersion") && settings.value("fUseProxy").toBool()) {
+            map_arg::SoftSetArg("-socks", settings.value("nSocksVersion").toString().toStdString());
+        }
     }
 
     if (settings.contains("addrTor") && settings.value("fUseTor").toBool()) {
-		map_arg::SoftSetArg("-tor", settings.value("addrTor").toString().toStdString());
-        if (settings.value("fTorOnly").toBool())
-			map_arg::SoftSetArg("-onlynet", "tor");
+        map_arg::SoftSetArg("-tor", settings.value("addrTor").toString().toStdString());
+        if (settings.value("fTorOnly").toBool()) {
+            map_arg::SoftSetArg("-onlynet", "tor");
+        }
 
         if (settings.value("TorName").toString().length() == 22) {
             std::string strTorName = settings.value("TorName").toString().toStdString();
 
-			CService addrTorName(strTorName, net_basis::GetListenPort());
-            if (addrTorName.IsValid())
-				map_arg::SoftSetArg("-torname", strTorName);
+            CService addrTorName(strTorName, net_basis::GetListenPort());
+            if (addrTorName.IsValid()) {
+                map_arg::SoftSetArg("-torname", strTorName);
+            }
         }
     }
 
     if (!args_bool::fTestNet && settings.contains("externalSeeder") && settings.value("externalSeeder").toString() != "") {
-		map_arg::SoftSetArg("-peercollector", settings.value("externalSeeder").toString().toStdString());
+        map_arg::SoftSetArg("-peercollector", settings.value("externalSeeder").toString().toStdString());
     }
 
-    if (settings.contains("detachDB"))
-		map_arg::SoftSetBoolArg("-detachdb", settings.value("detachDB").toBool());
-    if (!language.isEmpty())
-		map_arg::SoftSetArg("-lang", language.toStdString());
+    if (settings.contains("detachDB")) {
+        map_arg::SoftSetBoolArg("-detachdb", settings.value("detachDB").toBool());
+    }
+    if (! language.isEmpty()) {
+        map_arg::SoftSetArg("-lang", language.toStdString());
+    }
 }
 
-int OptionsModel::rowCount(const QModelIndex & parent) const
+int OptionsModel::rowCount(const QModelIndex &parent) const
 {
     return OptionIDRowCount;
 }
 
-QVariant OptionsModel::data(const QModelIndex & index, int role) const
+QVariant OptionsModel::data(const QModelIndex &index, int role) const
 {
-    if(role == Qt::EditRole)
-    {
+    if(role == Qt::EditRole) {
         QSettings settings;
         switch(index.row())
         {
@@ -130,36 +140,40 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
         case ProxyUse:
             return settings.value("fUseProxy", false);
         case ProxyIP: {
-			netbase::proxyType proxy;
-			if (netbase::manage::GetProxy(netbase::NET_IPV4, proxy))
+            netbase::proxyType proxy;
+            if (netbase::manage::GetProxy(netbase::NET_IPV4, proxy)) {
                 return QVariant(QString::fromStdString(proxy.first.ToStringIP()));
-            else
+            } else {
                 return QVariant(QString::fromStdString("127.0.0.1"));
+            }
         }
         case ProxyPort: {
-			netbase::proxyType proxy;
-			if (netbase::manage::GetProxy(netbase::NET_IPV4, proxy))
+            netbase::proxyType proxy;
+            if (netbase::manage::GetProxy(netbase::NET_IPV4, proxy)) {
                 return QVariant(proxy.first.GetPort());
-            else
-				return QVariant(entry::nSocksDefault);
+            } else {
+                return QVariant(entry::nSocksDefault);
+            }
         }
         case ProxySocksVersion:
             return settings.value("nSocksVersion", 5);
         case TorUse:
             return settings.value("fUseTor", false);
         case TorIP: {
-			netbase::proxyType proxy;
-			if (netbase::manage::GetProxy(netbase::NET_TOR, proxy))
+            netbase::proxyType proxy;
+            if (netbase::manage::GetProxy(netbase::NET_TOR, proxy)) {
                 return QVariant(QString::fromStdString(proxy.first.ToStringIP()));
-            else
+            } else {
                 return QVariant(QString::fromStdString("127.0.0.1"));
+            }
         }
         case TorPort: {
-			netbase::proxyType proxy;
-			if (netbase::manage::GetProxy(netbase::NET_TOR, proxy))
+            netbase::proxyType proxy;
+            if (netbase::manage::GetProxy(netbase::NET_TOR, proxy)) {
                 return QVariant(proxy.first.GetPort());
-            else
+            } else {
                 return QVariant(entry::nSocksDefault);
+            }
         }
         case TorOnly:
             return settings.value("fTorOnly", false);
@@ -188,11 +202,10 @@ QVariant OptionsModel::data(const QModelIndex & index, int role) const
     return QVariant();
 }
 
-bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, int role)
+bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int role)
 {
     bool successful = true; /* set to false on parse error */
-    if(role == Qt::EditRole)
-    {
+    if(role == Qt::EditRole) {
         QSettings settings;
         switch(index.row())
         {
@@ -212,9 +225,9 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
             ApplyProxySettings();
             break;
         case ProxyIP: {
-			netbase::proxyType proxy;
+            netbase::proxyType proxy;
             proxy.first = CService("127.0.0.1", entry::nSocksDefault);
-			netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
+            netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
 
             CNetAddr addr(value.toString().toStdString());
             proxy.first.SetIP(addr);
@@ -223,9 +236,9 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         }
         break;
         case ProxyPort: {
-			netbase::proxyType proxy;
+            netbase::proxyType proxy;
             proxy.first = CService("127.0.0.1", entry::nSocksDefault);
-			netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
+            netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
 
             proxy.first.SetPort(value.toInt());
             settings.setValue("addrProxy", proxy.first.ToStringIPPort().c_str());
@@ -233,9 +246,9 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         }
         break;
         case ProxySocksVersion: {
-			netbase::proxyType proxy;
+            netbase::proxyType proxy;
             proxy.second = 5;
-			netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
+            netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
 
             proxy.second = value.toInt();
             settings.setValue("nSocksVersion", proxy.second);
@@ -248,9 +261,9 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         }
         break;
         case TorIP: {
-			netbase::proxyType proxy;
+            netbase::proxyType proxy;
             proxy.first = CService("127.0.0.1", entry::nSocksDefault);
-			netbase::manage::GetProxy(netbase::NET_TOR, proxy);
+            netbase::manage::GetProxy(netbase::NET_TOR, proxy);
 
             CNetAddr addr(value.toString().toStdString());
             proxy.first.SetIP(addr);
@@ -259,9 +272,9 @@ bool OptionsModel::setData(const QModelIndex & index, const QVariant & value, in
         }
         break;
         case TorPort: {
-			netbase::proxyType proxy;
+            netbase::proxyType proxy;
             proxy.first = CService("127.0.0.1", entry::nSocksDefault);
-			netbase::manage::GetProxy(netbase::NET_TOR, proxy);
+            netbase::manage::GetProxy(netbase::NET_TOR, proxy);
 
             proxy.first.SetPort((uint16_t)value.toUInt());
             settings.setValue("addrTor", proxy.first.ToStringIPPort().c_str());

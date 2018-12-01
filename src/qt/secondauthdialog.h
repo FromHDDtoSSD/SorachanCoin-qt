@@ -14,7 +14,9 @@ QT_END_NAMESPACE
 class SecondAuthDialog : public QWidget
 {
     Q_OBJECT
-
+private:
+    SecondAuthDialog(const SecondAuthDialog &); // {}
+    SecondAuthDialog &operator=(const SecondAuthDialog &); // {}
 public:
     explicit SecondAuthDialog(QWidget *parent = 0);
     ~SecondAuthDialog();
@@ -40,3 +42,4 @@ private slots:
 };
 
 #endif // SECONDAUTHDIALOG_H
+//@

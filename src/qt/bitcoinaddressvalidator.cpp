@@ -38,14 +38,18 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co
         default:
             break;
         }
+
         // Remove whitespace
-        if(ch.isSpace())
+        if(ch.isSpace()) {
             removeChar = true;
+        }
+
         // To next character
-        if(removeChar)
+        if(removeChar) {
             input.remove(idx, 1);
-        else
+        } else {
             ++idx;
+        }
     }
 
     // Validation
@@ -60,16 +64,13 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co
            ch != 'l' && ch != 'I' && ch != '0' && ch != 'O')
         {
             // Alphanumeric and not a 'forbidden' character
-        }
-        else
-        {
+        } else {
             state = QValidator::Invalid;
         }
     }
 
     // Empty address is "intermediate" input
-    if(input.isEmpty())
-    {
+    if(input.isEmpty()) {
         state = QValidator::Intermediate;
     }
 

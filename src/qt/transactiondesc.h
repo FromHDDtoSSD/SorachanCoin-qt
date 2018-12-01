@@ -13,6 +13,9 @@ class CWalletTx;
 class TransactionDesc: public QObject
 {
     Q_OBJECT
+private:
+    TransactionDesc(const TransactionDesc &); // {}
+    TransactionDesc &operator=(const TransactionDesc &); // {}
 public:
     static QString toHTML(CWallet *wallet, CWalletTx &wtx);
 private:
@@ -22,3 +25,4 @@ private:
 };
 
 #endif // TRANSACTIONDESC_H
+//@

@@ -1,6 +1,5 @@
 #ifndef BITCOINGUI_H
 #define BITCOINGUI_H
-//
 
 #include <QMainWindow>
 #include <QSystemTrayIcon>
@@ -39,6 +38,9 @@ QT_END_NAMESPACE
 class BitcoinGUI : public QMainWindow
 {
     Q_OBJECT
+private:
+    BitcoinGUI(const BitcoinGUI &); // {}
+    BitcoinGUI &operator=(const BitcoinGUI &); // {}
 public:
     explicit BitcoinGUI(QWidget *parent = 0);
     ~BitcoinGUI();
@@ -133,7 +135,7 @@ public slots:
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */
     void setNumBlocks(int count, int nTotalBlocks);
-    void updateMining();			// stake information icon
+    void updateMining();            // stake information icon
     /** Set the encryption status as shown in the UI.
        @param[in] status            current encryption status
        @see WalletModel::EncryptionStatus
@@ -214,3 +216,4 @@ private slots:
 };
 
 #endif
+//@

@@ -14,8 +14,11 @@ class WalletModel;
 class TransactionTableModel : public QAbstractTableModel
 {
     Q_OBJECT
+private:
+    TransactionTableModel(const TransactionTableModel &); // {}
+    TransactionTableModel &operator=(const TransactionTableModel &); // {}
 public:
-    explicit TransactionTableModel(CWallet* wallet, WalletModel *parent = 0);
+    explicit TransactionTableModel(CWallet *wallet, WalletModel *parent = 0);
     ~TransactionTableModel();
 
     enum ColumnIndex {
@@ -56,7 +59,7 @@ public:
     int columnCount(const QModelIndex &parent) const;
     QVariant data(const QModelIndex &index, int role) const;
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
-    QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const;
+    QModelIndex index(int row, int column, const QModelIndex &parent = QModelIndex()) const;
     void refresh();
 private:
     CWallet* wallet;
@@ -87,4 +90,4 @@ public slots:
 };
 
 #endif
-
+//@

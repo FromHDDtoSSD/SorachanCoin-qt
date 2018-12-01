@@ -1,4 +1,4 @@
-//
+
 #include "aboutdialog.h"
 #include "ui_aboutdialog.h"
 #include "dialogwindowflags.h"
@@ -9,35 +9,35 @@
 
 AboutDialog::AboutDialog(QWidget *parent/*=0*/) : QWidget(parent, DIALOGWINDOWHINTS), ui(new Ui::AboutDialog)
 {
-	ui->setupUi(this);
+    ui->setupUi(this);
 }
 
 void AboutDialog::setModel(ClientModel *model)
 {
-	if(model) {
-		ui->versionLabel->setText(model->formatFullVersion());
-	}
+    if(model) {
+        ui->versionLabel->setText(model->formatFullVersion());
+    }
 }
 
 AboutDialog::~AboutDialog()
 {
-	delete ui;
+    delete ui;
 }
 
 void AboutDialog::on_buttonBox_accepted()
 {
-	close();
+    close();
 }
 
 void AboutDialog::keyPressEvent(QKeyEvent *event)
 {
 #ifdef ANDROID
-	if(event->key() == Qt::Key_Back) {
-		close();
-	}
+    if(event->key() == Qt::Key_Back) {
+        close();
+    }
 #else
-	if(event->key() == Qt::Key_Escape) {
-		close();
-	}
+    if(event->key() == Qt::Key_Escape) {
+        close();
+    }
 #endif
 }

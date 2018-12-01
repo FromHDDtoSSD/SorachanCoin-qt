@@ -14,6 +14,9 @@ class WalletModel;
 class MintingTableModel : public QAbstractTableModel
 {
     Q_OBJECT
+private:
+    MintingTableModel(const MintingTableModel &); // {}
+    MintingTableModel &operator=(const MintingTableModel &); // {}
 public:
     explicit MintingTableModel(CWallet * wallet, WalletModel *parent = 0);
     ~MintingTableModel();
@@ -62,3 +65,4 @@ private slots:
 };
 
 #endif // MINTINGTABLEMODEL_H
+//@

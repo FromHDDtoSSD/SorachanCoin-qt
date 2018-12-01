@@ -27,8 +27,12 @@ TrafficGraphWidget::TrafficGraphWidget(QWidget *parent) :
     nLastBytesOut(0),
     clientModel(0)
 {
-    timer = new QTimer(this);
-    connect(timer, SIGNAL(timeout()), SLOT(updateRates()));
+    try {
+        timer = new QTimer(this);
+        connect(timer, SIGNAL(timeout()), SLOT(updateRates()));
+    } catch (const std::bad_alloc &) {
+        throw std::runtime_error("TrafficGraphWidget Failed to allocate memory.");
+    }
 }
 
 void TrafficGraphWidget::setClientModel(ClientModel *model)
@@ -51,7 +55,8 @@ void TrafficGraphWidget::paintPath(QPainterPath &path, QQueue<float> &samples)
     int sampleCount = samples.size(), x = XMARGIN + w, y;
     if(sampleCount > 0) {
         path.moveTo(x, YMARGIN + h);
-        for(int i = 0; i < sampleCount; ++i) {
+        for(int i = 0; i < sampleCount; ++i)
+        {
             x = XMARGIN + w - w * i / DESIRED_SAMPLES;
             y = YMARGIN + h - (int)(h * samples.at(i) / fMax);
             path.lineTo(x, y);
@@ -65,7 +70,9 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
 
-    if(fMax <= 0.0f) return;
+    if(fMax <= 0.0f) {
+        return;
+    }
 
     QColor axisCol(Qt::gray);
     int h = height() - YMARGIN * 2;
@@ -82,7 +89,8 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
     // draw lines
     painter.setPen(axisCol);
     painter.drawText(XMARGIN, YMARGIN + h - h * val / fMax-yMarginText, QString("%1 %2").arg(val).arg(units));
-    for(float y = val; y < fMax; y += val) {
+    for(float y = val; y < fMax; y += val)
+    {
         int yy = YMARGIN + h - h * y / fMax;
         painter.drawLine(XMARGIN, yy, width() - XMARGIN, yy);
     }
@@ -93,23 +101,25 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
         painter.setPen(axisCol);
         painter.drawText(XMARGIN, YMARGIN + h - h * val / fMax-yMarginText, QString("%1 %2").arg(val).arg(units));
         int count = 1;
-        for(float y = val; y < fMax; y += val, count++) {
+        for(float y = val; y < fMax; y += val, count++)
+        {
             // don't overwrite lines drawn above
-            if(count % 10 == 0)
+            if(count % 10 == 0) {
                 continue;
+            }
             int yy = YMARGIN + h - h * y / fMax;
             painter.drawLine(XMARGIN, yy, width() - XMARGIN, yy);
         }
     }
 
-    if(!vSamplesIn.empty()) {
+    if(! vSamplesIn.empty()) {
         QPainterPath p;
         paintPath(p, vSamplesIn);
         painter.fillPath(p, QColor(0, 255, 0, 128));
         painter.setPen(Qt::green);
         painter.drawPath(p);
     }
-    if(!vSamplesOut.empty()) {
+    if(! vSamplesOut.empty()) {
         QPainterPath p;
         paintPath(p, vSamplesOut);
         painter.fillPath(p, QColor(255, 0, 0, 128));
@@ -120,7 +130,9 @@ void TrafficGraphWidget::paintEvent(QPaintEvent *)
 
 void TrafficGraphWidget::updateRates()
 {
-    if(!clientModel) return;
+    if(! clientModel) {
+        return;
+    }
 
     quint64 bytesIn = clientModel->getTotalBytesRecv(),
             bytesOut = clientModel->getTotalBytesSent();
@@ -131,18 +143,22 @@ void TrafficGraphWidget::updateRates()
     nLastBytesIn = bytesIn;
     nLastBytesOut = bytesOut;
 
-    while(vSamplesIn.size() > DESIRED_SAMPLES) {
+    while(vSamplesIn.size() > DESIRED_SAMPLES)
+    {
         vSamplesIn.pop_back();
     }
-    while(vSamplesOut.size() > DESIRED_SAMPLES) {
+    while(vSamplesOut.size() > DESIRED_SAMPLES)
+    {
         vSamplesOut.pop_back();
     }
 
     float tmax = 0.0f;
-    foreach(float f, vSamplesIn) {
+    foreach(float f, vSamplesIn)
+    {
         if(f > tmax) tmax = f;
     }
-    foreach(float f, vSamplesOut) {
+    foreach(float f, vSamplesOut)
+    {
         if(f > tmax) tmax = f;
     }
     fMax = tmax;

@@ -1,4 +1,4 @@
-//
+
 #ifndef ABOUTDIALOG_H
 #define ABOUTDIALOG_H
 
@@ -14,26 +14,27 @@ class ClientModel;
 //
 class AboutDialog : public QWidget
 {
-	Q_OBJECT
+    Q_OBJECT
 
 private:
-	// AboutDialog(); Call by explicit AboutDialog(QWidget *parent = 0);
-	AboutDialog(const AboutDialog &); // {}
-	AboutDialog &operator=(const AboutDialog &); // {}
+    // AboutDialog(); Call by explicit AboutDialog(QWidget *parent = 0);
+    AboutDialog(const AboutDialog &); // {}
+    AboutDialog &operator=(const AboutDialog &); // {}
 
 public:
-	explicit AboutDialog(QWidget *parent = 0);
-	~AboutDialog();
+    explicit AboutDialog(QWidget *parent = 0);
+    ~AboutDialog();
 
-	void setModel(ClientModel *model);
+    void setModel(ClientModel *model);
 
 private:
-	Ui::AboutDialog *ui;
+    Ui::AboutDialog *ui;
 
-	void keyPressEvent(QKeyEvent *);
+    void keyPressEvent(QKeyEvent *);
 
 private slots:
-	void on_buttonBox_accepted();
+    void on_buttonBox_accepted();
 };
 
 #endif // ABOUTDIALOG_H
+//@

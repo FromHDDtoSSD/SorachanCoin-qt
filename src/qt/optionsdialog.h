@@ -4,7 +4,7 @@
 #include <QWidget>
 
 namespace Ui {
-class OptionsDialog;
+    class OptionsDialog;
 }
 class OptionsModel;
 class MonitoredDataMapper;
@@ -14,7 +14,9 @@ class QValidatedLineEdit;
 class OptionsDialog : public QWidget
 {
     Q_OBJECT
-
+private:
+    OptionsDialog(const OptionsDialog &); // {}
+    OptionsDialog &operator=(const OptionsDialog &); // {}
 public:
     explicit OptionsDialog(QWidget *parent = 0);
     ~OptionsDialog();
@@ -68,3 +70,4 @@ private:
 };
 
 #endif // OPTIONSDIALOG_H
+//@

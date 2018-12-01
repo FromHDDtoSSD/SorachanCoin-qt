@@ -43,15 +43,13 @@ Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, 
     ,interface(0)
 #endif
 {
-    if(trayicon && trayicon->supportsMessages())
-    {
+    if(trayicon && trayicon->supportsMessages()) {
         mode = QSystemTray;
     }
 #ifdef USE_DBUS
     interface = new QDBusInterface("org.freedesktop.Notifications",
         "/org/freedesktop/Notifications", "org.freedesktop.Notifications");
-    if(interface->isValid())
-    {
+    if(interface->isValid()) {
         mode = Freedesktop;
     }
 #endif
@@ -59,18 +57,18 @@ Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, 
     // check if users OS has support for NSUserNotification
     if( MacNotificationHandler::instance()->hasUserNotificationCenterSupport()) {
         mode = UserNotificationCenter;
-    }
-    else {
+    } else {
         // Check if Growl is installed (based on Qt's tray icon implementation)
         CFURLRef cfurl;
         OSStatus status = LSGetApplicationForInfo(kLSUnknownType, kLSUnknownCreator, CFSTR("growlTicket"), kLSRolesAll, 0, &cfurl);
         if (status != kLSApplicationNotFoundErr) {
             CFBundleRef bundle = CFBundleCreate(0, cfurl);
             if (CFStringCompare(CFBundleGetIdentifier(bundle), CFSTR("com.Growl.GrowlHelperApp"), kCFCompareCaseInsensitive | kCFCompareBackwards) == kCFCompareEqualTo) {
-                if (CFStringHasSuffix(CFURLGetString(cfurl), CFSTR("/Growl.app/")))
+                if (CFStringHasSuffix(CFURLGetString(cfurl), CFSTR("/Growl.app/"))) {
                     mode = Growl13;
-                else
+                } else {
                     mode = Growl12;
+                }
             }
             CFRelease(cfurl);
             CFRelease(bundle);
@@ -91,6 +89,9 @@ Notificator::~Notificator()
 // Loosely based on http://www.qtcentre.org/archive/index.php/t-25879.html
 class FreedesktopImage
 {
+private:
+    FreedesktopImage(const FreedesktopImage &); // {}
+    FreedesktopImage &operator=(const FreedesktopImage &); // {}
 public:
     FreedesktopImage() {}
     FreedesktopImage(const QImage &img);
@@ -199,8 +200,7 @@ void Notificator::notifyDBus(Class cls, const QString &title, const QString &tex
 
     // If no icon specified, set icon based on class
     QIcon tmpicon;
-    if(icon.isNull())
-    {
+    if(icon.isNull()) {
         QStyle::StandardPixmap sicon = QStyle::SP_MessageBoxQuestion;
         switch(cls)
         {
@@ -210,9 +210,7 @@ void Notificator::notifyDBus(Class cls, const QString &title, const QString &tex
         default: break;
         }
         tmpicon = QApplication::style()->standardIcon(sicon);
-    }
-    else
-    {
+    } else {
         tmpicon = icon;
     }
     hints["icon_data"] = FreedesktopImage::toVariant(tmpicon.pixmap(FREEDESKTOP_NOTIFICATION_ICON_SIZE).toImage());
@@ -253,8 +251,9 @@ void Notificator::notifyGrowl(Class cls, const QString &title, const QString &te
     );
 
     QString notificationApp(QApplication::applicationName());
-    if (notificationApp.isEmpty())
+    if (notificationApp.isEmpty()) {
         notificationApp = "Application";
+    }
 
     QPixmap notificationIconPixmap;
     if (icon.isNull()) { // If no icon specified, set icon based on class
@@ -266,8 +265,7 @@ void Notificator::notifyGrowl(Class cls, const QString &title, const QString &te
         case Critical: sicon = QStyle::SP_MessageBoxCritical; break;
         }
         notificationIconPixmap = QApplication::style()->standardPixmap(sicon);
-    }
-    else {
+    } else {
         QSize size = icon.actualSize(QSize(48, 48));
         notificationIconPixmap = icon.pixmap(size);
     }
@@ -276,8 +274,9 @@ void Notificator::notifyGrowl(Class cls, const QString &title, const QString &te
     QTemporaryFile notificationIconFile;
     if (!notificationIconPixmap.isNull() && notificationIconFile.open()) {
         QImageWriter writer(&notificationIconFile, "PNG");
-        if (writer.write(notificationIconPixmap.toImage()))
+        if (writer.write(notificationIconPixmap.toImage())) {
             notificationIcon = QString(" image from location \"file://%1\"").arg(notificationIconFile.fileName());
+        }
     }
 
     QString quotedTitle(title), quotedText(text);
@@ -316,8 +315,7 @@ void Notificator::notify(Class cls, const QString &title, const QString &text, c
         break;
 #endif
     default:
-        if(cls == Critical)
-        {
+        if(cls == Critical) {
             // Fall back to old fashioned pop-up dialog if critical and no other notification available
             QMessageBox::critical(parent, title, text, QMessageBox::Ok, QMessageBox::Ok);
         }

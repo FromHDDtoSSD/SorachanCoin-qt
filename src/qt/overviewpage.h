@@ -18,7 +18,9 @@ class TransactionFilterProxy;
 class OverviewPage : public QWidget
 {
     Q_OBJECT
-
+private:
+    OverviewPage(const OverviewPage &); // {}
+    OverviewPage &operator=(const OverviewPage &); // {}
 public:
     explicit OverviewPage(QWidget *parent = 0);
     ~OverviewPage();
@@ -52,3 +54,4 @@ private slots:
 };
 
 #endif // OVERVIEWPAGE_H
+//@

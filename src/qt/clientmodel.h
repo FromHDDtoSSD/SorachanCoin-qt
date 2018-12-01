@@ -26,6 +26,9 @@ enum NumConnections {
 class ClientModel : public QObject
 {
     Q_OBJECT
+private:
+    ClientModel(const ClientModel &); // {}
+    ClientModel &operator=(const ClientModel &); // {}
 public:
     explicit ClientModel(OptionsModel *optionsModel, QObject *parent = 0);
     ~ClientModel();
@@ -86,3 +89,4 @@ public slots:
 };
 
 #endif // CLIENTMODEL_H
+//@

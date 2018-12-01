@@ -16,7 +16,10 @@ namespace Ui
 
 class MultisigDialog : public QWidget
 {
-    Q_OBJECT;
+  Q_OBJECT;
+  private:
+    MultisigDialog(const MultisigDialog &); // {}
+    MultisigDialog &operator=(const MultisigDialog &); // {}
   protected:
     void keyPressEvent(QKeyEvent *);
 
@@ -59,3 +62,4 @@ class MultisigDialog : public QWidget
 };
 
 #endif // MULTISIGDIALOG_H
+//@

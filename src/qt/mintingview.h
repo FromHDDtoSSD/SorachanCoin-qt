@@ -16,6 +16,9 @@ QT_END_NAMESPACE
 class MintingView : public QWidget
 {
     Q_OBJECT
+private:
+    MintingView(const MintingView &); // {}
+    MintingView &operator=(const MintingView &); // {}
 public:
     explicit MintingView(QWidget *parent = 0);
     void setModel(WalletModel *model);
@@ -53,3 +56,4 @@ public slots:
 };
 
 #endif // MINTINGVIEW_H
+//@

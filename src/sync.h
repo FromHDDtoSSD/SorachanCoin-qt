@@ -34,69 +34,69 @@ template<typename Mutex>
 class CMutexLock
 {
 private:
-	CMutexLock(const CMutexLock &); // {}
-	CMutexLock &operator=(const CMutexLock &); // {}
+    CMutexLock(const CMutexLock &); // {}
+    CMutexLock &operator=(const CMutexLock &); // {}
 
-	boost::unique_lock<Mutex> lock;
+    boost::unique_lock<Mutex> lock;
 
 public:
-	void Enter(const char *pszName, const char *pszFile, int nLine) {
-		if (! lock.owns_lock()) {
-			EnterCritical(pszName, pszFile, nLine, (void*)(lock.mutex()));
+    void Enter(const char *pszName, const char *pszFile, int nLine) {
+        if (! lock.owns_lock()) {
+            EnterCritical(pszName, pszFile, nLine, (void*)(lock.mutex()));
 
 #ifdef DEBUG_LOCKCONTENTION
-			if (! lock.try_lock()) {
-				PrintLockContention(pszName, pszFile, nLine);
+            if (! lock.try_lock()) {
+                PrintLockContention(pszName, pszFile, nLine);
 #endif
 
             lock.lock();
 
 #ifdef DEBUG_LOCKCONTENTION
-			}
+            }
 #endif
 
-		}
-	}
+        }
+    }
 
-	void Leave() {
+    void Leave() {
         if (lock.owns_lock()) {
             lock.unlock();
-			LeaveCritical();
-		}
-	}
+            LeaveCritical();
+        }
+    }
 
-	bool TryEnter(const char *pszName, const char *pszFile, int nLine) {
+    bool TryEnter(const char *pszName, const char *pszFile, int nLine) {
         if (! lock.owns_lock()) {
             EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), true);
-			lock.try_lock();
+            lock.try_lock();
             if (! lock.owns_lock()) {
-				LeaveCritical();
-			}
-		}
+                LeaveCritical();
+            }
+        }
         return lock.owns_lock();
-	}
+    }
 
-	CMutexLock(Mutex &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) : lock(mutexIn, boost::defer_lock) {
-		if (fTry) {
-			TryEnter(pszName, pszFile, nLine);
-		} else {
-			Enter(pszName, pszFile, nLine);
-		}
-	}
+    CMutexLock(Mutex &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) : lock(mutexIn, boost::defer_lock) {
+        if (fTry) {
+            TryEnter(pszName, pszFile, nLine);
+        } else {
+            Enter(pszName, pszFile, nLine);
+        }
+    }
 
-	~CMutexLock() {
+    ~CMutexLock() {
         if (lock.owns_lock()) {
-			LeaveCritical();
-		}
-	}
+            LeaveCritical();
+        }
+    }
 
-	operator bool() {
+    operator bool() {
         return lock.owns_lock();
-	}
+    }
 
-	boost::unique_lock<Mutex> &GetLock() {
+    boost::unique_lock<Mutex> &GetLock() {
         return lock;
-	}
+    }
 };
 
 typedef CMutexLock<CCriticalSection> CCriticalBlock;
@@ -106,118 +106,118 @@ typedef CMutexLock<CCriticalSection> CCriticalBlock;
 #define TRY_LOCK(cs,name) CCriticalBlock name(cs, #cs, __FILE__, __LINE__, true)
 
 #define ENTER_CRITICAL_SECTION(cs) \
-	{ \
-		EnterCritical(#cs, __FILE__, __LINE__, (void*)(&cs)); \
-		(cs).lock(); \
-	}
+    { \
+        EnterCritical(#cs, __FILE__, __LINE__, (void*)(&cs)); \
+        (cs).lock(); \
+    }
 
 #define LEAVE_CRITICAL_SECTION(cs) \
-	{ \
-		(cs).unlock(); \
-		LeaveCritical(); \
-	}
+    { \
+        (cs).unlock(); \
+        LeaveCritical(); \
+    }
 
 class CSemaphore
 {
 private:
-	CSemaphore(const CSemaphore &); // {}
-	CSemaphore &operator=(const CSemaphore &); // {}
+    CSemaphore(const CSemaphore &); // {}
+    CSemaphore &operator=(const CSemaphore &); // {}
 
-	boost::condition_variable condition;
-	boost::mutex mutex;
-	int value;
+    boost::condition_variable condition;
+    boost::mutex mutex;
+    int value;
 
 public:
-	CSemaphore(int init) : value(init) {}
+    CSemaphore(int init) : value(init) {}
 
-	void wait() {
+    void wait() {
         boost::unique_lock<boost::mutex> lock(mutex);
         while (value < 1)
-		{
+        {
             condition.wait(lock);
-		}
+        }
         value--;
-	}
+    }
 
-	bool try_wait() {
+    bool try_wait() {
         boost::unique_lock<boost::mutex> lock(mutex);
         if (value < 1) {
-			return false;
-		}
+            return false;
+        }
         value--;
-		return true;
-	}
+        return true;
+    }
 
-	void post() {
-		{
+    void post() {
+        {
             boost::unique_lock<boost::mutex> lock(mutex);
             value++;
-		}
+        }
         condition.notify_one();
-	}
+    }
 };
 
 /** RAII-style semaphore lock */
 class CSemaphoreGrant
 {
 private:
-	CSemaphoreGrant(const CSemaphoreGrant &); // {}
-	CSemaphoreGrant &operator=(const CSemaphoreGrant &); // {}
+    CSemaphoreGrant(const CSemaphoreGrant &); // {}
+    CSemaphoreGrant &operator=(const CSemaphoreGrant &); // {}
 
-	CSemaphore *sem;
-	bool fHaveGrant;
+    CSemaphore *sem;
+    bool fHaveGrant;
 
 public:
-	void Acquire() {
+    void Acquire() {
         if (fHaveGrant) {
-			return;
-		}
+            return;
+        }
         sem->wait();
         fHaveGrant = true;
-	}
+    }
 
-	void Release() {
+    void Release() {
         if (! fHaveGrant) {
-			return;
-		}
+            return;
+        }
         sem->post();
         fHaveGrant = false;
-	}
+    }
 
-	bool TryAcquire() {
-		if (!fHaveGrant && sem->try_wait()) {
+    bool TryAcquire() {
+        if (!fHaveGrant && sem->try_wait()) {
             fHaveGrant = true;
-		}
+        }
         return fHaveGrant;
-	}
+    }
 
-	void MoveTo(CSemaphoreGrant &grant) {
-		grant.Release();
+    void MoveTo(CSemaphoreGrant &grant) {
+        grant.Release();
         grant.sem = sem;
         grant.fHaveGrant = fHaveGrant;
 
         sem = NULL;
         fHaveGrant = false;
-	}
+    }
 
-	CSemaphoreGrant() : sem(NULL), fHaveGrant(false) {}
+    CSemaphoreGrant() : sem(NULL), fHaveGrant(false) {}
 
-	CSemaphoreGrant(CSemaphore &sema, bool fTry = false) : sem(&sema), fHaveGrant(false) {
-		if (fTry) {
-			TryAcquire();
-		} else {
-			Acquire();
-		}
-	}
+    CSemaphoreGrant(CSemaphore &sema, bool fTry = false) : sem(&sema), fHaveGrant(false) {
+        if (fTry) {
+            TryAcquire();
+        } else {
+            Acquire();
+        }
+    }
 
-	~CSemaphoreGrant() {
-		Release();
-	}
+    ~CSemaphoreGrant() {
+        Release();
+    }
 
-	operator bool() {
+    operator bool() {
         return fHaveGrant;
-	}
+    }
 };
 
 #endif
-
+//@

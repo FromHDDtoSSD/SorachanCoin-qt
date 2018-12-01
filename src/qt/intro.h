@@ -22,7 +22,9 @@ namespace Ui {
 class Intro : public QDialog
 {
     Q_OBJECT
-
+private:
+    Intro(const Intro &); // {}
+    Intro &operator=(const Intro &); // {}
 public:
     explicit Intro(QWidget *parent = 0);
     ~Intro();

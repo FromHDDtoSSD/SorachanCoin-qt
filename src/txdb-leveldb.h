@@ -32,215 +32,215 @@
 class CTxDB
 {
 public:
-	CTxDB(const char *pszMode="r+");
-	~CTxDB() {
-		//
-		// Note that this is not the same as Close() because it deletes only
-		// data scoped to this TxDB object.
-		//
-		delete this->activeBatch;
-	}
+    CTxDB(const char *pszMode="r+");
+    ~CTxDB() {
+        //
+        // Note that this is not the same as Close() because it deletes only
+        // data scoped to this TxDB object.
+        //
+        delete this->activeBatch;
+    }
 
-	//
-	// Destroys the underlying shared global state accessed by this TxDB.
-	//
-	void Close();
+    //
+    // Destroys the underlying shared global state accessed by this TxDB.
+    //
+    void Close();
 
 private:
-	CTxDB(const CTxDB &); // {}
-	CTxDB &operator=(const CTxDB &); // {}
+    CTxDB(const CTxDB &); // {}
+    CTxDB &operator=(const CTxDB &); // {}
 
-	//
-	// global pointer for LevelDB object instance
-	//
-	static leveldb::DB *txdb;
+    //
+    // global pointer for LevelDB object instance
+    //
+    static leveldb::DB *txdb;
 
-	//
-	// Points to the global instance
-	//
-	leveldb::DB *pdb;
+    //
+    // Points to the global instance
+    //
+    leveldb::DB *pdb;
 
-	//
-	// A batch stores up writes and deletes for atomic application. When this
-	// field is non-NULL, writes/deletes go there instead of directly to disk.
-	//
-	leveldb::WriteBatch *activeBatch;
-	leveldb::Options options;
-	bool fReadOnly;
-	int nVersion;
+    //
+    // A batch stores up writes and deletes for atomic application. When this
+    // field is non-NULL, writes/deletes go there instead of directly to disk.
+    //
+    leveldb::WriteBatch *activeBatch;
+    leveldb::Options options;
+    bool fReadOnly;
+    int nVersion;
 
-	leveldb::Options GetOptions();
-	void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
-	CBlockIndex *InsertBlockIndex(uint256 hash);
+    leveldb::Options GetOptions();
+    void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
+    CBlockIndex *InsertBlockIndex(uint256 hash);
 
 protected:
-	//
-	// Returns true and sets (value,false) if activeBatch contains the given key
-	// or leaves value alone and sets deleted = true if activeBatch contains a
-	// delete for it.
-	//
-	bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
+    //
+    // Returns true and sets (value,false) if activeBatch contains the given key
+    // or leaves value alone and sets deleted = true if activeBatch contains a
+    // delete for it.
+    //
+    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
 
-	template<typename K, typename T>
-	bool Read(const K &key, T &value) {
-		CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
-		ssKey.reserve(1000);
-		ssKey << key;
-		std::string strValue;
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        ssKey.reserve(1000);
+        ssKey << key;
+        std::string strValue;
 
-		bool readFromDb = true;
-		if (this->activeBatch) {
-			//
-			// First we must search for it in the currently pending set of
-			// changes to the db. If not found in the batch, go on to read disk.
-			//
-			bool deleted = false;
-			readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
-			if (deleted) {
-				return false;
-			}
-		}
-		if (readFromDb) {
-			leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
-			if (! status.ok()) {
-				if (status.IsNotFound()) {
-					return false;
-				}
+        bool readFromDb = true;
+        if (this->activeBatch) {
+            //
+            // First we must search for it in the currently pending set of
+            // changes to the db. If not found in the batch, go on to read disk.
+            //
+            bool deleted = false;
+            readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
+            if (deleted) {
+                return false;
+            }
+        }
+        if (readFromDb) {
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
+            if (! status.ok()) {
+                if (status.IsNotFound()) {
+                    return false;
+                }
 
-				// Some unexpected error.
-				printf("LevelDB read failure: %s\n", status.ToString().c_str());
-				return false;
-			}
-		}
+                // Some unexpected error.
+                printf("LevelDB read failure: %s\n", status.ToString().c_str());
+                return false;
+            }
+        }
 
-		//
-		// Unserialize value
-		//
-		try {
-			CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, version::CLIENT_VERSION);
-			ssValue >> value;
-		} catch (const std::exception &) {
-			return false;
-		}
+        //
+        // Unserialize value
+        //
+        try {
+            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, version::CLIENT_VERSION);
+            ssValue >> value;
+        } catch (const std::exception &) {
+            return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	template<typename K, typename T>
-	bool Write(const K &key, const T &value) {
-		if (this->fReadOnly) {
-			assert(! "Write called on database in read-only mode");
-		}
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value) {
+        if (this->fReadOnly) {
+            assert(! "Write called on database in read-only mode");
+        }
 
-		CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
-		ssKey.reserve(1000);
-		ssKey << key;
+        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        ssKey.reserve(1000);
+        ssKey << key;
 
-		CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-		ssValue.reserve(10000);
-		ssValue << value;
+        CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
+        ssValue.reserve(10000);
+        ssValue << value;
 
-		if (this->activeBatch) {
-			this->activeBatch->Put(ssKey.str(), ssValue.str());
-			return true;
-		}
+        if (this->activeBatch) {
+            this->activeBatch->Put(ssKey.str(), ssValue.str());
+            return true;
+        }
 
-		leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
-		if (! status.ok()) {
-			printf("LevelDB write failure: %s\n", status.ToString().c_str());
-			return false;
-		}
+        leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
+        if (! status.ok()) {
+            printf("LevelDB write failure: %s\n", status.ToString().c_str());
+            return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	template<typename K>
-	bool Erase(const K &key) {
-		if (! this->pdb) {
-			return false;
-		}
-		if (this->fReadOnly) {
-			assert(! "Erase called on database in read-only mode");
-		}
+    template<typename K>
+    bool Erase(const K &key) {
+        if (! this->pdb) {
+            return false;
+        }
+        if (this->fReadOnly) {
+            assert(! "Erase called on database in read-only mode");
+        }
 
-		CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
-		ssKey.reserve(1000);
-		ssKey << key;
-		if (this->activeBatch) {
-			this->activeBatch->Delete(ssKey.str());
-			return true;
-		}
+        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        ssKey.reserve(1000);
+        ssKey << key;
+        if (this->activeBatch) {
+            this->activeBatch->Delete(ssKey.str());
+            return true;
+        }
 
-		leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
-		return (status.ok() || status.IsNotFound());
-	}
+        leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
+        return (status.ok() || status.IsNotFound());
+    }
 
-	template<typename K>
-	bool Exists(const K &key) {
-		CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
-		ssKey.reserve(1000);
-		ssKey << key;
-		std::string unused;
+    template<typename K>
+    bool Exists(const K &key) {
+        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        ssKey.reserve(1000);
+        ssKey << key;
+        std::string unused;
 
-		if (this->activeBatch) {
-			bool deleted;
-			if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
-				return true;
-			}
-		}
+        if (this->activeBatch) {
+            bool deleted;
+            if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
+                return true;
+            }
+        }
 
-		leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
-		return status.IsNotFound() == false;
-	}
+        leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
+        return status.IsNotFound() == false;
+    }
 
 public:
-	bool TxnBegin();
-	bool TxnCommit();
-	bool TxnAbort() {
-		delete this->activeBatch;
-		this->activeBatch = NULL;
-		return true;
-	}
+    bool TxnBegin();
+    bool TxnCommit();
+    bool TxnAbort() {
+        delete this->activeBatch;
+        this->activeBatch = NULL;
+        return true;
+    }
 
-	bool ReadVersion(int &nVersion) {
-		nVersion = 0;
-		return Read(std::string("version"), nVersion);
-	}
+    bool ReadVersion(int &nVersion) {
+        nVersion = 0;
+        return Read(std::string("version"), nVersion);
+    }
 
-	bool WriteVersion(int nVersion) {
-		return Write(std::string("version"), nVersion);
-	}
+    bool WriteVersion(int nVersion) {
+        return Write(std::string("version"), nVersion);
+    }
 
 
-	bool ReadTxIndex(uint256 hash, CTxIndex &txindex);
-	bool UpdateTxIndex(uint256 hash, const CTxIndex &txindex);
-	bool AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight);
-	bool EraseTxIndex(const CTransaction& tx);
-	bool ContainsTx(uint256 hash);
+    bool ReadTxIndex(uint256 hash, CTxIndex &txindex);
+    bool UpdateTxIndex(uint256 hash, const CTxIndex &txindex);
+    bool AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight);
+    bool EraseTxIndex(const CTransaction& tx);
+    bool ContainsTx(uint256 hash);
 
-	bool ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex);
-	bool ReadDiskTx(uint256 hash, CTransaction &tx);
-	bool ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex);
-	bool ReadDiskTx(COutPoint outpoint, CTransaction &tx);
+    bool ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex);
+    bool ReadDiskTx(uint256 hash, CTransaction &tx);
+    bool ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex);
+    bool ReadDiskTx(COutPoint outpoint, CTransaction &tx);
 
-	bool WriteBlockIndex(const CDiskBlockIndex &blockindex);
+    bool WriteBlockIndex(const CDiskBlockIndex &blockindex);
 
-	bool ReadHashBestChain(uint256 &hashBestChain);
-	bool WriteHashBestChain(uint256 hashBestChain);
+    bool ReadHashBestChain(uint256 &hashBestChain);
+    bool WriteHashBestChain(uint256 hashBestChain);
 
-	bool ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust);
-	bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
+    bool ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust);
+    bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
 
-	bool ReadSyncCheckpoint(uint256 &hashCheckpoint);
-	bool WriteSyncCheckpoint(uint256 hashCheckpoint);
+    bool ReadSyncCheckpoint(uint256 &hashCheckpoint);
+    bool WriteSyncCheckpoint(uint256 hashCheckpoint);
 
-	bool ReadCheckpointPubKey(std::string &strPubKey);
-	bool WriteCheckpointPubKey(const std::string &strPubKey);
+    bool ReadCheckpointPubKey(std::string &strPubKey);
+    bool WriteCheckpointPubKey(const std::string &strPubKey);
 
-	bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
-	bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
+    bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
+    bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-	bool LoadBlockIndex();
+    bool LoadBlockIndex();
 };
 
 #endif // BITCOIN_DB_H

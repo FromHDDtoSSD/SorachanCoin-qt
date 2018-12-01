@@ -20,7 +20,9 @@ QT_END_NAMESPACE
 class SendCoinsDialog : public QDialog
 {
     Q_OBJECT
-
+private:
+    SendCoinsDialog (const SendCoinsDialog &); // {}
+    SendCoinsDialog &operator=(const SendCoinsDialog &); // {}
 public:
     explicit SendCoinsDialog(QWidget *parent = 0);
     ~SendCoinsDialog();
@@ -70,3 +72,4 @@ private slots:
 };
 
 #endif // SENDCOINSDIALOG_H
+//@

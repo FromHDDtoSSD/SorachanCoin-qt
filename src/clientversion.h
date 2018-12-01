@@ -18,3 +18,4 @@
 #define DO_STRINGIZE(X) #X
 
 #endif // CLIENTVERSION_H
+//@

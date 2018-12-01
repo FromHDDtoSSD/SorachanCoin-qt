@@ -25,6 +25,9 @@ class Notificator: public QObject
 {
     Q_OBJECT
 
+private:
+    Notificator(const Notificator &); // {}
+    Notificator &operator=(const Notificator &); // {}
 public:
     /** Create a new notificator.
        @note Ownership of trayIcon is not transferred to this object.
@@ -78,3 +81,4 @@ private:
 };
 
 #endif // BITCOIN_QT_NOTIFICATOR_H
+//@

@@ -10,10 +10,10 @@ namespace timestamps
 {
     const unsigned int GENESIS_TIME_STAMP = 1533549600;                 // 06-Aug-2018 10:00:00 UTC
 
-    const unsigned int TARGETS_SWITCH_TIME = 1556668800;				// 01-May-2019 00:00:00 UTC
+    const unsigned int TARGETS_SWITCH_TIME = 1556668800;                // 01-May-2019 00:00:00 UTC
     const unsigned int TARGETS_SWITCH_WORK = 1533636000;                // 07-Aug-2018 10:00:00 UTC
-    const unsigned int CHECKLOCKTIMEVERIFY_SWITCH_TIME = 1556668800;	// 01-May-2019 00:00:00 UTC
-    const unsigned int BLOCKS_ADMIT_HOURS_SWITCH_TIME = 1556668800;		// 01-May-2019 00:00:00 UTC
+    const unsigned int CHECKLOCKTIMEVERIFY_SWITCH_TIME = 1556668800;    // 01-May-2019 00:00:00 UTC
+    const unsigned int BLOCKS_ADMIT_HOURS_SWITCH_TIME = 1556668800;     // 01-May-2019 00:00:00 UTC
 }
 
 namespace blockreward
@@ -38,3 +38,4 @@ namespace blockreward
 }
 
 #endif
+//@

@@ -112,8 +112,9 @@ void setupAmountWidget(QLineEdit *widget, QWidget *parent)
 bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
 {
     // SorachanCoin: check prefix
-    if(uri.scheme() != QString("SorachanCoin"))
+    if(uri.scheme() != QString("SorachanCoin")) {
         return false;
+    }
 
     SendCoinsRecipient rv;
     rv.address = uri.path();
@@ -127,34 +128,28 @@ bool parseBitcoinURI(const QUrl &uri, SendCoinsRecipient *out)
     for (QList<QPair<QString, QString> >::iterator i = items.begin(); i != items.end(); i++)
     {
         bool fShouldReturnFalse = false;
-        if (i->first.startsWith("req-"))
-        {
+        if (i->first.startsWith("req-")) {
             i->first.remove(0, 4);
             fShouldReturnFalse = true;
         }
 
-        if (i->first == "label")
-        {
+        if (i->first == "label") {
             rv.label = i->second;
             fShouldReturnFalse = false;
-        }
-        else if (i->first == "amount")
-        {
-            if(!i->second.isEmpty())
-            {
-                if(!BitcoinUnits::parse(BitcoinUnits::BTC, i->second, &rv.amount))
-                {
+        } else if (i->first == "amount") {
+            if(! i->second.isEmpty()) {
+                if(!BitcoinUnits::parse(BitcoinUnits::BTC, i->second, &rv.amount)) {
                     return false;
                 }
             }
             fShouldReturnFalse = false;
         }
 
-        if (fShouldReturnFalse)
+        if (fShouldReturnFalse) {
             return false;
+        }
     }
-    if(out)
-    {
+    if(out) {
         *out = rv;
     }
     return true;
@@ -166,8 +161,7 @@ bool parseBitcoinURI(QString uri, SendCoinsRecipient *out)
     //
     //    Cannot handle this later, because bitcoin:// will cause Qt to see the part after // as host,
     //    which will lower-case it (and thus invalidate the address).
-    if(uri.startsWith("SorachanCoin://"))
-    {
+    if(uri.startsWith("SorachanCoin://")) {
         uri.replace(0, 10, "SorachanCoin:");
     }
     QUrl uriInstance(uri);
@@ -181,8 +175,7 @@ QString HtmlEscape(const QString& str, bool fMultiLine)
 #else
     QString escaped = str.toHtmlEscaped();
 #endif
-    if(fMultiLine)
-    {
+    if(fMultiLine) {
         escaped = escaped.replace("\n", "<br>\n");
     }
     return escaped;
@@ -195,12 +188,13 @@ QString HtmlEscape(const std::string& str, bool fMultiLine)
 
 void copyEntryData(QAbstractItemView *view, int column, int role)
 {
-    if(!view || !view->selectionModel())
+    if(!view || !view->selectionModel()) {
         return;
+    }
+
     QModelIndexList selection = view->selectionModel()->selectedRows(column);
 
-    if(!selection.isEmpty())
-    {
+    if(! selection.isEmpty()) {
         // Copy first item
         QApplication::clipboard()->setText(selection.at(0).data(role).toString());
     }
@@ -213,44 +207,39 @@ QString getSaveFileName(QWidget *parent, const QString &caption,
 {
     QString selectedFilter;
     QString myDir;
-    if(dir.isEmpty()) // Default to user documents location
-    {
+    if(dir.isEmpty()) { // Default to user documents location
 #if QT_VERSION < 0x050000
         myDir = QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation);
 #else
         myDir = QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation);
 #endif
-    }
-    else
-    {
+    } else {
         myDir = dir;
     }
+
     QString result = QFileDialog::getSaveFileName(parent, caption, myDir, filter, &selectedFilter);
 
     /* Extract first suffix from filter pattern "Description (*.foo)" or "Description (*.foo *.bar ...) */
     QRegExp filter_re(".* \\(\\*\\.(.*)[ \\)]");
     QString selectedSuffix;
-    if(filter_re.exactMatch(selectedFilter))
-    {
+    if(filter_re.exactMatch(selectedFilter)) {
         selectedSuffix = filter_re.cap(1);
     }
 
     /* Add suffix if needed */
     QFileInfo info(result);
-    if(!result.isEmpty())
-    {
-        if(info.suffix().isEmpty() && !selectedSuffix.isEmpty())
-        {
+    if(! result.isEmpty()) {
+        if(info.suffix().isEmpty() && !selectedSuffix.isEmpty()) {
             /* No suffix specified, add selected suffix */
-            if(!result.endsWith("."))
+            if(!result.endsWith(".")) {
                 result.append(".");
+            }
             result.append(selectedSuffix);
         }
     }
 
     /* Return selected suffix if asked to */
-    if(selectedSuffixOut)
-    {
+    if(selectedSuffixOut) {
         *selectedSuffixOut = selectedSuffix;
     }
     return result;
@@ -258,12 +247,9 @@ QString getSaveFileName(QWidget *parent, const QString &caption,
 
 Qt::ConnectionType blockingGUIThreadConnection()
 {
-    if(QThread::currentThread() != QCoreApplication::instance()->thread())
-    {
+    if(QThread::currentThread() != QCoreApplication::instance()->thread()) {
         return Qt::BlockingQueuedConnection;
-    }
-    else
-    {
+    } else {
         return Qt::DirectConnection;
     }
 }
@@ -271,7 +257,9 @@ Qt::ConnectionType blockingGUIThreadConnection()
 bool checkPoint(const QPoint &p, const QWidget *w)
 {
     QWidget *atW = qApp->widgetAt(w->mapToGlobal(p));
-    if (!atW) return false;
+    if (! atW) {
+        return false;
+    }
     return atW->topLevelWidget() == w;
 }
 
@@ -286,36 +274,35 @@ bool isObscured(QWidget *w)
 
 void openDebugLogfile()
 {
-	boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
+    boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
 
     /* Open debug.log with the associated application */
-    if (boost::filesystem::exists(pathDebug))
+    if (boost::filesystem::exists(pathDebug)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathDebug.string())));
+    }
 }
 
 void openConfigfile()
 {
-	boost::filesystem::path pathConfig = iofs::GetConfigFile();
+    boost::filesystem::path pathConfig = iofs::GetConfigFile();
 
     /* Open SorachanCoin.conf with the associated application */
-    if (boost::filesystem::exists(pathConfig))
+    if (boost::filesystem::exists(pathConfig)) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(QString::fromStdString(pathConfig.string())));
+    }
 }
 
 ToolTipToRichTextFilter::ToolTipToRichTextFilter(int size_threshold, QObject *parent) :
     QObject(parent), size_threshold(size_threshold)
 {
-
 }
 
 bool ToolTipToRichTextFilter::eventFilter(QObject *obj, QEvent *evt)
 {
-    if(evt->type() == QEvent::ToolTipChange)
-    {
-        QWidget *widget = static_cast<QWidget*>(obj);
+    if(evt->type() == QEvent::ToolTipChange) {
+        QWidget *widget = static_cast<QWidget *>(obj);
         QString tooltip = widget->toolTip();
-        if(tooltip.size() > size_threshold && !tooltip.startsWith("<qt>") && !Qt::mightBeRichText(tooltip))
-        {
+        if(tooltip.size() > size_threshold && !tooltip.startsWith("<qt>") && !Qt::mightBeRichText(tooltip)) {
             // Prefix <qt/> to make sure Qt detects this as rich text
             // Escape the current message as HTML and replace \n by <br>
             tooltip = "<qt>" + HtmlEscape(tooltip, true) + "<qt/>";
@@ -343,21 +330,19 @@ bool SetStartOnSystemStartup(bool fAutoStart)
     // If the shortcut exists already, remove it for updating
     boost::filesystem::remove(StartupShortcutPath());
 
-    if (fAutoStart)
-    {
+    if (fAutoStart) {
         CoInitialize(NULL);
 
         // Get a pointer to the IShellLink interface.
-        IShellLink* psl = NULL;
+        IShellLink *psl = NULL;
         HRESULT hres = CoCreateInstance(CLSID_ShellLink, NULL,
                                 CLSCTX_INPROC_SERVER, IID_IShellLink,
-                                reinterpret_cast<void**>(&psl));
+                                reinterpret_cast<void **>(&psl));
 
-        if (SUCCEEDED(hres))
-        {
+        if (SUCCEEDED(hres)) {
             // Get the current executable path
             TCHAR pszExePath[MAX_PATH];
-            GetModuleFileName(NULL, pszExePath, sizeof(pszExePath));
+            ::GetModuleFileName(NULL, pszExePath, sizeof(pszExePath));
 
             TCHAR pszArgs[5] = TEXT("-min");
 
@@ -373,11 +358,10 @@ bool SetStartOnSystemStartup(bool fAutoStart)
             IPersistFile* ppf = NULL;
             hres = psl->QueryInterface(IID_IPersistFile,
                                        reinterpret_cast<void**>(&ppf));
-            if (SUCCEEDED(hres))
-            {
+            if (SUCCEEDED(hres)) {
                 WCHAR pwsz[MAX_PATH];
                 // Ensure that the string is ANSI.
-                MultiByteToWideChar(CP_ACP, 0, StartupShortcutPath().string().c_str(), -1, pwsz, MAX_PATH);
+                ::MultiByteToWideChar(CP_ACP, 0, StartupShortcutPath().string().c_str(), -1, pwsz, MAX_PATH);
                 // Save the link by calling IPersistFile::Save.
                 hres = ppf->Save(pwsz, TRUE);
                 ppf->Release();
@@ -402,10 +386,10 @@ boost::filesystem::path static GetAutostartDir()
 {
     namespace fs = boost::filesystem;
 
-    char* pszConfigHome = getenv("XDG_CONFIG_HOME");
-    if (pszConfigHome) return fs::path(pszConfigHome) / "autostart";
-    char* pszHome = getenv("HOME");
-    if (pszHome) return fs::path(pszHome) / ".config" / "autostart";
+    char *pszConfigHome = getenv("XDG_CONFIG_HOME");
+    if (pszConfigHome) {return fs::path(pszConfigHome) / "autostart";}
+    char *pszHome = getenv("HOME");
+    if (pszHome) {return fs::path(pszHome) / ".config" / "autostart";}
     return fs::path();
 }
 
@@ -417,16 +401,19 @@ boost::filesystem::path static GetAutostartFilePath()
 bool GetStartOnSystemStartup()
 {
     boost::filesystem::ifstream optionFile(GetAutostartFilePath());
-    if (!optionFile.good())
+    if (! optionFile.good()) {
         return false;
+    }
+
     // Scan through file for "Hidden=true":
     std::string line;
-    while (!optionFile.eof())
+    while (! optionFile.eof())
     {
         getline(optionFile, line);
         if (line.find("Hidden") != std::string::npos &&
-            line.find("true") != std::string::npos)
+            line.find("true") != std::string::npos) {
             return false;
+        }
     }
     optionFile.close();
 
@@ -435,20 +422,22 @@ bool GetStartOnSystemStartup()
 
 bool SetStartOnSystemStartup(bool fAutoStart)
 {
-    if (!fAutoStart)
+    if (! fAutoStart) {
         boost::filesystem::remove(GetAutostartFilePath());
-    else
-    {
+    } else {
         char pszExePath[MAX_PATH+1];
         memset(pszExePath, 0, sizeof(pszExePath));
-        if (readlink("/proc/self/exe", pszExePath, sizeof(pszExePath)-1) == -1)
+        if (readlink("/proc/self/exe", pszExePath, sizeof(pszExePath)-1) == -1) {
             return false;
+        }
 
         boost::filesystem::create_directories(GetAutostartDir());
 
         boost::filesystem::ofstream optionFile(GetAutostartFilePath(), std::ios_base::out|std::ios_base::trunc);
-        if (!optionFile.good())
+        if (! optionFile.good()) {
             return false;
+        }
+
         // Write a bitcoin.desktop file to the autostart directory:
         optionFile << "[Desktop Entry]\n";
         optionFile << "Type=Application\n";
@@ -474,11 +463,11 @@ HelpMessageBox::HelpMessageBox(QWidget *parent) :
     QMessageBox(parent)
 {
     header = tr("SorachanCoin-qt") + " " + tr("version") + " " +
-		QString::fromStdString(format_version::FormatFullVersion()) + "\n\n" +
+        QString::fromStdString(format_version::FormatFullVersion()) + "\n\n" +
         tr("Usage:") + "\n" +
         "  SorachanCoin-qt [" + tr("command-line options") + "]                     " + "\n";
 
-	coreOptions = QString::fromStdString(entry::HelpMessage());
+    coreOptions = QString::fromStdString(entry::HelpMessage());
 
     uiOptions = tr("UI options") + ":\n" +
         "  -lang=<lang>           " + tr("Set language, for example \"de_DE\" (default: system locale)") + "\n" +
@@ -507,11 +496,11 @@ void HelpMessageBox::printToConsole()
 void HelpMessageBox::showOrPrint()
 {
 #if defined(WIN32)
-        // On Windows, show a message box, as there is no stderr/stdout in windowed applications
-        exec();
+    // On Windows, show a message box, as there is no stderr/stdout in windowed applications
+    exec();
 #else
-        // On other operating systems, print help text to console
-        printToConsole();
+    // On other operating systems, print help text to console
+    printToConsole();
 #endif
 }
 
@@ -523,17 +512,20 @@ QString formatDurationStr(int secs)
     int mins = (secs % 3600) / 60;
     int seconds = secs % 60;
 
-    if (days)
+    if (days) {
         strList.append(QString(QObject::tr("%1 d")).arg(days));
-    if (hours)
+    }
+    if (hours) {
         strList.append(QString(QObject::tr("%1 h")).arg(hours));
-    if (mins)
+    }
+    if (mins) {
         strList.append(QString(QObject::tr("%1 m")).arg(mins));
-    if (seconds || (!days && !hours && !mins))
+    }
+    if (seconds || (!days && !hours && !mins)) {
         strList.append(QString(QObject::tr("%1 s")).arg(seconds));
+    }
 
     return strList.join(" ");
 }
 
 } // namespace GUIUtil
-

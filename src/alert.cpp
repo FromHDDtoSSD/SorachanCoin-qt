@@ -1,7 +1,7 @@
 //
 // Alert system
 //
-//
+
 #include <boost/foreach.hpp>
 #include <map>
 
@@ -10,9 +10,6 @@
 #include "net.h"
 #include "ui_interface.h"
 
-//
-// static member variables
-//
 CCriticalSection CUnsignedAlert::cs_mapAlerts;
 std::map<uint256, CAlert> CAlert::mapAlerts;
 const char *CAlert::pszMainKey = "04c98776bba066e7dafe8c132375543e90fa59fb9b42437e3e419b67b6715040f6220c589c17715a4b4cfe28d4aaac5bb3a5d8322be8bfdbd6260b38f0e4f8ac4b";
@@ -45,42 +42,42 @@ void CUnsignedAlert::SetNull()
 
 std::string CUnsignedAlert::ToString() const
 {
-	std::string strSetCancel;
+    std::string strSetCancel;
     BOOST_FOREACH(int n, setCancel)
-	{
-		strSetCancel += strprintf("%d ", n);
-	}
+    {
+        strSetCancel += strprintf("%d ", n);
+    }
 
-	std::string strSetSubVer;
+    std::string strSetSubVer;
     BOOST_FOREACH(std::string str, setSubVer)
-	{
-		strSetSubVer += "\"" + str + "\" ";
-	}
+    {
+        strSetSubVer += "\"" + str + "\" ";
+    }
 
-	return strprintf(
-		"CAlert(\n"
-		"    nVersion     = %d\n"
-		"    nRelayUntil  = %" PRId64 "\n"
-		"    nExpiration  = %" PRId64 "\n"
-		"    nID          = %d\n"
-		"    nCancel      = %d\n"
-		"    setCancel    = %s\n"
-		"    nMinVer      = %d\n"
-		"    nMaxVer      = %d\n"
-		"    setSubVer    = %s\n"
-		"    nPriority    = %d\n"
-		"    strComment   = \"%s\"\n"
-		"    strStatusBar = \"%s\"\n"
-		")\n",
+    return strprintf(
+        "CAlert(\n"
+        "    nVersion     = %d\n"
+        "    nRelayUntil  = %" PRId64 "\n"
+        "    nExpiration  = %" PRId64 "\n"
+        "    nID          = %d\n"
+        "    nCancel      = %d\n"
+        "    setCancel    = %s\n"
+        "    nMinVer      = %d\n"
+        "    nMaxVer      = %d\n"
+        "    setSubVer    = %s\n"
+        "    nPriority    = %d\n"
+        "    strComment   = \"%s\"\n"
+        "    strStatusBar = \"%s\"\n"
+        ")\n",
         nVersion,
         nRelayUntil,
         nExpiration,
         nID,
         nCancel,
-		strSetCancel.c_str(),
+        strSetCancel.c_str(),
         nMinVer,
         nMaxVer,
-		strSetSubVer.c_str(),
+        strSetSubVer.c_str(),
         nPriority,
         strComment.c_str(),
         strStatusBar.c_str());
@@ -88,7 +85,7 @@ std::string CUnsignedAlert::ToString() const
 
 void CAlert::SetNull()
 {
-	CUnsignedAlert::SetNull();
+    CUnsignedAlert::SetNull();
     vchMsg.clear();
     vchSig.clear();
 }
@@ -111,14 +108,14 @@ bool CAlert::IsInEffect() const
 bool CAlert::Cancels(const CAlert &alert) const
 {
     if (! IsInEffect()) {
-        return false;	// this was a no-op before 31403
-	}
+        return false;    // this was a no-op before 31403
+    }
     return (alert.nID <= nCancel || setCancel.count(alert.nID));
 }
 
 bool CAlert::AppliesTo(int nVersion, std::string strSubVerIn) const
 {
-	// TODO: rework for client-version-embedded-in-strSubVer ?
+    // TODO: rework for client-version-embedded-in-strSubVer ?
     return (IsInEffect() &&
             nMinVer <= nVersion &&
             nVersion <= nMaxVer &&
@@ -133,75 +130,75 @@ bool CAlert::AppliesToMe() const
 bool CAlert::RelayTo(CNode* pnode) const
 {
     if (! IsInEffect()) {
-		return false;
-	}
+        return false;
+    }
 
-	//
-	// don't relay to nodes which haven't sent their version message
-	//
-	if (pnode->nVersion == 0) {
-		return false;
-	}
+    //
+    // don't relay to nodes which haven't sent their version message
+    //
+    if (pnode->nVersion == 0) {
+        return false;
+    }
 
-	//
-	// returns true if wasn't already contained in the set
-	//
-	if (pnode->setKnown.insert(GetHash()).second) {
-		if (AppliesTo(pnode->nVersion, pnode->strSubVer) ||
-			AppliesToMe() ||
+    //
+    // returns true if wasn't already contained in the set
+    //
+    if (pnode->setKnown.insert(GetHash()).second) {
+        if (AppliesTo(pnode->nVersion, pnode->strSubVer) ||
+            AppliesToMe() ||
             bitsystem::GetAdjustedTime() < nRelayUntil) {
-			pnode->PushMessage("alert", *this);
-			return true;
-		}
-	}
-	return false;
+            pnode->PushMessage("alert", *this);
+            return true;
+        }
+    }
+    return false;
 }
 
 bool CAlert::CheckSignature() const
 {
-	CPubKey key;
+    CPubKey key;
     key.Set(hex::ParseHex(args_bool::fTestNet ? pszTestKey : pszMainKey));
     if (! key.Verify(hash_basis::Hash(vchMsg.begin(), vchMsg.end()), vchSig)) {
-		return print::error("CAlert::CheckSignature() : verify signature failed");
-	}
+        return print::error("CAlert::CheckSignature() : verify signature failed");
+    }
 
-	// Now unserialize the data
-	CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
-	sMsg >> *(CUnsignedAlert *)this;
-	return true;
+    // Now unserialize the data
+    CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
+    sMsg >> *(CUnsignedAlert *)this;
+    return true;
 }
 
 CAlert CAlert::getAlertByHash(const uint256 &hash)
 {
-	CAlert retval;
-	{
-		LOCK(CUnsignedAlert::cs_mapAlerts);
-		std::map<uint256, CAlert>::iterator mi = CAlert::mapAlerts.find(hash);
-		if(mi != CAlert::mapAlerts.end()) {
-			retval = mi->second;
-		}
-	}
-	return retval;
+    CAlert retval;
+    {
+        LOCK(CUnsignedAlert::cs_mapAlerts);
+        std::map<uint256, CAlert>::iterator mi = CAlert::mapAlerts.find(hash);
+        if(mi != CAlert::mapAlerts.end()) {
+            retval = mi->second;
+        }
+    }
+    return retval;
 }
 
 bool CAlert::ProcessAlert()
 {
     if (! CheckSignature()) {
-		return false;
-	}
+        return false;
+    }
     if (! IsInEffect()) {
-		return false;
-	}
+        return false;
+    }
 
-	//
-	// alert.nID=max is reserved for if the alert key is
-	// compromised. It must have a pre-defined message,
-	// must never expire, must apply to all versions,
-	// and must cancel all previous alerts or it will be ignored (so an attacker can't send an "everything is OK, don't panic" version that cannot be overridden):
-	//
-	int maxInt = std::numeric_limits<int>::max();
-	if (nID == maxInt) {
-		if (!(
+    //
+    // alert.nID=max is reserved for if the alert key is
+    // compromised. It must have a pre-defined message,
+    // must never expire, must apply to all versions,
+    // and must cancel all previous alerts or it will be ignored (so an attacker can't send an "everything is OK, don't panic" version that cannot be overridden):
+    //
+    int maxInt = std::numeric_limits<int>::max();
+    if (nID == maxInt) {
+        if (!(
                 nExpiration == maxInt &&
                 nCancel == (maxInt-1) &&
                 nMinVer == 0 &&
@@ -209,50 +206,50 @@ bool CAlert::ProcessAlert()
                 setSubVer.empty() &&
                 nPriority == maxInt &&
                 strStatusBar == "URGENT: Alert key compromised, upgrade required"
-				)) {
-			return false;
-		}
-	}
+                )) {
+            return false;
+        }
+    }
 
-	{
-		LOCK(CUnsignedAlert::cs_mapAlerts);
+    {
+        LOCK(CUnsignedAlert::cs_mapAlerts);
 
-		// Cancel previous alerts
-		for (std::map<uint256, CAlert>::iterator mi = CAlert::mapAlerts.begin(); mi != CAlert::mapAlerts.end();)
-		{
-			const CAlert &alert = (*mi).second;
-			if (Cancels(alert)) {
-				printf("cancelling alert %d\n", alert.nID);
-				CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
-				CAlert::mapAlerts.erase(mi++);
-			} else if (! alert.IsInEffect()) {
-				printf("expiring alert %d\n", alert.nID);
-				CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
-				CAlert::mapAlerts.erase(mi++);
-			} else {
-				mi++;
-			}
-		}
+        // Cancel previous alerts
+        for (std::map<uint256, CAlert>::iterator mi = CAlert::mapAlerts.begin(); mi != CAlert::mapAlerts.end();)
+        {
+            const CAlert &alert = (*mi).second;
+            if (Cancels(alert)) {
+                printf("cancelling alert %d\n", alert.nID);
+                CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+                CAlert::mapAlerts.erase(mi++);
+            } else if (! alert.IsInEffect()) {
+                printf("expiring alert %d\n", alert.nID);
+                CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+                CAlert::mapAlerts.erase(mi++);
+            } else {
+                mi++;
+            }
+        }
 
-		// Check if this alert has been cancelled
-		BOOST_FOREACH(PAIRTYPE(const uint256, CAlert)&item, CAlert::mapAlerts)
-		{
-			const CAlert &alert = item.second;
-			if (alert.Cancels(*this)) {
-				printf("alert already cancelled by %d\n", alert.nID);
-				return false;
-			}
-		}
+        // Check if this alert has been cancelled
+        BOOST_FOREACH(PAIRTYPE(const uint256, CAlert)&item, CAlert::mapAlerts)
+        {
+            const CAlert &alert = item.second;
+            if (alert.Cancels(*this)) {
+                printf("alert already cancelled by %d\n", alert.nID);
+                return false;
+            }
+        }
 
-		// Add to mapAlerts
+        // Add to mapAlerts
         CAlert::mapAlerts.insert(std::make_pair(GetHash(), *this));
 
-		// Notify UI if it applies to me
-		if(AppliesToMe()) {
+        // Notify UI if it applies to me
+        if(AppliesToMe()) {
             CClientUIInterface::uiInterface.NotifyAlertChanged(GetHash(), CT_NEW);
-		}
-	}
+        }
+    }
 
     printf("accepted alert %d, AppliesToMe()=%d\n", nID, AppliesToMe());
-	return true;
+    return true;
 }

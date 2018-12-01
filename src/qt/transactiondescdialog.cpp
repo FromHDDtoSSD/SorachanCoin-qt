@@ -11,6 +11,10 @@ TransactionDescDialog::TransactionDescDialog(const QModelIndex &idx, QWidget *pa
     QWidget(parent, DIALOGWINDOWHINTS),
     ui(new Ui::TransactionDescDialog)
 {
+    if(! ui){
+        throw std::runtime_error("TransactionDescDialog Failed to allocate memory.");
+    }
+
     ui->setupUi(this);
     QString desc = idx.data(TransactionTableModel::LongDescriptionRole).toString();
     ui->detailText->setHtml(desc);
@@ -24,13 +28,11 @@ TransactionDescDialog::~TransactionDescDialog()
 void TransactionDescDialog::keyPressEvent(QKeyEvent *event)
 {
 #ifdef ANDROID
-    if(event->key() == Qt::Key_Back)
-    {
+    if(event->key() == Qt::Key_Back) {
         close();
     }
 #else
-    if(event->key() == Qt::Key_Escape)
-    {
+    if(event->key() == Qt::Key_Escape) {
         close();
     }
 #endif

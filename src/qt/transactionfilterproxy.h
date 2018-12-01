@@ -8,6 +8,9 @@
 class TransactionFilterProxy : public QSortFilterProxyModel
 {
     Q_OBJECT
+private:
+    TransactionFilterProxy(const TransactionFilterProxy &); // {}
+    TransactionFilterProxy &operator=(const TransactionFilterProxy &); // {}
 public:
     explicit TransactionFilterProxy(QObject *parent = 0);
 
@@ -50,3 +53,4 @@ public slots:
 };
 
 #endif // TRANSACTIONFILTERPROXY_H
+//@

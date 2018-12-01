@@ -25,6 +25,9 @@ QT_END_NAMESPACE
 
 class SendCoinsRecipient
 {
+private:
+    //SendCoinsRecipient(const SendCoinsRecipient &); // {}
+    //SendCoinsRecipient &operator=(const SendCoinsRecipient &); // {}
 public:
     QString address;
     QString label;
@@ -35,7 +38,9 @@ public:
 class WalletModel : public QObject
 {
     Q_OBJECT
-
+private:
+    WalletModel(const WalletModel &); // {}
+    WalletModel &operator=(const WalletModel &); // {}
 public:
     explicit WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent = 0);
     ~WalletModel();
@@ -128,15 +133,15 @@ public:
 
     UnlockContext requestUnlock();
 
-    bool getPubKey(const CKeyID &address, CPubKey& vchPubKeyOut) const;
-    void getOutputs(const std::vector<COutPoint>& vOutpoints, std::vector<COutput>& vOutputs);
-    void listCoins(std::map<QString, std::vector<COutput> >& mapCoins) const;
+    bool getPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const;
+    void getOutputs(const std::vector<COutPoint> &vOutpoints, std::vector<COutput> &vOutputs);
+    void listCoins(std::map<QString, std::vector<COutput> > &mapCoins) const;
     bool isLockedCoin(uint256 hash, unsigned int n) const;
-    void lockCoin(COutPoint& output);
-    void unlockCoin(COutPoint& output);
-    void listLockedCoins(std::vector<COutPoint>& vOutpts);
+    void lockCoin(COutPoint &output);
+    void unlockCoin(COutPoint &output);
+    void listLockedCoins(std::vector<COutPoint> &vOutpts);
     void clearOrphans();
-    CWallet* getWallet();
+    CWallet *getWallet();
 
 private:
     CWallet *wallet;
@@ -201,3 +206,4 @@ signals:
 
 
 #endif // WALLETMODEL_H
+//@

@@ -7,13 +7,14 @@
 
 namespace ntp_ext
 {
-	void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault=tcp_domain::strLocal);
+    void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault=tcp_domain::strLocal);
 
-	int64_t NtpGetTime(CNetAddr &ip);
-	int64_t NtpGetTime(const std::string &strHostName);
+    int64_t NtpGetTime(CNetAddr &ip);
+    int64_t NtpGetTime(const std::string &strHostName);
 
-	int64_t GetNtpOffset();
-	void ThreadNtpSamples(void *parg);
+    int64_t GetNtpOffset();
+    void ThreadNtpSamples(void *parg);
 }
 
 #endif
+//@

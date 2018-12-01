@@ -38,149 +38,158 @@ TransactionView::TransactionView(QWidget *parent) :
     QWidget(parent), model(0), transactionProxyModel(0),
     transactionView(0)
 {
-    // Build filter row
-    setContentsMargins(0,0,0,0);
+    try {
 
-    QHBoxLayout *hlayout = new QHBoxLayout();
-    hlayout->setContentsMargins(0,0,0,0);
+        // Build filter row
+        setContentsMargins(0,0,0,0);
+
+        QHBoxLayout *hlayout = new QHBoxLayout();
+        hlayout->setContentsMargins(0,0,0,0);
 #ifdef Q_OS_MAC
-    hlayout->setSpacing(5);
-    hlayout->addSpacing(26);
+        hlayout->setSpacing(5);
+        hlayout->addSpacing(26);
 #else
-    hlayout->setSpacing(0);
-    hlayout->addSpacing(23);
+        hlayout->setSpacing(0);
+        hlayout->addSpacing(23);
 #endif
 
-    dateWidget = new QComboBox(this);
+        dateWidget = new QComboBox(this);
 #ifdef Q_OS_MAC
-    dateWidget->setFixedWidth(121);
+        dateWidget->setFixedWidth(121);
 #else
-    dateWidget->setFixedWidth(120);
+        dateWidget->setFixedWidth(120);
 #endif
-    dateWidget->addItem(tr("All"), All);
-    dateWidget->addItem(tr("Today"), Today);
-    dateWidget->addItem(tr("This week"), ThisWeek);
-    dateWidget->addItem(tr("This month"), ThisMonth);
-    dateWidget->addItem(tr("Last month"), LastMonth);
-    dateWidget->addItem(tr("This year"), ThisYear);
-    dateWidget->addItem(tr("Range..."), Range);
-    hlayout->addWidget(dateWidget);
+        dateWidget->addItem(tr("All"), All);
+        dateWidget->addItem(tr("Today"), Today);
+        dateWidget->addItem(tr("This week"), ThisWeek);
+        dateWidget->addItem(tr("This month"), ThisMonth);
+        dateWidget->addItem(tr("Last month"), LastMonth);
+        dateWidget->addItem(tr("This year"), ThisYear);
+        dateWidget->addItem(tr("Range..."), Range);
+        hlayout->addWidget(dateWidget);
 
-    typeWidget = new QComboBox(this);
+        typeWidget = new QComboBox(this);
 #ifdef Q_OS_MAC
-    typeWidget->setFixedWidth(121);
+        typeWidget->setFixedWidth(121);
 #else
-    typeWidget->setFixedWidth(120);
+        typeWidget->setFixedWidth(120);
 #endif
 
-    typeWidget->addItem(tr("All"), TransactionFilterProxy::ALL_TYPES);
-    typeWidget->addItem(tr("Received with"), TransactionFilterProxy::TYPE(TransactionRecord::RecvWithAddress) |
-                                        TransactionFilterProxy::TYPE(TransactionRecord::RecvFromOther));
-    typeWidget->addItem(tr("Sent to"), TransactionFilterProxy::TYPE(TransactionRecord::SendToAddress) |
-                                  TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
-    typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
-    typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
-    typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
+        typeWidget->addItem(tr("All"), TransactionFilterProxy::ALL_TYPES);
+        typeWidget->addItem(tr("Received with"), TransactionFilterProxy::TYPE(TransactionRecord::RecvWithAddress) |
+                                                 TransactionFilterProxy::TYPE(TransactionRecord::RecvFromOther));
+        typeWidget->addItem(tr("Sent to"), TransactionFilterProxy::TYPE(TransactionRecord::SendToAddress) |
+                                           TransactionFilterProxy::TYPE(TransactionRecord::SendToOther));
+        typeWidget->addItem(tr("To yourself"), TransactionFilterProxy::TYPE(TransactionRecord::SendToSelf));
+        typeWidget->addItem(tr("Mined"), TransactionFilterProxy::TYPE(TransactionRecord::Generated));
+        typeWidget->addItem(tr("Other"), TransactionFilterProxy::TYPE(TransactionRecord::Other));
 
-    hlayout->addWidget(typeWidget);
+        hlayout->addWidget(typeWidget);
 
-    addressWidget = new QLineEdit(this);
+        addressWidget = new QLineEdit(this);
 #if QT_VERSION >= 0x040700
-    /* Do not move this to the XML file, Qt before 4.7 will choke on it */
-    addressWidget->setPlaceholderText(tr("Enter address or label to search"));
+        /* Do not move this to the XML file, Qt before 4.7 will choke on it */
+        addressWidget->setPlaceholderText(tr("Enter address or label to search"));
 #endif
-    hlayout->addWidget(addressWidget);
+        hlayout->addWidget(addressWidget);
 
-    amountWidget = new QLineEdit(this);
+        amountWidget = new QLineEdit(this);
 #if QT_VERSION >= 0x040700
-    /* Do not move this to the XML file, Qt before 4.7 will choke on it */
-    amountWidget->setPlaceholderText(tr("Min amount"));
+        /* Do not move this to the XML file, Qt before 4.7 will choke on it */
+        amountWidget->setPlaceholderText(tr("Min amount"));
 #endif
 #ifdef Q_OS_MAC
-    amountWidget->setFixedWidth(97);
+        amountWidget->setFixedWidth(97);
 #else
-    amountWidget->setFixedWidth(100);
+        amountWidget->setFixedWidth(100);
 #endif
-    amountWidget->setValidator(new QDoubleValidator(0, 1e20, 8, this));
-    hlayout->addWidget(amountWidget);
+        amountWidget->setValidator(new QDoubleValidator(0, 1e20, 8, this));
+        hlayout->addWidget(amountWidget);
 
-    QVBoxLayout *vlayout = new QVBoxLayout(this);
-    vlayout->setContentsMargins(0,0,0,0);
-    vlayout->setSpacing(0);
+        QVBoxLayout *vlayout = new QVBoxLayout(this);
+        vlayout->setContentsMargins(0,0,0,0);
+        vlayout->setSpacing(0);
 
-    QTableView *view = new QTableView(this);
-    vlayout->addLayout(hlayout);
-    vlayout->addWidget(createDateRangeWidget());
-    vlayout->addWidget(view);
-    vlayout->setSpacing(0);
-    int width = view->verticalScrollBar()->sizeHint().width();
-    // Cover scroll bar width with spacing
+        QTableView *view = new QTableView(this);
+        vlayout->addLayout(hlayout);
+        vlayout->addWidget(createDateRangeWidget());
+        vlayout->addWidget(view);
+        vlayout->setSpacing(0);
+        int width = view->verticalScrollBar()->sizeHint().width();
+        // Cover scroll bar width with spacing
 #ifdef Q_OS_MAC
-    hlayout->addSpacing(width+2);
+        hlayout->addSpacing(width+2);
 #else
-    hlayout->addSpacing(width);
+        hlayout->addSpacing(width);
 #endif
-    // Always show scroll bar
-    view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-    view->setTabKeyNavigation(false);
-    view->setContextMenuPolicy(Qt::CustomContextMenu);
+        // Always show scroll bar
+        view->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        view->setTabKeyNavigation(false);
+        view->setContextMenuPolicy(Qt::CustomContextMenu);
 
-    transactionView = view;
+        transactionView = view;
 
-    // Actions
-    QAction *copyAddressAction = new QAction(tr("Copy address"), this);
-    QAction *copyLabelAction = new QAction(tr("Copy label"), this);
-    QAction *copyAmountAction = new QAction(tr("Copy amount"), this);
-    QAction *copyTxIDAction = new QAction(tr("Copy transaction ID"), this);
-    QAction *editLabelAction = new QAction(tr("Edit label"), this);
-    QAction *showDetailsAction = new QAction(tr("Show transaction details"), this);
-    QAction *clearOrphansAction = new QAction(tr("Clear orphans"), this);
+        // Actions
+        QAction *copyAddressAction = new QAction(tr("Copy address"), this);
+        QAction *copyLabelAction = new QAction(tr("Copy label"), this);
+        QAction *copyAmountAction = new QAction(tr("Copy amount"), this);
+        QAction *copyTxIDAction = new QAction(tr("Copy transaction ID"), this);
+        QAction *editLabelAction = new QAction(tr("Edit label"), this);
+        QAction *showDetailsAction = new QAction(tr("Show transaction details"), this);
+        QAction *clearOrphansAction = new QAction(tr("Clear orphans"), this);
 
-    contextMenu = new QMenu();
-    contextMenu->addAction(copyAddressAction);
-    contextMenu->addAction(copyLabelAction);
-    contextMenu->addAction(copyAmountAction);
-    contextMenu->addAction(copyTxIDAction);
-    contextMenu->addAction(editLabelAction);
-    contextMenu->addAction(showDetailsAction);
-    contextMenu->addSeparator();
-    contextMenu->addAction(clearOrphansAction);
+        contextMenu = new QMenu();
+        contextMenu->addAction(copyAddressAction);
+        contextMenu->addAction(copyLabelAction);
+        contextMenu->addAction(copyAmountAction);
+        contextMenu->addAction(copyTxIDAction);
+        contextMenu->addAction(editLabelAction);
+        contextMenu->addAction(showDetailsAction);
+        contextMenu->addSeparator();
+        contextMenu->addAction(clearOrphansAction);
 
-    mapperThirdPartyTxUrls = new QSignalMapper(this);
+        mapperThirdPartyTxUrls = new QSignalMapper(this);
 
-    // Connect actions
-    connect(mapperThirdPartyTxUrls, SIGNAL(mapped(QString)), this, SLOT(openThirdPartyTxUrl(QString)));
+        // Connect actions
+        connect(mapperThirdPartyTxUrls, SIGNAL(mapped(QString)), this, SLOT(openThirdPartyTxUrl(QString)));
 
-    connect(dateWidget, SIGNAL(activated(int)), this, SLOT(chooseDate(int)));
-    connect(typeWidget, SIGNAL(activated(int)), this, SLOT(chooseType(int)));
-    connect(addressWidget, SIGNAL(textChanged(QString)), this, SLOT(changedPrefix(QString)));
-    connect(amountWidget, SIGNAL(textChanged(QString)), this, SLOT(changedAmount(QString)));
+        connect(dateWidget, SIGNAL(activated(int)), this, SLOT(chooseDate(int)));
+        connect(typeWidget, SIGNAL(activated(int)), this, SLOT(chooseType(int)));
+        connect(addressWidget, SIGNAL(textChanged(QString)), this, SLOT(changedPrefix(QString)));
+        connect(amountWidget, SIGNAL(textChanged(QString)), this, SLOT(changedAmount(QString)));
 
-    connect(view, SIGNAL(doubleClicked(QModelIndex)), this, SIGNAL(doubleClicked(QModelIndex)));
-    connect(view, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
+        connect(view, SIGNAL(doubleClicked(QModelIndex)), this, SIGNAL(doubleClicked(QModelIndex)));
+        connect(view, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
 
-    connect(copyAddressAction, SIGNAL(triggered()), this, SLOT(copyAddress()));
-    connect(copyLabelAction, SIGNAL(triggered()), this, SLOT(copyLabel()));
-    connect(copyAmountAction, SIGNAL(triggered()), this, SLOT(copyAmount()));
-    connect(copyTxIDAction, SIGNAL(triggered()), this, SLOT(copyTxID()));
-    connect(editLabelAction, SIGNAL(triggered()), this, SLOT(editLabel()));
-    connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
-    connect(clearOrphansAction, SIGNAL(triggered()), this, SLOT(clearOrphans()));
+        connect(copyAddressAction, SIGNAL(triggered()), this, SLOT(copyAddress()));
+        connect(copyLabelAction, SIGNAL(triggered()), this, SLOT(copyLabel()));
+        connect(copyAmountAction, SIGNAL(triggered()), this, SLOT(copyAmount()));
+        connect(copyTxIDAction, SIGNAL(triggered()), this, SLOT(copyTxID()));
+        connect(editLabelAction, SIGNAL(triggered()), this, SLOT(editLabel()));
+        connect(showDetailsAction, SIGNAL(triggered()), this, SLOT(showDetails()));
+        connect(clearOrphansAction, SIGNAL(triggered()), this, SLOT(clearOrphans()));
+
+    } catch (const std::bad_alloc &) {
+        throw std::runtime_error("TransactionView Failed to allocate memory.");
+    }
 }
 
 void TransactionView::setModel(WalletModel *model, bool fShoudAddThirdPartyURL)
 {
     this->model = model;
-    if(model)
-    {
-        transactionProxyModel = new TransactionFilterProxy(this);
+    if(model) {
+        transactionProxyModel = new (std::nothrow) TransactionFilterProxy(this);
+        if(! transactionProxyModel){
+            throw std::runtime_error("TransactionView Failed to allocate memory.");
+        }
+
         transactionProxyModel->setSourceModel(model->getTransactionTableModel());
         transactionProxyModel->setDynamicSortFilter(true);
         transactionProxyModel->setSortCaseSensitivity(Qt::CaseInsensitive);
         transactionProxyModel->setFilterCaseSensitivity(Qt::CaseInsensitive);
 
         transactionProxyModel->setSortRole(Qt::EditRole);
-//        transactionProxyModel->setSortRole(TransactionTableModel::DateRole);
+        // transactionProxyModel->setSortRole(TransactionTableModel::DateRole);
 
         transactionView->setModel(transactionProxyModel);
         transactionView->setAlternatingRowColors(true);
@@ -205,18 +214,20 @@ void TransactionView::setModel(WalletModel *model, bool fShoudAddThirdPartyURL)
         transactionView->horizontalHeader()->resizeSection(
                 TransactionTableModel::Amount, 130);
 
-        if (model->getOptionsModel() && fShoudAddThirdPartyURL)
-        {
+        if (model->getOptionsModel() && fShoudAddThirdPartyURL) {
             // Add third party transaction URLs to context menu
             QStringList listUrls = model->getOptionsModel()->getThirdPartyTxUrls().split("|", QString::SkipEmptyParts);
             for (int i = 0; i < listUrls.size(); ++i)
             {
                 QString host = QUrl(listUrls[i].trimmed(), QUrl::StrictMode).host();
-                if (!host.isEmpty())
-                {
+                if (! host.isEmpty()) {
                     QAction *thirdPartyTxUrlAction = new QAction(host, this); // use host as menu item label
-                    if (i == 0)
+                    if(! thirdPartyTxUrlAction) {
+                        throw std::runtime_error("TransactionView Failed to allocate memory.");
+                    }
+                    if (i == 0) {
                         contextMenu->addSeparator();
+                    }
                     contextMenu->addAction(thirdPartyTxUrlAction);
                     connect(thirdPartyTxUrlAction, SIGNAL(triggered()), mapperThirdPartyTxUrls, SLOT(map()));
                     mapperThirdPartyTxUrls->setMapping(thirdPartyTxUrlAction, listUrls[i].trimmed());
@@ -228,8 +239,10 @@ void TransactionView::setModel(WalletModel *model, bool fShoudAddThirdPartyURL)
 
 void TransactionView::chooseDate(int idx)
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
+    }
+
     QDate current = QDate::currentDate();
     dateRangeWidget->setVisible(false);
     switch(dateWidget->itemData(idx).toInt())
@@ -276,30 +289,30 @@ void TransactionView::chooseDate(int idx)
 
 void TransactionView::chooseType(int idx)
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
+    }
     transactionProxyModel->setTypeFilter(
         typeWidget->itemData(idx).toInt());
 }
 
 void TransactionView::changedPrefix(const QString &prefix)
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
+    }
     transactionProxyModel->setAddressPrefix(prefix);
 }
 
 void TransactionView::changedAmount(const QString &amount)
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
-    qint64 amount_parsed = 0;
-    if(BitcoinUnits::parse(model->getOptionsModel()->getDisplayUnit(), amount, &amount_parsed))
-    {
-        transactionProxyModel->setMinAmount(amount_parsed);
     }
-    else
-    {
+    qint64 amount_parsed = 0;
+    if(BitcoinUnits::parse(model->getOptionsModel()->getDisplayUnit(), amount, &amount_parsed)) {
+        transactionProxyModel->setMinAmount(amount_parsed);
+    } else {
         transactionProxyModel->setMinAmount(0);
     }
 }
@@ -312,7 +325,9 @@ void TransactionView::exportClicked()
             tr("Export Transaction Data"), QString(),
             tr("Comma separated file (*.csv)"));
 
-    if (filename.isNull()) return;
+    if (filename.isNull()) {
+        return;
+    }
 
     CSVModelWriter writer(filename);
 
@@ -326,8 +341,7 @@ void TransactionView::exportClicked()
     writer.addColumn(tr("Amount"), 0, TransactionTableModel::FormattedAmountRole);
     writer.addColumn(tr("ID"), 0, TransactionTableModel::TxIDRole);
 
-    if(!writer.write())
-    {
+    if(! writer.write()) {
         QMessageBox::critical(this, tr("Error exporting"), tr("Could not write to file %1.").arg(filename),
                               QMessageBox::Abort, QMessageBox::Abort);
     }
@@ -336,8 +350,7 @@ void TransactionView::exportClicked()
 void TransactionView::contextualMenu(const QPoint &point)
 {
     QModelIndex index = transactionView->indexAt(point);
-    if(index.isValid())
-    {
+    if(index.isValid()) {
         contextMenu->exec(QCursor::pos());
     }
 }
@@ -364,25 +377,25 @@ void TransactionView::copyTxID()
 
 void TransactionView::editLabel()
 {
-    if(!transactionView->selectionModel() ||!model)
+    if(!transactionView->selectionModel() ||!model) {
         return;
+    }
+
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
-    {
+    if(! selection.isEmpty()) {
         AddressTableModel *addressBook = model->getAddressTableModel();
-        if(!addressBook)
+        if(! addressBook) {
             return;
+        }
         QString address = selection.at(0).data(TransactionTableModel::AddressRole).toString();
-        if(address.isEmpty())
-        {
+        if(address.isEmpty()) {
             // If this transaction has no associated address, exit
             return;
         }
         // Is address in address book? Address book can miss address when a transaction is
         // sent from outside the UI.
         int idx = addressBook->lookupAddress(address);
-        if(idx != -1)
-        {
+        if(idx != -1) {
             // Edit sending / receiving address
             QModelIndex modelIdx = addressBook->index(idx, 0, QModelIndex());
             // Determine type of address, launch appropriate editor dialog type
@@ -395,9 +408,7 @@ void TransactionView::editLabel()
             dlg.setModel(addressBook);
             dlg.loadRow(idx);
             dlg.exec();
-        }
-        else
-        {
+        } else {
             // Add sending address
             EditAddressDialog dlg(EditAddressDialog::NewSendingAddress,
                                   this);
@@ -410,11 +421,12 @@ void TransactionView::editLabel()
 
 void TransactionView::showDetails()
 {
-    if(!transactionView->selectionModel())
+    if(! transactionView->selectionModel()) {
         return;
+    }
+
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
-    if(!selection.isEmpty())
-    {
+    if(! selection.isEmpty()) {
         TransactionDescDialog dlg(selection.at(0));
         dlg.setWindowModality(Qt::ApplicationModal);
         dlg.show();
@@ -428,8 +440,9 @@ void TransactionView::showDetails()
 
 void TransactionView::clearOrphans()
 {
-    if(!model)
+    if(! model) {
         return;
+    }
 
     model->clearOrphans();
     model->getTransactionTableModel()->refresh();
@@ -441,53 +454,63 @@ void TransactionView::clearOrphans()
 
 void TransactionView::openThirdPartyTxUrl(QString url)
 {
-    if(!transactionView->selectionModel())
+    if(! transactionView->selectionModel()) {
        return;
+    }
+
     QModelIndexList selection = transactionView->selectionModel()->selectedRows(0);
-    if(!selection.isEmpty())
+    if(! selection.isEmpty()) {
         QDesktopServices::openUrl(QUrl::fromUserInput(url.replace("%s", selection.at(0).data(TransactionTableModel::TxHashRole).toString())));
+    }
 }
 
 QWidget *TransactionView::createDateRangeWidget()
 {
-    dateRangeWidget = new QFrame();
-    dateRangeWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
-    dateRangeWidget->setContentsMargins(1,1,1,1);
-    QHBoxLayout *layout = new QHBoxLayout(dateRangeWidget);
-    layout->setContentsMargins(0,0,0,0);
-    layout->addSpacing(23);
-    layout->addWidget(new QLabel(tr("Range:")));
+    try {
 
-    dateFrom = new QDateTimeEdit(this);
-    dateFrom->setDisplayFormat("dd/MM/yy");
-    dateFrom->setCalendarPopup(true);
-    dateFrom->setMinimumWidth(100);
-    dateFrom->setDate(QDate::currentDate().addDays(-7));
-    layout->addWidget(dateFrom);
-    layout->addWidget(new QLabel(tr("to")));
+        dateRangeWidget = new QFrame();
+        dateRangeWidget->setFrameStyle(QFrame::Panel | QFrame::Raised);
+        dateRangeWidget->setContentsMargins(1,1,1,1);
+        QHBoxLayout *layout = new QHBoxLayout(dateRangeWidget);
+        layout->setContentsMargins(0,0,0,0);
+        layout->addSpacing(23);
+        layout->addWidget(new QLabel(tr("Range:")));
 
-    dateTo = new QDateTimeEdit(this);
-    dateTo->setDisplayFormat("dd/MM/yy");
-    dateTo->setCalendarPopup(true);
-    dateTo->setMinimumWidth(100);
-    dateTo->setDate(QDate::currentDate());
-    layout->addWidget(dateTo);
-    layout->addStretch();
+        dateFrom = new QDateTimeEdit(this);
+        dateFrom->setDisplayFormat("dd/MM/yy");
+        dateFrom->setCalendarPopup(true);
+        dateFrom->setMinimumWidth(100);
+        dateFrom->setDate(QDate::currentDate().addDays(-7));
+        layout->addWidget(dateFrom);
+        layout->addWidget(new QLabel(tr("to")));
 
-    // Hide by default
-    dateRangeWidget->setVisible(false);
+        dateTo = new QDateTimeEdit(this);
+        dateTo->setDisplayFormat("dd/MM/yy");
+        dateTo->setCalendarPopup(true);
+        dateTo->setMinimumWidth(100);
+        dateTo->setDate(QDate::currentDate());
+        layout->addWidget(dateTo);
+        layout->addStretch();
 
-    // Notify on change
-    connect(dateFrom, SIGNAL(dateChanged(QDate)), this, SLOT(dateRangeChanged()));
-    connect(dateTo, SIGNAL(dateChanged(QDate)), this, SLOT(dateRangeChanged()));
+        // Hide by default
+        dateRangeWidget->setVisible(false);
 
-    return dateRangeWidget;
+        // Notify on change
+        connect(dateFrom, SIGNAL(dateChanged(QDate)), this, SLOT(dateRangeChanged()));
+        connect(dateTo, SIGNAL(dateChanged(QDate)), this, SLOT(dateRangeChanged()));
+
+        return dateRangeWidget;
+
+    } catch (const std::bad_alloc &) {
+        throw std::runtime_error("TransactionView Failed to allocate memory.");
+    }
 }
 
 void TransactionView::dateRangeChanged()
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
+    }
     transactionProxyModel->setDateRange(
             QDateTime(dateFrom->date()),
             QDateTime(dateTo->date()).addDays(1));
@@ -495,8 +518,10 @@ void TransactionView::dateRangeChanged()
 
 void TransactionView::focusTransaction(const QModelIndex &idx)
 {
-    if(!transactionProxyModel)
+    if(! transactionProxyModel) {
         return;
+    }
+
     QModelIndex targetIdx = transactionProxyModel->mapFromSource(idx);
     transactionView->scrollTo(targetIdx);
     transactionView->setCurrentIndex(targetIdx);

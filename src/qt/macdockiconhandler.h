@@ -26,7 +26,9 @@ class DockIconClickEventHandler;
 class MacDockIconHandler : public QObject
 {
     Q_OBJECT
-
+private:
+    MacDockIconHandler(const MacDockIconHandler &); // {}
+    MacDockIconHandler &operator=(const MacDockIconHandler &); // {}
 public:
     ~MacDockIconHandler();
 
@@ -52,3 +54,4 @@ private:
 };
 
 #endif // BITCOIN_QT_MACDOCKICONHANDLER_H
+//@

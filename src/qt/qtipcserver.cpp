@@ -24,9 +24,9 @@
 #endif
 #endif
 
-using namespace boost;
-using namespace boost::interprocess;
-using namespace boost::posix_time;
+//using namespace boost;
+//using namespace boost::interprocess;
+//using namespace boost::posix_time;
 
 #if defined MAC_OSX || defined __FreeBSD__
 // URI handling not implemented on OSX yet
@@ -44,21 +44,19 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
     bool fSent = false;
     for (int i = 1; i < argc; i++)
     {
-        if (boost::algorithm::istarts_with(argv[i], "SorachanCoin:"))
-        {
+        if (boost::algorithm::istarts_with(argv[i], "SorachanCoin:")) {
             const char *strURI = argv[i];
             try {
                 boost::interprocess::message_queue mq(boost::interprocess::open_only, BITCOINURI_QUEUE_NAME);
-                if (mq.try_send(strURI, strlen(strURI), 0))
+                if (mq.try_send(strURI, strlen(strURI), 0)) {
                     fSent = true;
-                else if (fRelay)
+                } else if (fRelay) {
                     break;
-            }
-            catch (boost::interprocess::interprocess_exception &ex) {
+                }
+            } catch (boost::interprocess::interprocess_exception &ex) {
                 // don't log the "file not found" exception, because that's normal for
                 // the first start of the first instance
-                if (ex.get_error_code() != boost::interprocess::not_found_error || !fRelay)
-                {
+                if (ex.get_error_code() != boost::interprocess::not_found_error || !fRelay) {
                     printf("main() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
                     break;
                 }
@@ -70,23 +68,22 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
 
 void ipcScanRelay(int argc, char *argv[])
 {
-    if (ipcScanCmd(argc, argv, true))
+    if (ipcScanCmd(argc, argv, true)) {
         exit(0);
+    }
 }
 
 static void ipcThread(void* pArg)
 {
     // Make this thread recognisable as the GUI-IPC thread
     bitthread::manage::RenameThread("SorachanCoin-gui-ipc");
-	
-    try
-    {
+    
+    try {
         ipcThread2(pArg);
-    }
-    catch (std::exception& e) {
-		excep::PrintExceptionContinue(&e, "ipcThread()");
+    } catch (std::exception &e) {
+        excep::PrintExceptionContinue(&e, "ipcThread()");
     } catch (...) {
-		excep::PrintExceptionContinue(NULL, "ipcThread()");
+        excep::PrintExceptionContinue(NULL, "ipcThread()");
     }
     printf("ipcThread exited\n");
 }
@@ -95,33 +92,33 @@ static void ipcThread2(void* pArg)
 {
     printf("ipcThread started\n");
 
-    message_queue* mq = (message_queue*)pArg;
+    boost::interprocess::message_queue *mq = (boost::interprocess::message_queue *)pArg;
     char buffer[MAX_URI_LENGTH + 1] = "";
     size_t nSize = 0;
     unsigned int nPriority = 0;
 
     for ( ; ; )
     {
-        ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(100);
-        if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))
-        {
+        boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(100);
+        if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d)) {
             CClientUIInterface::uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));
             util::Sleep(1000);
         }
 
-        if (args_bool::fShutdown)
+        if (args_bool::fShutdown) {
             break;
+        }
     }
 
     // Remove message queue
-    message_queue::remove(BITCOINURI_QUEUE_NAME);
+    boost::interprocess::message_queue::remove(BITCOINURI_QUEUE_NAME);
     // Cleanup allocated memory
     delete mq;
 }
 
 void ipcInit(int argc, char *argv[])
 {
-    message_queue* mq = NULL;
+    boost::interprocess::message_queue *mq = NULL;
     char buffer[MAX_URI_LENGTH + 1] = "";
     size_t nSize = 0;
     unsigned int nPriority = 0;
@@ -129,33 +126,32 @@ void ipcInit(int argc, char *argv[])
     std::string bitcoin_queue_name = BITCOINURI_QUEUE_NAME + std::to_string(::time(NULL));
 
     try {
-        mq = new message_queue(open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
+        mq = new boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
 
         // Make sure we don't lose any bitcoin: URIs
         for (int i = 0; i < 2; i++)
         {
-            ptime d = boost::posix_time::microsec_clock::universal_time() + millisec(1);
-            if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d))
-            {
+            boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(1);
+            if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d)) {
                 CClientUIInterface::uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));
-            }
-            else
+            } else {
                 break;
+            }
         }
 
         // Make sure only one bitcoin instance is listening
-        message_queue::remove(bitcoin_queue_name.c_str());
+        boost::interprocess::message_queue::remove(bitcoin_queue_name.c_str());
         delete mq;
 
-        mq = new message_queue(open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
-    }
-    catch (interprocess_exception &ex) {
+        mq = new boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
+    } catch (const boost::interprocess::interprocess_exception &ex) {
         printf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
         return;
+    } catch (const std::bad_alloc &) {
+        throw std::runtime_error("ipcInit Failed to allocate memory.");
     }
 
-	if (! bitthread::manage::NewThread(ipcThread, mq))
-    {
+    if (! bitthread::manage::NewThread(ipcThread, mq)) {
         delete mq;
         return;
     }

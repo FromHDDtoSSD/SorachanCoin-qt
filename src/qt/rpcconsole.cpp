@@ -42,6 +42,9 @@ const struct {
 class RPCExecutor: public QObject
 {
     Q_OBJECT
+private:
+    //RPCExecutor(const RPCExecutor &); // {}
+    RPCExecutor &operator=(const RPCExecutor &); // {}
 public slots:
     void start();
     void request(const QString &command);
@@ -143,47 +146,43 @@ bool parseCommandLine(std::vector<std::string> &args, const std::string &strComm
 void RPCExecutor::request(const QString &command)
 {
     std::vector<std::string> args;
-    if(!parseCommandLine(args, command.toStdString()))
-    {
+    if(! parseCommandLine(args, command.toStdString())) {
         emit reply(RPCConsole::CMD_ERROR, QString("Parse error: unbalanced ' or \""));
         return;
     }
-    if(args.empty())
+    if(args.empty()) {
         return; // Nothing to do
-    try
-    {
+    }
+
+    try {
         std::string strPrint;
         // Convert argument list to JSON objects in method-dependent way,
         // and pass it along with the method name to the dispatcher.
-		json_spirit::Value result = CRPCTable::CRPCTable_GUI::execute(
+        json_spirit::Value result = CRPCTable::CRPCTable_GUI::execute(
             args[0],
-			bitrpc::RPCConvertValues(args[0], std::vector<std::string>(args.begin() + 1, args.end())));
+            bitrpc::RPCConvertValues(args[0], std::vector<std::string>(args.begin() + 1, args.end())));
 
         // Format result reply
-        if (result.type() == json_spirit::null_type)
+        if (result.type() == json_spirit::null_type) {
             strPrint = "";
-        else if (result.type() == json_spirit::str_type)
+        } else if (result.type() == json_spirit::str_type) {
             strPrint = result.get_str();
-        else
+        } else {
             strPrint = write_string(result, true);
+        }
 
         emit reply(RPCConsole::CMD_REPLY, QString::fromStdString(strPrint));
-    }
-    catch (json_spirit::Object& objError)
-    {
-        try // Nice formatting for standard-format error
-        {
+    } catch (json_spirit::Object &objError) {
+        try {
+            // Nice formatting for standard-format error
             int code = find_value(objError, "code").get_int();
             std::string message = find_value(objError, "message").get_str();
             emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(message) + " (code " + QString::number(code) + ")");
-        }
-        catch(std::runtime_error &) // raised when converting to invalid type, i.e. missing code or message
-        {   // Show raw JSON object
+        } catch(const std::runtime_error &) {   // raised when converting to invalid type, i.e. missing code or message
+            // Show raw JSON object
             emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(write_string(json_spirit::Value(objError), false)));
         }
-    }
-    catch (std::exception& e)
-    {
+    } catch (const std::exception &e) {
         emit reply(RPCConsole::CMD_ERROR, QString("Error: ") + QString::fromStdString(e.what()));
     }
 }
@@ -193,6 +192,10 @@ RPCConsole::RPCConsole(QWidget *parent) :
     ui(new Ui::RPCConsole),
     historyPtr(0)
 {
+    if(! ui) {
+        throw std::runtime_error("RPCConsole Failed to allocate memory.");
+    }
+
     ui->setupUi(this);
 
 #ifndef Q_OS_MAC
@@ -226,9 +229,8 @@ RPCConsole::~RPCConsole()
 
 bool RPCConsole::eventFilter(QObject* obj, QEvent *event)
 {
-    if(event->type() == QEvent::KeyPress) // Special key handling
-    {
-        QKeyEvent *keyevt = static_cast<QKeyEvent*>(event);
+    if(event->type() == QEvent::KeyPress) { // Special key handling
+        QKeyEvent *keyevt = static_cast<QKeyEvent *>(event);
         int key = keyevt->key();
         Qt::KeyboardModifiers mod = keyevt->modifiers();
         switch(key)
@@ -237,8 +239,7 @@ bool RPCConsole::eventFilter(QObject* obj, QEvent *event)
         case Qt::Key_Down: if(obj == ui->lineEdit) { browseHistory(1); return true; } break;
         case Qt::Key_PageUp: /* pass paging keys to messages widget */
         case Qt::Key_PageDown:
-            if(obj == ui->lineEdit)
-            {
+            if(obj == ui->lineEdit) {
                 QApplication::postEvent(ui->messagesWidget, new QKeyEvent(*keyevt));
                 return true;
             }
@@ -264,8 +265,7 @@ void RPCConsole::setClientModel(ClientModel *model)
 {
     this->clientModel = model;
     ui->trafficGraph->setClientModel(model);
-    if(model)
-    {
+    if(model) {
         // Subscribe to information, replies, messages, errors
         connect(model, SIGNAL(numConnectionsChanged(int)), this, SLOT(setNumConnections(int)));
         connect(model, SIGNAL(numBlocksChanged(int,int)), this, SLOT(setNumBlocks(int,int)));
@@ -337,18 +337,20 @@ void RPCConsole::message(int category, const QString &message, bool html)
     out += "<table><tr><td class=\"time\" width=\"65\">" + timeString + "</td>";
     out += "<td class=\"icon\" width=\"32\"><img src=\"" + categoryClass(category) + "\"></td>";
     out += "<td class=\"message " + categoryClass(category) + "\" valign=\"middle\">";
-    if(html)
+    if(html) {
         out += message;
-    else
+    } else {
         out += GUIUtil::HtmlEscape(message, true);
+    }
     out += "</td></tr></table>";
     ui->messagesWidget->append(out);
 }
 
 void RPCConsole::setNumConnections(int count)
 {
-    if (!clientModel)
+    if (! clientModel) {
         return;
+    }
 
     QString connections = QString::number(count) + " (";
     connections += tr("Inbound:") + " " + QString::number(clientModel->getNumConnections(CONNECTIONS_IN)) + " / ";
@@ -361,8 +363,7 @@ void RPCConsole::setNumBlocks(int count, int countOfPeers)
 {
     ui->numberOfBlocks->setText(QString::number(count));
     ui->totalBlocks->setText(QString::number(countOfPeers));
-    if(clientModel)
-    {
+    if(clientModel) {
         // If there is no current number available display N/A instead of 0, which can't ever be true
         ui->totalBlocks->setText(clientModel->getNumBlocksOfPeers() == 0 ? tr("N/A") : QString::number(clientModel->getNumBlocksOfPeers()));
         ui->lastBlockTime->setText(clientModel->getLastBlockDate().toString());
@@ -374,8 +375,7 @@ void RPCConsole::on_lineEdit_returnPressed()
     QString cmd = ui->lineEdit->text();
     ui->lineEdit->clear();
 
-    if(!cmd.isEmpty())
-    {
+    if(! cmd.isEmpty()) {
         message(CMD_REQUEST, cmd);
         emit cmdRequest(cmd);
         // Remove command, if already in history
@@ -384,7 +384,9 @@ void RPCConsole::on_lineEdit_returnPressed()
         history.append(cmd);
         // Enforce maximum history size
         while(history.size() > CONSOLE_HISTORY)
+        {
             history.removeFirst();
+        }
         // Set pointer to end of history
         historyPtr = history.size();
         // Scroll console view to end
@@ -395,20 +397,28 @@ void RPCConsole::on_lineEdit_returnPressed()
 void RPCConsole::browseHistory(int offset)
 {
     historyPtr += offset;
-    if(historyPtr < 0)
+    if(historyPtr < 0) {
         historyPtr = 0;
-    if(historyPtr > history.size())
+    }
+    if(historyPtr > history.size()) {
         historyPtr = history.size();
+    }
+
     QString cmd;
-    if(historyPtr < history.size())
+    if(historyPtr < history.size()) {
         cmd = history.at(historyPtr);
+    }
     ui->lineEdit->setText(cmd);
 }
 
 void RPCConsole::startExecutor()
 {
-    QThread* thread = new QThread;
-    RPCExecutor *executor = new RPCExecutor();
+    QThread *thread = new (std::nothrow) QThread;
+    RPCExecutor *executor = new (std::nothrow) RPCExecutor;
+    if(!thread || !executor){
+        throw std::runtime_error("RPCConsole Failed to allocate memory.");
+    }
+
     executor->moveToThread(thread);
 
     // Notify executor when thread started (in executor thread)
@@ -432,8 +442,7 @@ void RPCConsole::startExecutor()
 
 void RPCConsole::on_tabWidget_currentChanged(int index)
 {
-    if(ui->tabWidget->widget(index) == ui->tab_console)
-    {
+    if(ui->tabWidget->widget(index) == ui->tab_console) {
         ui->lineEdit->setFocus();
     }
 }
@@ -468,12 +477,15 @@ void RPCConsole::on_sldGraphRange_valueChanged(int value)
 
 QString RPCConsole::FormatBytes(quint64 bytes)
 {
-    if(bytes < 1024)
+    if(bytes < 1024) {
         return QString(tr("%1 B")).arg(bytes);
-    if(bytes < 1024 * 1024)
+    }
+    if(bytes < 1024 * 1024) {
         return QString(tr("%1 KB")).arg(bytes / 1024);
-    if(bytes < 1024 * 1024 * 1024)
+    }
+    if(bytes < 1024 * 1024 * 1024) {
         return QString(tr("%1 MB")).arg(bytes / 1024 / 1024);
+    }
 
     return QString(tr("%1 GB")).arg(bytes / 1024 / 1024 / 1024);
 }
@@ -499,28 +511,28 @@ void RPCConsole::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
 
-    if (!clientModel)
+    if (! clientModel) {
         return;
+    }
 }
 
 void RPCConsole::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
 
-    if (!clientModel)
+    if (! clientModel) {
         return;
+    }
 }
 
 void RPCConsole::keyPressEvent(QKeyEvent *event)
 {
 #ifdef ANDROID
-    if(windowType() != Qt::Widget && event->key() == Qt::Key_Back)
-    {
+    if(windowType() != Qt::Widget && event->key() == Qt::Key_Back) {
         close();
     }
 #else
-    if(windowType() != Qt::Widget && event->key() == Qt::Key_Escape)
-    {
+    if(windowType() != Qt::Widget && event->key() == Qt::Key_Escape) {
         close();
     }
 #endif

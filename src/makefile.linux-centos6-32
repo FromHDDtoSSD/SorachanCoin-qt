@@ -158,19 +158,19 @@ else
 endif
 
 obj/%.o: %.cpp $(HEADERS)
-	g++ -c $(CXXFLAGS) -o $@ $<
+    g++ -c $(CXXFLAGS) -o $@ $<
 
 obj/scrypt-x86.o: scrypt-x86.S
-	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+    $(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 obj/scrypt-x86_64.o: scrypt-x86_64.S
-	$(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
+    $(CXX) -c $(xCXXFLAGS) -MMD -o $@ $<
 
 SorachanCoind: $(OBJS:obj/%=obj/%)
-	g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
+    g++ $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS)
 
 clean:
-	rm -rf SorachanCoind
-	rm -rf obj/*
+    rm -rf SorachanCoind
+    rm -rf obj/*
 
 FORCE:

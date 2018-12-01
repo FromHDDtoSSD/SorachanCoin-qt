@@ -18,112 +18,112 @@
 class CHashWriter
 {
 private:
-	CHashWriter(); // {}
-	CHashWriter(const CHashWriter &); // {}
-	CHashWriter &operator=(const CHashWriter &); // {}
+    CHashWriter(); // {}
+    CHashWriter(const CHashWriter &); // {}
+    CHashWriter &operator=(const CHashWriter &); // {}
 
-	SHA256_CTX ctx;
-	int nType;
-	int nVersion;
+    SHA256_CTX ctx;
+    int nType;
+    int nVersion;
 
 public:
-	void Init() {
+    void Init() {
         SHA256_Init(&ctx);
-	}
+    }
 
-	CHashWriter(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {
-		Init();
-	}
+    CHashWriter(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {
+        Init();
+    }
 
-	CHashWriter &write(const char *pch, size_t size) {
+    CHashWriter &write(const char *pch, size_t size) {
         SHA256_Update(&ctx, pch, size);
-		return *this;
-	}
+        return *this;
+    }
 
-	// invalidates the object
-	uint256 GetHash() {
-		uint256 hash1;
+    // invalidates the object
+    uint256 GetHash() {
+        uint256 hash1;
         SHA256_Final((unsigned char *)&hash1, &ctx);
-		uint256 hash2;
+        uint256 hash2;
         SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
-		return hash2;
-	}
+        return hash2;
+    }
 
-	// Serialize to this stream
-	template<typename T>
-	CHashWriter &operator<<(const T &obj) {
+    // Serialize to this stream
+    template<typename T>
+    CHashWriter &operator<<(const T &obj) {
         ::Serialize(*this, obj, nType, nVersion);
-		return *this;
-	}
+        return *this;
+    }
 };
 
-class hash_basis : private no_instance	// bitcoin SHA256
+class hash_basis : private no_instance    // bitcoin SHA256
 {
 public:
-	template<typename T1>
+    template<typename T1>
     static uint256 Hash(const T1 pbegin, const T1 pend) {
-		static unsigned char pblank[1] = { 0 };
-		uint256 hash1;
+        static unsigned char pblank[1] = { 0 };
+        uint256 hash1;
         SHA256((pbegin == pend ? pblank : (unsigned char *)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char *)&hash1);
-		uint256 hash2;
+        uint256 hash2;
         SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
-		return hash2;
-	}
+        return hash2;
+    }
 
-	template<typename T1, typename T2>
-	static uint256 Hash(const T1 p1begin, const T1 p1end,
+    template<typename T1, typename T2>
+    static uint256 Hash(const T1 p1begin, const T1 p1end,
                         const T2 p2begin, const T2 p2end) {
-		static unsigned char pblank[1] = { 0 };
-		uint256 hash1;
-		SHA256_CTX ctx;
+        static unsigned char pblank[1] = { 0 };
+        uint256 hash1;
+        SHA256_CTX ctx;
         SHA256_Init(&ctx);
         SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char *)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
         SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char *)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
         SHA256_Final((unsigned char *)&hash1, &ctx);
-		uint256 hash2;
+        uint256 hash2;
         SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
-		return hash2;
-	}
+        return hash2;
+    }
 
-	template<typename T1, typename T2, typename T3>
-	static uint256 Hash(const T1 p1begin, const T1 p1end,
-						const T2 p2begin, const T2 p2end,
+    template<typename T1, typename T2, typename T3>
+    static uint256 Hash(const T1 p1begin, const T1 p1end,
+                        const T2 p2begin, const T2 p2end,
                         const T3 p3begin, const T3 p3end) {
-		static unsigned char pblank[1] = { 0 };
-		uint256 hash1;
-		SHA256_CTX ctx;
+        static unsigned char pblank[1] = { 0 };
+        uint256 hash1;
+        SHA256_CTX ctx;
         SHA256_Init(&ctx);
         SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char *)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
         SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char *)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
         SHA256_Update(&ctx, (p3begin == p3end ? pblank : (unsigned char *)&p3begin[0]), (p3end - p3begin) * sizeof(p3begin[0]));
         SHA256_Final((unsigned char *)&hash1, &ctx);
-		uint256 hash2;
+        uint256 hash2;
         SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
-		return hash2;
-	}
+        return hash2;
+    }
 
-	template<typename T>
+    template<typename T>
     static uint256 SerializeHash(const T &obj, int nType=SER_GETHASH, int nVersion = version::PROTOCOL_VERSION) {
-		CHashWriter ss(nType, nVersion);
-		ss << obj;
-		return ss.GetHash();
-	}
+        CHashWriter ss(nType, nVersion);
+        ss << obj;
+        return ss.GetHash();
+    }
 
-	template<typename T1>
+    template<typename T1>
     static uint160 Hash160(const T1 pbegin, const T1 pend) {
-		static unsigned char pblank[1] = { 0 };
-		uint256 hash1;
+        static unsigned char pblank[1] = { 0 };
+        uint256 hash1;
         SHA256((pbegin == pend ? pblank : (unsigned char *)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char *)&hash1);
-		uint160 hash2;
+        uint160 hash2;
         RIPEMD160((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
-		return hash2;
-	}
+        return hash2;
+    }
 
     static uint160 Hash160(const std::vector<unsigned char> &vch) {
-		return hash_basis::Hash160(vch.begin(), vch.end());
-	}
+        return hash_basis::Hash160(vch.begin(), vch.end());
+    }
 
-	// unsigned int MurmurHash3(unsigned int nHashSeed, const std::vector<unsigned char> &vDataToHash);
+    // unsigned int MurmurHash3(unsigned int nHashSeed, const std::vector<unsigned char> &vDataToHash);
 };
 
 /**
@@ -139,3 +139,4 @@ int HMAC_SHA512_Final(unsigned char *pmd, HMAC_SHA512_CTX *pctx);
 **/
 
 #endif
+//@

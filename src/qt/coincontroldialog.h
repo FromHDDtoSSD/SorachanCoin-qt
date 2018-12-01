@@ -24,6 +24,9 @@ class CoinControlDialog : public QWidget
 signals:
     void beforeClose();
 
+private:
+    CoinControlDialog(const CoinControlDialog &); // {}
+    CoinControlDialog &operator=(const CoinControlDialog &); // {}
 public:
     explicit CoinControlDialog(QWidget *parent = 0);
     ~CoinControlDialog();
@@ -100,3 +103,4 @@ private slots:
 };
 
 #endif // COINCONTROLDIALOG_H
+//@

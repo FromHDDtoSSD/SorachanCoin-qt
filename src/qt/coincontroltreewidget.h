@@ -4,9 +4,12 @@
 #include <QKeyEvent>
 #include <QTreeWidget>
 
-class CoinControlTreeWidget : public QTreeWidget {
+class CoinControlTreeWidget : public QTreeWidget
+{
 Q_OBJECT
-
+private:
+    CoinControlTreeWidget(const CoinControlTreeWidget &); // {}
+    CoinControlTreeWidget &operator=(const CoinControlTreeWidget &); // {}
 public:
     explicit CoinControlTreeWidget(QWidget *parent = 0);
     
@@ -15,3 +18,4 @@ protected:
 };
 
 #endif // COINCONTROLTREEWIDGET_H
+//@

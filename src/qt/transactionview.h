@@ -23,6 +23,9 @@ QT_END_NAMESPACE
 class TransactionView : public QWidget
 {
     Q_OBJECT
+private:
+    TransactionView(const TransactionView &); // {}
+    TransactionView &operator=(const TransactionView &); // {}
 public:
     explicit TransactionView(QWidget *parent = 0);
 
@@ -85,3 +88,4 @@ public slots:
 };
 
 #endif // TRANSACTIONVIEW_H
+//@

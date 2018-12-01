@@ -17,7 +17,9 @@ class AddressTableModel;
 class EditAddressDialog : public QDialog
 {
     Q_OBJECT
-
+private:
+    EditAddressDialog(const EditAddressDialog &); // {}
+    EditAddressDialog &operator=(const EditAddressDialog &); // {}
 public:
     enum Mode {
         NewReceivingAddress,
@@ -50,3 +52,4 @@ private:
 };
 
 #endif // EDITADDRESSDIALOG_H
+//@

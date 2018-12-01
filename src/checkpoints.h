@@ -24,88 +24,88 @@ class CBlockIndex;
 class CUnsignedSyncCheckpoint
 {
 //private:
-	// CUnsignedSyncCheckpoint(const CUnsignedSyncCheckpoint &); // {}
-	// CUnsignedSyncCheckpoint &operator=(const CUnsignedSyncCheckpoint &); // {}
+    // CUnsignedSyncCheckpoint(const CUnsignedSyncCheckpoint &); // {}
+    // CUnsignedSyncCheckpoint &operator=(const CUnsignedSyncCheckpoint &); // {}
 
 public:
-	int nVersion;
-	uint256 hashCheckpoint;      // checkpoint block
+    int nVersion;
+    uint256 hashCheckpoint;      // checkpoint block
 
-	CUnsignedSyncCheckpoint() {
-		SetNull();
-	}
+    CUnsignedSyncCheckpoint() {
+        SetNull();
+    }
 
-	IMPLEMENT_SERIALIZE
-	(
-		READWRITE(this->nVersion);
-		nVersion = this->nVersion;
-		READWRITE(this->hashCheckpoint);
-	)
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->nVersion);
+        nVersion = this->nVersion;
+        READWRITE(this->hashCheckpoint);
+    )
 
-	void SetNull() {
+    void SetNull() {
         nVersion = 1;
         hashCheckpoint = 0;
-	}
+    }
 
-	std::string ToString() const {
-		return strprintf(
-				"CSyncCheckpoint(\n"
-				"    nVersion       = %d\n"
-				"    hashCheckpoint = %s\n"
-				")\n",
+    std::string ToString() const {
+        return strprintf(
+                "CSyncCheckpoint(\n"
+                "    nVersion       = %d\n"
+                "    hashCheckpoint = %s\n"
+                ")\n",
                 nVersion,
                 hashCheckpoint.ToString().c_str());
-	}
+    }
 };
 
 class CSyncCheckpoint : public CUnsignedSyncCheckpoint
 {
 private:
-	CSyncCheckpoint(const CSyncCheckpoint &); // {}
-	// CSyncCheckpoint &operator=(const CSyncCheckpoint &); // {}
+    CSyncCheckpoint(const CSyncCheckpoint &); // {}
+    // CSyncCheckpoint &operator=(const CSyncCheckpoint &); // {}
 
 public:
-	static const std::string strMasterPubKey;
-	static std::string strMasterPrivKey;
+    static const std::string strMasterPubKey;
+    static std::string strMasterPrivKey;
 
-	std::vector<unsigned char> vchMsg;
-	std::vector<unsigned char> vchSig;
+    std::vector<unsigned char> vchMsg;
+    std::vector<unsigned char> vchSig;
 
-	CSyncCheckpoint() {
-		SetNull();
-	}
+    CSyncCheckpoint() {
+        SetNull();
+    }
 
-	IMPLEMENT_SERIALIZE
-	(
-		READWRITE(this->vchMsg);
-		READWRITE(this->vchSig);
-	)
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->vchMsg);
+        READWRITE(this->vchSig);
+    )
 
-	void SetNull() {
-		// CUnsignedSyncCheckpoint::SetNull();
+    void SetNull() {
+        // CUnsignedSyncCheckpoint::SetNull();
         vchMsg.clear();
         vchSig.clear();
-	}
+    }
 
-	bool IsNull() const {
-		return (hashCheckpoint == 0);
-	}
+    bool IsNull() const {
+        return (hashCheckpoint == 0);
+    }
 
-	uint256 GetHash() const {
-		return hash_basis::SerializeHash(*this);
-	}
+    uint256 GetHash() const {
+        return hash_basis::SerializeHash(*this);
+    }
 
-	bool RelayTo(CNode *pnode) const {	// returns true if wasn't already sent
-		if (pnode->hashCheckpointKnown != hashCheckpoint) {
-			pnode->hashCheckpointKnown = hashCheckpoint;
-			pnode->PushMessage("checkpoint", *this);
-			return true;
-		}
-		return false;
-	}
+    bool RelayTo(CNode *pnode) const {    // returns true if wasn't already sent
+        if (pnode->hashCheckpointKnown != hashCheckpoint) {
+            pnode->hashCheckpointKnown = hashCheckpoint;
+            pnode->PushMessage("checkpoint", *this);
+            return true;
+        }
+        return false;
+    }
 
-	bool CheckSignature();
-	bool ProcessSyncCheckpoint(CNode *pfrom);
+    bool CheckSignature();
+    bool ProcessSyncCheckpoint(CNode *pfrom);
 };
 
 //
@@ -117,12 +117,12 @@ typedef std::list<uint256> ListBannedBlocks;
 typedef unsigned int LastCheckpointTime;
 namespace Checkpoints
 {
-	enum CPMode
-	{
-		STRICT = 0,		// Scrict checkpoints policy, perform conflicts verification and resolve conflicts
-		ADVISORY = 1,	// Advisory checkpoints policy, perform conflicts verification but don't try to resolve them
-		PERMISSIVE = 2	// Permissive checkpoints policy, don't perform any checking
-	};
+    enum CPMode
+    {
+        STRICT = 0,        // Scrict checkpoints policy, perform conflicts verification and resolve conflicts
+        ADVISORY = 1,      // Advisory checkpoints policy, perform conflicts verification but don't try to resolve them
+        PERMISSIVE = 2     // Permissive checkpoints policy, don't perform any checking
+    };
 
     extern CCriticalSection cs_hashSyncCheckpoint;
     extern uint256 hashPendingCheckpoint;// = 0;
@@ -130,58 +130,59 @@ namespace Checkpoints
     extern CSyncCheckpoint checkpointMessage;
     extern CSyncCheckpoint checkpointMessagePending;
 
-	class manage : private no_instance
-	{
-	private:
-		// max 1 hour before latest block
-		static const int64_t CHECKPOINT_MAX_SPAN = util::nOneHour;
+    class manage : private no_instance
+    {
+    private:
+        // max 1 hour before latest block
+        static const int64_t CHECKPOINT_MAX_SPAN = util::nOneHour;
 
-		static const MapCheckpoints mapCheckpoints;
-		static const MapCheckpoints mapCheckpointsTestnet;
-		static const ListBannedBlocks listBanned;
-		static const LastCheckpointTime CheckpointLastTime;
-		static const LastCheckpointTime CheckpointLastTimeTestnet;
+        static const MapCheckpoints mapCheckpoints;
+        static const MapCheckpoints mapCheckpointsTestnet;
+        static const ListBannedBlocks listBanned;
+        static const LastCheckpointTime CheckpointLastTime;
+        static const LastCheckpointTime CheckpointLastTimeTestnet;
 
-		// ppcoin: synchronized checkpoint (centrally broadcasted)
-		static uint256 hashSyncCheckpoint;
-		static uint256 hashInvalidCheckpoint;
+        // ppcoin: synchronized checkpoint (centrally broadcasted)
+        static uint256 hashSyncCheckpoint;
+        static uint256 hashInvalidCheckpoint;
 
-		static uint256 AutoSelectSyncCheckpoint();
-		static bool SendSyncCheckpoint(uint256 hashCheckpoint);
-	public:
-		static bool CheckHardened(int nHeight, const uint256 &hash);	// Returns true if block passes checkpoint checks
-		static bool CheckBanned(const uint256 &nHash);					// Returns true if block passes banlist checks
+        static uint256 AutoSelectSyncCheckpoint();
+        static bool SendSyncCheckpoint(uint256 hashCheckpoint);
+    public:
+        static bool CheckHardened(int nHeight, const uint256 &hash);    // Returns true if block passes checkpoint checks
+        static bool CheckBanned(const uint256 &nHash);                  // Returns true if block passes banlist checks
 
-		static int GetTotalBlocksEstimate();							// Return conservative estimate of total number of blocks, 0 if unknown
-		static unsigned int GetLastCheckpointTime();					// Returns last checkpoint timestamp
+        static int GetTotalBlocksEstimate();                            // Return conservative estimate of total number of blocks, 0 if unknown
+        static unsigned int GetLastCheckpointTime();                    // Returns last checkpoint timestamp
 
-		static CBlockIndex *GetLastSyncCheckpoint();
-		static bool ValidateSyncCheckpoint(uint256 hashCheckpoint);
-		static bool WriteSyncCheckpoint(const uint256 &hashCheckpoint);
-		static bool AcceptPendingSyncCheckpoint();
-		static bool CheckSync(const uint256 &hashBlock, const CBlockIndex *pindexPrev);
-		static bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
-		static bool ResetSyncCheckpoint();
-		static void AskForPendingSyncCheckpoint(CNode *pfrom);
-		static bool SetCheckpointPrivKey(std::string strPrivKey);
-		
-		static CBlockIndex *GetLastCheckpoint(const std::map<uint256, CBlockIndex *> &mapBlockIndex);	// Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
-		static bool AutoSendSyncCheckpoint();
-		static bool IsMatureSyncCheckpoint();
+        static CBlockIndex *GetLastSyncCheckpoint();
+        static bool ValidateSyncCheckpoint(uint256 hashCheckpoint);
+        static bool WriteSyncCheckpoint(const uint256 &hashCheckpoint);
+        static bool AcceptPendingSyncCheckpoint();
+        static bool CheckSync(const uint256 &hashBlock, const CBlockIndex *pindexPrev);
+        static bool WantedByPendingSyncCheckpoint(uint256 hashBlock);
+        static bool ResetSyncCheckpoint();
+        static void AskForPendingSyncCheckpoint(CNode *pfrom);
+        static bool SetCheckpointPrivKey(std::string strPrivKey);
+        
+        static CBlockIndex *GetLastCheckpoint(const std::map<uint256, CBlockIndex *> &mapBlockIndex);    // Returns last CBlockIndex* in mapBlockIndex that is a checkpoint
+        static bool AutoSendSyncCheckpoint();
+        static bool IsMatureSyncCheckpoint();
 
-		static uint256 &getHashSyncCheckpoint() {
-			return Checkpoints::manage::hashSyncCheckpoint;
-		}
-		static uint256 &getHashInvalidCheckpoint() {
-			return Checkpoints::manage::hashInvalidCheckpoint;
-		}
-		//static void setHashSyncCheckpoint(const uint256 &sync) {
-		//	Checkpoints::manage::hashSyncCheckpoint = sync;
-		//}
-		static void setHashInvalidCheckpoint(const uint256 &invalid) {
-			Checkpoints::manage::hashInvalidCheckpoint = invalid;
-		}
-	};
+        static uint256 &getHashSyncCheckpoint() {
+            return Checkpoints::manage::hashSyncCheckpoint;
+        }
+        static uint256 &getHashInvalidCheckpoint() {
+            return Checkpoints::manage::hashInvalidCheckpoint;
+        }
+        //static void setHashSyncCheckpoint(const uint256 &sync) {
+        //    Checkpoints::manage::hashSyncCheckpoint = sync;
+        //}
+        static void setHashInvalidCheckpoint(const uint256 &invalid) {
+            Checkpoints::manage::hashInvalidCheckpoint = invalid;
+        }
+    };
 }
 
 #endif
+//@

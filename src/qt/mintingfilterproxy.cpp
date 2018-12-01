@@ -3,5 +3,4 @@
 MintingFilterProxy::MintingFilterProxy(QObject * parent) :
     QSortFilterProxyModel(parent)
 {
-
 }

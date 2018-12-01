@@ -15,6 +15,9 @@ class MultisigAddressEntry : public QFrame
 {
     Q_OBJECT;
 
+  private:
+    MultisigAddressEntry(const MultisigAddressEntry &); // {}
+    MultisigAddressEntry &operator=(const MultisigAddressEntry &); // {}
   public:
     explicit MultisigAddressEntry(QWidget *parent = 0);
     ~MultisigAddressEntry();
@@ -42,3 +45,4 @@ class MultisigAddressEntry : public QFrame
 };
 
 #endif // MULTISIGADDRESSENTRY_H
+//@

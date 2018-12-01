@@ -14,6 +14,9 @@ QT_END_NAMESPACE
 class TransactionDescDialog : public QWidget
 {
     Q_OBJECT
+private:
+    TransactionDescDialog(const TransactionDescDialog &); // {}
+    TransactionDescDialog &operator=(const TransactionDescDialog &); // {}
 protected:
     void keyPressEvent(QKeyEvent *);
     void closeEvent(QCloseEvent *e);
@@ -30,3 +33,4 @@ signals:
 };
 
 #endif // TRANSACTIONDESCDIALOG_H
+//@

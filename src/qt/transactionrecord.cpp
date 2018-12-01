@@ -1,13 +1,10 @@
-//
+
 #include "transactionrecord.h"
 
 #include "init.h"
 #include "wallet.h"
 #include "base58.h"
 
-//
-// static
-//
 std::map<const TransactionRecord *, int> TransactionRecord::mapConfirmations;
 
 /*
@@ -201,12 +198,12 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
         idx);
     status.confirmed = wtx.IsTrusted();
     status.depth = wtx.GetDepthInMainChain();
-	status.cur_num_blocks = block_info::nBestHeight;
+    status.cur_num_blocks = block_info::nBestHeight;
 
     if (! wtx.IsFinal()) {
         if (wtx.nLockTime < block_param::LOCKTIME_THRESHOLD) {
             status.status = TransactionStatus::OpenUntilBlock;
-			status.open_for = block_info::nBestHeight - wtx.nLockTime;
+            status.open_for = block_info::nBestHeight - wtx.nLockTime;
         } else {
             status.status = TransactionStatus::OpenUntilDate;
             status.open_for = wtx.nLockTime;
@@ -246,7 +243,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
 
 bool TransactionRecord::statusUpdateNeeded()
 {
-	return status.cur_num_blocks != block_info::nBestHeight;
+    return status.cur_num_blocks != block_info::nBestHeight;
 }
 
 std::string TransactionRecord::getTxID()

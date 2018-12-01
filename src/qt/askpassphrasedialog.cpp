@@ -1,4 +1,4 @@
-//
+
 #include "askpassphrasedialog.h"
 #include "ui_askpassphrasedialog.h"
 #include "wallet.h"
@@ -156,7 +156,7 @@ void AskPassphraseDialog::accept()
                                   tr("The passphrase entered for the wallet decryption was incorrect."));
         } else {
             QDialog::accept(); // Success
-			CWallet::fWalletUnlockMintOnly = true;
+            CWallet::fWalletUnlockMintOnly = true;
         }
         break;
     case Decrypt:

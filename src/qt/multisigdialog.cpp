@@ -58,8 +58,9 @@ void MultisigDialog::showEvent(QShowEvent *event)
 {
     QWidget::showEvent(event);
 
-    if (!model)
+    if (! model) {
         return;
+    }
 
     updateAmounts();
 }
@@ -68,8 +69,9 @@ void MultisigDialog::hideEvent(QHideEvent *event)
 {
     QWidget::hideEvent(event);
 
-    if (!model)
+    if (! model) {
         return;
+    }
 
     clear();
 }
@@ -86,24 +88,25 @@ void MultisigDialog::setModel(WalletModel *model)
     for(int i = 0; i < ui->pubkeyEntries->count(); i++)
     {
         MultisigAddressEntry *entry = qobject_cast<MultisigAddressEntry *>(ui->pubkeyEntries->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setModel(model);
+        }
     }
-
 
     for(int i = 0; i < ui->inputs->count(); i++)
     {
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setModel(model);
+        }
     }
-
 
     for(int i = 0; i < ui->outputs->count(); i++)
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setModel(model);
+        }
     }
 }
 
@@ -114,30 +117,31 @@ void MultisigDialog::updateRemoveEnabled()
     for(int i = 0; i < ui->pubkeyEntries->count(); i++)
     {
         MultisigAddressEntry *entry = qobject_cast<MultisigAddressEntry *>(ui->pubkeyEntries->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setRemoveEnabled(enabled);
+        }
     }
 
     QString maxSigsStr;
     maxSigsStr.setNum(ui->pubkeyEntries->count());
     ui->maxSignaturesLabel->setText(QString("/ ") + maxSigsStr);
 
-
     enabled = (ui->inputs->count() > 1);
     for(int i = 0; i < ui->inputs->count(); i++)
     {
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setRemoveEnabled(enabled);
+        }
     }
-
 
     enabled = (ui->outputs->count() > 1);
     for(int i = 0; i < ui->outputs->count(); i++)
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             entry->setRemoveEnabled(enabled);
+        }
     }
 }
 
@@ -146,8 +150,9 @@ void MultisigDialog::on_createAddressButton_clicked()
     ui->multisigAddress->clear();
     ui->redeemScript->clear();
 
-    if(!model)
+    if(! model) {
         return;
+    }
 
     std::vector<CPubKey> pubkeys;
     pubkeys.resize(ui->pubkeyEntries->count());
@@ -156,38 +161,37 @@ void MultisigDialog::on_createAddressButton_clicked()
     for(int i = 0; i < ui->pubkeyEntries->count(); i++)
     {
         MultisigAddressEntry *entry = qobject_cast<MultisigAddressEntry *>(ui->pubkeyEntries->itemAt(i)->widget());
-        if(!entry->validate())
+        if(! entry->validate()) {
             return;
+        }
+
         QString str = entry->getPubkey();
-		CPubKey vchPubKey(hex::ParseHex(str.toStdString().c_str()));
-        if(!vchPubKey.IsValid())
+        CPubKey vchPubKey(hex::ParseHex(str.toStdString().c_str()));
+        if(! vchPubKey.IsValid()) {
             return;
+        }
         pubkeys[i] = vchPubKey;
     }
 
-    if(pubkeys.size() > 16)
-    {
+    if(pubkeys.size() > 16) {
         QMessageBox::warning(this, tr("Error"), tr("Number of addresses involved in the address creation > %1\nReduce the number").arg(16), QMessageBox::Ok);
         return;
     }
 
-    if(required == 0)
-    {
+    if(required == 0) {
         QMessageBox::warning(this, tr("Error"), tr("Number of required signatures is 0\nNumber of required signatures must be between 1 and number of keys involved in the creation of address."), QMessageBox::Ok);
         return;
     }
 
-    if(required > pubkeys.size())
-    {
+    if(required > pubkeys.size()) {
         QMessageBox::warning(this, tr("Error"), tr("Number of required signatures > Number of keys involved in the creation of address."), QMessageBox::Ok);
         return;
     }
-    
+
     CScript script;
     script.SetMultisig(required, pubkeys);
-	if (script.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE)
-    {
-		QMessageBox::warning(this, tr("Error"), tr("Redeem script exceeds size limit: %1 > %2\nReduce the number of addresses involved in the address creation.").arg(script.size()).arg(Script_param::MAX_SCRIPT_ELEMENT_SIZE), QMessageBox::Ok);
+    if (script.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE) {
+        QMessageBox::warning(this, tr("Error"), tr("Redeem script exceeds size limit: %1 > %2\nReduce the number of addresses involved in the address creation.").arg(script.size()).arg(Script_param::MAX_SCRIPT_ELEMENT_SIZE), QMessageBox::Ok);
         return;
     }
     CScriptID scriptID = script.GetID();
@@ -209,57 +213,68 @@ void MultisigDialog::on_copyRedeemScriptButton_clicked()
 
 void MultisigDialog::on_saveRedeemScriptButton_clicked()
 {
-    if(!model)
+    if(! model) {
         return;
+    }
 
     CWallet *wallet = model->getWallet();
     std::string redeemScript = ui->redeemScript->text().toStdString();
-	std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
+    std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
     CScript script(scriptData.begin(), scriptData.end());
     CScriptID scriptID = script.GetID();
 
     LOCK(wallet->cs_wallet);
-    if(!wallet->HaveCScript(scriptID))
+    if(! wallet->HaveCScript(scriptID)) {
         wallet->AddCScript(script);
+    }
 }
 
 void MultisigDialog::on_saveMultisigAddressButton_clicked()
 {
-    if(!model)
+    if(! model) {
         return;
+    }
 
     CWallet *wallet = model->getWallet();
     std::string redeemScript = ui->redeemScript->text().toStdString();
     std::string address = ui->multisigAddress->text().toStdString();
     std::string label("multisig");
 
-    if(!model->validateAddress(QString(address.c_str())))
+    if(! model->validateAddress(QString(address.c_str()))) {
         return;
+    }
 
-	std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
+    std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
     CScript script(scriptData.begin(), scriptData.end());
     CScriptID scriptID = script.GetID();
 
     LOCK(wallet->cs_wallet);
-    if(!wallet->HaveCScript(scriptID))
+    if(! wallet->HaveCScript(scriptID)) {
         wallet->AddCScript(script);
-    if(!wallet->mapAddressBook.count(CBitcoinAddress(address)))
+    }
+    if(! wallet->mapAddressBook.count(CBitcoinAddress(address))) {
         wallet->SetAddressBookName(CBitcoinAddress(address), label);
+    }
 }
 
 void MultisigDialog::clear()
 {
     while(ui->pubkeyEntries->count())
+    {
         delete ui->pubkeyEntries->takeAt(0)->widget();
+    }
 
     addPubKey();
     addPubKey();
     updateRemoveEnabled();
 }
 
-MultisigAddressEntry * MultisigDialog::addPubKey()
+MultisigAddressEntry *MultisigDialog::addPubKey()
 {
-    MultisigAddressEntry *entry = new MultisigAddressEntry(this);
+    MultisigAddressEntry *entry = new (std::nothrow) MultisigAddressEntry(this);
+    if(! entry){
+        throw std::runtime_error("MultisigAddressEntry Failed to allocate memory.");
+    }
 
     entry->setModel(model);
     ui->pubkeyEntries->addWidget(entry);
@@ -268,8 +283,9 @@ MultisigAddressEntry * MultisigDialog::addPubKey()
     entry->clear();
     ui->scrollAreaWidgetContents->resize(ui->scrollAreaWidgetContents->sizeHint());
     QScrollBar *bar = ui->scrollArea->verticalScrollBar();
-    if(bar)
+    if(bar) {
         bar->setSliderPosition(bar->maximum());
+    }
 
     return entry;
 }
@@ -288,15 +304,13 @@ void MultisigDialog::on_createTransactionButton_clicked()
     for(int i = 0; i < ui->inputs->count(); i++)
     {
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(i)->widget());
-        if(entry)
-        {
-            if(entry->validate())
-            {
+        if(entry) {
+            if(entry->validate()) {
                 CTxIn input = entry->getInput();
                 transaction.vin.push_back(input);
-            }
-            else
+            } else {
                 return;
+            }
         }
     }
 
@@ -305,10 +319,8 @@ void MultisigDialog::on_createTransactionButton_clicked()
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(i)->widget());
 
-        if(entry)
-        {
-            if(entry->validate())
-            {
+        if(entry) {
+            if(entry->validate()) {
                 SendCoinsRecipient recipient = entry->getValue();
                 CBitcoinAddress address(recipient.address.toStdString());
                 CScript scriptPubKey;
@@ -316,13 +328,13 @@ void MultisigDialog::on_createTransactionButton_clicked()
                 int64_t amount = recipient.amount;
                 CTxOut output(amount, scriptPubKey);
                 transaction.vout.push_back(output);
-            }
-            else
+            } else {
                 return;
+            }
         }
     }
 
-	CDataStream ss(SER_NETWORK, version::PROTOCOL_VERSION);
+    CDataStream ss(SER_NETWORK, version::PROTOCOL_VERSION);
     ss << transaction;
     ui->transaction->setText(util::HexStr(ss.begin(), ss.end()).c_str());
 }
@@ -330,25 +342,27 @@ void MultisigDialog::on_createTransactionButton_clicked()
 void MultisigDialog::on_transaction_textChanged()
 {
     while(ui->inputs->count())
+    {
         delete ui->inputs->takeAt(0)->widget();
+    }
     while(ui->outputs->count())
+    {
         delete ui->outputs->takeAt(0)->widget();
+    }
 
-    if(ui->transaction->text().size() > 0)
+    if(ui->transaction->text().size() > 0) {
         ui->signTransactionButton->setEnabled(true);
-    else
+    } else {
         ui->signTransactionButton->setEnabled(false);
+    }
 
     // Decode the raw transaction
-	std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
+    std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
     CDataStream ss(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
-    try
-    {
+    try {
         ss >> tx;
-    }
-    catch(const std::exception&)
-    {
+    } catch(const std::exception &) {
         return;
     }
 
@@ -360,8 +374,7 @@ void MultisigDialog::on_transaction_textChanged()
         addInput();
         index++;
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(index)->widget());
-        if(entry)
-        {
+        if(entry) {
             entry->setTransactionId(QString(prevoutHash.GetHex().c_str()));
             entry->setTransactionOutputIndex(txin.prevout.n);
         }
@@ -373,7 +386,7 @@ void MultisigDialog::on_transaction_textChanged()
     {
         CScript scriptPubKey = txout.scriptPubKey;
         CTxDestination addr;
-		Script_util::ExtractDestination(scriptPubKey, addr);
+        Script_util::ExtractDestination(scriptPubKey, addr);
         CBitcoinAddress address(addr);
         SendCoinsRecipient recipient;
         recipient.address = QString(address.ToString().c_str());
@@ -381,8 +394,7 @@ void MultisigDialog::on_transaction_textChanged()
         addOutput();
         index++;
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(index)->widget());
-        if(entry)
-        {
+        if(entry) {
             entry->setValue(recipient);
         }
     }
@@ -404,21 +416,19 @@ void MultisigDialog::on_signTransactionButton_clicked()
 {
     ui->signedTransaction->clear();
 
-    if(!model)
+    if(! model) {
         return;
+    }
 
     CWallet *wallet = model->getWallet();
 
     // Decode the raw transaction
-	std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
+    std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
     CDataStream ss(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
-    try
-    {
+    try {
         ss >> tx;
-    }
-    catch(const std::exception&)
-    {
+    } catch(const std::exception &) {
         return;
     }
     CTransaction mergedTx(tx);
@@ -436,11 +446,12 @@ void MultisigDialog::on_signTransactionButton_clicked()
         tempTx.vin.push_back(mergedTx.vin[i]);
         tempTx.FetchInputs(txdb, unused, false, false, mapPrevTx, fInvalid);
 
-        BOOST_FOREACH(const CTxIn& txin, tempTx.vin)
+        BOOST_FOREACH(const CTxIn &txin, tempTx.vin)
         {
             const uint256& prevHash = txin.prevout.hash;
-            if(mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.vout.size() > txin.prevout.n)
+            if(mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.vout.size() > txin.prevout.n) {
                 mapPrevOut[txin.prevout] = mapPrevTx[prevHash].second.vout[txin.prevout.n].scriptPubKey;
+            }
         }
     }
 
@@ -448,12 +459,10 @@ void MultisigDialog::on_signTransactionButton_clicked()
     for(int i = 0; i < ui->inputs->count(); i++)
     {
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(i)->widget());
-        if(entry)
-        {
+        if(entry) {
             QString redeemScriptStr = entry->getRedeemScript();
-            if(redeemScriptStr.size() > 0)
-            {
-				std::vector<unsigned char> scriptData(hex::ParseHex(redeemScriptStr.toStdString()));
+            if(redeemScriptStr.size() > 0) {
+                std::vector<unsigned char> scriptData(hex::ParseHex(redeemScriptStr.toStdString()));
                 CScript redeemScript(scriptData.begin(), scriptData.end());
                 wallet->AddCScript(redeemScript);
             }
@@ -461,26 +470,25 @@ void MultisigDialog::on_signTransactionButton_clicked()
     }
 
     WalletModel::UnlockContext ctx(model->requestUnlock());
-    if(!ctx.isValid())
+    if(! ctx.isValid()) {
         return;
+    }
 
     // Sign what we can
     bool fComplete = true;
     for(unsigned int i = 0; i < mergedTx.vin.size(); i++)
     {
-        CTxIn& txin = mergedTx.vin[i];
-        if(mapPrevOut.count(txin.prevout) == 0)
-        {
+        CTxIn &txin = mergedTx.vin[i];
+        if(mapPrevOut.count(txin.prevout) == 0) {
             fComplete = false;
             continue;
         }
-        const CScript& prevPubKey = mapPrevOut[txin.prevout];
+        const CScript &prevPubKey = mapPrevOut[txin.prevout];
 
         txin.scriptSig.clear();
-		Script_util::SignSignature(*wallet, prevPubKey, mergedTx, i, Script_param::SIGHASH_ALL);
+        Script_util::SignSignature(*wallet, prevPubKey, mergedTx, i, Script_param::SIGHASH_ALL);
         txin.scriptSig = Script_util::CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, tx.vin[i].scriptSig);
-        if(! Script_util::VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, true, 0))
-        {
+        if(! Script_util::VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, true, 0)) {
             fComplete = false;
         }
     }
@@ -489,13 +497,10 @@ void MultisigDialog::on_signTransactionButton_clicked()
     ssTx << mergedTx;
     ui->signedTransaction->setText(util::HexStr(ssTx.begin(), ssTx.end()).c_str());
 
-    if(fComplete)
-    {
+    if(fComplete) {
         ui->statusLabel->setText(tr("Transaction signature is complete"));
         ui->sendTransactionButton->setEnabled(true);
-    }
-    else
-    {
+    } else {
         ui->statusLabel->setText(tr("Transaction is NOT completely signed"));
         ui->sendTransactionButton->setEnabled(false);
     }
@@ -509,35 +514,32 @@ void MultisigDialog::on_copySignedTransactionButton_clicked()
 void MultisigDialog::on_sendTransactionButton_clicked()
 {
     int64_t transactionSize = ui->signedTransaction->text().size() / 2;
-    if(transactionSize == 0)
+    if(transactionSize == 0) {
         return;
+    }
 
     // Check the fee
-	int64_t fee = (int64_t ) (ui->fee->text().toDouble() * util::COIN);
+    int64_t fee = (int64_t ) (ui->fee->text().toDouble() * util::COIN);
     int64_t minFee = block_param::MIN_TX_FEE * (1 + (int64_t) transactionSize / 1000);
-    if(fee < minFee)
-    {
-		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 SORA) is smaller than the expected fee (%2 SORA). Do you want to send the transaction anyway?").arg((double) fee / util::COIN).arg((double) minFee / util::COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
-        if(ret != QMessageBox::Yes)
+    if(fee < minFee) {
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 SORA) is smaller than the expected fee (%2 SORA). Do you want to send the transaction anyway?").arg((double) fee / util::COIN).arg((double) minFee / util::COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if(ret != QMessageBox::Yes) {
             return;
-    }
-    else if(fee > minFee)
-    {
-		QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 SORA) is bigger than the expected fee (%2 SORA). Do you want to send the transaction anyway?").arg((double) fee / util::COIN).arg((double) minFee / util::COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
-        if(ret != QMessageBox::Yes)
+        }
+    } else if(fee > minFee) {
+        QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 SORA) is bigger than the expected fee (%2 SORA). Do you want to send the transaction anyway?").arg((double) fee / util::COIN).arg((double) minFee / util::COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
+        if(ret != QMessageBox::Yes) {
             return;
+        }
     }
 
     // Decode the raw transaction
-	std::vector<unsigned char> txData(hex::ParseHex(ui->signedTransaction->text().toStdString()));
+    std::vector<unsigned char> txData(hex::ParseHex(ui->signedTransaction->text().toStdString()));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
-    try
-    {
+    try {
         ssData >> tx;
-    }
-    catch(const std::exception&)
-    {
+    } catch(const std::exception &) {
         return;
     }
     uint256 txHash = tx.GetHash();
@@ -545,24 +547,29 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     // Check if the transaction is already in the blockchain
     CTransaction existingTx;
     uint256 blockHash = 0;
-	if(block_transaction::manage::GetTransaction(txHash, existingTx, blockHash))
-    {
-        if(blockHash != 0)
+    if(block_transaction::manage::GetTransaction(txHash, existingTx, blockHash)) {
+        if(blockHash != 0) {
             return;
+        }
     }
 
     // Send the transaction to the local node
     CTxDB txdb("r");
-    if(!tx.AcceptToMemoryPool(txdb, false))
-    return;
-	wallet_process::manage::SyncWithWallets(tx, NULL, true);
+    if(! tx.AcceptToMemoryPool(txdb, false)) {
+        return;
+    }
+
+    wallet_process::manage::SyncWithWallets(tx, NULL, true);
     //(CInv(MSG_TX, txHash), tx);
-	bitrelay::RelayTransaction(tx, txHash);
+    bitrelay::RelayTransaction(tx, txHash);
 }
 
-MultisigInputEntry * MultisigDialog::addInput()
+MultisigInputEntry *MultisigDialog::addInput()
 {
-    MultisigInputEntry *entry = new MultisigInputEntry(this);
+    MultisigInputEntry *entry = new (std::nothrow) MultisigInputEntry(this);
+    if(! entry) {
+        throw std::runtime_error("MultisigDialog Failed to allocate memory.");
+    }
 
     entry->setModel(model);
     ui->inputs->addWidget(entry);
@@ -572,8 +579,9 @@ MultisigInputEntry * MultisigDialog::addInput()
     entry->clear();
     ui->scrollAreaWidgetContents_2->resize(ui->scrollAreaWidgetContents_2->sizeHint());
     QScrollBar *bar = ui->scrollArea_2->verticalScrollBar();
-    if(bar)
+    if(bar) {
         bar->setSliderPosition(bar->maximum());
+    }
 
     return entry;
 }
@@ -584,9 +592,12 @@ void MultisigDialog::removeEntry(MultisigInputEntry *entry)
     updateRemoveEnabled();
 }
 
-SendCoinsEntry * MultisigDialog::addOutput()
+SendCoinsEntry *MultisigDialog::addOutput()
 {
-    SendCoinsEntry *entry = new SendCoinsEntry(this);
+    SendCoinsEntry *entry = new (std::nothrow) SendCoinsEntry(this);
+    if(! entry) {
+        throw std::runtime_error("MultisigDialog Failed to allocate memory.");
+    }
 
     entry->setModel(model);
     ui->outputs->addWidget(entry);
@@ -596,8 +607,9 @@ SendCoinsEntry * MultisigDialog::addOutput()
     entry->clear();
     ui->scrollAreaWidgetContents_3->resize(ui->scrollAreaWidgetContents_3->sizeHint());
     QScrollBar *bar = ui->scrollArea_3->verticalScrollBar();
-    if(bar)
+    if(bar) {
         bar->setSliderPosition(bar->maximum());
+    }
 
     return entry;
 }
@@ -615,11 +627,13 @@ void MultisigDialog::updateAmounts()
     for(int i = 0; i < ui->inputs->count(); i++)
     {
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             inputsAmount += entry->getAmount();
+        }
     }
+
     QString inputsAmountStr;
-	inputsAmountStr.sprintf("%.6f", (double) inputsAmount / util::COIN);
+    inputsAmountStr.sprintf("%.6f", (double) inputsAmount / util::COIN);
     ui->inputsAmount->setText(inputsAmountStr);
 
     // Update outputs amount
@@ -627,9 +641,11 @@ void MultisigDialog::updateAmounts()
     for(int i = 0; i < ui->outputs->count(); i++)
     {
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(i)->widget());
-        if(entry)
+        if(entry) {
             outputsAmount += entry->getValue().amount;
+        }
     }
+
     QString outputsAmountStr;
     outputsAmountStr.sprintf("%.6f", (double) outputsAmount / util::COIN);
     ui->outputsAmount->setText(outputsAmountStr);
@@ -644,13 +660,11 @@ void MultisigDialog::updateAmounts()
 void MultisigDialog::keyPressEvent(QKeyEvent *event)
 {
 #ifdef ANDROID
-    if(windowType() != Qt::Widget && event->key() == Qt::Key_Back)
-    {
+    if(windowType() != Qt::Widget && event->key() == Qt::Key_Back) {
         close();
     }
 #else
-    if(windowType() != Qt::Widget && event->key() == Qt::Key_Escape)
-    {
+    if(windowType() != Qt::Widget && event->key() == Qt::Key_Escape) {
         close();
     }
 #endif

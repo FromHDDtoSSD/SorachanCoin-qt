@@ -33,90 +33,90 @@ enum ChangeType
 class CClientUIInterface
 {
 private:
-	CClientUIInterface() {}
+    CClientUIInterface() {}
 
-	CClientUIInterface(const CClientUIInterface &); // {}
-	CClientUIInterface &operator=(const CClientUIInterface &); // {}
+    CClientUIInterface(const CClientUIInterface &); // {}
+    CClientUIInterface &operator=(const CClientUIInterface &); // {}
 
 public:
-	// Singleton Object: instance init.cpp
-	static CClientUIInterface uiInterface;
+    // Singleton Object: instance init.cpp
+    static CClientUIInterface uiInterface;
 
-	/** Flags for CClientUIInterface::ThreadSafeMessageBox */
-	enum MessageBoxFlags
-	{
-		YES                   = 0x00000002,
-		OK                    = 0x00000004,
-		NO                    = 0x00000008,
-		YES_NO                = (YES|NO),
-		CANCEL                = 0x00000010,
-		APPLY                 = 0x00000020,
-		CLOSE                 = 0x00000040,
-		OK_DEFAULT            = 0x00000000,
-		YES_DEFAULT           = 0x00000000,
-		NO_DEFAULT            = 0x00000080,
-		CANCEL_DEFAULT        = 0x80000000,
-		ICON_EXCLAMATION      = 0x00000100,
-		ICON_HAND             = 0x00000200,
-		ICON_WARNING          = ICON_EXCLAMATION,
-		ICON_ERROR            = ICON_HAND,
-		ICON_QUESTION         = 0x00000400,
-		ICON_INFORMATION      = 0x00000800,
-		ICON_STOP             = ICON_HAND,
-		ICON_ASTERISK         = ICON_INFORMATION,
-		ICON_MASK             = (0x00000100|0x00000200|0x00000400|0x00000800),
-		FORWARD               = 0x00001000,
-		BACKWARD              = 0x00002000,
-		RESET                 = 0x00004000,
-		HELP                  = 0x00008000,
-		MORE                  = 0x00010000,
-		SETUP                 = 0x00020000,
+    /** Flags for CClientUIInterface::ThreadSafeMessageBox */
+    enum MessageBoxFlags
+    {
+        YES                   = 0x00000002,
+        OK                    = 0x00000004,
+        NO                    = 0x00000008,
+        YES_NO                = (YES|NO),
+        CANCEL                = 0x00000010,
+        APPLY                 = 0x00000020,
+        CLOSE                 = 0x00000040,
+        OK_DEFAULT            = 0x00000000,
+        YES_DEFAULT           = 0x00000000,
+        NO_DEFAULT            = 0x00000080,
+        CANCEL_DEFAULT        = 0x80000000,
+        ICON_EXCLAMATION      = 0x00000100,
+        ICON_HAND             = 0x00000200,
+        ICON_WARNING          = ICON_EXCLAMATION,
+        ICON_ERROR            = ICON_HAND,
+        ICON_QUESTION         = 0x00000400,
+        ICON_INFORMATION      = 0x00000800,
+        ICON_STOP             = ICON_HAND,
+        ICON_ASTERISK         = ICON_INFORMATION,
+        ICON_MASK             = (0x00000100|0x00000200|0x00000400|0x00000800),
+        FORWARD               = 0x00001000,
+        BACKWARD              = 0x00002000,
+        RESET                 = 0x00004000,
+        HELP                  = 0x00008000,
+        MORE                  = 0x00010000,
+        SETUP                 = 0x00020000,
 
-		//
-		// Force blocking, modal message box dialog (not just OS notification)
-		//
-		MODAL                 = 0x00040000,
+        //
+        // Force blocking, modal message box dialog (not just OS notification)
+        //
+        MODAL                 = 0x00040000,
 
-		//
-		// Predefined combinations for certain default usage cases
-		//
-		MSG_INFORMATION = ICON_INFORMATION,
-		MSG_WARNING = (ICON_WARNING | OK | MODAL),
-		MSG_ERROR = (ICON_ERROR | OK | MODAL)
-	};
+        //
+        // Predefined combinations for certain default usage cases
+        //
+        MSG_INFORMATION = ICON_INFORMATION,
+        MSG_WARNING = (ICON_WARNING | OK | MODAL),
+        MSG_ERROR = (ICON_ERROR | OK | MODAL)
+    };
 
-	/** Show message box. */
-	boost::signals2::signal<void (const std::string &message, const std::string &caption, int style)> ThreadSafeMessageBox;
+    /** Show message box. */
+    boost::signals2::signal<void (const std::string &message, const std::string &caption, int style)> ThreadSafeMessageBox;
 
-	/** Ask the user whether they want to pay a fee or not. */
-	boost::signals2::signal<bool (int64_t nFeeRequired, const std::string &strCaption), boost::signals2::last_value<bool> > ThreadSafeAskFee;
+    /** Ask the user whether they want to pay a fee or not. */
+    boost::signals2::signal<bool (int64_t nFeeRequired, const std::string &strCaption), boost::signals2::last_value<bool> > ThreadSafeAskFee;
 
-	/** Handle a URL passed at the command line. */
-	boost::signals2::signal<void (const std::string &strURI)> ThreadSafeHandleURI;
+    /** Handle a URL passed at the command line. */
+    boost::signals2::signal<void (const std::string &strURI)> ThreadSafeHandleURI;
 
-	/** Progress message during initialization. */
-	boost::signals2::signal<void (const std::string &message)> InitMessage;
+    /** Progress message during initialization. */
+    boost::signals2::signal<void (const std::string &message)> InitMessage;
 
-	/** Initiate client shutdown. */
-	boost::signals2::signal<void ()> QueueShutdown;
+    /** Initiate client shutdown. */
+    boost::signals2::signal<void ()> QueueShutdown;
 
-	/** Translate a message to the native language of the user. */
-	boost::signals2::signal<std::string (const char *psz)> Translate;
+    /** Translate a message to the native language of the user. */
+    boost::signals2::signal<std::string (const char *psz)> Translate;
 
-	/** Block chain changed. */
-	boost::signals2::signal<void ()> NotifyBlocksChanged;
+    /** Block chain changed. */
+    boost::signals2::signal<void ()> NotifyBlocksChanged;
 
-	/** Number of network connections changed. */
-	boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;
+    /** Number of network connections changed. */
+    boost::signals2::signal<void (int newNumConnections)> NotifyNumConnectionsChanged;
 
-	//
-	// New, updated or cancelled alert.
-	// @note called with lock CUnsignedAlert::cs_mapAlerts held.
-	//
-	boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
+    //
+    // New, updated or cancelled alert.
+    // @note called with lock CUnsignedAlert::cs_mapAlerts held.
+    //
+    boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
 
-	static int noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style);
-	static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption);
+    static int noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style);
+    static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption);
 };
 
 //
@@ -125,8 +125,9 @@ public:
 //
 static std::string _(const char *psz)
 {
-	boost::optional<std::string> rv = CClientUIInterface::uiInterface.Translate(psz);
-	return rv ? (*rv) : psz;
+    boost::optional<std::string> rv = CClientUIInterface::uiInterface.Translate(psz);
+    return rv ? (*rv) : psz;
 }
 
 #endif
+//@

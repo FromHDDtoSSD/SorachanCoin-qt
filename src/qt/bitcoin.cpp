@@ -1,7 +1,7 @@
 /*
  * W.J. van der Laan 2011-2012
  */
-//
+
 #include "bitcoingui.h"
 #include "clientmodel.h"
 #include "walletmodel.h"
@@ -56,7 +56,7 @@ static void initTranslations(QTranslator &qtTranslatorBase, QTranslator &qtTrans
     }
 
     // 3) -lang command line argument
-	lang_territory = QString::fromStdString(map_arg::GetArg("-lang", lang_territory.toStdString()));
+    lang_territory = QString::fromStdString(map_arg::GetArg("-lang", lang_territory.toStdString()));
 
     // Convert to "de" only by truncating "_DE"
     QString lang = lang_territory;
@@ -157,7 +157,7 @@ static std::string Translate(const char *psz)
  */
 static void handleRunawayException(const std::exception *e)
 {
-	excep::PrintExceptionContinue(e, "Runaway exception");
+    excep::PrintExceptionContinue(e, "Runaway exception");
     QMessageBox::critical(0, "Runaway exception", BitcoinGUI::tr("A fatal error occurred. SorachanCoin can no longer continue safely and will quit.") + QString("\n\n") + QString::fromStdString(excep::get_strMiscWarning()));
     exit(1);
 }
@@ -196,7 +196,7 @@ int main(int argc, char *argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
     // Command-line options take precedence:
-	map_arg::ParseParameters(argc, argv);
+    map_arg::ParseParameters(argc, argv);
 
     // User language is set up: pick a data directory
     Intro::pickDataDirectory();
@@ -207,10 +207,10 @@ int main(int argc, char *argv[])
     // ... then bitcoin.conf:
     if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
         QMessageBox::critical(0, "SorachanCoin",
-			QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
+            QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
-	map_arg::ReadConfigFile();
+    map_arg::ReadConfigFile();
 
     // ... then GUI settings:
     OptionsModel optionsModel;
@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
                 }
 
                 ClientModel clientModel(&optionsModel);
-				WalletModel walletModel(entry::pwalletMain, &optionsModel);
+                WalletModel walletModel(entry::pwalletMain, &optionsModel);
 
                 window.setClientModel(&clientModel);
                 window.setWalletModel(&walletModel);
@@ -285,7 +285,7 @@ int main(int argc, char *argv[])
             }
 
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-			net_node::Shutdown(NULL);
+            net_node::Shutdown(NULL);
         } else {
             return 1;
         }

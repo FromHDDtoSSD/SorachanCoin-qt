@@ -9,6 +9,9 @@
 class BitcoinAddressValidator : public QValidator
 {
     Q_OBJECT
+private:
+    BitcoinAddressValidator(const BitcoinAddressValidator &); // {}
+    BitcoinAddressValidator &operator=(const BitcoinAddressValidator &); // {}
 public:
     explicit BitcoinAddressValidator(QObject *parent = 0);
 
@@ -22,3 +25,4 @@ public slots:
 };
 
 #endif // BITCOINADDRESSVALIDATOR_H
+//@

@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #include "protocol.h"
 #include "netbase.h"
 
@@ -27,39 +27,39 @@ std::string CMessageHeader::GetCommand() const
 {
     if (pchCommand[CMD_SIZE::COMMAND_SIZE - 1] == 0) {
         return std::string(pchCommand, pchCommand + ::strlen(pchCommand));
-	} else {
+    } else {
         return std::string(pchCommand, pchCommand + CMD_SIZE::COMMAND_SIZE);
-	}
+    }
 }
 
 bool CMessageHeader::IsValid() const
 {
-	// Check start string
+    // Check start string
     if (::memcmp(mpchMessageStart, block_info::gpchMessageStart, sizeof(mpchMessageStart)) != 0) {
-		return false;
-	}
+        return false;
+    }
 
-	// Check the command string for errors
+    // Check the command string for errors
     for (const char *p1 = pchCommand; p1 < pchCommand + CMD_SIZE::COMMAND_SIZE; p1++)
-	{
-		if (*p1 == 0) {
-			// Must be all zeros after the first zero
+    {
+        if (*p1 == 0) {
+            // Must be all zeros after the first zero
             for (; p1 < pchCommand + CMD_SIZE::COMMAND_SIZE; p1++)
-			{
-				if (*p1 != 0) {
-					return false;
-				}
-			}
-		} else if (*p1 < ' ' || *p1 > 0x7E) {
-			return false;
-		}
-	}
+            {
+                if (*p1 != 0) {
+                    return false;
+                }
+            }
+        } else if (*p1 < ' ' || *p1 > 0x7E) {
+            return false;
+        }
+    }
 
-	// Message size
+    // Message size
     if (nMessageSize > compact_size::MAX_SIZE) {
         printf("CMessageHeader::IsValid() : (%s, %u bytes) nMessageSize > compact_size::MAX_SIZE\n", GetCommand().c_str(), nMessageSize);
-		return false;
-	}
+        return false;
+    }
 
-	return true;
+    return true;
 }
