@@ -48,8 +48,8 @@ namespace boost {
 # include <sys/prctl.h>
 #endif
 
-#if !defined(WIN32) && !defined(ANDROID)
-#include <execinfo.h>
+#if !defined(WIN32) && !defined(ANDROID) && !defined(__OpenBSD__)
+# include <execinfo.h>
 #endif
 
 FILE *trace::_fileout = NULL;

@@ -1,0 +1,155 @@
+
+Copyright (c) 2009-2012 Bitcoin Developers
+Copyright (c) 2013 NovaCoin Developers
+Copyright (c) 2018 SorachanCoin Developers
+
+Distributed under the MIT/X11 software license, see the accompanying
+file license.txt or http://www.opensource.org/licenses/mit-license.php.
+
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/). 
+This product includes software developed by the LibreSSL Project for use in the LibreSSL Toolkit (https://www.libressl.org/). 
+This product includes cryptographic software written by Eric Young (eay@cryptsoft.com).
+
+LINUX(Fedora) BUILD NOTES
+==========================
+
+INSTALL SorachanCoind [Fedora 32bit/64bit]
+
+----------------------------
+gcc, g++, zlib-devel
+----------------------------
+yum -y install gcc
+yum -y install gcc-c++
+yum -y install zlib-devel
+
+----------------------------
+Download SorachanCoin-qt
+----------------------------
+cd /usr/local/src
+
+git clone https://github.com/FromHDDtoSSD/SorachanCoin-qt.git
+
+or
+
+yum -y install unzip
+wget https://github.com/FromHDDtoSSD/SorachanCoin-qt/archive/master.zip -O SorachanCoin-qt.zip
+unzip -d /usr/local/src SorachanCoin-qt.zip
+mv ./SorachanCoin-qt-master ./SorachanCoin-qt
+
+----------------------------
+BOOST_1_68_0
+----------------------------
+cd /usr/local/src
+wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download -O boost_1_68_0.tar.gz
+
+tar zxvf boost_1_68_0.tar.gz
+cd boost_1_68_0
+./bootstrap.sh
+./b2 install -j2 --toolset=gcc --variant=release --link=static --threading=multi --with-system --with-filesystem --with-program_options --with-thread --with-chrono --prefix=/opt/boost_1_68_0
+
+----------------------------
+Berkeley DB 4.8.30
+----------------------------
+cd /usr/local/src
+wget http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
+
+tar zxvf db-4.8.30.NC.tar.gz
+cd db-4.8.30.NC/build_unix/
+../dist/configure --enable-cxx --disable-shared --with-pic --prefix=/opt/db-4.8.30
+
+cd ../dbinc
+chmod +w atomic.h
+vi atomic.h
+__atomic_compare_exchange => __db_atomic_compare_exchange
+*** https://src.fedoraproject.org/cgit/rpms/libdb.git/commit/?id=d6841b3b46a51db98c162347211a5a64d154ea37
+
+cd ../build_unix
+make
+make install
+
+----------------------------
+LibreSSL 2.8.2
+----------------------------
+cd /usr/local/src
+wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.8.2.tar.gz -O libressl-2.8.2.tar.gz
+
+tar zxvf libressl-2.8.2.tar.gz
+cd libressl-2.8.2
+./config --prefix=/opt/libressl-2.8.2 shared
+make
+make install
+
+----------------------------
+Miniupnp
+----------------------------
+cd /usr/local/src
+
+git clone https://github.com/miniupnp/miniupnp.git
+
+or
+
+wget https://github.com/miniupnp/miniupnp/archive/master.zip -O miniupnp.zip
+unzip -d /usr/local/src miniupnp.zip
+mv miniupnp-master miniupnp
+
+cd miniupnp/miniupnpc
+INSTALLPREFIX=/opt/miniupnpc make install
+
+----------------------------
+Leveldb
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src/leveldb
+make
+make memenv_test
+
+----------------------------
+SorachanCoind
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src
+mkdir obj
+make -f makefile.linux
+
+----------------------------
+SorachanCoind Install
+----------------------------
+mkdir /opt/SorachanCoin
+cp ./SorachanCoind /opt/SorachanCoin/SorachanCoind
+chown -R user:user /opt/SorachanCoin
+chmod -R 500 /opt/SorachanCoin
+ln -s /opt/SorachanCoin/SorachanCoind /bin/SorachanCoind
+
+[BlockChain Data]
+mkdir /.sorachandata
+chown user:user /.sorachandata
+chmod 700 /.sorachandata
+
+--------------------------------------------------------------------
+Let's Begin the SorachanCoind in Fedora which is connected by SSH.
+--------------------------------------------------------------------
+SorachanCoind -datadir=/.sorachandata -daemon
+
+cat /.sorachandata/SorachanCoin.conf
+*** Please copy to clipbord the rpcpassword which is written in SorachanCoin.conf.
+
+-------------------
+SorachanCoind usage
+-------------------
+HELP:
+SorachanCoind -datadir=/.sorachandata --help
+
+START:
+SorachanCoind -datadir=/.sorachandata -daemon
+
+STOP:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) stop
+
+GET INFO:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getinfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getwork
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getmininginfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getblocktemplate
+
+GET ADDRESS:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getnewaddress
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getaccountaddress ""
+

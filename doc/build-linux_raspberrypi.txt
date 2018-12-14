@@ -1,0 +1,131 @@
+
+Copyright (c) 2009-2012 Bitcoin Developers
+Copyright (c) 2013 NovaCoin Developers
+Copyright (c) 2018 SorachanCoin Developers
+
+Distributed under the MIT/X11 software license, see the accompanying
+file license.txt or http://www.opensource.org/licenses/mit-license.php.
+
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/). 
+This product includes software developed by the LibreSSL Project for use in the LibreSSL Toolkit (https://www.libressl.org/). 
+This product includes cryptographic software written by Eric Young (eay@cryptsoft.com).
+
+LINUX(RaspberryPi) BUILD NOTES
+==========================
+
+INSTALL SorachanCoind [RaspberryPi 32bit]
+
+----------------------------
+SorachanCoin-qt.git
+----------------------------
+sudo git clone https://github.com/FromHDDtoSSD/SorachanCoin-qt.git
+
+----------------------------
+BOOST_1_68_0
+----------------------------
+cd /usr/local/src
+sudo wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download -O boost_1_68_0.tar.gz
+
+tar zxvf boost_1_68_0.tar.gz
+cd boost_1_68_0
+./bootstrap.sh
+sudo ./b2 install -j2 --toolset=gcc --variant=release --link=static --threading=multi --with-system --with-filesystem --with-program_options --with-thread --with-chrono --prefix=/opt/boost_1_68_0
+
+----------------------------
+Berkeley DB 4.8.30
+----------------------------
+cd /usr/local/src
+sudo wget http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
+
+sudo tar zxvf db-4.8.30.NC.tar.gz
+cd db-4.8.30.NC/build_unix/
+../dist/configure --enable-cxx --disable-shared --with-pic --prefix=/opt/db-4.8.30
+make
+sudo make install
+
+----------------------------
+Miniupnp
+----------------------------
+cd /usr/local/src
+
+sudo git clone https://github.com/miniupnp/miniupnp.git
+
+or
+
+sudo wget https://github.com/miniupnp/miniupnp/archive/master.zip -O miniupnp.zip
+sudo unzip -d /usr/local/src miniupnp.zip
+sudo mv miniupnp-master miniupnp
+
+cd miniupnp/miniupnpc
+sudo INSTALLPREFIX=/opt/miniupnpc make install
+
+----------------------------
+LibreSSL 2.8.2
+----------------------------
+cd /usr/local/src
+sudo wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.8.2.tar.gz -O libressl-2.8.2.tar.gz
+
+sudo tar zxvf libressl-2.8.2.tar.gz
+cd libressl-2.8.2
+./config --prefix=/opt/libressl-2.8.2 shared
+make
+sudo make install
+
+----------------------------
+Leveldb
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src/leveldb
+sudo make
+sudo make memenv_test
+
+----------------------------
+SorachanCoind
+----------------------------
+cd /usr/local/src/SorachanCoin-qt/src
+sudo mkdir obj
+sudo make -f makefile.linux
+
+----------------------------
+SorachanCoind Install
+----------------------------
+sudo mkdir /opt/SorachanCoin
+sudo cp ./SorachanCoind /opt/SorachanCoin/SorachanCoind
+sudo chown -R user:user /opt/SorachanCoin
+sudo chmod -R 500 /opt/SorachanCoin
+sudo ln -s /opt/SorachanCoin/SorachanCoind /bin/SorachanCoind
+
+[BlockChain Data]
+sudo mkdir /.sorachandata
+sudo chown user:user /.sorachandata
+sudo chmod 700 /.sorachandata
+
+--------------------------------------------------------------------
+Let's Begin the SorachanCoind in RaspberryPi.
+--------------------------------------------------------------------
+SorachanCoind -datadir=/home/user/.sorachandata -daemon
+
+cat ~/.sorachandata/SorachanCoin.conf
+*** Please copy to clipbord the rpcpassword which is written in SorachanCoin.conf.
+
+-------------------
+SorachanCoind usage
+-------------------
+HELP:
+SorachanCoind -datadir=/.sorachandata --help
+
+START:
+SorachanCoind -datadir=/.sorachandata -daemon
+
+STOP:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) stop
+
+GET INFO:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getinfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getwork
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getmininginfo
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getblocktemplate
+
+GET ADDRESS:
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getnewaddress
+SorachanCoind -datadir=/.sorachandata -walletnotify -rpcuser=sora -rpcpassword=(rpcpassword here!) getaccountaddress ""
+
