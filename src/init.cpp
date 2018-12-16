@@ -250,7 +250,7 @@ std::string entry::HelpMessage()
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
         "  -torname=<host.onion>  " + _("Send the specified hidden service name when connecting to Tor nodes (default: none)") + "\n"
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
-        "  -port=<port>           " + _(("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet) + "or testnet: " + std::to_string(tcp_port::uTestnet) + ")").c_str()) + "\n" +
+        "  -port=<port>           " + _(("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet[tcp_port::nMainnet_default]) + "or testnet: " + std::to_string(tcp_port::uTestnet[tcp_port::nTestnet_default]) + ")").c_str()) + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
@@ -744,7 +744,8 @@ bool entry::AppInit2()
     if (! args_bool::fNoListen) {
         std::string strError;
         if (map_arg::GetMapArgsCount("-bind")) {
-            BOOST_FOREACH(std::string strBind, map_arg::GetMapMultiArgsString("-bind")) {
+            BOOST_FOREACH(std::string strBind, map_arg::GetMapMultiArgsString("-bind"))
+            {
                 CService addrBind;
                 if (! netbase::manage::Lookup(strBind.c_str(), addrBind, net_basis::GetListenPort(), false)) {
                     return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
@@ -759,7 +760,7 @@ bool entry::AppInit2()
                 fBound |= Bind(CService(in6addr_any, net_basis::GetListenPort()), false);
             }
 #endif
-            if (!ext_ip::IsLimited(netbase::NET_IPV4)) {
+            if (! ext_ip::IsLimited(netbase::NET_IPV4)) {
                 fBound |= Bind(CService(inaddr_any, net_basis::GetListenPort()), !fBound);
             }
         }

@@ -32,8 +32,11 @@ class CBlockIndex;
 //
 namespace tcp_port
 {
-    const unsigned short uMainnet = 6350;
-    const unsigned short uTestnet = 16350;
+    const unsigned short uMainnet[5] = {6350, 9350, 12350, 15350, 18350};
+    const unsigned short uTestnet[5] = {16350, 19350, 22350, 25350, 28350};
+    const unsigned int nPortLen = ARRAYLEN(uMainnet);
+    const unsigned int nMainnet_default = 0;
+    const unsigned int nTestnet_default = 0;
 
     const unsigned short uJsonRpcMain = 6351;
     const unsigned short uJsonRpcTest = 16351;
@@ -116,6 +119,19 @@ public:
 //
 class net_basis : private no_instance
 {
+private:
+    static CCriticalSection cs_port;
+
+    static bool IsNoneblock(SOCKET hSocket, char mode, long timeout_usec) {
+        fd_set fdset;
+        struct timeval timeout;
+        FD_ZERO(&fdset);
+        FD_SET(hSocket, &fdset);
+        timeout.tv_sec = 0;
+        timeout.tv_usec = timeout_usec;
+        int ret = (mode == 'r') ? ::select(hSocket + 1, &fdset, nullptr, nullptr, &timeout): ::select(hSocket + 1, nullptr, &fdset, nullptr, &timeout);
+        return (ret == 1) ? true: false;
+    }
 protected:
     static std::list<CNode *> vNodesDisconnected;
 
@@ -125,19 +141,36 @@ public:
     static const char *const strLocal;
     static const char *const strSeedMaster;
 
-    static unsigned short GetDefaultPort() {
-        return static_cast<unsigned short>(args_bool::fTestNet ? tcp_port::uTestnet: tcp_port::uMainnet);
+    static bool IsNoneblockSend(SOCKET hSocket, long timeout_usec = 20 * 1000) {
+        return IsNoneblock(hSocket, 's', timeout_usec);
     }
+    static bool IsNoneblockRecv(SOCKET hSocket, long timeout_usec = 20 * 1000) {
+        return IsNoneblock(hSocket, 'r', timeout_usec);
+    }
+
+    enum GET_PORT_TYPE
+    {
+        CONNECT_NODE,
+        DNS_SEED,
+        ONION,
+        ARG_DEFAULT_PORT,
+        ADD_NODE,
+        SHA256_BLOCKCHAIN,
+        QUANTUM_BLOCKCHAIN,
+    };
+    static unsigned short GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNetAddr = nullptr, const char *pszDest = nullptr);
 
     static void vNodeDisconnected_cleanup() {
         BOOST_FOREACH(CNode *pnode, vNodesDisconnected)
         {
-            delete pnode;
+            if(pnode) {
+                delete pnode;
+            }
         }
         vNodesDisconnected.clear();
     }
 
-    static unsigned short GetListenPort();
+    static unsigned short GetListenPort(GET_PORT_TYPE type = SHA256_BLOCKCHAIN);
     static bool RecvLine(SOCKET hSocket, std::string &strLine);
 };
 

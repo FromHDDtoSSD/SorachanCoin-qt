@@ -19,6 +19,7 @@ class entry : private no_instance
 #ifdef QT_GUI
     friend class OptionsModel;
 #endif
+    friend class net_basis;
 private:
     static const uint16_t nSocksDefault = tcp_port::uSocksDefault;
 
@@ -33,7 +34,7 @@ private:
     static void HandleSIGHUP(int);
 #endif
 
-    static bool BindListenPort(const CService &addrBind, std::string &strError);
+    static bool BindListenPort(const CService &addrBind, std::string &strError, bool check = false);
 
 public:
     static enum Checkpoints::CPMode CheckpointsMode;

@@ -23,6 +23,7 @@
 #include "upnperrors.h"
 #endif
 
+CCriticalSection net_basis::cs_port;
 CCriticalSection net_node::cs_vNodes;
 CCriticalSection shot::cs_vOneShots;
 std::deque<std::string> shot::vOneShots;
@@ -88,9 +89,210 @@ bool_arg args_bool::fClient(false);
  #endif
 #endif
 
-unsigned short net_basis::GetListenPort()
+/*
+class conn_tcp_port
 {
-    return (unsigned short)(map_arg::GetArg("-port", net_basis::GetDefaultPort()));
+private:
+    unsigned short port;
+public:
+    conn_tcp_port() : port(net_basis::GetDefaultPort()) {}
+    virtual ~conn_tcp_port() {}
+    unsigned short get_port() const {
+        return port;
+    }
+};
+*/
+
+unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNetAddr/*=nullptr*/, const char *pszDest/*=nullptr*/)
+{
+    class NET_ADDR_TYPE
+    {
+    private:
+        CNetAddr netAddr;
+        GET_PORT_TYPE type;
+        void insert(const CNetAddr &_netAddr, GET_PORT_TYPE _type) {
+            netAddr = _netAddr;
+            type = _type;
+        }
+        NET_ADDR_TYPE(); // {}
+    public:
+        bool operator==(const NET_ADDR_TYPE &obj) const {
+            return (netAddr == obj.netAddr) && (type == obj.type);
+        }
+        bool operator<(const NET_ADDR_TYPE &obj) const {
+            return netAddr < obj.netAddr;
+        }
+        NET_ADDR_TYPE &operator=(const NET_ADDR_TYPE &obj) {
+            insert(obj.netAddr, obj.type);
+            return *this;
+        }
+        explicit NET_ADDR_TYPE(const CNetAddr &_netAddr, GET_PORT_TYPE _type) {
+            insert(_netAddr, _type);
+        }
+        NET_ADDR_TYPE(const NET_ADDR_TYPE &obj) {
+            operator=(obj);
+        }
+    };
+
+    printf("GetDefaultPort type_%d\n", (int)type);
+    const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet: tcp_port::uMainnet;
+
+    {
+        LOCK(net_basis::cs_port);
+        static std::map<NET_ADDR_TYPE, unsigned short> map_port_info;
+        if(pNetAddr || pszDest) {
+            for(int i=0; i < tcp_port::nPortLen; ++i)
+            {
+                if(args_bool::fShutdown) {
+                    break;
+                }
+                unsigned short port_target = p_uport[i];
+                CService addrConnect; // pNetAddr: set, pszDest: get
+                SOCKET hSocket;
+                if(pNetAddr) {
+                    addrConnect.SetIP(*pNetAddr);
+                    addrConnect.SetPort(port_target);
+                    pszDest = nullptr;
+                }
+                if(pNetAddr) {
+                    printf("GetDefaultPort CService %s\n", addrConnect.ToString().c_str());
+                }
+                bool ret = pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, port_target) : netbase::manage::ConnectSocket(addrConnect, hSocket);
+                if(ret) {
+                    //
+                    // SorachanCoin
+                    // connected test
+                    //
+                    std::vector<char> vchMsg;
+                    vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
+                    CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
+                    std::string retstr;
+                    printf("GetDefaultPort Connected %s\n", sMsg.str().c_str());
+                    if(! IsNoneblockSend(hSocket)) {
+                        netbase::manage::CloseSocket(hSocket);
+                        util::Sleep(20);
+                        continue;
+                    }
+                    if(::send(hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT) <= 0) {
+                        netbase::manage::CloseSocket(hSocket);
+                        util::Sleep(20);
+                        continue;
+                    }
+                    if(! IsNoneblockRecv(hSocket)) {
+                        netbase::manage::CloseSocket(hSocket);
+                        util::Sleep(20);
+                        continue;
+                    }
+                    bool ret = net_basis::RecvLine(hSocket, retstr);
+                    printf("GetDefaultPort RecvLine %s\n", retstr.c_str());
+                    if(ret && retstr == coin_param::strEcho) {
+                        struct in_addr ipv4;
+                        if(addrConnect.GetInAddr(&ipv4)) {
+                            CNetAddr netAddr = CNetAddr(ipv4);
+                            NET_ADDR_TYPE addr_type(netAddr, type);
+                            std::pair<NET_ADDR_TYPE, unsigned short> data = std::make_pair(addr_type, port_target);
+                            map_port_info.insert(data);
+                        }
+#ifdef USE_IPV6
+# if USE_IPV6 == 1
+                        struct in6_addr ipv6;
+                        if(addrConnect.GetIn6Addr(&ipv6)) {
+                            CNetAddr netAddr = CNetAddr(ipv6);
+                            NET_ADDR_TYPE addr_type(netAddr, type);
+                            std::pair<NET_ADDR_TYPE, unsigned short> data = std::make_pair(addr_type, port_target);
+                            map_port_info.insert(data);
+                        }
+# endif
+#endif
+                        netbase::manage::CloseSocket(hSocket);
+                        util::Sleep(20);
+                        printf("GetDefaultPort port_target %d\n", (int)port_target);
+                        return port_target;
+                    } else {
+                        netbase::manage::CloseSocket(hSocket);
+                        util::Sleep(20);
+                        continue;
+                    }
+                } else {
+                    netbase::manage::CloseSocket(hSocket);
+                    util::Sleep(20);
+                }
+            }
+        } else {
+            if(pNetAddr){
+                NET_ADDR_TYPE key(*pNetAddr, type);
+                std::map<NET_ADDR_TYPE, unsigned short>::const_iterator ite = map_port_info.find(key);
+                if(ite != map_port_info.end()) {
+                    const std::pair<const NET_ADDR_TYPE, unsigned short> data = *ite;
+                    printf("GetDefaultPort map_port find %d\n", (int)data.second);
+                    return data.second;
+                }
+            }
+        }
+    }
+
+    //
+    // no connect or addnode or default (Ver1.0.0 - Ver1.0.4)
+    //
+    // printf("GetDefaultPort default selected pNetAddr_%p pszDest_%p\n", pNetAddr, pszDest);
+    printf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default: tcp_port::nMainnet_default]);
+    return p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default: tcp_port::nMainnet_default];
+
+    // return static_cast<unsigned short>(args_bool::fTestNet ? tcp_port::uTestnet: tcp_port::uMainnet[tcp_port::nMainnet_default]);
+}
+
+unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN */)
+{
+    //
+    // Listen port : SHA256_BLOCKCHAIN, QUANTUM_BLOCKCHAIN
+    //
+    const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet: tcp_port::uMainnet;
+
+    unsigned short port_default = p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default: tcp_port::nMainnet_default];
+    if(type == SHA256_BLOCKCHAIN) {
+        unsigned short port = static_cast<unsigned short>(map_arg::GetArg("-port", port_default));
+        if(port_default != port) {
+            return port;
+        }
+    } else if (type == QUANTUM_BLOCKCHAIN) {
+        unsigned short port = static_cast<unsigned short>(map_arg::GetArg("-port-quantum", port_default));
+        if(port_default != port) {
+            return port;
+        }
+    }
+
+    {
+        LOCK(net_basis::cs_port);
+        static std::map<GET_PORT_TYPE, unsigned short> map_port_type;
+        std::map<GET_PORT_TYPE, unsigned short>::const_iterator ite = map_port_type.find(type);
+        if(ite != map_port_type.end()) {
+            std::pair<GET_PORT_TYPE, unsigned short> data = *ite;
+            printf("GetListenPort map_port %d\n", (int)data.second);
+            return data.second;
+        } else {
+            std::string strError;
+            struct in_addr inaddr_loopback;
+            inaddr_loopback.s_addr = htonl(INADDR_LOOPBACK);
+
+            for(int i=0; i < tcp_port::nPortLen; ++i)
+            {
+                unsigned short port_target = p_uport[i];
+                if(entry::BindListenPort(CService(inaddr_loopback, port_target), strError, true)) {
+                    printf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
+                    std::pair<GET_PORT_TYPE, unsigned short> data = std::make_pair(type, port_target);
+                    map_port_type.insert(data);
+                    return port_target;
+                }
+                util::Sleep(20);
+            }
+        }
+
+        // can not bind
+        printf("GetListenPort can not bind port %d\n", (int)port_default);
+        return port_default;
+    }
+
+    // return (unsigned short)(map_arg::GetArg("-port", net_basis::GetDefaultPort()));
 }
 
 void CNode::PushGetBlocks(CBlockIndex *pindexBegin, uint256 hashEnd)
@@ -268,7 +470,7 @@ void ext_ip::AdvertiseLocal(CNode *pnode)
 //
 // learn a new local address
 //
-bool ext_ip::AddLocal(const CService& addr, int nScore/* =LOCAL_NONE */)
+bool ext_ip::AddLocal(const CService &addr, int nScore/* =LOCAL_NONE */)
 {
     if (! addr.IsRoutable()) {
         return false;
@@ -454,7 +656,7 @@ CNode *net_node::ConnectNode(CAddress addrConnect, const char *pszDest/*=NULL*/,
     // Connect
     //
     SOCKET hSocket;
-    if (pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, net_basis::GetDefaultPort()) : netbase::manage::ConnectSocket(addrConnect, hSocket)) {
+    if (pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, net_basis::GetDefaultPort(CONNECT_NODE, nullptr, pszDest)) : netbase::manage::ConnectSocket(addrConnect, hSocket)) {
         net_node::addrman.Attempt(addrConnect);
 
         /// debug print
@@ -801,7 +1003,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                 int nInbound = 0;
 
                 if (hSocket != INVALID_SOCKET) {
-                    if (! addr.SetSockAddr((const struct sockaddr*)&sockaddr)) {
+                    if (! addr.SetSockAddr((const struct sockaddr *)&sockaddr)) {
                         printf("Warning: Unknown socket family\n");
                     }
                 }
@@ -833,11 +1035,16 @@ void net_node::ThreadSocketHandler2(void *parg)
                     netbase::manage::CloseSocket(hSocket);
                 } else {
                     printf("accepted connection %s\n", addr.ToString().c_str());
-                    CNode *pnode = new CNode(hSocket, addr, "", true);
-                    pnode->AddRef();
-                    {
-                        LOCK(net_node::cs_vNodes);
-                        net_node::vNodes.push_back(pnode);
+                    CNode *pnode = new(std::nothrow) CNode(hSocket, addr, "", true);
+                    if(! pnode) {
+                        printf("CNode memory allocate failed.\n");
+                        netbase::manage::CloseSocket(hSocket);
+                    } else {
+                        pnode->AddRef();
+                        {
+                            LOCK(net_node::cs_vNodes);
+                            net_node::vNodes.push_back(pnode);
+                        }
                     }
                 }
             }
@@ -883,7 +1090,36 @@ void net_node::ThreadSocketHandler2(void *parg)
                         // typical socket buffer is 8K-64K
                         char pchBuf[0x10000];
                         int nBytes = recv(pnode->hSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);
-                        if (nBytes > 0) {
+
+                        std::vector<char> vchMsg;
+                        vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
+                        CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
+                        std::vector<char> vchQuantum;
+                        vchQuantum.assign(coin_param::strQuantum.c_str(), coin_param::strQuantum.c_str() + coin_param::strQuantum.length());
+                        CDataStream sQuantum(vchQuantum, SER_NETWORK, version::PROTOCOL_VERSION);
+                        if (nBytes > 0 && ::memcmp(&sMsg[0], pchBuf, sMsg.size()) == 0) {
+                            //
+                            // Echo SorachanCoin
+                            //
+                            printf("socket echo send and socket closed\n");
+                            if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
+                                pnode->CloseSocketDisconnect();
+                            } else {
+                                (void)send(pnode->hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT);
+                                pnode->CloseSocketDisconnect();
+                            }
+                        } else if (nBytes > 0 && ::memcmp(&sQuantum[0], pchBuf, sQuantum.size()) == 0) {
+                            //
+                            // Quantum SorachanCoin
+                            //
+                            printf("socket quantum send and socket closed\n");
+                            if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
+                                pnode->CloseSocketDisconnect();
+                            } else {
+                                (void)send(pnode->hSocket, &sQuantum[0], sQuantum.size(), MSG_NOSIGNAL | MSG_DONTWAIT);
+                                pnode->CloseSocketDisconnect();
+                            }
+                        } else if (nBytes > 0) {
                             vRecv.resize(nPos + nBytes);
                             ::memcpy(&vRecv[nPos], pchBuf, nBytes);
                             pnode->nLastRecv = bitsystem::GetTime();
@@ -1146,7 +1382,7 @@ void dns_seed::ThreadDNSAddressSeed2(void *parg)
                 if (netbase::manage::LookupHost(dns_seed::strDNSSeed[seed_idx][1], vaddr)) {
                     BOOST_FOREACH(CNetAddr &ip, vaddr)
                     {
-                        CAddress addr = CAddress(CService(ip, net_basis::GetDefaultPort()));
+                        CAddress addr = CAddress(CService(ip, net_basis::GetDefaultPort(net_basis::DNS_SEED)));
                         addr.set_nTime( bitsystem::GetTime() - 3 * util::nOneDay - bitsystem::GetRand(4 * util::nOneDay) ); // use a random age between 3 and 7 days old
                         vAdd.push_back(addr);
                         found++;
@@ -1305,7 +1541,7 @@ void net_node::ThreadOpenConnections2(void *parg)
                 // weeks ago.
                 struct in_addr ip;
                 ::memcpy(&ip, &pnSeed[i], sizeof(ip));
-                CAddress addr(CService(ip, net_basis::GetDefaultPort()));
+                CAddress addr(CService(ip, net_basis::GetDefaultPort(DNS_SEED)));
                 addr.set_nTime( bitsystem::GetTime() - bitsystem::GetRand(util::nOneWeek) - util::nOneWeek );
                 vAdd.push_back(addr);
             }
@@ -1317,7 +1553,7 @@ void net_node::ThreadOpenConnections2(void *parg)
             std::vector<CAddress> vAdd;
             for (unsigned int i = 0; i < ARRAYLEN(pchTorSeed); ++i)
             {
-                CAddress addr(CService(pchTorSeed[i], net_basis::GetDefaultPort()));
+                CAddress addr(CService(pchTorSeed[i], net_basis::GetDefaultPort(ONION)));
                 addr.set_nTime( bitsystem::GetTime() - bitsystem::GetRand(util::nOneWeek) - util::nOneWeek );
                 vAdd.push_back(addr);
             }
@@ -1375,7 +1611,7 @@ void net_node::ThreadOpenConnections2(void *parg)
             }
 
             // do not allow non-default ports, unless after 50 invalid addresses selected already
-            if (addr.GetPort() != net_basis::GetDefaultPort() && nTries < 50) {
+            if (addr.GetPort() != net_basis::GetDefaultPort(ARG_DEFAULT_PORT) && nTries < 50) {
                 continue;
             }
 
@@ -1457,7 +1693,8 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
         BOOST_FOREACH(std::string &strAddNode, lAddresses)
         {
             std::vector<CService> vservNode(0);
-            if (netbase::manage::Lookup(strAddNode.c_str(), vservNode, net_basis::GetDefaultPort(), netbase::fNameLookup, 0))
+            CNetAddr netAddr(strAddNode.c_str(), true);
+            if (netbase::manage::Lookup(strAddNode.c_str(), vservNode, net_basis::GetDefaultPort(ADD_NODE, &netAddr), netbase::fNameLookup, 0))
             {
                 lservAddressesToAdd.push_back(vservNode);
                 {
@@ -1494,7 +1731,7 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
                 }
             }
         }
-        BOOST_FOREACH(std::vector<CService>& vserv, lservAddressesToAdd)
+        BOOST_FOREACH(std::vector<CService> &vserv, lservAddressesToAdd)
         {
             if (vserv.size() == 0) {
                 continue;
@@ -1707,7 +1944,7 @@ void net_node::ThreadMessageHandler2(void *parg)
     }
 }
 
-bool entry::BindListenPort(const CService &addrBind, std::string &strError)
+bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool check/* = false*/)
 {
     strError.clear();
     int nOne = 1;
@@ -1785,7 +2022,14 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError)
         netbase::manage::CloseSocket(hListenSocket);
         return false;
     }
-    printf("Bound to %s\n", addrBind.ToString().c_str());
+    if (check) {
+        printf("Bound to %s OK\n", addrBind.ToString().c_str());
+        netbase::manage::CloseSocket(hListenSocket);
+        util::Sleep(500);
+        return true;
+    } else {
+        printf("Bound to %s\n", addrBind.ToString().c_str());
+    }
 
     // Listen for incoming connections
     if (::listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR) {
@@ -2041,7 +2285,9 @@ private:
         //
         BOOST_FOREACH(CNode *pnode, net_node::vNodes)
         {
-            delete pnode;
+            if(pnode) {
+                delete pnode;
+            }
         }
 
         /*

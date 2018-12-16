@@ -16,12 +16,11 @@ UNIX(FreeBSD) BUILD NOTES
 INSTALL SorachanCoind [FreeBSD 32bit/64bit] Clang
 
 ----------------------------
-wget, perl, gmake
+wget, gmake
 ----------------------------
 pkg install wget
 pkg install security/ca_root_nss
 
-pkg install perl5
 pkg install devel/gmake
 
 ----------------------------

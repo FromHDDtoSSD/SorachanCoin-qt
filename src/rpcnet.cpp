@@ -238,7 +238,8 @@ json_spirit::Value CRPCTable::getaddednodeinfo(const json_spirit::Array &params,
     BOOST_FOREACH(std::string &strAddNode, laddedNodes)
     {
         std::vector<CService> vservNode(0);
-        if(netbase::manage::Lookup(strAddNode.c_str(), vservNode, net_basis::GetDefaultPort(), netbase::fNameLookup, 0)) {
+        CNetAddr netAddr(strAddNode.c_str(), true);
+        if(netbase::manage::Lookup(strAddNode.c_str(), vservNode, net_basis::GetDefaultPort(net_basis::ADD_NODE, &netAddr), netbase::fNameLookup, 0)) {
             laddedAddreses.push_back(make_pair(strAddNode, vservNode));
         } else {
             json_spirit::Object obj;
