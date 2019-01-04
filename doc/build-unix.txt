@@ -10,45 +10,89 @@ This product includes software developed by the OpenSSL Project for use in the O
 This product includes software developed by the LibreSSL Project for use in the LibreSSL Toolkit (https://www.libressl.org/). 
 This product includes cryptographic software written by Eric Young (eay@cryptsoft.com).
 
-LINUX BUILD NOTES
+UNIX BUILD NOTES
 ==========================
 
 INSTALL SorachanCoind
-[gcc4.8 / gcc6.4 / gcc8.1, Confirmed of compile has completed.]
+[Clang, Confirmed of compile has completed.]
 
 ----------------------------
-Download SorachanCoin-qt
+SorachanCoin-qt.zip
 ----------------------------
-cd /usr/local/src
-git clone https://github.com/FromHDDtoSSD/SorachanCoin-qt.git
+cd /usr/src
+
+wget https://github.com/FromHDDtoSSD/SorachanCoin-qt/archive/master.zip -O SorachanCoin-qt.zip
+unzip -d /usr/src SorachanCoin-qt.zip
+mv ./SorachanCoin-qt-master ./SorachanCoin-qt
 
 ----------------------------
 BOOST_1_68_0
 ----------------------------
-cd /usr/local/src
+cd /usr/src
 wget https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download -O boost_1_68_0.tar.gz
 
 tar zxvf boost_1_68_0.tar.gz
 cd boost_1_68_0
-./bootstrap.sh
-./b2 install -j2 --toolset=gcc --variant=release --link=static --threading=multi --with-system --with-filesystem --with-program_options --with-thread --with-chrono --prefix=/opt/boost_1_68_0
+./bootstrap.sh --with-toolset=clang
+./b2 install -j2 --toolset=clang --variant=release --link=static --threading=multi --with-system --with-filesystem --with-program_options --with-thread --with-chrono --prefix=/opt/boost_1_68_0
 
 ----------------------------
 Berkeley DB 4.8.30
 ----------------------------
-cd /usr/local/src
+cd /usr/src
 wget http://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz
 
 tar zxvf db-4.8.30.NC.tar.gz
 cd db-4.8.30.NC/build_unix/
 ../dist/configure --enable-cxx --disable-shared --with-pic --prefix=/opt/db-4.8.30
+
+cd ../dbinc
+chmod +w atomic.h
+vi atomic.h
+
+__atomic_compare_exchange => __db_atomic_compare_exchange
+*** https://src.fedoraproject.org/cgit/rpms/libdb.git/commit/?id=d6841b3b46a51db98c162347211a5a64d154ea37
+
+atomic_init => db_atomic_init
+*** Checked by the SorachanCoin Developers.
+
+cd ../mutex
+chmod +w mut_tas.c
+vi mut_tas.c
+
+atomic_init => db_atomic_init
+*** Checked by the SorachanCoin Developers.
+
+cd ../mp
+chmod +w mp_region.c
+chmod +w mp_mvcc.c
+chmod +w mp_fget.c
+
+vi mp_region.c
+vi mp_mvcc.c
+vi mp_fget.c
+
+atomic_init => db_atomic_init
+*** Checked by the SorachanCoin Developers.
+
+cd ../build_unix
 make
 make install
 
 ----------------------------
+Miniupnp
+----------------------------
+cd /usr/src
+git clone https://github.com/miniupnp/miniupnp.git
+
+cd miniupnp/miniupnpc
+setenv INSTALLPREFIX /opt/miniupnpc
+gmake install
+
+----------------------------
 LibreSSL 2.8.2
 ----------------------------
-cd /usr/local/src
+cd /usr/src
 wget https://ftp.openbsd.org/pub/OpenBSD/LibreSSL/libressl-2.8.2.tar.gz -O libressl-2.8.2.tar.gz
 
 tar zxvf libressl-2.8.2.tar.gz
@@ -58,25 +102,16 @@ make
 make install
 
 ----------------------------
-Miniupnp
-----------------------------
-cd /usr/local/src
-git clone https://github.com/miniupnp/miniupnp.git
-
-cd miniupnp/miniupnpc
-INSTALLPREFIX=/opt/miniupnpc make install
-
-----------------------------
 Leveldb
 ----------------------------
-cd /usr/local/src/SorachanCoin-qt/src/leveldb
-make
-make memenv_test
+cd /usr/src/SorachanCoin-qt/src/leveldb
+gmake
+gmake memenv_test
 
 ----------------------------
 SorachanCoind
 ----------------------------
-cd /usr/local/src/SorachanCoin-qt/src
+cd /usr/src/SorachanCoin-qt/src
 mkdir obj
-make -f makefile.linux
+gmake -f makefile.unix-clang
 
