@@ -13,7 +13,7 @@ class MacNotificationHandler : public QObject
 {
     Q_OBJECT
 private:
-    MacNotificationHandler(const MacNotificationHandler &); // {}
+    //MacNotificationHandler(const MacNotificationHandler &); // {}
     MacNotificationHandler &operator=(const MacNotificationHandler &); // {}
 public:
     /** shows a 10.8+ UserNotification in the UserNotificationCenter
