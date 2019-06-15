@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.0.5
+VERSION = 1.1.5
 
 INCLUDEPATH += src src/json src/qt
 
@@ -363,8 +363,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/multisigdialog.h \
     src/qt/secondauthdialog.h \
     src/ies.h \
-    src/ipcollector.h #\
-#    src/quantum.h
+    src/ipcollector.h # \
+    # src/quantum.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -451,8 +451,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/base58.cpp \
     src/cryptogram.cpp \
     src/ecies.cpp \
-    src/ipcollector.cpp #\
-#    src/quantum.cpp
+    src/ipcollector.cpp # \
+    # src/quantum.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc
@@ -610,4 +610,6 @@ netbsd-*|freebsd-*|openbsd-* {
 }
 
 system($$QMAKE_LRELEASE -silent $$PWD/src/qt/locale/translations.pro)
+
+DISTFILES +=
 

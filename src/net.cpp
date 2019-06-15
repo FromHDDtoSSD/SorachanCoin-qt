@@ -167,22 +167,27 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
                     CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
                     std::string retstr;
-                    printf("GetDefaultPort Connected %s\n", sMsg.str().c_str());
+                    printf("GetDefaultPort Connect %s\n", sMsg.str().c_str());
                     if(! IsNoneblockSend(hSocket)) {
                         netbase::manage::CloseSocket(hSocket);
+                        printf("GetDefaultPort Connect failure A\n");
                         util::Sleep(20);
                         continue;
                     }
                     if(::send(hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT) <= 0) {
                         netbase::manage::CloseSocket(hSocket);
+                        printf("GetDefaultPort Connect failure B\n");
                         util::Sleep(20);
                         continue;
                     }
+                    /*
                     if(! IsNoneblockRecv(hSocket)) {
                         netbase::manage::CloseSocket(hSocket);
+                        printf("GetDefaultPort Connect failure C\n");
                         util::Sleep(20);
                         continue;
                     }
+                    */
                     bool ret = net_basis::RecvLine(hSocket, retstr);
                     printf("GetDefaultPort RecvLine %s\n", retstr.c_str());
                     if(ret && retstr == coin_param::strEcho) {

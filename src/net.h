@@ -32,14 +32,14 @@ class CBlockIndex;
 //
 namespace tcp_port
 {
-    const unsigned short uMainnet[5] = {6350, 9350, 12350, 15350, 18350};
-    const unsigned short uTestnet[5] = {16350, 19350, 22350, 25350, 28350};
+    const unsigned short uMainnet[2] = {21587, 6350};
+    const unsigned short uTestnet[2] = {31587, 16350};
     const unsigned int nPortLen = ARRAYLEN(uMainnet);
     const unsigned int nMainnet_default = 0;
     const unsigned int nTestnet_default = 0;
 
-    const unsigned short uJsonRpcMain = 6351;
-    const unsigned short uJsonRpcTest = 16351;
+    const unsigned short uJsonRpcMain = 21588;
+    const unsigned short uJsonRpcTest = 31588;
 
     const unsigned short uStun = 17398;
     const unsigned short uSocksDefault = 9714;

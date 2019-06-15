@@ -42,10 +42,12 @@
         <file alias="debugwindow">res/icons/debugwindow.png</file>
         <file alias="dump">res/icons/dump.png</file>
         <file alias="import">res/icons/import.png</file>
+        <file alias="icon">res/icons/SorachanCoin.ico</file>
     </qresource>
     <qresource prefix="/images">
         <file alias="about">res/images/about.png</file>
-        <file alias="splash">res/images/splash2.jpg</file>
+        <file alias="splash2">res/images/splash2.jpg</file>
+        <file alias="splash">res/images/splash2.png</file>
     </qresource>
     <qresource prefix="/movies">
         <file alias="update_spinner">res/movies/update_spinner.mng</file>
