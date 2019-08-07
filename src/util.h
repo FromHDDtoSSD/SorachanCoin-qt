@@ -156,7 +156,7 @@ public:
 
     static bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
 };
-#define printf print::OutputDebugStringF
+#define printf(format, ...) print::OutputDebugStringF(format, ##__VA_ARGS__)
 #define strprintf(format, ...) print::real_strprintf(format, 0, __VA_ARGS__)
 
 //
