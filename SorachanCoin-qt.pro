@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.1.5
+VERSION = 1.1.6
 
 INCLUDEPATH += src src/json src/qt
 

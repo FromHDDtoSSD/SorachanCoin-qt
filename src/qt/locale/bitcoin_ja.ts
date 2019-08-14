@@ -13,12 +13,18 @@
     </message>
     <message>
         <location line="+41"/>
-        <source>Copyright © 2009-2014 The Bitcoin developers
-Copyright © 2012-2014 The NovaCoin developers
-Copyright © 2017-2018 The SorachanCoin developers</source>
-        <translation>Copyright © 2009-2014 The Bitcoin developers
-Copyright © 2012-2014 The NovaCoin developers
-Copyright © 2017-2018 The SorachanCoin developers
+        <source>Copyright © 2009-2016 The Bitcoin developers
+Copyright © 2011-2012 The PPCoin Developers
+Copyright © 2014 The Peerunity Developers
+Copyright © 2014 The EmerCoin Developers
+Copyright © 2012-2016 The NovaCoin developers
+Copyright © 2017-2018 The SorachanCoin Developers</source>
+        <translation>Copyright © 2009-2016 The Bitcoin developers
+Copyright © 2011-2012 The PPCoin Developers
+Copyright © 2014 The Peerunity Developers
+Copyright © 2014 The EmerCoin Developers
+Copyright © 2012-2016 The NovaCoin developers
+Copyright © 2017-2019 The SorachanCoin Developers
 </translation>
     </message>
     <message>
@@ -26,15 +32,15 @@ Copyright © 2017-2018 The SorachanCoin developers
         <source>
 This is experimental software.
 
-Distributed under the MIT/X11 software license, see the accompanying file COPYING or http://www.opensource.org/licenses/mit-license.php.
+Distributed under the MIT/X11 software license, see the accompanying file COPYING or https://www.opensource.org/licenses/mit-license.php.
 
-This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (http://www.openssl.org/) and cryptographic software written by Eric Young (eay@cryptsoft.com) and UPnP software written by Thomas Bernard.</source>
+This product includes software developed by the OpenSSL Project for use in the OpenSSL Toolkit (https://www.openssl.org/) and cryptographic software written by Eric Young (eay@cryptsoft.com) and UPnP software written by Thomas Bernard.</source>
         <translation>
 これは実験的なソフトウェアです。
 
-MIT/X11 ソフトウェア ライセンスの下で配布されています。詳しくは添付の COPYING ファイルやhttp://www.opensource.org/licenses/mit-license.php を参照してください。
+MIT/X11 ソフトウェア ライセンスの下で配布されています。詳しくは添付のCOPYINGファイルまたはhttps://www.opensource.org/licenses/mit-license.php を参照してください。
 
-この製品は OpenSSL Toolkit (http://www.openssl.org/) に用いられる  Eric Young (eay@cryptsoft.com)  が開発した暗号化ソフトウェアと Thomas Bernard が開発した UPnP ソフトウェアを含んでいます。</translation>
+この製品は OpenSSL Toolkit (https://www.openssl.org/) に用いられる Eric Young (eay@cryptsoft.com) が開発した暗号化ソフトウェアと Thomas Bernard が開発した UPnP ソフトウェアを含んでいます。</translation>
     </message>
 </context>
 <context>
@@ -137,7 +143,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+0"/>
         <source>Could not write to file %1.</source>
-        <translation>ファイルを書き込めませんでした。空き容量をご確認いただき、再度、お試しください。%1</translation>
+        <translation>%1 ファイルを書き込めませんでした。空き容量をご確認いただき、再度、お試しください。</translation>
     </message>
 </context>
 <context>
@@ -238,7 +244,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+1"/>
         <source>Warning: If you encrypt your wallet and lose your passphrase, you will &lt;b&gt;LOSE ALL OF YOUR COINS&lt;/b&gt;!</source>
-        <translation>ご注意：暗号化したウォレットのパスフレーズを忘れてしまった場合、&lt;b&gt;このウォレットに保有される全てのSoraコインを失います。&lt;/b&gt;復旧は不可能です。テクニカルサポート等でも、この復旧だけには対応できません。</translation>
+        <translation>ご注意：暗号化したウォレットのパスフレーズを忘れてしまった場合、&lt;b&gt;このウォレットに保有される全てのコインを失います。&lt;/b&gt;復旧は不可能です。テクニカルサポート等でも、この復旧だけには対応できません。</translation>
     </message>
     <message>
         <location line="+0"/>
@@ -248,13 +254,13 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+15"/>
         <source>IMPORTANT: Any previous backups you have made of your wallet file should be replaced with the newly generated, encrypted wallet file. For security reasons, previous backups of the unencrypted wallet file will become useless as soon as you start using the new, encrypted wallet.</source>
-        <translation>重要: 過去のウォレットのバックアップについても、今すぐに、今回暗号化された新しいウォレットに取り替える必要があります。これは、セキュリティ上の理由により、暗号化された新しいウォレットを使い始めますと、暗号化されていない過去のウォレットのバックアップはすぐに使えなくなるためです。</translation>
+        <translation>重要：過去のウォレットのバックアップについても、今すぐに、今回暗号化された新しいウォレットに取り替える必要があります。これは、セキュリティ上の理由により、暗号化された新しいウォレットを使い始めますと、暗号化されていない過去のウォレットのバックアップはすぐに使えなくなるためです。</translation>
     </message>
     <message>
         <location line="+103"/>
         <location line="+24"/>
         <source>Warning: The Caps Lock key is on!</source>
-        <translation>警告: Caps Lock キーがオンになっています。これは、入力された文字列が期待されたものと異なる場合があります。本当に、ご注意ください。</translation>
+        <translation>警告：Caps Lock キーがオンになっています。これは、入力された文字列が期待されたものと異なる場合があります。本当に、ご注意ください。</translation>
     </message>
     <message>
         <location line="-133"/>
@@ -265,7 +271,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="-58"/>
         <source>SorachanCoin will close now to finish the encryption process. Remember that encrypting your wallet cannot fully protect your coins from being stolen by malware infecting your computer.</source>
-        <translation>ウォレットの暗号処理を完結するため、一旦、sorachancoin-qtを閉じます。なお、ウォレットを暗号化をされた場合でも、ウイルスやマルウェアからの完全な盗難防止にはならない点について、ご理解をお願いいたします。</translation>
+        <translation>ウォレットの暗号処理を完結するため、一旦、SorachanCoin-qtを閉じます。なお、ウォレットを暗号化をされた場合でも、ウイルスやマルウェアからの完全な盗難防止にはならない点について、ご理解をお願いいたします。</translation>
     </message>
     <message>
         <location line="+13"/>
@@ -339,7 +345,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+1"/>
         <source>Browse transaction history</source>
-        <translation>処理履歴をみます</translation>
+        <translation>処理履歴を拝見します</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -419,12 +425,12 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+6"/>
         <source>Downloaded %1 of %2 blocks of transaction history (%3% done).</source>
-        <translation>処理の履歴の%1 / %2 ブロックをダウンロードいたしました。(%3% 完成）</translation>
+        <translation>処理の履歴の %1 / %2 ブロックをダウンロードいたしました。(%3% 完成）</translation>
     </message>
     <message>
         <location line="-247"/>
         <source>&amp;Export...</source>
-        <translation>アドレス帳をCSVにて書き出します (&amp;E)</translation>
+        <translation>アドレス帳をCSVにて書き出します。 (&amp;E)</translation>
     </message>
     <message>
         <location line="-62"/>
@@ -499,7 +505,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+1"/>
         <source>&amp;Lock Wallet</source>
-        <translation>(&amp;L)ウォレットをロックいたします</translation>
+        <translation>(&amp;L) ウォレットをロックいたします</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -509,17 +515,17 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+34"/>
         <source>&amp;File</source>
-        <translation>ファイル(&amp;F)</translation>
+        <translation>ファイル (&amp;F)</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>&amp;Settings</source>
-        <translation>設定(&amp;S)</translation>
+        <translation>設定 (&amp;S)</translation>
     </message>
     <message>
         <location line="+8"/>
         <source>&amp;Help</source>
-        <translation>ヘルプ(&amp;H)</translation>
+        <translation>ヘルプ (&amp;H)</translation>
     </message>
     <message>
         <location line="+9"/>
@@ -541,7 +547,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
         <location line="+0"/>
         <location line="+60"/>
         <source>SorachanCoin client</source>
-        <translation>SorachanCoin クライアントソフトウェア</translation>
+        <translation>SorachanCoinクライアントソフトウェア</translation>
     </message>
     <message numerus="yes">
         <location line="+70"/>
@@ -720,7 +726,7 @@ Address: %4
     <message>
         <location filename="../bitcoin.cpp" line="+109"/>
         <source>A fatal error occurred. SorachanCoin can no longer continue safely and will quit.</source>
-        <translation>大変申し訳ございません。致命的なエラーが発生いたしました。安全に手続きができないため、sorachancoin-qtは閉じられます。</translation>
+        <translation>大変申し訳ございません。致命的なエラーが発生いたしました。安全に手続きができないため、SorachanCoin-qtは閉じられます。</translation>
     </message>
 </context>
 <context>
@@ -941,11 +947,11 @@ Address: %4
  This means a fee of at least %1 per kb is required.
 
  Can vary +/- 1 Byte per input.</source>
-        <translation>このラベルが赤くなりましたら、処理の大きさは10000バイトより大きくなります。
+        <translation>このラベルが赤くなりましたら、その処理の大きさは10000バイトより大きくなります。
 
 少なくとも%1 KBあたりの手数料は必要となります。
 
-入力データによって、手数料の+/-1 バイトが可能となります。</translation>
+入力データによって、手数料の +/-1バイトが可能となります。</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -967,11 +973,11 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
  This means a fee of at least %2 is required. 
 
  Amounts below 0.546 times the minimum relay fee are shown as DUST.</source>
-        <translation>任意の受信者は%1より少ない額をもらった場合、このラベルは赤くなります。
+        <translation>任意の受信者は%1より少ない額をもらった場合に、このラベルは赤くなります。
 
 少なくとも%2の手数料は必要です。
 
-最小なリレー手数料　x　0.546より下の額は、端数分の扱いとなります。</translation>
+最小なリレー手数料 x 0.546より下の額は、端数分の扱いとなります。</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -986,7 +992,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+37"/>
         <location line="+66"/>
         <source>(no label)</source>
-        <translation>（ラベル無し）</translation>
+        <translation>(ラベル無し)</translation>
     </message>
     <message>
         <location line="-9"/>
@@ -1009,7 +1015,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+11"/>
         <source>&amp;Label</source>
-        <translation>ラベル(&amp;L)</translation>
+        <translation>ラベル (&amp;L)</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -1073,7 +1079,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location filename="../guiutil.cpp" line="+420"/>
         <location line="+12"/>
         <source>SorachanCoin-Qt</source>
-        <translation>SorachanCoin-QT</translation>
+        <translation>SorachanCoin-qt</translation>
     </message>
     <message>
         <location line="-12"/>
@@ -1098,17 +1104,17 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+1"/>
         <source>Set language, for example &quot;de_DE&quot; (default: system locale)</source>
-        <translation>言語の設定、例: &quot;de_DE&quot; (デフォルト:システムのロケール)</translation>
+        <translation>言語の設定となります。例: &quot;de_DE&quot; (初期値: システムロケール)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Start minimized</source>
-        <translation>最小化状態でスタートいたします</translation>
+        <translation>最小化の状態でスタートいたします。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Show splash screen on startup (default: 1)</source>
-        <translation>起動画面を表示いたします(デフォルト:１)</translation>
+        <translation>SorachanCoinの起動画面を表示いたします。(初期値: 1)</translation>
     </message>
 </context>
 <context>
@@ -1124,14 +1130,14 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>メイン (&amp;M)</translation>
     </message>
     <message>
-        <location line="+6"/>
-        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</source>
-        <translation>こちらは、手続きを早めるための手数料となります。設定される場合、0.01をおすすめいたします。</translation>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.001 recommended.</source>
+        <translation>こちらは、トランザクション処理の手続きを早めるための手数料となります。設定される場合、0.001をおすすめいたします。</translation>
     </message>
     <message>
         <location line="+15"/>
         <source>Pay transaction &amp;fee</source>
-        <translation>支払う取引手数料 (&amp;f)</translation>
+        <translation>お支払い取引手数料 (&amp;f)</translation>
     </message>
     <message>
         <location line="+31"/>
@@ -1146,12 +1152,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+31"/>
         <source>Automatically start SorachanCoin after logging in to the system.</source>
-        <translation>システムのログイン次第、自動的にブラックコインをスタート。</translation>
+        <translation>システムのログイン次第、自動的にSorachanCoin-qtをスタートいたします。</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>&amp;Start SorachanCoin on system login</source>
-        <translation>システムログイン次第、SorachanCoinをスタート</translation>
+        <translation>システムログイン次第、SorachanCoin-qtをスタート</translation>
     </message>
     <message>
         <location line="+7"/>
@@ -1176,22 +1182,22 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+3"/>
         <source>Map port using &amp;UPnP</source>
-        <translation>UPnP を使ってポートを割り当てます (&amp;U)</translation>
+        <translation>UPnP を使ってポートを割り当てます。 (&amp;U)</translation>
     </message>
     <message>
         <location line="+7"/>
         <source>Connect to the SorachanCoin network through a SOCKS proxy (e.g. when connecting through Tor).</source>
-        <translation>SorachanCoinのネットワークに、SOCKSプロキシで接続いたします（例：TORで接続する場合）</translation>
+        <translation>SorachanCoinのネットワークに、SOCKSプロキシで接続いたします。（例：TORで接続する場合）</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>&amp;Connect through SOCKS proxy:</source>
-        <translation>SOCKSプロキシで接続いたします</translation>
+        <translation>SOCKSプロキシで接続いたします。</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>Proxy &amp;IP:</source>
-        <translation>プロキシの IP (&amp;I) :</translation>
+        <translation>プロキシの IP (&amp;I) ：</translation>
     </message>
     <message>
         <location line="+19"/>
@@ -1201,7 +1207,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+7"/>
         <source>&amp;Port:</source>
-        <translation>ポート (&amp;P) :</translation>
+        <translation>ポート (&amp;P) ：</translation>
     </message>
     <message>
         <location line="+19"/>
@@ -1211,7 +1217,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+7"/>
         <source>SOCKS &amp;Version:</source>
-        <translation>SOCKS バージョン (&amp;V) :</translation>
+        <translation>SOCKS バージョン (&amp;V) ：</translation>
     </message>
     <message>
         <location line="+13"/>
@@ -1261,7 +1267,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+11"/>
         <source>&amp;Unit to show amounts in:</source>
-        <translation>額を表示する単位 (&amp;U) :</translation>
+        <translation>額を表示する単位 (&amp;U) ：</translation>
     </message>
     <message>
         <location line="+13"/>
@@ -1890,33 +1896,33 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+15"/>
         <source>A&amp;mount:</source>
-        <translation>金額(&amp;A):</translation>
+        <translation>金額(&amp;A)：</translation>
     </message>
     <message>
         <location line="+13"/>
         <source>Pay &amp;To:</source>
-        <translation>送り先(&amp;T):</translation>
+        <translation>送り先(&amp;T)：</translation>
     </message>
     <message>
         <location line="+24"/>
         <location filename="../sendcoinsentry.cpp" line="+25"/>
         <source>Enter a label for this address to add it to your address book</source>
-        <translation>アドレス帳に追加するには、このアドレスのラベルを入力いたします</translation>
+        <translation>アドレス帳に追加するには、このアドレスのラベルを入力いたします。</translation>
     </message>
     <message>
         <location line="+9"/>
         <source>&amp;Label:</source>
-        <translation>ラベル(&amp;L):</translation>
+        <translation>ラベル (&amp;L)：</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>The address to send the payment to  (e.g. SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</source>
-        <translation>支払い先 アドレス (例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
+        <translation>支払い先アドレス (例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
     </message>
     <message>
         <location line="+10"/>
         <source>Choose address from address book</source>
-        <translation>アドレス帳からアドレスを選択いたします</translation>
+        <translation>アドレス帳からアドレスを選択いたします。</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -1926,7 +1932,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+7"/>
         <source>Paste address from clipboard</source>
-        <translation>クリップボードからアドレスを貼り付けます</translation>
+        <translation>クリップボードからアドレスを貼り付けます。</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -1936,7 +1942,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+7"/>
         <source>Remove this recipient</source>
-        <translation>この受信者を外します</translation>
+        <translation>この受信者を外します。</translation>
     </message>
     <message>
         <location filename="../sendcoinsentry.cpp" line="+1"/>
@@ -1965,7 +1971,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+18"/>
         <source>The address to sign the message with (e.g. SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</source>
-        <translation>メッセージを署名するアドレス(例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
+        <translation>メッセージを署名するアドレス (例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -1982,7 +1988,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-193"/>
         <source>Paste address from clipboard</source>
-        <translation>クリップボードからアドレスを貼り付ける</translation>
+        <translation>クリップボードからアドレスを貼り付ける。</translation>
     </message>
     <message>
         <location line="+10"/>
@@ -1992,22 +1998,22 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+12"/>
         <source>Enter the message you want to sign here</source>
-        <translation>ここにあなたが署名するメッセージを入力いたします</translation>
+        <translation>ここにあなたが署名するメッセージを入力いたします。</translation>
     </message>
     <message>
         <location line="+24"/>
         <source>Copy the current signature to the system clipboard</source>
-        <translation>現在の署名をシステムのクリップボードにコピーいたします</translation>
+        <translation>現在の署名をシステムのクリップボードにコピーいたします。</translation>
     </message>
     <message>
         <location line="+21"/>
         <source>Sign the message to prove you own this SorachanCoin address</source>
-        <translation>所有権を証明するため、このメッセージを署名いたします</translation>
+        <translation>所有権を証明するため、このメッセージを署名いたします。</translation>
     </message>
     <message>
         <location line="+17"/>
         <source>Reset all sign message fields</source>
-        <translation>メッセージ署名の内容を全て消去いたします</translation>
+        <translation>メッセージ署名の内容を全て消去いたします。</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -2029,7 +2035,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+21"/>
         <source>The address the message was signed with (e.g. SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</source>
-        <translation>メッセージを署名するアドレス(例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
+        <translation>メッセージを署名するアドレス (例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
     </message>
     <message>
         <location line="+40"/>
@@ -2039,18 +2045,18 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+17"/>
         <source>Reset all verify message fields</source>
-        <translation>入力項目の内容を全て消去いたします</translation>
+        <translation>入力項目の内容を全て消去いたします。</translation>
     </message>
     <message>
         <location filename="../signverifymessagedialog.cpp" line="+27"/>
         <location line="+3"/>
         <source>Enter a SorachanCoin address (e.g. SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</source>
-        <translation>SorachanCoinのアドレスを入力(例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
+        <translation>SorachanCoinのアドレスを入力 (例：SUEgQX5BMKamE3eZYJD7wGfV1T3EuytBak)</translation>
     </message>
     <message>
         <location line="-2"/>
         <source>Click &quot;Sign Message&quot; to generate signature</source>
-        <translation>署名を作成するには&quot;メッセージの署名&quot;をクリック</translation>
+        <translation>署名を作成するには&quot;メッセージの署名&quot;をクリックいたします。</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -2129,7 +2135,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location filename="../transactiondesc.cpp" line="+19"/>
         <source>Open until %1</source>
-        <translation>ユニット %1 を開く</translation>
+        <translation>ユニット %1 を開きます</translation>
     </message>
     <message numerus="yes">
         <location line="-2"/>
@@ -2144,12 +2150,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+2"/>
         <source>%1/offline</source>
-        <translation>%1/オフライン</translation>
+        <translation>%1/ オフライン</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>%1/unconfirmed</source>
-        <translation>%1/未検証</translation>
+        <translation>%1/ 未検証</translation>
     </message>
     <message>
         <location line="+2"/>
@@ -2179,7 +2185,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+0"/>
         <source>Generated</source>
-        <translation>生成された</translation>
+        <translation>生成された状態</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -2295,7 +2301,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-211"/>
         <source>, has not been successfully broadcast yet</source>
-        <translation>まだブロードキャストが成功しておりません</translation>
+        <translation>まだブロードキャストが成功しておりません。</translation>
     </message>
     <message>
         <location line="+35"/>
@@ -2313,7 +2319,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+6"/>
         <source>This pane shows a detailed description of the transaction</source>
-        <translation>ここでは処理の詳細を表示しています</translation>
+        <translation>ここでは処理の詳細を表示しています。</translation>
     </message>
 </context>
 <context>
@@ -2341,7 +2347,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+60"/>
         <source>Open until %1</source>
-        <translation>ユニット %1 を開く</translation>
+        <translation>ユニット %1 を開きます</translation>
     </message>
     <message>
         <location line="+12"/>
@@ -2376,7 +2382,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+3"/>
         <source>Immature (%1 confirmations, will be available after %2)</source>
-        <translation>未熟 (%1 検証,%2の後可用ができる)</translation>
+        <translation>未熟 (%1 検証, %2の後可用ができる)</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -2386,7 +2392,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+3"/>
         <source>Generated but not accepted</source>
-        <translation>生成されましたが承認されませんでした</translation>
+        <translation>生成されましたが承認されませんでした。</translation>
     </message>
     <message>
         <location line="+42"/>
@@ -2651,42 +2657,47 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+2"/>
         <source>Options:</source>
-        <translation>オプション:</translation>
+        <translation>オプション：</translation>
     </message>
     <message>
         <location line="+2"/>
-        <source>Specify configuration file (default: SorachanCoin.conf)</source>
-        <translation>設定ファイルを特定する (デファルト: SorachanCoin.conf)</translation>
+        <source>Specify configuration file (default: sorachancoin.conf)</source>
+        <translation>設定ファイル名を設定します (初期値: SorachanCoin.conf)</translation>
     </message>
     <message>
         <location line="+1"/>
-        <source>Specify pid file (default: SorachanCoind.pid)</source>
-        <translation>pid ファイルを特定する (デフォルト: SorachanCoind.pid)</translation>
+        <source>Specify pid file (default: sorachancoind.pid)</source>
+        <translation>pid ファイル名を設定します (初期値: SorachanCoind.pid)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Send the specified hidden service name when connecting to Tor nodes (default: none)</source>
+        <translation>Torノードに接続するときに、指定された非表示のサービス名を送信します。(初期値: none)</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Specify wallet file (within data directory)</source>
-        <translation>ウォレットのファイルを指定　(ディレクトリの中に)</translation>
+        <translation>ウォレットのファイルを指定いたします。 (ディレクトリの中)</translation>
     </message>
     <message>
         <location line="-1"/>
         <source>Specify data directory</source>
-        <translation>data ディレクトリの指定</translation>
+        <translation>data ディレクトリを指定いたします。</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Set database cache size in megabytes (default: 25)</source>
-        <translation>データベースのキャッシュサイズをメガバイトで設定 (初期値: 25)</translation>
+        <translation>データベースのキャッシュサイズをメガバイトで設定いたします。 (初期値: 25)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Set database disk log size in megabytes (default: 100)</source>
-        <translation>データベースのログザイズをメガバイトで設定 (デファルト：100)</translation>
+        <translation>データベースのログザイズをメガバイトで設定いたします。 (初期値：100)</translation>
     </message>
     <message>
         <location line="+6"/>
-        <source>Listen for connections on &lt;port&gt; (default：6350 testnet：16350)</source>
-        <translation>&lt;port&gt; にて 接続 (default：6350 testnet：16350)</translation>
+        <source>Listen for connections on &lt;port&gt; (default: 21587or testnet: 31587)</source>
+        <translation>&lt;port&gt; にて SorachanCoinネットワークに接続いたします。 (初期値：21587 または testnet：31587)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -2696,22 +2707,22 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+3"/>
         <source>Connect to a node to retrieve peer addresses, and disconnect</source>
-        <translation>ピア アドレスを取得するためにノードに接続のち、切断いたします。</translation>
+        <translation>ピアアドレスを取得するためにノードに接続のち、切断いたします。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Specify your own public address</source>
-        <translation>あなた自身のパブリックアドレスを指定</translation>
+        <translation>あなた自身の公開アドレスを指定いたします。</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Bind to given address. Use [host]:port notation for IPv6</source>
-        <translation>バインド先アドレス IPv6の場合、[host]:port 表記法をご利用ください。</translation>
+        <translation>バインド先アドレス ※ IPv6の場合、[host]:port 表記法をご利用ください。</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Stake your coins to support network and gain reward (default: 1)</source>
-        <translation>PoSの有効無効(デファルト：1 有効)</translation>
+        <translation>PoSの有効無効 (初期値：1 有効)</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -2731,12 +2742,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+51"/>
         <source>Detach block and address databases. Increases shutdown time (default: 0)</source>
-        <translation>ブロックとアドレスのデータベースを切り離します。この設定はシャットダウンの時間を延ばしますのでご注意ください。(デファルト：0)</translation>
+        <translation>ブロックとアドレスのデータベースを切り離します。この設定はシャットダウンの時間を延ばしますのでご注意ください。(初期値: 0)</translation>
     </message>
     <message>
         <location line="+109"/>
         <source>Error: The transaction was rejected.  This might happen if some of the coins in your wallet were already spent, such as if you used a copy of wallet.dat and coins were spent in the copy but not marked as spent here.</source>
-        <translation>エラー：処理が拒否されました。ウォレットのコインが既に使われている、または現行のwallet.datがアップデートされておりません。</translation>
+        <translation>エラー: 処理が拒否されました。ウォレットのコインが既に使われている、または現行のwallet.datがアップデートされておりません。</translation>
     </message>
     <message>
         <location line="-5"/>
@@ -2745,8 +2756,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="-87"/>
-        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 6351 or testnet: 16351)</source>
-        <translation>&lt;port&gt; で JSON-RPC 接続を待ち受けます (default: 6351 or testnet: 16351)</translation>
+        <source>Listen for JSON-RPC connections on &lt;port&gt; (default: 21587 or testnet: 21588)</source>
+        <translation>&lt;port&gt;にて JSON-RPC接続を待ち受けます (初期値: 21587 or testnet: 21588)</translation>
     </message>
     <message>
         <location line="-11"/>
@@ -2826,7 +2837,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-30"/>
         <source>Attempt to recover private keys from a corrupt wallet.dat</source>
-        <translation>壊れてしまったwallet.datから、秘密鍵を復旧することを試します</translation>
+        <translation>壊れてしまったwallet.datから、秘密鍵を復旧することを試します。</translation>
     </message>
     <message>
         <location line="+4"/>
@@ -2851,12 +2862,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-90"/>
         <source>Find peers using DNS lookup (default: 1)</source>
-        <translation>DNSルックアップでピアを探します(デファルト：1)</translation>
+        <translation>DNSルックアップでピアを探します (デファルト：1)</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Sync checkpoints policy (default: strict)</source>
-        <translation>同期チェックポイントのポリシー(デファルト：厳しい)</translation>
+        <translation>同期チェックポイントのポリシー (デファルト：厳しい)</translation>
     </message>
     <message>
         <location line="+83"/>
@@ -2866,7 +2877,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+4"/>
         <source>Invalid amount for -reservebalance=&lt;amount&gt;</source>
-        <translation>-reservebalance=&lt;amount&gt;の額は無効です</translation>
+        <translation>-reservebalance=&lt;amount&gt;の額は無効です。</translation>
     </message>
     <message>
         <location line="-82"/>
@@ -2880,8 +2891,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="-16"/>
-        <source>Only connect to nodes in network &lt;net&gt; (IPv4, IPv6 or Tor)</source>
-        <translation>&lt;net&gt; (IPv4, IPv6, Tor) ネットワーク内のノードだけに接続いたします</translation>
+        <source>Only connect to nodes in network &lt;net&gt; (IPv4, IPv6 or Onion)</source>
+        <translation>&lt;net&gt; (IPv4, IPv6 または Tor)ネットワーク内のノードだけに接続いたします。</translation>
     </message>
     <message>
         <location line="+28"/>
@@ -2891,12 +2902,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+1"/>
         <source>Output extra network debugging information</source>
-        <translation>余分なネットワークのデバッグ情報を出力いたします</translation>
+        <translation>余分なネットワークのデバッグ情報を出力いたします。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Prepend debug output with timestamp</source>
-        <translation>デバッグの低アウトプットは、タイムスタンプから先頭に追加する</translation>
+        <translation>デバッグの低アウトプットは、タイムスタンプから先頭に追加いたします。</translation>
     </message>
     <message>
         <location line="+35"/>
@@ -2906,17 +2917,32 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-74"/>
         <source>Select the version of socks proxy to use (4-5, default: 5)</source>
-        <translation>SOCKSプロクシーのバージョンを選択する (4-5、 デファルト: 5)</translation>
-    </message>
-    <message>
-        <location line="+41"/>
-        <source>Send trace / debug info to console instead of debug.log file</source>
-        <translation>トレース / デバッグ情報を debug.log ファイルの代わりにコンソールへ送る</translation>
+        <translation>SOCKSプロキシのバージョンを選択いたします。 (4-5、 初期値: 5)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Send trace/debug info to debugger</source>
         <translation>デバッガへの追跡とデバッグ情報を送ります。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Execute command to collect peer addresses</source>
+        <translation>コマンドを実行してピアアドレスを収集いたします。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Clear list of wallet transactions (diagnostic tool; implies -rescan)</source>
+        <translation>ウォレットトのランザクションの明確なリストを一旦クリアします。 (診断ツールです。-rescanを意味いたします)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Set the number of script verification threads (1-16, 0=auto, default: 0)</source>
+        <translation>ブロックチェーン スクリプト検証のスレッド数を設定いたします。 (1-16, 自動 = 0, 初期値: 0)</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Send trace/debug info to console instead of debug.log file</source>
+        <translation>debug.logファイルではなく、コンソールにトレース/デバッグ情報を送信します。</translation>
     </message>
     <message>
         <location line="+28"/>
@@ -2931,7 +2957,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-29"/>
         <source>Shrink debug.log file on client startup (default: 1 when no -debug)</source>
-        <translation>クライアント起動時に debug.log ファイルを縮小 (初期値: -debug オプションを指定しない場合は1)</translation>
+        <translation>クライアント起動時に debug.log ファイルを縮小いたします。 (初期値: -debug オプションを指定しない場合は1)</translation>
     </message>
     <message>
         <location line="-42"/>
@@ -2942,7 +2968,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+109"/>
         <source>Unable to sign checkpoint, wrong checkpointkey?
 </source>
-        <translation>チェックポイントを署名できません。checkpointkeyは異なりますでしょうか。
+        <translation>チェックポイントを署名できませんでした。ブロックチェーンは本流に乗っているでしょうか？
 </translation>
     </message>
     <message>
@@ -2953,12 +2979,12 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="-1"/>
         <source>Use UPnP to map the listening port (default: 1 when listening)</source>
-        <translation>待ち受けポートの割当に UPnP を使用 (初期値: リスン中は1)</translation>
+        <translation>待ち受けポートの割当に UPnP を使用 (初期値: 待ち受け中は1)</translation>
     </message>
     <message>
         <location line="-25"/>
         <source>Use proxy to reach tor hidden services (default: same as -proxy)</source>
-        <translation>プロキシでTORヒドゥンサービス(TOR Hidden Services)を接続する(デファルト：-proxyと同じ)</translation>
+        <translation>プロキシでTorサービス(Tor Hidden Services)を接続いたします。 (初期値: -proxyと同じ)</translation>
     </message>
     <message>
         <location line="+42"/>
@@ -2973,7 +2999,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+57"/>
         <source>WARNING: syncronized checkpoint violation detected, but skipped!</source>
-        <translation>警告：シンクロナイズ チェックポイント違反を検出したが、チェックポイントを飛ばしました。</translation>
+        <translation>警告：シンクロナイズ チェックポイントの違反を検出いたしましたが、そのチェックポイントを飛ばしました。</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3008,9 +3034,9 @@ If the file does not exist, create it with owner-readable-only file permissions.
 It is also recommended to set alertnotify so you are notified of problems;
 for example: alertnotify=echo %%s | mail -s &quot;SorachanCoin Alert&quot; admin@foo.com
 </source>
-        <translation>%s, 設定ファイル：%sでrpcpasswordのパスワードを入力しなければなりません
+        <translation>%s, 設定ファイル：%sでrpcpasswordのパスワードを入力しなければなりません。
 
-このランダムパスワードのおすすめです：
+このランダムパスワードをおすすめいたします：
 rpcuser=sora
 rpcpassword=%s
 (このパスワードは覚えなくても大丈夫です)
@@ -3022,23 +3048,28 @@ rpcpassword=%s
     </message>
     <message>
         <location line="+51"/>
-        <source>Find peers using internet relay chat (default: 0)</source>
-        <translation>インターネットリレーチャット(IRC)でピアを探す。(デファルト:1 {0}?)</translation>
+        <source>Find peers using internet relay chat (default: 1)</source>
+        <translation>インターネットリレーチャット(IRC)でピアを探す。(初期値: 1)</translation>
+    </message>
+    <message>
+        <location line="+51"/>
+        <source>Use in-memory logging for block index database (default: 1)</source>
+        <translation>ブロックインデックスデータベースのメモリ内ロギングを使用します (初期値: 1)</translation>
     </message>
     <message>
         <location line="+5"/>
         <source>Sync time with other nodes. Disable if time on your system is precise e.g. syncing with NTP (default: 1)</source>
-        <translation>他のノードと、時刻の同期いたします。正確な時刻のコンピューターの場合、無効とします。例：NTP同期設定が有効(デファルト：1)</translation>
+        <translation>他のノードと、時刻の同期いたします。正確な時刻のコンピューターの場合、無効とします。例：NTP同期設定が有効 (初期値: 1)</translation>
     </message>
     <message>
         <location line="+15"/>
-        <source>When creating transactions, ignore inputs with value less than this (default: 0.01)</source>
-        <translation>処理を作るとき、この額より少ない数字を無視いたします (デファルト：0.01)</translation>
+        <source>When creating transactions, ignore inputs with value less than this (default: %s)</source>
+        <translation>トランザクション処理を作るとき、この額より少ない数字は無視いたします (初期値: %s)</translation>
     </message>
     <message>
         <location line="+16"/>
         <source>Allow JSON-RPC connections from specified IP address</source>
-        <translation>指定した IP アドレスからの JSON-RPC 接続を許可</translation>
+        <translation>指定したIPアドレスからの JSON-RPC 接続を許可</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3048,27 +3079,27 @@ rpcpassword=%s
     <message>
         <location line="+1"/>
         <source>Execute command when the best block changes (%s in cmd is replaced by block hash)</source>
-        <translation>最良のブロックに変更する際、コマンドを実行 (cmd の %s はブロック ハッシュに置換される)</translation>
+        <translation>最良のブロックに変更する際、コマンドを実行いたします。 (cmd の %s はブロック ハッシュに置換される)</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Execute command when a wallet transaction changes (%s in cmd is replaced by TxID)</source>
-        <translation>ウォレットの処理を変更する際、コマンドを実行 (cmd の %s は TxID に置換される)</translation>
+        <translation>ウォレットの処理を変更する際、コマンドを実行いたします。 (cmd の %s は TxID に置換される)</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Require a confirmations for change (default: 0)</source>
-        <translation>変更するために、確認を必要とします (デファルト：0)</translation>
+        <translation>変更するために、確認を必要といたします。 (デファルト：0)</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Enforce transaction scripts to use canonical PUSH operators (default: 1)</source>
-        <translation>処理のスクリプトで標準的なPUSHオペレータを施行する(デファルト：1)</translation>
+        <translation>トランザクション処理のスクリプトで、標準的なPUSHオペレータを施行いたします。(デファルト：1)</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Execute command when a relevant alert is received (%s in cmd is replaced by message)</source>
-        <translation>関連した警告を受信した場合、そのコマンドを実行する (cmdの中で%sにメッセージを交換される)</translation>
+        <translation>関連した警告を受信した場合、そのコマンドを実行いたします。 (cmdの中で%sにメッセージを交換される)</translation>
     </message>
     <message>
         <location line="+3"/>
@@ -3088,12 +3119,12 @@ rpcpassword=%s
     <message>
         <location line="+2"/>
         <source>How many blocks to check at startup (default: 2500, 0 = all)</source>
-        <translation>スタートのときに、いくつのブロックを調べます　(デファルト：2500、 0 = すべて )</translation>
+        <translation>スタートのときに、いくつのブロックを調べます (初期値：2500、 0 = すべて )</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>How thorough the block verification is (0-6, default: 1)</source>
-        <translation>ブロック検証の徹底の程度　(0-6 、デファルト：1)</translation>
+        <translation>ブロック検証の徹底の程度 (0-6 、初期値：1)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3118,22 +3149,22 @@ rpcpassword=%s
     <message>
         <location line="+1"/>
         <source>Acceptable ciphers (default: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)</source>
-        <translation>OpenSSLで使用する暗号タイプ (デフォルト： TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)</translation>
+        <translation>OpenSSLで使用する暗号タイプ (初期値: TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH)</translation>
     </message>
     <message>
         <location line="+53"/>
         <source>Error: Wallet unlocked for staking only, unable to create transaction.</source>
-        <translation>エラー：アンロックされたウォレットはPoS専用です。送金等の取引はできません。全機能のアンロックを先にお願いいたします。</translation>
+        <translation>エラー：アンロックされたウォレットはPoS専門で動いています。これでは、送金等の取引はできません。全機能のアンロックを先にお願いいたします。</translation>
     </message>
     <message>
         <location line="+18"/>
         <source>WARNING: Invalid checkpoint found! Displayed transactions may not be correct! You may need to upgrade, or notify developers.</source>
-        <translation>警告：無効なチェックポイントが見つかりました。表示された処理は正しくない可能性があります。アップグレードするか、開発元に報告する必要があります。</translation>
+        <translation>警告：無効なチェックポイントが見つかりました。このため、ここに表示された処理結果は正しくない可能性があります。アップグレードするか、開発元に報告する必要があります。</translation>
     </message>
     <message>
         <location line="-158"/>
         <source>This help message</source>
-        <translation>このヘルプ メッセージ</translation>
+        <translation>ヘルプ メッセージ</translation>
     </message>
     <message>
         <location line="+95"/>
@@ -3143,7 +3174,7 @@ rpcpassword=%s
     <message>
         <location line="+1"/>
         <source>Cannot obtain a lock on data directory %s.  SorachanCoin is probably already running.</source>
-        <translation>%sディレクトリをロックできません。sorachancoin-qtは、すでに動作しております。</translation>
+        <translation>%sディレクトリをロックできません。SorachanCoin-qtは、すでに動作しております。</translation>
     </message>
     <message>
         <location line="-98"/>
@@ -3158,12 +3189,12 @@ rpcpassword=%s
     <message>
         <location line="-130"/>
         <source>Connect through socks proxy</source>
-        <translation>SOCKSプロキシで接続する</translation>
+        <translation>SOCKSプロキシで接続する。</translation>
     </message>
     <message>
         <location line="+3"/>
         <source>Allow DNS lookups for -addnode, -seednode and -connect</source>
-        <translation>-addnode, -seednode と -connect で DNS ルックアップを許可する</translation>
+        <translation>-addnode, -seednode と -connect で DNS ルックアップを許可する。</translation>
     </message>
     <message>
         <location line="+122"/>
@@ -3178,17 +3209,17 @@ rpcpassword=%s
     <message>
         <location line="+2"/>
         <source>Error loading wallet.dat: Wallet corrupted</source>
-        <translation>wallet.dat 読み込みエラー: ウォレットが壊れました</translation>
+        <translation>wallet.dat 読み込みエラー: ウォレットが壊れました。</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Error loading wallet.dat: Wallet requires newer version of SorachanCoin</source>
-        <translation>wallet.dat 読み込みエラー: 　sorachancoin-qtの最新バージョンが必要です</translation>
+        <translation>wallet.dat 読み込みエラー: SorachanCoin-qtの最新バージョンが必要となります。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Wallet needed to be rewritten: restart SorachanCoin to complete</source>
-        <translation>ウォレットのデータを再試行しなければならい：sorachancoin-qtを再起動してください</translation>
+        <translation>ウォレットのデータ更新を再試行しなければなりません：SorachanCoin-qtを再起動してください。</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3203,32 +3234,32 @@ rpcpassword=%s
     <message>
         <location line="-1"/>
         <source>Unknown network specified in -onlynet: &apos;%s&apos;</source>
-        <translation>-onlynet で指定された &apos;%s&apos; は未知のネットワークです</translation>
+        <translation>-onlynet で指定された &apos;%s&apos; は未知のネットワークです。</translation>
     </message>
     <message>
         <location line="-1"/>
         <source>Unknown -socks proxy version requested: %i</source>
-        <translation>-socks で指定された %i は未知のバージョンです</translation>
+        <translation>-socks で指定された %i は未知のバージョンです。</translation>
     </message>
     <message>
         <location line="+4"/>
         <source>Cannot resolve -bind address: &apos;%s&apos;</source>
-        <translation>-bind のアドレス &apos;%s&apos; を解決できません</translation>
+        <translation>-bind のアドレス &apos;%s&apos; を解決できません。</translation>
     </message>
     <message>
         <location line="+2"/>
         <source>Cannot resolve -externalip address: &apos;%s&apos;</source>
-        <translation>-externalip のアドレス &apos;%s&apos; を解決できません</translation>
+        <translation>-externalip のアドレス &apos;%s&apos; を解決できません。</translation>
     </message>
     <message>
         <location line="-24"/>
         <source>Invalid amount for -paytxfee=&lt;amount&gt;: &apos;%s&apos;</source>
-        <translation>-paytxfee=&lt;amount&gt; の額 &apos;%s&apos; が無効です</translation>
+        <translation>-paytxfee=&lt;amount&gt; の額 &apos;%s&apos; が無効です。</translation>
     </message>
     <message>
         <location line="+44"/>
         <source>Error: could not start node</source>
-        <translation>エラー：ノードの開始ができなった</translation>
+        <translation>エラー：ノード接続の開始ができません。</translation>
     </message>
     <message>
         <location line="+11"/>
@@ -3258,7 +3289,7 @@ rpcpassword=%s
     <message>
         <location line="+122"/>
         <source>Unable to bind to %s on this computer. SorachanCoin is probably already running.</source>
-        <translation>このコンピューターで%sにバインドできません。sorachancoin-qtは、すでに動作しております。</translation>
+        <translation>このコンピューターで%sにバインドできません。SorachanCoin-qtは、すでに動作しております。</translation>
     </message>
     <message>
         <location line="-97"/>
@@ -3268,7 +3299,7 @@ rpcpassword=%s
     <message>
         <location line="+55"/>
         <source>Invalid amount for -mininput=&lt;amount&gt;: &apos;%s&apos;</source>
-        <translation>-mininput=&lt;amount&gt;: &apos;%s&apos;の額は無効です</translation>
+        <translation>-mininput=&lt;amount&gt;: &apos;%s&apos;の額は無効です。</translation>
     </message>
     <message>
         <location line="+25"/>
@@ -3278,17 +3309,17 @@ rpcpassword=%s
     <message>
         <location line="+8"/>
         <source>Cannot downgrade wallet</source>
-        <translation>ウォレットのダウングレードはできません</translation>
+        <translation>ウォレットのダウングレードはできません。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Cannot initialize keypool</source>
-        <translation>キープールを初期化できません</translation>
+        <translation>キープールを初期化できません。</translation>
     </message>
     <message>
         <location line="+1"/>
         <source>Cannot write default address</source>
-        <translation>初期値のアドレスを書き込むことができません</translation>
+        <translation>初期値のアドレスを書き込むことができません。</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -3303,7 +3334,7 @@ rpcpassword=%s
     <message>
         <location line="-167"/>
         <source>To use the %s option</source>
-        <translation>%s オプションを使うには</translation>
+        <translation>%sのオプションを使うには？</translation>
     </message>
     <message>
         <location line="+14"/>

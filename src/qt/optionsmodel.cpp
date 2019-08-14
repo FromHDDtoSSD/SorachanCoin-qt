@@ -67,13 +67,13 @@ void OptionsModel::Init()
     // These are Qt-only settings:
     nDisplayUnit = settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt();
     bDisplayAddresses = settings.value("bDisplayAddresses", false).toBool();
-    if (! settings.contains("strThirdPartyTxUrls")) {
+    //if (! settings.contains("strThirdPartyTxUrls")) {
         if(args_bool::fTestNet) {
             settings.setValue("strThirdPartyTxUrls", "");
         } else {
             settings.setValue("strThirdPartyTxUrls", "https://www.junkhdd.com:7350");
         }
-    }
+    //}
     strThirdPartyTxUrls = settings.value("strThirdPartyTxUrls", "https://www.junkhdd.com:7350").toString();
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
