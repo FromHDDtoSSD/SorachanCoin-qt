@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+  </property>
   <property name="frameShape">
    <enum>QFrame::StyledPanel</enum>
   </property>
@@ -58,7 +62,7 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QValidatedLineEdit" name="addAsLabel" native="true">
+      <widget class="QValidatedLineEdit" name="addAsLabel">
        <property name="enabled">
         <bool>true</bool>
        </property>
@@ -88,11 +92,11 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QValidatedLineEdit" name="payTo" native="true">
+      <widget class="QValidatedLineEdit" name="payTo">
        <property name="toolTip">
         <string>The address to send the payment to  (e.g. 4Zo1ga6xuKuQ7JV7M9rGDoxdbYwV5zgQJ5)</string>
        </property>
-       <property name="maxLength" stdset="0">
+       <property name="maxLength">
         <number>100</number>
        </property>
       </widget>
@@ -152,7 +156,7 @@
  <customwidgets>
   <customwidget>
    <class>QValidatedLineEdit</class>
-   <extends>QWidget</extends>
+   <extends>QLineEdit</extends>
    <header>qvalidatedlineedit.h</header>
   </customwidget>
   <customwidget>

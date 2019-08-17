@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Form</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+  </property>
   <property name="frameShape">
    <enum>QFrame::StyledPanel</enum>
   </property>
@@ -147,7 +151,7 @@
       <bool>true</bool>
      </property>
      <property name="toolTip">
-      <string></string>
+      <string/>
      </property>
      <property name="readOnly">
       <bool>true</bool>

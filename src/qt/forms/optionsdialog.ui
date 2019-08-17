@@ -13,6 +13,10 @@
   <property name="windowTitle">
    <string>Options</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
@@ -146,7 +150,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QValidatedLineEdit" name="proxyIp" native="true">
+          <widget class="QValidatedLineEdit" name="proxyIp">
            <property name="maximumSize">
             <size>
              <width>140</width>
@@ -242,7 +246,7 @@
           </widget>
          </item>
          <item>
-          <widget class="QValidatedLineEdit" name="torIp" native="true">
+          <widget class="QValidatedLineEdit" name="torIp">
            <property name="maximumSize">
             <size>
              <width>115</width>
@@ -594,7 +598,7 @@
  <customwidgets>
   <customwidget>
    <class>QValidatedLineEdit</class>
-   <extends>QWidget</extends>
+   <extends>QLineEdit</extends>
    <header>qvalidatedlineedit.h</header>
   </customwidget>
   <customwidget>

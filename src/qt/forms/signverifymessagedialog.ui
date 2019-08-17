@@ -16,6 +16,10 @@
   <property name="windowTitle">
    <string>Signatures - Sign / Verify a Message</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
@@ -46,11 +50,11 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QValidatedLineEdit" name="addressIn_SM" native="true">
+          <widget class="QValidatedLineEdit" name="addressIn_SM">
            <property name="toolTip">
             <string>The address to sign the message with (e.g. 4Zo1ga6xuKuQ7JV7M9rGDoxdbYwV5zgQJ5)</string>
            </property>
-           <property name="maxLength" stdset="0">
+           <property name="maxLength">
             <number>34</number>
            </property>
           </widget>
@@ -249,11 +253,11 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QValidatedLineEdit" name="addressIn_VM" native="true">
+          <widget class="QValidatedLineEdit" name="addressIn_VM">
            <property name="toolTip">
             <string>The address the message was signed with (e.g. 4Zo1ga6xuKuQ7JV7M9rGDoxdbYwV5zgQJ5)</string>
            </property>
-           <property name="maxLength" stdset="0">
+           <property name="maxLength">
             <number>34</number>
            </property>
           </widget>
@@ -284,7 +288,7 @@
         <widget class="QPlainTextEdit" name="messageIn_VM"/>
        </item>
        <item>
-        <widget class="QValidatedLineEdit" name="signatureIn_VM" native="true"/>
+        <widget class="QValidatedLineEdit" name="signatureIn_VM"/>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2_VM">
@@ -378,7 +382,7 @@
  <customwidgets>
   <customwidget>
    <class>QValidatedLineEdit</class>
-   <extends>QWidget</extends>
+   <extends>QLineEdit</extends>
    <header>qvalidatedlineedit.h</header>
   </customwidget>
  </customwidgets>

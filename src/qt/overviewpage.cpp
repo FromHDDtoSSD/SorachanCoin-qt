@@ -1,6 +1,7 @@
 #include "overviewpage.h"
 #include "ui_overviewpage.h"
-
+#include <QDesktopServices>
+#include <QUrl>
 #include "walletmodel.h"
 #include "bitcoinunits.h"
 #include "optionsmodel.h"
@@ -232,4 +233,16 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 {
     ui->labelWalletStatus->setVisible(fShow);
     ui->labelTransactionsStatus->setVisible(fShow);
+}
+
+void OverviewPage::on_pushButton_clicked()
+{
+    QString link="https://www.junkhdd.com/";
+       QDesktopServices::openUrl(QUrl(link));
+}
+
+void OverviewPage::on_pushButton_2_clicked()
+{
+    QString link="https://discord.gg/ThMeemM/";
+    QDesktopServices::openUrl(QUrl(link));
 }

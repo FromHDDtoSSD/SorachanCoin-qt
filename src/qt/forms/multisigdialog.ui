@@ -13,9 +13,17 @@
   <property name="windowTitle">
    <string>Multisig</string>
   </property>
+  <property name="styleSheet">
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="styleSheet">
+      <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
+     </property>
      <property name="currentIndex">
       <number>1</number>
      </property>
@@ -34,8 +42,8 @@
            <rect>
             <x>0</x>
             <y>0</y>
-            <width>1283</width>
-            <height>346</height>
+            <width>1297</width>
+            <height>385</height>
            </rect>
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -339,8 +347,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>616</width>
-                   <height>273</height>
+                   <width>626</width>
+                   <height>322</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -458,8 +466,8 @@
                   <rect>
                    <x>0</x>
                    <y>0</y>
-                   <width>615</width>
-                   <height>245</height>
+                   <width>625</width>
+                   <height>296</height>
                   </rect>
                  </property>
                  <layout class="QVBoxLayout" name="verticalLayout_5">
