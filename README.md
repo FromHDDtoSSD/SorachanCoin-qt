@@ -3,7 +3,7 @@ SorachanCoin - a hybrid scrypt PoW + PoS based cryptocurrency.
 
 ![SorachanCoin](https://raw.githubusercontent.com/FromHDDtoSSD/SorachanCoin-qt/master/src/qt/res/images/splash2.png)
 
-What is the SorachanCoin?
+What is SorachanCoin?
 ===========================
 
 The purpose of this coin is to change the drive failure prediction detection function(case: S.M.A.R.T.) to "reliable".  
@@ -33,19 +33,18 @@ How to build?
 
 Checked with "gcc-4.8.5".
 
-1, Install the following libraries:  
-openssl-devel  
-boost-devel  
-libdb-cxx-devel.x86_64  
-zlib-devel
+./autobuild.sh  
+or  
+./autogen.sh  
+./configure  
+make  
+make install
 
-2, make:  
-cd /usr/local/src  
-git clone https://github.com/FromHDDtoSSD/SorachanCoin-qt.git  
-cd SorachanCoin-qt/src  
-make
-
-SorachanCoind is generated in SorachanCoin-qt/src. "make install" is NOT required.
+Options:  
+-h, --help: View usage  
+--prefix: --prefix=[install path] (e.g. --prefix=/opt/SorachanCoin)  
+--build-unix: Build a UNIX system (e.g. FreeBSD).  
+--with-no-build-library: Use the package without building the necessary libraries.
 
 BlockExplorer
 ===========================

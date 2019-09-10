@@ -1,0 +1,59 @@
+
+bin_PROGRAMS = SorachanCoind
+INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/db-4.8.30/include -Ileveldb/include -Ileveldb/helpers
+SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_LEVELDB -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+SorachanCoind_LDADD = -lpthread \
+ ../library/boost_1_68_0/lib/libboost_system.a \
+ ../library/boost_1_68_0/lib/libboost_filesystem.a \
+ ../library/boost_1_68_0/lib/libboost_program_options.a \
+ ../library/boost_1_68_0/lib/libboost_thread.a \
+ ../library/boost_1_68_0/lib/libboost_chrono.a \
+ ../library/libressl-2.8.2/lib/libssl.a \
+ ../library/libressl-2.8.2/lib/libcrypto.a \
+ ../library/db-4.8.30/lib/libdb_cxx.a \
+ -lz \
+ -ldl \
+ ./leveldb/libleveldb.a \
+ ./leveldb/libmemenv.a
+
+SorachanCoind_SOURCES = alert.cpp \
+ version.cpp \
+ checkpoints.cpp \
+ netbase.cpp \
+ addrman.cpp \
+ crypter.cpp \
+ key.cpp \
+ db.cpp \
+ init.cpp \
+ irc.cpp \
+ keystore.cpp \
+ main.cpp \
+ miner.cpp \
+ net.cpp \
+ protocol.cpp \
+ bitcoinrpc.cpp \
+ rpcdump.cpp \
+ rpcnet.cpp \
+ rpcmining.cpp \
+ rpcwallet.cpp \
+ rpcblockchain.cpp \
+ rpcrawtransaction.cpp \
+ script.cpp \
+ sync.cpp \
+ util.cpp \
+ wallet.cpp \
+ walletdb.cpp \
+ noui.cpp \
+ kernel.cpp \
+ pbkdf2.cpp \
+ scrypt.cpp \
+ ntp.cpp \
+ stun.cpp \
+ rpccrypt.cpp \
+ base58.cpp \
+ kernel_worker.cpp \
+ ecies.cpp \
+ cryptogram.cpp \
+ ipcollector.cpp \
+ txdb-leveldb.cpp
+
