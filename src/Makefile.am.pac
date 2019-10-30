@@ -1,7 +1,7 @@
 
 bin_PROGRAMS = SorachanCoind
 INCLUDES = -Ileveldb/include -Ileveldb/helpers
-SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_LEVELDB -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_LEVELDB -DUSE_IPV6 -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 SorachanCoind_LDADD = -lpthread \
  -lboost_system \
  -lboost_filesystem \
