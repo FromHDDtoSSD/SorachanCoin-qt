@@ -15,6 +15,12 @@
 #undef ADVISORY
 #endif
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> checkpoints_vector;
+#else
+typedef std::vector<uint8_t> checkpoints_vector;
+#endif
+
 class uint256;
 class CBlockIndex;
 
@@ -68,8 +74,8 @@ public:
     static const std::string strMasterPubKey;
     static std::string strMasterPrivKey;
 
-    std::vector<unsigned char> vchMsg;
-    std::vector<unsigned char> vchSig;
+    checkpoints_vector vchMsg;
+    checkpoints_vector vchSig;
 
     CSyncCheckpoint() {
         SetNull();

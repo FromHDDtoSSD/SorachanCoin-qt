@@ -11,6 +11,7 @@
 #include <string.h>
 #include <string>
 #include <vector>
+#include <prevector/prevector.h>
 #include <stdint.h>
 
 /** Base class without constructors for uint256 and uint160.
@@ -431,6 +432,12 @@ typedef base_uint<256> base_uint256;
 // uint160
 //
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> uint160_vector;
+#else
+typedef std::vector<uint8_t> uint160_vector;
+#endif
+
 /** 160-bit unsigned integer */
 class uint160 : public base_uint160
 {
@@ -456,7 +463,7 @@ public:
         SetHex(str);
     }
 
-    explicit uint160(const std::vector<unsigned char> &vch) {
+    explicit uint160(const uint160_vector &vch) {
         if (vch.size() == size()) {
             set_mem(&vch[0]);
         } else {

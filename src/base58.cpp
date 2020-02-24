@@ -30,7 +30,7 @@ std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsi
 
     // Convert big endian data to little endian
     // Extra zero at the end make sure bignum will interpret as a positive number
-    std::vector<unsigned char> vchTmp(pend - pbegin + 1, 0);
+    base58_vector vchTmp((uint32_t)(pend - pbegin + 1), (uint8_t)0);
     std::reverse_copy(pbegin, pend, vchTmp.begin());
 
     // Convert little endian data to bignum
@@ -68,14 +68,14 @@ std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsi
 }
 
 // Encode a byte vector as a base58-encoded string
-std::string base58::manage::EncodeBase58(const std::vector<unsigned char> &vch)
+std::string base58::manage::EncodeBase58(const base58_vector &vch)
 {
     return base58::manage::EncodeBase58(&vch[0], &vch[0] + vch.size());
 }
 
 // Decode a base58-encoded string psz into byte vector vchRet
 // returns true if decoding is successful
-bool base58::manage::DecodeBase58(const char *psz, std::vector<unsigned char> &vchRet)
+bool base58::manage::DecodeBase58(const char *psz, base58_vector &vchRet)
 {
     vchRet.clear();
 
@@ -92,7 +92,7 @@ bool base58::manage::DecodeBase58(const char *psz, std::vector<unsigned char> &v
     // Convert big endian string to bignum
     for (const char *p = psz; *p; p++)
     {
-        const char* p1 = ::strchr(base58::pszBase58, *p);
+        const char *p1 = ::strchr(base58::pszBase58, *p);
         if (p1 == NULL) {
             while (::isspace(*p))
             {
@@ -112,7 +112,7 @@ bool base58::manage::DecodeBase58(const char *psz, std::vector<unsigned char> &v
     }
 
     // Get bignum as little endian data
-    std::vector<unsigned char> vchTmp = bn.getvch();
+    base58_vector vchTmp = bn.getvch();
 
     // Trim off sign byte if present
     if (vchTmp.size() >= 2 && vchTmp.end()[-1] == 0 && vchTmp.end()[-2] >= 0x80) {
@@ -140,10 +140,10 @@ bool base58::manage::DecodeBase58(const std::string &str, std::vector<unsigned c
 }
 
 // Encode a byte vector to a base58-encoded string, including checksum
-std::string base58::manage::EncodeBase58Check(const std::vector<unsigned char> &vchIn)
+std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn)
 {
     // add 4-byte hash check to the end
-    std::vector<unsigned char> vch(vchIn);
+    base58_vector vch(vchIn);
 
     uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
     vch.insert(vch.end(), (unsigned char *)&hash, (unsigned char *)&hash + 4);
@@ -151,7 +151,7 @@ std::string base58::manage::EncodeBase58Check(const std::vector<unsigned char> &
 }
 
 // Decode a base58-encoded string psz that includes a checksum, into byte vector vchRet
-bool base58::manage::DecodeBase58Check(const char *psz, std::vector<unsigned char> &vchRet)
+bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet)
 {
     if (! base58::manage::DecodeBase58(psz, vchRet)) {
         return false;
@@ -173,7 +173,7 @@ bool base58::manage::DecodeBase58Check(const char *psz, std::vector<unsigned cha
 }
 
 // Decode a base58-encoded string str that includes a checksum, into byte vector vchRet
-bool base58::manage::DecodeBase58Check(const std::string &str, std::vector<unsigned char> &vchRet)
+bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vchRet)
 {
     return base58::manage::DecodeBase58Check(str.c_str(), vchRet);
 }

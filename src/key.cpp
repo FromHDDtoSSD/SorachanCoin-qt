@@ -181,7 +181,7 @@ bool CKey::CheckSignatureElement(const unsigned char *vch, int len, bool half) {
            CompareBigEndian(vch, len, half ? vchMaxModHalfOrder : vchMaxModOrder, 32) <= 0;
 }
 
-bool CPubKey::ReserealizeSignature(std::vector<unsigned char> &vchSig)
+bool CPubKey::ReserealizeSignature(key_vector &vchSig)
 {
     if (vchSig.empty()) {
         return false;
@@ -322,7 +322,7 @@ CPubKey CKey::GetPubKey() const
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey failed");
     }
 
-    std::vector<unsigned char> vchPubKey(nSize, 0);
+    key_vector vchPubKey((uint32_t)nSize, (uint8_t)0);
     unsigned char *pbegin = &vchPubKey[0];
     if (i2o_ECPublicKey(pkey, &pbegin) != nSize) {
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
@@ -330,7 +330,7 @@ CPubKey CKey::GetPubKey() const
     return CPubKey(vchPubKey);
 }
 
-bool CKey::Sign(uint256 hash, std::vector<unsigned char> &vchSig)
+bool CKey::Sign(uint256 hash, key_vector &vchSig)
 {
     vchSig.clear();
     ECDSA_SIG *sig = ECDSA_do_sign((unsigned char *)&hash, sizeof(hash), pkey);
@@ -474,7 +474,7 @@ bool CPubKey::SetCompactSignature(uint256 hash, const std::vector<unsigned char>
     return fSuccessful;
 }
 
-bool CPubKey::Verify(const uint256 &hash, const std::vector<unsigned char>& vchSig) const
+bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const
 {
     if (vchSig.empty() || !IsValid()) {
         return false;
@@ -552,11 +552,11 @@ std::string CMalleablePubKey::ToString() const {
     CDataStream ssKey(SER_NETWORK, version::PROTOCOL_VERSION);
     ssKey << *this;
 
-    std::vector<unsigned char> vch(ssKey.begin(), ssKey.end());
+    key_vector vch(ssKey.begin(), ssKey.end());
     return base58::manage::EncodeBase58Check(vch);
 }
 bool CMalleablePubKey::SetString(const std::string &strMalleablePubKey) {
-    std::vector<unsigned char> vchTemp;
+    key_vector vchTemp;
     if (! base58::manage::DecodeBase58Check(strMalleablePubKey, vchTemp)) {
         throw key_error("CMalleablePubKey::SetString() : Provided key data seems corrupted.");
     }
@@ -592,7 +592,7 @@ void CMalleablePubKey::GetVariant(CPubKey &R, CPubKey &vchPubKeyVariant) const
         throw key_error("CMalleablePubKey::GetVariant() : i2o_ECPublicKey failed");
     }
 
-    std::vector<unsigned char> vchPubKey(nSize, 0);
+    key_vector vchPubKey((uint32_t)nSize, (uint8_t)0);
     unsigned char *pbegin_R = &vchPubKey[0];
 
     if (i2o_ECPublicKey(eckey, &pbegin_R) != nSize) {
@@ -614,7 +614,7 @@ void CMalleablePubKey::GetVariant(CPubKey &R, CPubKey &vchPubKeyVariant) const
     // Calculate L*r
     point.ECMUL(bnr);
 
-    std::vector<unsigned char> vchLr;
+    key_vector vchLr;
     if (! point.getBytes(vchLr)) {
         throw key_error("CMalleablePubKey::GetVariant() : Unable to convert Lr value");
     }
@@ -634,7 +634,7 @@ void CMalleablePubKey::GetVariant(CPubKey &R, CPubKey &vchPubKeyVariant) const
         throw key_error("CMalleablePubKey::GetVariant() : P is infinity");
     }
 
-    std::vector<unsigned char> vchResult;
+    key_vector vchResult;
     if(! P.getBytes(vchResult)) {
         throw key_error("CMalleablePubKey::GetVariant() : vchResult failed");
     }
@@ -694,7 +694,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     point_R.ECMUL(bnl);
 
-    std::vector<unsigned char> vchRl;
+    key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
         printf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
         return false;
@@ -771,7 +771,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     point_R.ECMUL(bnl);
 
-    std::vector<unsigned char> vchRl;
+    key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
         printf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
         return false;
@@ -813,14 +813,14 @@ std::string CMalleableKey::ToString() const
 {
     CDataStream ssKey(SER_NETWORK, version::PROTOCOL_VERSION);
     ssKey << *this;
-    std::vector<unsigned char> vch(ssKey.begin(), ssKey.end());
+    key_vector vch(ssKey.begin(), ssKey.end());
 
     return base58::manage::EncodeBase58Check(vch);
 }
 
 bool CMalleableKey::SetString(const std::string &strMutableKey)
 {
-    std::vector<unsigned char> vchTemp;
+    key_vector vchTemp;
     if (! base58::manage::DecodeBase58Check(strMutableKey, vchTemp)) {
         throw key_error("CMalleableKey::SetString() : Provided key data seems corrupted.");
     }
@@ -883,7 +883,7 @@ bool CMalleableKeyView::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubK
 
     point_R.ECMUL(bnl);
 
-    std::vector<unsigned char> vchRl;
+    key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
         printf("CMalleableKeyView::CheckKeyVariant() : Unable to convert Rl value");
         return false;
@@ -915,14 +915,14 @@ std::string CMalleableKeyView::ToString() const
 {
     CDataStream ssKey(SER_NETWORK, version::PROTOCOL_VERSION);
     ssKey << *this;
-    std::vector<unsigned char> vch(ssKey.begin(), ssKey.end());
+    key_vector vch(ssKey.begin(), ssKey.end());
 
     return base58::manage::EncodeBase58Check(vch);
 }
 
 bool CMalleableKeyView::SetString(const std::string &strMutableKey)
 {
-    std::vector<unsigned char> vchTemp;
+    key_vector vchTemp;
     if (! base58::manage::DecodeBase58Check(strMutableKey, vchTemp)) {
         throw key_error("CMalleableKeyView::SetString() : Provided key data seems corrupted.");
     }
@@ -938,7 +938,7 @@ bool CMalleableKeyView::SetString(const std::string &strMutableKey)
 
 //// Asymmetric encryption
 
-void CPubKey::EncryptData(const std::vector<unsigned char> &data, std::vector<unsigned char> &encrypted) const
+void CPubKey::EncryptData(const key_vector &data, key_vector &encrypted) const
 {
     char error[1024] = "Unknown error";
 
@@ -967,7 +967,7 @@ void CPubKey::EncryptData(const std::vector<unsigned char> &data, std::vector<un
     delete ctx;
 }
 
-void CKey::DecryptData(const std::vector<unsigned char> &encrypted, std::vector<unsigned char> &data)
+void CKey::DecryptData(const key_vector &encrypted, key_vector &data)
 {
     char error[1024] = "Unknown error";
 

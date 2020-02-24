@@ -35,7 +35,7 @@ void CRPCTable::ScriptPubKeyToJSON(const CScript &scriptPubKey, json_spirit::Obj
         out.push_back(json_spirit::Pair("type", TxnOutputType::GetTxnOutputType(type)));
 
         if (type == TxnOutputType::TX_PUBKEY_DROP) {
-            std::vector<Script_util::valtype> vSolutions;
+            Script_util::statype vSolutions;
             Script_util::Solver(scriptPubKey, type, vSolutions);
             out.push_back(json_spirit::Pair("keyVariant", util::HexStr(vSolutions[0])));
             out.push_back(json_spirit::Pair("R", util::HexStr(vSolutions[1])));
@@ -350,7 +350,7 @@ json_spirit::Value CRPCTable::decoderawtransaction(const json_spirit::Array &par
 
     bitrpc::RPCTypeCheck(params, boost::assign::list_of(json_spirit::str_type));
 
-    std::vector<unsigned char> txData(hex::ParseHex(params[0].get_str()));
+    rpctable_vector txData(hex::ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
     try {
@@ -378,7 +378,7 @@ json_spirit::Value CRPCTable::decodescript(const json_spirit::Array &params, boo
     json_spirit::Object r;
     CScript script;
     if (params[0].get_str().size() > 0){
-        std::vector<unsigned char> scriptData(hexrpc::ParseHexV(params[0], "argument"));
+        rpctable_vector scriptData(hexrpc::ParseHexV(params[0], "argument"));
         script = CScript(scriptData.begin(), scriptData.end());
     } else {
         // Empty scripts are valid
@@ -409,7 +409,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
 
     bitrpc::RPCTypeCheck(params, boost::assign::list_of(json_spirit::str_type)(json_spirit::array_type)(json_spirit::array_type)(json_spirit::str_type), true);
 
-    std::vector<unsigned char> txData(hex::ParseHex(params[0].get_str()));
+    rpctable_vector txData(hex::ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     std::vector<CTransaction> txVariants;
     while (! ssData.empty())
@@ -520,7 +520,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
                 throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "scriptPubKey must be hexadecimal");
             }
 
-            std::vector<unsigned char> pkData(hex::ParseHex(pkHex));
+            rpctable_vector pkData(hex::ParseHex(pkHex));
             CScript scriptPubKey(pkData.begin(), pkData.end());
 
             COutPoint outpoint(txid, nOut);
@@ -545,7 +545,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
                 bitrpc::RPCTypeCheck(prevOut, boost::assign::map_list_of("txid", json_spirit::str_type)("vout", json_spirit::int_type)("scriptPubKey", json_spirit::str_type)("redeemScript", json_spirit::str_type));
                 json_spirit::Value v = find_value(prevOut, "redeemScript");
                 if (!(v == json_spirit::Value::null)) {
-                    std::vector<unsigned char> rsData(hexrpc::ParseHexV(v, "redeemScript"));
+                    rpctable_vector rsData(hexrpc::ParseHexV(v, "redeemScript"));
                     CScript redeemScript(rsData.begin(), rsData.end());
                     tempKeystore.AddCScript(redeemScript);
                 }
@@ -622,7 +622,7 @@ json_spirit::Value CRPCTable::sendrawtransaction(const json_spirit::Array &param
     bitrpc::RPCTypeCheck(params, boost::assign::list_of(json_spirit::str_type));
 
     // parse hex string from parameter
-    std::vector<unsigned char> txData(hex::ParseHex(params[0].get_str()));
+    rpctable_vector txData(hex::ParseHex(params[0].get_str()));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
 

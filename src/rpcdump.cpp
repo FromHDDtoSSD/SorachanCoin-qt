@@ -116,7 +116,7 @@ json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, bo
         }
         script.SetAddress(address);
     } else if (hex::IsHex(params[0].get_str())) {
-        std::vector<unsigned char> data(hex::ParseHex(params[0].get_str()));
+        rpctable_vector data(hex::ParseHex(params[0].get_str()));
         script = CScript(data.begin(), data.end());
     } else {
         throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + coin_param::strCoinName + " address or script").c_str());
@@ -184,7 +184,7 @@ json_spirit::Value CRPCTable::removeaddress(const json_spirit::Array &params, bo
         }
         script.SetAddress(address);
     } else if (hex::IsHex(params[0].get_str())) {
-        std::vector<unsigned char> data(hex::ParseHex(params[0].get_str()));
+        rpctable_vector data(hex::ParseHex(params[0].get_str()));
         script = CScript(data.begin(), data.end());
     } else {
         throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or script");

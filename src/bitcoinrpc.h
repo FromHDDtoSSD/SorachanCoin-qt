@@ -130,6 +130,11 @@ namespace bitjson
 // Utilities: convert hex-encoded Values
 // (throws error if not hex).
 //
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> hexrpc_vector;
+#else
+typedef std::vector<uint8_t> hexrpc_vector;
+#endif
 class hexrpc : private no_instance
 {
 public:
@@ -151,7 +156,7 @@ public:
         return hexrpc::ParseHashV(json_spirit::find_value(o, strKey), strKey);
     }
 
-    static std::vector<unsigned char> ParseHexV(const json_spirit::Value &v, std::string strName) {
+    static hexrpc_vector ParseHexV(const json_spirit::Value &v, std::string strName) {
         std::string strHex;
         if (v.type() == json_spirit::Value_type::str_type) {
             strHex = v.get_str();
@@ -162,7 +167,7 @@ public:
         return hex::ParseHex(strHex);
     }
 
-    static std::vector<unsigned char> ParseHexO(const json_spirit::Object &o, std::string strKey) {
+    static hexrpc_vector ParseHexO(const json_spirit::Object &o, std::string strKey) {
         return hexrpc::ParseHexV(json_spirit::find_value(o, strKey), strKey);
     }
 };
@@ -239,6 +244,11 @@ public:
 // Bitcoin RPC command dispatcher.
 // Singleton Class
 //
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> rpctable_vector;
+#else
+typedef std::vector<uint8_t> rpctable_vector;
+#endif
 class CWalletTx;
 class CWalletDB;
 class CAccountingEntry;

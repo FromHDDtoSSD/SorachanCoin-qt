@@ -296,7 +296,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->hashMerkleRoot] = make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
+        mapNewBlock[pblock->hashMerkleRoot] = std::make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
 
         // Prebuild hash buffers
         char pmidstate[32];
@@ -330,8 +330,8 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         //
         // Parse parameters
         //
-        std::vector<unsigned char> vchData = hex::ParseHex(params[0].get_str());
-        std::vector<unsigned char> coinbase;
+        rpctable_vector vchData = hex::ParseHex(params[0].get_str());
+        rpctable_vector coinbase;
 
         if(params.size() == 2) {
             coinbase = hex::ParseHex(params[1].get_str());
@@ -472,7 +472,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
         //
         // Parse parameters
         //
-        std::vector<unsigned char> vchData = hex::ParseHex(params[0].get_str());
+        rpctable_vector vchData = hex::ParseHex(params[0].get_str());
         if (vchData.size() != 128) {
             throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
         }
@@ -667,7 +667,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
             "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
     }
 
-    std::vector<unsigned char> blockData(hex::ParseHex(params[0].get_str()));
+    rpctable_vector blockData(hex::ParseHex(params[0].get_str()));
     CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
 
     CBlock block;

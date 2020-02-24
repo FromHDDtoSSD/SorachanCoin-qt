@@ -117,55 +117,51 @@ private:
     CInit &operator=(const CInit &); // {}
 
     // Init OpenSSL library multithreading support
-    static CCriticalSection **ppmutexOpenSSL;
+    static CCriticalSection *pmutexOpenSSL;
 
     static void locking_callback(int mode, int i, const char *file, int line) {
         if (mode & CRYPTO_LOCK) {
-            ENTER_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
+            ENTER_CRITICAL_SECTION(pmutexOpenSSL[i]);
         } else {
-            LEAVE_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
+            LEAVE_CRITICAL_SECTION(pmutexOpenSSL[i]);
         }
     }
 
 private:
     CInit() {
         // Init OpenSSL library multithreading support
-        ppmutexOpenSSL = (CCriticalSection **)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(CCriticalSection *));
-        if(! ppmutexOpenSSL) {
-            throw std::runtime_error("CInit OPENSSL_malloc bad allocate.");
+        pmutexOpenSSL = (CCriticalSection *)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(CCriticalSection));
+        if(! pmutexOpenSSL) {
+            throw std::runtime_error("CInit OPENSSL_malloc allocate failure.");
         }
 
-        try {
-            for (int i = 0; i < CRYPTO_num_locks(); ++i)
-            {
-                ppmutexOpenSSL[i] = new CCriticalSection();
-            }
-            ::CRYPTO_set_locking_callback(locking_callback);
+        for (int i = 0; i < ::CRYPTO_num_locks(); ++i)
+        {
+            new(pmutexOpenSSL + i) CCriticalSection;
+        }
+        ::CRYPTO_set_locking_callback(locking_callback);
 
 #ifdef WIN32
-            // Seed random number generator with screen scrape and other hardware sources
-            //RAND_screen();
-            RAND_poll();
+        // Seed random number generator with screen scrape and other hardware sources
+        //::RAND_screen(); // case OpenSSL
+        ::RAND_poll();
 #endif
 
-            // Seed random number generator with performance counter
-            seed::RandAddSeed();
-        } catch (const std::bad_alloc &) {
-            throw std::runtime_error("CInit memory bad allocate.");
-        }
+        // Seed random number generator with performance counter
+        seed::RandAddSeed();
     }
 
     ~CInit() {
         // Shutdown OpenSSL library multithreading support
-        ::CRYPTO_set_locking_callback(NULL);
+        ::CRYPTO_set_locking_callback(nullptr);
         for (int i = 0; i < ::CRYPTO_num_locks(); ++i)
         {
-            delete ppmutexOpenSSL[i];
+            (pmutexOpenSSL + i)->~CCriticalSection();
         }
-        OPENSSL_free(ppmutexOpenSSL);
+        ::OPENSSL_free(pmutexOpenSSL);
     }
 };
-CCriticalSection **CInit::ppmutexOpenSSL = NULL;
+CCriticalSection *CInit::pmutexOpenSSL = nullptr;
 CInit CInit::instance_of_cinit;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

@@ -236,7 +236,11 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive, std::vector<CDBEnv::
         std::getline(strDump, keyHex);
         if (keyHex != "DATA=END") {
             std::getline(strDump, valueHex);
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+            vResult.push_back(std::make_pair(hex::ParseHex(keyHex).get_std_vector(), hex::ParseHex(valueHex).get_std_vector()));
+#else
             vResult.push_back(std::make_pair(hex::ParseHex(keyHex), hex::ParseHex(valueHex)));
+#endif
         }
     }
 
@@ -600,7 +604,7 @@ bool CAddrDB::Read(CAddrMan &addr)
 
     //Don't try to resize to a negative number if file is small
     if ( dataSize < 0 ) { dataSize = 0; }
-    std::vector<unsigned char> vchData;
+    addrdb_vector vchData;
     vchData.resize(dataSize);
     uint256 hashIn;
 

@@ -16,6 +16,12 @@
 #include "bignum.h"
 #include "ies.h"
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> key_vector;
+#else
+typedef std::vector<uint8_t> key_vector;
+#endif
+
 #include <openssl/ec.h> // for EC_KEY definition
 
 // secp160k1
@@ -121,7 +127,7 @@ public:
         Set(pbegin, pend);
     }
 
-    CPubKey(const std::vector<unsigned char> &vch) {
+    CPubKey(const key_vector &vch) {
         Set(vch.begin(), vch.end());
     }
 
@@ -136,7 +142,7 @@ public:
         }
     }
 
-    void Set(const std::vector<unsigned char> &vch) {
+    void Set(const key_vector &vch) {
         Set(vch.begin(), vch.end());
     }
 
@@ -202,16 +208,16 @@ public:
     }
 
     // Verify (Check only)
-    bool Verify(const uint256 &hash, const std::vector<unsigned char> &vchSig) const;
+    bool Verify(const uint256 &hash, const key_vector &vchSig) const;
     static bool VerifyCompact(uint256 hash, const std::vector<unsigned char> &vchSig);    // [static] CPubKey SetCompactSignature check only.
 
     bool SetCompactSignature(uint256 hash, const std::vector<unsigned char> &vchSig);
 
     // Reserialize to DER
-    static bool ReserealizeSignature(std::vector<unsigned char> &vchSig);
+    static bool ReserealizeSignature(key_vector &vchSig);
 
     // Encrypt data
-    void EncryptData(const std::vector<unsigned char> &data, std::vector<unsigned char> &encrypted) const;
+    void EncryptData(const key_vector &data, key_vector &encrypted) const;
 };
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -298,7 +304,7 @@ public:
     bool SetSecret(const CSecret &vchSecret, bool fCompressed = true);
 
     bool WritePEM(BIO *streamObj, const SecureString &strPassKey) const;
-    bool Sign(uint256 hash, std::vector<unsigned char> &vchSig);
+    bool Sign(uint256 hash, key_vector &vchSig);
 
     // create a compact signature (65 bytes), which allows reconstructing the used public key
     // The format is one header byte, followed by two times 32 bytes for the serialized r and s values.
@@ -312,7 +318,7 @@ public:
     static bool CheckSignatureElement(const unsigned char *vch, int len, bool half);
 
     // Decrypt data
-    void DecryptData(const std::vector<unsigned char>& encrypted, std::vector<unsigned char> &data);
+    void DecryptData(const key_vector &encrypted, key_vector &data);
 };
 
 class CPoint
@@ -381,7 +387,7 @@ public:
     }
 
     // Serialize to octets stream
-    bool getBytes(std::vector<unsigned char> &vchBytes) {
+    bool getBytes(key_vector &vchBytes) {
         size_t nSize = EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, NULL, 0, ctx);
         vchBytes.resize(nSize);
         if (! (nSize == EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, &vchBytes[0], nSize, ctx))) {
@@ -426,7 +432,7 @@ public:
         pubKeyL = mpk.pubKeyL;
         pubKeyH = mpk.pubKeyH;
     }
-    CMalleablePubKey(const std::vector<unsigned char> &vchPubKeyPair) { setvch(vchPubKeyPair); }
+    CMalleablePubKey(const key_vector &vchPubKeyPair) { setvch(vchPubKeyPair); }
     CMalleablePubKey(const std::string &strMalleablePubKey) { SetString(strMalleablePubKey); }
     CMalleablePubKey(const CPubKey &pubKeyInL, const CPubKey &pubKeyInH) : pubKeyL(pubKeyInL), pubKeyH(pubKeyInH) {}
 
@@ -453,17 +459,17 @@ public:
         return pubKeyL.GetID();
     }
 
-    bool setvch(const std::vector<unsigned char> &vchPubKeyPair) {
+    bool setvch(const key_vector &vchPubKeyPair) {
         CDataStream ssKey(vchPubKeyPair, SER_NETWORK, version::PROTOCOL_VERSION);
         ssKey >> *this;
 
         return IsValid();
     }
-    std::vector<unsigned char> Raw() const {
+    key_vector Raw() const {
         CDataStream ssKey(SER_NETWORK, version::PROTOCOL_VERSION);
         ssKey << *this;
 
-        std::vector<unsigned char> vch(ssKey.begin(), ssKey.end());
+        key_vector vch(ssKey.begin(), ssKey.end());
         return vch;
     }
 

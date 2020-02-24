@@ -79,7 +79,7 @@ void MultisigAddressEntry::on_addressBookButton_clicked()
 void MultisigAddressEntry::on_pubkey_textChanged(const QString &pubkey)
 {
     // Compute address from public key
-    std::vector<unsigned char> vchPubKey(hex::ParseHex(pubkey.toStdString().c_str()));
+    key_vector vchPubKey(hex::ParseHex(pubkey.toStdString().c_str()));
     CPubKey pkey(vchPubKey);
     CKeyID keyID = pkey.GetID();
     CBitcoinAddress address(keyID);

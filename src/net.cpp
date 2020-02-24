@@ -153,9 +153,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     addrConnect.SetIP(*pNetAddr);
                     addrConnect.SetPort(port_target);
                     pszDest = nullptr;
-                }
-                if(pNetAddr) {
-                    printf("GetDefaultPort CService %s\n", addrConnect.ToString().c_str());
+                    //printf("GetDefaultPort CService %s\n", addrConnect.ToString().c_str());
                 }
                 bool ret = pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, port_target) : netbase::manage::ConnectSocket(addrConnect, hSocket);
                 if(ret) {
@@ -163,20 +161,20 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     // SorachanCoin
                     // connected test
                     //
-                    std::vector<char> vchMsg;
+                    datastream_signed_vector vchMsg;
                     vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
                     CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
                     std::string retstr;
-                    printf("GetDefaultPort Connect %s\n", sMsg.str().c_str());
+                    //printf("GetDefaultPort Connect %s\n", sMsg.str().c_str());
                     if(! IsNoneblockSend(hSocket)) {
                         netbase::manage::CloseSocket(hSocket);
-                        printf("GetDefaultPort Connect failure A\n");
+                        //printf("GetDefaultPort Connect failure A\n");
                         util::Sleep(20);
                         continue;
                     }
                     if(::send(hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT) <= 0) {
                         netbase::manage::CloseSocket(hSocket);
-                        printf("GetDefaultPort Connect failure B\n");
+                        //printf("GetDefaultPort Connect failure B\n");
                         util::Sleep(20);
                         continue;
                     }
@@ -189,7 +187,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     }
                     */
                     bool ret = net_basis::RecvLine(hSocket, retstr);
-                    printf("GetDefaultPort RecvLine %s\n", retstr.c_str());
+                    //printf("GetDefaultPort RecvLine %s\n", retstr.c_str());
                     if(ret && retstr == coin_param::strEcho) {
                         struct in_addr ipv4;
                         if(addrConnect.GetInAddr(&ipv4)) {
@@ -1096,17 +1094,17 @@ void net_node::ThreadSocketHandler2(void *parg)
                         char pchBuf[0x10000];
                         int nBytes = recv(pnode->hSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);
 
-                        std::vector<char> vchMsg;
+                        datastream_signed_vector vchMsg;
                         vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
                         CDataStream sMsg(vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
-                        std::vector<char> vchQuantum;
+                        datastream_signed_vector vchQuantum;
                         vchQuantum.assign(coin_param::strQuantum.c_str(), coin_param::strQuantum.c_str() + coin_param::strQuantum.length());
                         CDataStream sQuantum(vchQuantum, SER_NETWORK, version::PROTOCOL_VERSION);
                         if (nBytes > 0 && ::memcmp(&sMsg[0], pchBuf, sMsg.size()) == 0) {
                             //
                             // Echo SorachanCoin
                             //
-                            printf("socket echo send and socket closed\n");
+                            //printf("socket echo send and socket closed\n");
                             if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
                                 pnode->CloseSocketDisconnect();
                             } else {

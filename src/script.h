@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <prevector/prevector.h>
 
 #include <boost/foreach.hpp>
 
@@ -255,10 +256,17 @@ namespace ScriptOpcodes
 //
 // Serialized script, used inside transaction inputs and outputs
 //
-class CScript : public std::vector<uint8_t>
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> script_vector;
+typedef prevector<PREVECTOR_N, prevector<PREVECTOR_N, uint8_t> > stack_vector;
+#else
+typedef std::vector<uint8_t> script_vector;
+typedef std::vector<std::vector<uint8_t> > stack_vector;
+#endif
+class CScript : public script_vector
 {
 private:
-    static std::string ValueString(const std::vector<unsigned char> &vch) {
+    static std::string ValueString(const script_vector &vch) {
         if (vch.size() <= 4) {
             return strprintf("%d", CBigNum(vch).getint32());
         } else {
@@ -266,9 +274,9 @@ private:
         }
     }
 
-    static std::string StackString(const std::vector<std::vector<unsigned char> > &vStack) {
+    static std::string StackString(const stack_vector &vStack) {
         std::string str;
-        BOOST_FOREACH(const std::vector<unsigned char> &vch, vStack)
+        BOOST_FOREACH(const script_vector &vch, vStack)
         {
             if (! str.empty()) {
                 str += " ";
@@ -301,15 +309,19 @@ protected:
 
 public:
     CScript() {}
-    CScript(const CScript &b) : std::vector<uint8_t>(b.begin(), b.end()) {}
-    CScript(const_iterator pbegin, const_iterator pend) : std::vector<uint8_t>(pbegin, pend) {}
+    CScript(const CScript &b) : script_vector(b.begin(), b.end()) {}
+    CScript(script_vector::const_iterator pbegin, script_vector::const_iterator pend) : script_vector(pbegin, pend) {}
 #ifndef _MSC_VER
-    CScript(const uint8_t *pbegin, const uint8_t* pend) : std::vector<uint8_t>(pbegin, pend) {}
+    CScript(const uint8_t *pbegin, const uint8_t *pend) : script_vector(pbegin, pend) {}
 #endif
 
     CScript &operator+=(const CScript &b) {
         insert(end(), b.begin(), b.end());
         return *this;
+    }
+    operator std::vector<unsigned char>() const {
+        std::vector<unsigned char> obj(this->begin(), this->end());
+        return obj;
     }
 
     explicit CScript(int8_t  b) { operator<<(b); }
@@ -325,7 +337,7 @@ public:
     explicit CScript(ScriptOpcodes::opcodetype b) { operator<<(b); }
     explicit CScript(const uint256 &b) { operator<<(b); }
     explicit CScript(const CBigNum &b) { operator<<(b); }
-    explicit CScript(const std::vector<uint8_t> &b) { operator<<(b); }
+    explicit CScript(const script_vector &b) { operator<<(b); }
 
     CScript &operator<<(int8_t  b) { return push_int64(b); }
     CScript &operator<<(int16_t b) { return push_int64(b); }
@@ -351,15 +363,17 @@ public:
         return *this;
     }
 
-    CScript &operator<<(const uint256& b) {
+    CScript &operator<<(const uint256 &b) {
         insert(end(), sizeof(b));
         insert(end(), (uint8_t*)&b, (uint8_t*)&b + sizeof(b));
         return *this;
     }
 
     CScript &operator<<(const CPubKey &key) {
-        std::vector<uint8_t> vchKey(key.begin(), key.end());
-        return (*this) << vchKey;
+        //std::vector<uint8_t> vchKey(key.begin(), key.end());
+        //return (*this) << vchKey;
+        insert(end(), key.begin(), key.end());
+        return *this;
     }
 
     CScript &operator<<(const CBigNum &b) {
@@ -367,7 +381,7 @@ public:
         return *this;
     }
 
-    CScript &operator<<(const std::vector<uint8_t> &b) {
+    CScript &operator<<(const script_vector &b) {
         if (b.size() < ScriptOpcodes::OP_PUSHDATA1) {
             insert(end(), (uint8_t)b.size());
         } else if (b.size() <= 0xff) {
@@ -405,7 +419,7 @@ public:
         return *this;
     }
 
-    bool GetOp(iterator& pc, ScriptOpcodes::opcodetype &opcodeRet, std::vector<uint8_t> &vchRet) {
+    bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) {
          //
          // Wrapper so it can be called with either iterator or const_iterator
          //
@@ -422,7 +436,7 @@ public:
          return fRet;
     }
 
-    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, std::vector<uint8_t> &vchRet) const {
+    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) const {
         return GetOp2(pc, opcodeRet, &vchRet);
     }
 
@@ -430,7 +444,7 @@ public:
         return GetOp2(pc, opcodeRet, NULL);
     }
 
-    bool GetOp2(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, std::vector<uint8_t> *pvchRet) const {
+    bool GetOp2(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector *pvchRet) const {
         opcodeRet = ScriptOpcodes::OP_INVALIDOPCODE;
         if (pvchRet) {
             pvchRet->clear();
@@ -584,7 +598,7 @@ public:
     std::string ToString(bool fShort=false) const {
         std::string str;
         ScriptOpcodes::opcodetype opcode;
-        std::vector<uint8_t> vch;
+        script_vector vch;
         const_iterator pc = begin();
         while (pc < end())
         {
@@ -619,7 +633,8 @@ public:
 class Script_util : private no_instance
 {
 public:
-    typedef std::vector<uint8_t> valtype;
+    typedef script_vector valtype;
+    typedef stack_vector statype;
 
 private:
     // Setting nSequence to this value for every input in a transaction disables nLockTime.
@@ -649,27 +664,27 @@ private:
     static CBigNum CastToBigNum(const valtype &vch);
     static bool CastToBool(const valtype &vch);
 
-    static void popstack(std::vector<valtype> &stack);
+    static void popstack(statype &stack);
 
     static uint256 SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
-    static bool CheckSig(std::vector<unsigned char> vchSig, const std::vector<unsigned char> &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
+    static bool CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
     static unsigned int HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore);
 
     static bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags);
-    static bool IsCanonicalPubKey(const std::vector<unsigned char> &vchPubKey, unsigned int flags);
+    static bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags);
     static bool Solver(const CKeyStore &keystore, const CScript &scriptPubKey, const uint256& hash, int nHashType, CScript &scriptSigRet, TxnOutputType::txnouttype &whichTypeRet);
 
     static bool Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
-    static bool SignN(const std::vector<valtype> &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
+    static bool SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
 
-    static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const std::vector<valtype> &vSolutions, std::vector<valtype> &sigs1, std::vector<valtype> &sigs2);
+    static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2);
 
 public:
     static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
-    static bool EvalScript(std::vector<std::vector<unsigned char> > &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
-    static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<std::vector<unsigned char> > &vSolutionsRet);
-    static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const std::vector<std::vector<unsigned char> > &vSolutions);
+    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
+    static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet);
+    static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions);
     static bool IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType);
 
     static isminetype IsMine(const CKeyStore &keystore, const CBitcoinAddress &dest);

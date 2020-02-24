@@ -370,9 +370,9 @@ bool Checkpoints::manage::SetCheckpointPrivKey(std::string strPrivKey)
 
     CDataStream sMsg(SER_NETWORK, version::PROTOCOL_VERSION);
     sMsg << (CUnsignedSyncCheckpoint)checkpoint;
-    checkpoint.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
+    checkpoint.vchMsg = checkpoints_vector(sMsg.begin(), sMsg.end());
 
-    std::vector<unsigned char> vchPrivKey = hex::ParseHex(strPrivKey);
+    checkpoints_vector vchPrivKey = hex::ParseHex(strPrivKey);
 
     CKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
@@ -392,12 +392,12 @@ bool Checkpoints::manage::SendSyncCheckpoint(uint256 hashCheckpoint)
 
     CDataStream sMsg(SER_NETWORK, version::PROTOCOL_VERSION);
     sMsg << (CUnsignedSyncCheckpoint)checkpoint;
-    checkpoint.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
+    checkpoint.vchMsg = checkpoints_vector(sMsg.begin(), sMsg.end());
 
     if (CSyncCheckpoint::strMasterPrivKey.empty()) {
         return print::error("Checkpoints::manage::SendSyncCheckpoint: Checkpoint master key unavailable.");
     }
-    std::vector<unsigned char> vchPrivKey = hex::ParseHex(CSyncCheckpoint::strMasterPrivKey);
+    checkpoints_vector vchPrivKey = hex::ParseHex(CSyncCheckpoint::strMasterPrivKey);
 
     CKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash

@@ -450,7 +450,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QWidget* dialog)
                 fDust = true;
             }
 
-            CTxOut txout(amount, (CScript)std::vector<unsigned char>(24, 0));
+            CTxOut txout(amount, (CScript)script_vector((uint32_t)24, (uint8_t)0));
             txDummy.vout.push_back(txout);
         }
     }

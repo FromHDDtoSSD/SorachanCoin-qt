@@ -7,6 +7,12 @@
 #include "base58.h"
 #include "net.h"
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> irc_vector;
+#else
+typedef std::vector<uint8_t> irc_vector;
+#endif
+
 class irc : private no_instance
 {
 private:
@@ -57,7 +63,7 @@ std::string irc::EncodeAddress(const CService &addr)
     if (addr.GetInAddr(&tmp.ip)) {
         tmp.port = htons(addr.GetPort());
 
-        std::vector<unsigned char> vch(UBEGIN(tmp), UEND(tmp));
+        irc_vector vch(UBEGIN(tmp), UEND(tmp));
         return std::string("u") + base58::manage::EncodeBase58Check(vch);
     }
     return "";
@@ -65,7 +71,7 @@ std::string irc::EncodeAddress(const CService &addr)
 
 bool irc::DecodeAddress(std::string str, CService &addr)
 {
-    std::vector<unsigned char> vch;
+    irc_vector vch;
     if (! base58::manage::DecodeBase58Check(str.substr(1), vch)) {
         return false;
     }

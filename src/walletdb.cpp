@@ -53,7 +53,7 @@ bool CWalletDB::WriteAccount(const std::string &strAccount, const CAccount &acco
 
 bool CWalletDB::WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry &acentry)
 {
-    return Write(boost::make_tuple(std::string("acentry"), acentry.strAccount, nAccEntryNum), acentry);
+    return Write(std::make_tuple(std::string("acentry"), acentry.strAccount, nAccEntryNum), acentry);
 }
 
 bool CWalletDB::WriteAccountingEntry(const CAccountingEntry &acentry)
@@ -92,7 +92,7 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
         //
         CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
         if (fFlags == DB_SET_RANGE) {
-            ssKey << boost::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
+            ssKey << std::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
         }
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
@@ -1073,8 +1073,13 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     BOOST_FOREACH(CDBEnv::KeyValPair &row, salvagedData)
     {
         if (fOnlyKeys) {
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+            CDataStream ssKey(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.first), SER_DISK, version::CLIENT_VERSION);
+            CDataStream ssValue(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.second), SER_DISK, version::CLIENT_VERSION);
+#else
             CDataStream ssKey(row.first, SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(row.second, SER_DISK, version::CLIENT_VERSION);
+#endif
 
             std::string strType, strErr;
             bool fReadOK = ReadKeyValue(&dummyWallet, ssKey, ssValue, wss, strType, strErr);

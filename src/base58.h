@@ -22,6 +22,12 @@
 #include "key.h"
 #include "script.h"
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> base58_vector;
+#else
+typedef std::vector<uint8_t> base58_vector;
+#endif
+
 namespace base58
 {
     const char *const pszBase58 = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
@@ -30,24 +36,24 @@ namespace base58
     {
     private:
         // Decode a base58-encoded string psz into byte vector vchRet
-        static bool DecodeBase58(const char *psz, std::vector<unsigned char> &vchRet);
+        static bool DecodeBase58(const char *psz, base58_vector &vchRet);
 
     public:
         // Encode a byte sequence as a base58-encoded string
         static std::string EncodeBase58(const unsigned char *pbegin, const unsigned char *pend);
 
         // Encode a byte vector as a base58-encoded string
-        static std::string EncodeBase58(const std::vector<unsigned char> &vch);
+        static std::string EncodeBase58(const base58_vector &vch);
 
         // Decode a base58-encoded string str into byte vector vchRet
         static bool DecodeBase58(const std::string &str, std::vector<unsigned char> &vchRet);
 
         // [4 bytes hash check] Encode a byte vector to a base58-encoded string, including checksum
-        static std::string EncodeBase58Check(const std::vector<unsigned char> &vchIn);
+        static std::string EncodeBase58Check(const base58_vector &vchIn);
 
         // [4 bytes hash check] Decode a base58-encoded string psz or str that includes a checksum, into byte vector vchRet
-        static bool DecodeBase58Check(const char *psz, std::vector<unsigned char> &vchRet);
-        static bool DecodeBase58Check(const std::string &str, std::vector<unsigned char> &vchRet);
+        static bool DecodeBase58Check(const char *psz, base58_vector &vchRet);
+        static bool DecodeBase58Check(const std::string &str, base58_vector &vchRet);
     };
 }
 
@@ -62,7 +68,7 @@ private:
     unsigned char nVersion;
 
     // the actually encoded data
-    std::vector<unsigned char> vchData;
+    base58_vector vchData;
 
 protected:
     CBase58Data() {
@@ -88,7 +94,7 @@ protected:
     }
 
     unsigned int getVersion() const { return nVersion; }
-    const std::vector<unsigned char> &getvchData() const { return vchData; }
+    const base58_vector &getvchData() const { return vchData; }
     void setvchData(const unsigned char &in) { vchData.push_back(in); }
     const unsigned char *getvchArray() const { return &vchData[0]; }
     bool Set(const CBase58Data &dest) {
@@ -99,7 +105,7 @@ protected:
 
 public:
     bool SetString(const char *psz) {
-        std::vector<unsigned char> vchTemp;
+        base58_vector vchTemp;
         base58::manage::DecodeBase58Check(psz, vchTemp);
         if (vchTemp.empty()) {
             vchData.clear();
@@ -120,12 +126,12 @@ public:
     }
 
     std::string ToString() const {
-        std::vector<unsigned char> vch(1, nVersion);
+        base58_vector vch((uint32_t)1, (uint8_t)nVersion);
         vch.insert(vch.end(), vchData.begin(), vchData.end());
         return base58::manage::EncodeBase58Check(vch);
     }
 
-    const std::vector<unsigned char> &GetData() const {
+    const base58_vector &GetData() const {
         return vchData;
     }
 
@@ -197,7 +203,7 @@ public:
     }
     bool Set(const CTxDestination &dest);    // base58.cpp
     bool Set(const CMalleablePubKey &mpk) {
-        std::vector<unsigned char> vchPubkeyPair = mpk.Raw();
+        base58_vector vchPubkeyPair = mpk.Raw();
         SetData(args_bool::fTestNet ? PUBKEY_PAIR_ADDRESS_TEST : PUBKEY_PAIR_ADDRESS, &vchPubkeyPair[0], 68);
         return true;
     }

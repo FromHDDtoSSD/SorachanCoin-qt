@@ -57,6 +57,12 @@ public:
     }
 };
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> hashbasis_vector;
+#else
+typedef std::vector<uint8_t> hashbasis_vector;
+#endif
+
 class hash_basis : private no_instance    // bitcoin SHA256
 {
 public:
@@ -119,7 +125,7 @@ public:
         return hash2;
     }
 
-    static uint160 Hash160(const std::vector<unsigned char> &vch) {
+    static uint160 Hash160(const hashbasis_vector &vch) {
         return hash_basis::Hash160(vch.begin(), vch.end());
     }
 

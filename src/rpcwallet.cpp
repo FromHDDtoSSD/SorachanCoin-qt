@@ -869,7 +869,7 @@ json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, bool fH
 
         totalAmount += nAmount;
 
-        vecSend.push_back(make_pair(scriptPubKey, nAmount));
+        vecSend.push_back(std::make_pair(scriptPubKey, nAmount));
     }
 
     EnsureWalletIsUnlocked();
@@ -994,7 +994,7 @@ json_spirit::Value CRPCTable::addredeemscript(const json_spirit::Array &params, 
     }
 
     // Construct using pay-to-script-hash:
-    std::vector<unsigned char> innerData = hexrpc::ParseHexV(params[0], "redeemScript");
+    rpctable_vector innerData = hexrpc::ParseHexV(params[0], "redeemScript");
     CScript inner(innerData.begin(), innerData.end());
     entry::pwalletMain->AddCScript(inner);
     CBitcoinAddress address(inner.GetID());

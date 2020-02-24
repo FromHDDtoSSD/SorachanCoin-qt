@@ -372,6 +372,11 @@ public:
 /**
  ** Access to the (IP) address database (peers.dat) 
  */
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> addrdb_vector;
+#else
+typedef std::vector<uint8_t> addrdb_vector;
+#endif
 class CAddrDB
 {
 private:

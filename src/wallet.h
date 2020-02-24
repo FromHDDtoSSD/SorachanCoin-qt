@@ -794,7 +794,7 @@ public:
         if (fRead) {
             me.mapValue.clear();
             if (std::string::npos != nSepPos) {
-                CDataStream ss(std::vector<char>(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);
+                CDataStream ss(datastream_signed_vector(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);
                 ss >> me.mapValue;
                 me._ssExtra = std::vector<char>(ss.begin(), ss.end());
             }

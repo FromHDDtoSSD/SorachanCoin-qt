@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.1.7
+VERSION = 1.1.8
 
 INCLUDEPATH += src src/json src/qt
 
@@ -19,6 +19,7 @@ macx: {
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
 
 RELEASE=1
+DEBUGCS=1
 
 USE_DBUS=0
 BITCOIN_NEED_QT_PLUGINS=0
@@ -31,7 +32,7 @@ USE_UPNP=1
 USE_IPV6=1
 USE_QRCODE=1
 
-USE_QUANTUM=-
+USE_QUANTUM=1
 
 freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
 linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
@@ -122,7 +123,9 @@ contains(RELEASE, 1) {
 
     QMAKE_CFLAGS += -g -O0
     QMAKE_CXXCFLAGS += -g -O0
+}
 
+contains(DEBUGCS, 1) {
     DEFINES += DEBUG
 }
 
@@ -363,8 +366,13 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/multisigdialog.h \
     src/qt/secondauthdialog.h \
     src/ies.h \
-    src/ipcollector.h # \
-    # src/quantum.h
+    src/ipcollector.h \
+    src/prevector/prevector.h \
+    src/quantum/quantum.h \
+    src/debugcs/debugcs.h \
+    src/compat/compat.h \
+    src/compat/byteswap.h \
+    src/compat/endian.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -451,8 +459,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/base58.cpp \
     src/cryptogram.cpp \
     src/ecies.cpp \
-    src/ipcollector.cpp # \
-    # src/quantum.cpp
+    src/ipcollector.cpp \
+    src/quantum/quantum.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

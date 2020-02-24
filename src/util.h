@@ -273,6 +273,12 @@ public:
     }
 };
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> util_vector;
+#else
+typedef std::vector<uint8_t> util_vector;
+#endif
+
 namespace util
 {
     const int32_t nOneHour = 60 * 60;
@@ -304,10 +310,10 @@ namespace util
  #ifndef S_IRUSR
   #define S_IRUSR            0400
   #define S_IWUSR            0200
-    inline void Sleep(int64_t n) {
-        ::Sleep(n);
-    }
  #endif
+ inline void Sleep(int64_t n) {
+     ::Sleep(n);
+ }
 #else
  #define MAX_PATH            1024
     inline void Sleep(int64_t n) {
@@ -367,7 +373,7 @@ namespace util
         return rv;
     }
 
-    inline std::string HexStr(const std::vector<unsigned char> &vch, bool fSpaces=false) {
+    inline std::string HexStr(const util_vector &vch, bool fSpaces=false) {
         return util::HexStr(vch.begin(), vch.end(), fSpaces);
     }
 
@@ -376,7 +382,7 @@ namespace util
         printf(pszFormat, util::HexStr(pbegin, pend, fSpaces).c_str());
     }
 
-    inline void PrintHex(const std::vector<unsigned char> &vch, const char *pszFormat="%s", bool fSpaces=true) {
+    inline void PrintHex(const util_vector &vch, const char *pszFormat="%s", bool fSpaces=true) {
         printf(pszFormat, util::HexStr(vch, fSpaces).c_str());
     }
 
@@ -650,15 +656,21 @@ namespace bitstr
     }
 }
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> hex_vector;
+#else
+typedef std::vector<uint8_t> hex_vector;
+#endif
+
 class hex : private no_instance
 {
 private:
     static const signed char phexdigit[256];
 
 public:
-    static std::vector<unsigned char> ParseHex(const char *psz) {
+    static hex_vector ParseHex(const char *psz) {
         // convert hex dump to vector
-        std::vector<unsigned char> vch;
+        hex_vector vch;
         for ( ; ; )
         {
             while (::isspace(*psz))
@@ -682,7 +694,7 @@ public:
         }
         return vch;
     }
-    static std::vector<unsigned char> ParseHex(const std::string &str) {
+    static hex_vector ParseHex(const std::string &str) {
         return hex::ParseHex(str.c_str());
     }
     static bool IsHex(const std::string &str) {

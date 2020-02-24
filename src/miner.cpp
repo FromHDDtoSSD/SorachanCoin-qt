@@ -85,7 +85,7 @@ public:
 //
 // We want to sort transactions by priority and fee, so
 //
-typedef boost::tuple<double, double, CTransaction*> TxPriority;
+typedef std::tuple<double, double, CTransaction*> TxPriority;
 class TxPriorityCompare
 {
 private:
@@ -101,15 +101,15 @@ public:
     bool operator()(const TxPriority &a, const TxPriority &b)
     {
         if (byFee) {
-            if (a.get<1>() == b.get<1>()) {
-                return a.get<0>() < b.get<0>();
+            if (std::get<1>(a) == std::get<1>(b)) {
+                return std::get<0>(a) < std::get<0>(b);
             }
-            return a.get<1>() < b.get<1>();
+            return std::get<1>(a) < std::get<1>(b);
         } else {
-            if (a.get<0>() == b.get<0>()) {
-                return a.get<1>() < b.get<1>();
+            if (std::get<0>(a) == std::get<0>(b)) {
+                return std::get<1>(a) < std::get<1>(b);
             }
-            return a.get<0>() < b.get<0>();
+            return std::get<0>(a) < std::get<0>(b);
         }
     }
 };
@@ -290,9 +290,9 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Take highest priority transaction off the priority queue
             //
-            double dPriority = vecPriority.front().get<0>();
-            double dFeePerKb = vecPriority.front().get<1>();
-            CTransaction &tx = *(vecPriority.front().get<2>());
+            double dPriority = std::get<0>(vecPriority.front());
+            double dFeePerKb = std::get<1>(vecPriority.front());
+            CTransaction &tx = *(std::get<2>(vecPriority.front()));
 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
@@ -615,7 +615,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
             // Trying to parse scriptPubKey
             TxnOutputType::txnouttype whichType;
-            std::vector<Script_util::valtype> vSolutions;
+            Script_util::statype vSolutions;
             if (! Script_util::Solver(pcoin->first->vout[pcoin->second].scriptPubKey, whichType, vSolutions)) {
                 continue;
             }

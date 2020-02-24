@@ -1171,7 +1171,7 @@ public:
     std::vector<CTransaction> vtx;
 
     // ppcoin: block signature - signed by one of the coin base txout[N]'s owner
-    std::vector<unsigned char> vchBlockSig;
+    Script_util::valtype vchBlockSig;
 
     // memory only
     mutable std::vector<uint256> vMerkleTree;

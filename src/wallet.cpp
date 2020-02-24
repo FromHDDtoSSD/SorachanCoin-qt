@@ -2466,7 +2466,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         return print::error("Transaction %s is not found\n", hashTx.GetHex().c_str());
     }
 
-    std::vector<Script_util::valtype> vSolutions;
+    Script_util::statype vSolutions;
     TxnOutputType::txnouttype whichType;
     CScript scriptPubKeyOut;
     CScript scriptPubKeyKernel = wtx.vout[nOut].scriptPubKey;

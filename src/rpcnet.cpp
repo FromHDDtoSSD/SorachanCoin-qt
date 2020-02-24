@@ -323,9 +323,9 @@ json_spirit::Value CRPCTable::sendalert(const json_spirit::Array &params, bool f
 
     CDataStream sMsg(SER_NETWORK, version::PROTOCOL_VERSION);
     sMsg << (CUnsignedAlert)alert;
-    alert.vchMsg = std::vector<unsigned char>(sMsg.begin(), sMsg.end());
+    alert.vchMsg = alert_vector(sMsg.begin(), sMsg.end());
 
-    std::vector<unsigned char> vchPrivKey = hex::ParseHex(params[1].get_str());
+    key_vector vchPrivKey = hex::ParseHex(params[1].get_str());
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (! key.Sign(hash_basis::Hash(alert.vchMsg.begin(), alert.vchMsg.end()), alert.vchSig)) {
         throw std::runtime_error("Unable to sign alert, check private key?\n");

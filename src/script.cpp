@@ -14,9 +14,9 @@
 #include "sync.h"
 #include "util.h"
 
-const Script_util::valtype Script_util::vchFalse(0);
-const Script_util::valtype Script_util::vchZero(0);
-const Script_util::valtype Script_util::vchTrue(1, 1);
+const Script_util::valtype Script_util::vchFalse((uint32_t)0);
+const Script_util::valtype Script_util::vchZero((uint32_t)0);
+const Script_util::valtype Script_util::vchTrue((uint32_t)1, (uint8_t)1);
 const CBigNum Script_util::bnZero(0);
 const CBigNum Script_util::bnOne(1);
 const CBigNum Script_util::bnFalse(0);
@@ -81,7 +81,7 @@ void MakeSameSize(valtype &vch1, valtype &vch2)
 //
 #define stacktop(i) (stack.at(stack.size()+(i)))
 #define altstacktop(i) (altstack.at(altstack.size()+(i)))
-void Script_util::popstack(std::vector<valtype> &stack)
+void Script_util::popstack(statype &stack)
 {
     if (stack.empty()) {
         throw std::runtime_error("popstack() : stack empty");
@@ -361,7 +361,7 @@ bool Script_util::IsCanonicalSignature(const valtype &vchSig, unsigned int flags
     return Script_util::IsDERSignature(vchSig, true, (flags & Script_param::SCRIPT_VERIFY_LOW_S) != 0);
 }
 
-bool Script_util::EvalScript(std::vector<std::vector<unsigned char> > &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
+bool Script_util::EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
     using namespace ScriptOpcodes;
 
@@ -452,7 +452,7 @@ bool Script_util::EvalScript(std::vector<std::vector<unsigned char> > &stack, co
     ScriptOpcodes::opcodetype opcode;
     valtype vchPushValue;
     std::vector<bool> vfExec;
-    std::vector<valtype> altstack;
+    statype altstack;
     if (script.size() > 10000) {
         return false;
     }
@@ -771,8 +771,8 @@ bool Script_util::EvalScript(std::vector<std::vector<unsigned char> > &stack, co
                         if (stack.size() < 4) {
                             return false;
                         }
-                        swap(stacktop(-4), stacktop(-2));
-                        swap(stacktop(-3), stacktop(-1));
+                        std::swap(stacktop(-4), stacktop(-2));
+                        std::swap(stacktop(-3), stacktop(-1));
                     }
                     break;
 
@@ -870,8 +870,8 @@ bool Script_util::EvalScript(std::vector<std::vector<unsigned char> > &stack, co
                         if (stack.size() < 3) {
                             return false;
                         }
-                        swap(stacktop(-3), stacktop(-2));
-                        swap(stacktop(-2), stacktop(-1));
+                        std::swap(stacktop(-3), stacktop(-2));
+                        std::swap(stacktop(-2), stacktop(-1));
                     }
                     break;
 
@@ -881,7 +881,7 @@ bool Script_util::EvalScript(std::vector<std::vector<unsigned char> > &stack, co
                         if (stack.size() < 2) {
                             return false;
                         }
-                        swap(stacktop(-2), stacktop(-1));
+                        std::swap(stacktop(-2), stacktop(-1));
                     }
                     break;
 
@@ -1339,7 +1339,7 @@ private:
     CSignatureCache &operator=(const CSignatureCache &); // {}
 
     // sigdata_type is (signature hash, signature, public key):
-    typedef boost::tuple<uint256, std::vector<unsigned char>, CPubKey > sigdata_type;
+    typedef std::tuple<uint256, script_vector, CPubKey > sigdata_type;
 
     std::set<sigdata_type> setValid;
     boost::shared_mutex cs_sigcache;
@@ -1347,7 +1347,7 @@ private:
 public:
     static CSignatureCache signatureCache;    // Singleton Class, instance script.cpp
 
-    bool Get(const uint256 &hash, const std::vector<unsigned char> &vchSig, const CPubKey &pubKey) {
+    bool Get(const uint256 &hash, const script_vector &vchSig, const CPubKey &pubKey) {
         boost::shared_lock<boost::shared_mutex> lock(cs_sigcache);
 
         sigdata_type k(hash, vchSig, pubKey);
@@ -1358,7 +1358,7 @@ public:
         return false;
     }
 
-    void Set(const uint256 &hash, const std::vector<unsigned char> &vchSig, const CPubKey &pubKey) {
+    void Set(const uint256 &hash, const script_vector &vchSig, const CPubKey &pubKey) {
         //
         // DoS prevention: limit cache size to less than 10MB
         // (~200 bytes per cache entry times 50,000 entries)
@@ -1381,7 +1381,7 @@ public:
             // than our cache size.
             //
             uint256 randomHash = bitsystem::GetRandHash();
-            std::vector<unsigned char> unused;
+            script_vector unused;
             std::set<sigdata_type>::iterator it = setValid.lower_bound(sigdata_type(randomHash, unused, unused));
             if (it == setValid.end()) {
                 it = setValid.begin();
@@ -1395,7 +1395,7 @@ public:
 };
 CSignatureCache CSignatureCache::signatureCache;
 
-bool Script_util::CheckSig(std::vector<unsigned char> vchSig, const std::vector<unsigned char> &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags)
+bool Script_util::CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags)
 {
     //
     // static CSignatureCache signatureCache;
@@ -1434,26 +1434,26 @@ bool Script_util::CheckSig(std::vector<unsigned char> vchSig, const std::vector<
 //
 // Return public keys or hashes from scriptPubKey, for 'standard' transaction types.
 //
-bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<std::vector<unsigned char> > &vSolutionsRet)
+bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet)
 {
     // Templates
     static std::map<TxnOutputType::txnouttype, CScript> mTemplates;
 
     if (mTemplates.empty()) {
         // Standard tx, sender provides pubkey, receiver adds signature
-        mTemplates.insert(make_pair(TxnOutputType::TX_PUBKEY, CScript() << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_CHECKSIG));
+        mTemplates.insert(std::make_pair(TxnOutputType::TX_PUBKEY, CScript() << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_CHECKSIG));
 
         // Malleable pubkey tx hack, sender provides generated pubkey combined with R parameter. The R parameter is dropped before checking a signature.
-        mTemplates.insert(make_pair(TxnOutputType::TX_PUBKEY_DROP, CScript() << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_DROP << ScriptOpcodes::OP_CHECKSIG));
+        mTemplates.insert(std::make_pair(TxnOutputType::TX_PUBKEY_DROP, CScript() << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_PUBKEY << ScriptOpcodes::OP_DROP << ScriptOpcodes::OP_CHECKSIG));
 
         // Bitcoin address tx, sender provides hash of pubkey, receiver provides signature and pubkey
-        mTemplates.insert(make_pair(TxnOutputType::TX_PUBKEYHASH, CScript() << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASH160 << ScriptOpcodes::OP_PUBKEYHASH << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG));
+        mTemplates.insert(std::make_pair(TxnOutputType::TX_PUBKEYHASH, CScript() << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASH160 << ScriptOpcodes::OP_PUBKEYHASH << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG));
 
         // Sender provides N pubkeys, receivers provides M signatures
-        mTemplates.insert(make_pair(TxnOutputType::TX_MULTISIG, CScript() << ScriptOpcodes::OP_SMALLINTEGER << ScriptOpcodes::OP_PUBKEYS << ScriptOpcodes::OP_SMALLINTEGER << ScriptOpcodes::OP_CHECKMULTISIG));
+        mTemplates.insert(std::make_pair(TxnOutputType::TX_MULTISIG, CScript() << ScriptOpcodes::OP_SMALLINTEGER << ScriptOpcodes::OP_PUBKEYS << ScriptOpcodes::OP_SMALLINTEGER << ScriptOpcodes::OP_CHECKMULTISIG));
 
         // Empty, provably prunable, data-carrying output
-        mTemplates.insert(make_pair(TxnOutputType::TX_NULL_DATA, CScript() << ScriptOpcodes::OP_RETURN << ScriptOpcodes::OP_SMALLDATA));
+        mTemplates.insert(std::make_pair(TxnOutputType::TX_NULL_DATA, CScript() << ScriptOpcodes::OP_RETURN << ScriptOpcodes::OP_SMALLDATA));
     }
 
     vSolutionsRet.clear();
@@ -1464,7 +1464,7 @@ bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype 
     //
     if (scriptPubKey.IsPayToScriptHash()) {
         typeRet = TxnOutputType::TX_SCRIPTHASH;
-        std::vector<unsigned char> hashBytes(scriptPubKey.begin() + 2, scriptPubKey.begin() + 22);
+        valtype hashBytes(scriptPubKey.begin() + 2, scriptPubKey.begin() + 22);
         vSolutionsRet.push_back(hashBytes);
         return true;
     }
@@ -1488,7 +1488,7 @@ bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype 
         vSolutionsRet.clear();
 
         ScriptOpcodes::opcodetype opcode1, opcode2;
-        std::vector<unsigned char> vch1, vch2;
+        valtype vch1, vch2;
 
         // Compare
         CScript::const_iterator pc1 = script1.begin();
@@ -1593,7 +1593,7 @@ bool Script_util::Sign1(const CKeyID &address, const CKeyStore &keystore, const 
         return false;
     }
 
-    std::vector<unsigned char> vchSig;
+    valtype vchSig;
     if (! key.Sign(hash, vchSig)) {
         return false;
     }
@@ -1611,7 +1611,7 @@ bool Script_util::SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore
         return false;
     }
 
-    std::vector<unsigned char> vchSig;
+    valtype vchSig;
     if (! key.Sign(hash, vchSig)) {
         return false;
     }
@@ -1622,7 +1622,7 @@ bool Script_util::SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore
     return true;
 }
 
-bool Script_util::SignN(const std::vector<valtype> &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet)
+bool Script_util::SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet)
 {
     int nSigned = 0;
     int nRequired = multisigdata.front()[0];
@@ -1649,7 +1649,7 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
 
     scriptSigRet.clear();
 
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     if (! Script_util::Solver(scriptPubKey, whichTypeRet, vSolutions)) {
         return false;
     }
@@ -1689,7 +1689,7 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
     return false;
 }
 
-int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const std::vector<std::vector<unsigned char> > &vSolutions)
+int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions)
 {
     using namespace TxnOutputType;
 
@@ -1717,7 +1717,7 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const std::v
 
 bool Script_util::IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType)
 {
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     if (! Script_util::Solver(scriptPubKey, whichType, vSolutions)) {
         return false;
     }
@@ -1787,7 +1787,7 @@ isminetype Script_util::IsMine(const CKeyStore &keystore, const CScript &scriptP
 {
     using namespace TxnOutputType;
 
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     TxnOutputType::txnouttype whichType;
     if (! Script_util::Solver(scriptPubKey, whichType, vSolutions)) {
         if (keystore.HaveWatchOnly(scriptPubKey)) {
@@ -1861,7 +1861,7 @@ isminetype Script_util::IsMine(const CKeyStore &keystore, const CScript &scriptP
 
 bool Script_util::ExtractDestination(const CScript &scriptPubKey, CTxDestination &addressRet)
 {
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     TxnOutputType::txnouttype whichType;
     if (! Script_util::Solver(scriptPubKey, whichType, vSolutions)) {
         return false;
@@ -1884,7 +1884,7 @@ bool Script_util::ExtractDestination(const CScript &scriptPubKey, CTxDestination
 
 bool Script_util::ExtractAddress(const CKeyStore &keystore, const CScript &scriptPubKey, CBitcoinAddress &addressRet)
 {
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     TxnOutputType::txnouttype whichType;
     if (! Script_util::Solver(scriptPubKey, whichType, vSolutions)) {
         return false;
@@ -1965,7 +1965,7 @@ bool Script_util::ExtractDestinations(const CScript &scriptPubKey, TxnOutputType
     addressRet.clear();
 
     typeRet = TxnOutputType::TX_NONSTANDARD;
-    std::vector<valtype> vSolutions;
+    statype vSolutions;
     if (! Script_util::Solver(scriptPubKey, typeRet, vSolutions)) {
         return false;
     }
@@ -1999,7 +1999,7 @@ bool Script_util::ExtractDestinations(const CScript &scriptPubKey, TxnOutputType
 
 bool Script_util::VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
-    std::vector<std::vector<unsigned char> > stack, stackCopy;
+    statype stack, stackCopy;
     if (! Script_util::EvalScript(stack, scriptSig, txTo, nIn, flags, nHashType)) {
         return false;
     }
@@ -2088,7 +2088,7 @@ bool Script_util::SignSignature(const CKeyStore &keystore, const CScript &fromPu
     return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, Script_param::STRICT_FLAGS, 0);
 }
 
-bool Script_util::SignSignature(const CKeyStore &keystore, const CTransaction& txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
+bool Script_util::SignSignature(const CKeyStore &keystore, const CTransaction &txFrom, CTransaction& txTo, unsigned int nIn, int nHashType)
 {
     assert(nIn < txTo.vin.size());
 
@@ -2100,11 +2100,11 @@ bool Script_util::SignSignature(const CKeyStore &keystore, const CTransaction& t
     return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
 }
 
-CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const std::vector<valtype> &vSolutions, std::vector<valtype> &sigs1, std::vector<valtype> &sigs2)
+CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2)
 {
     using namespace TxnOutputType;
 
-    auto PushAll = [](const std::vector<valtype> &values) {
+    auto PushAll = [](const statype &values) {
         CScript result;
         BOOST_FOREACH(const valtype &v, values)
         {
@@ -2113,7 +2113,7 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
         return result;
     };
 
-    auto CombineMultisig = [](const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const std::vector<valtype> &vSolutions, std::vector<valtype> &sigs1, std::vector<valtype> &sigs2) {
+    auto CombineMultisig = [](const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const statype &vSolutions, statype &sigs1, statype &sigs2) {
         //
         // Combine all the signatures we've got
         //
@@ -2211,7 +2211,7 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
             CScript pubKey2(spk.begin(), spk.end());
 
             TxnOutputType::txnouttype txType2;
-            std::vector<std::vector<unsigned char> > vSolutions2;
+            statype vSolutions2;
             Script_util::Solver(pubKey2, txType2, vSolutions2);
             sigs1.pop_back();
             sigs2.pop_back();
@@ -2229,12 +2229,12 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
 CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const CScript &scriptSig1, const CScript &scriptSig2) 
 {
     TxnOutputType::txnouttype txType;
-    std::vector<std::vector<unsigned char> > vSolutions;
+    statype vSolutions;
     Script_util::Solver(scriptPubKey, txType, vSolutions);
 
-    std::vector<valtype> stack1;
+    statype stack1;
     Script_util::EvalScript(stack1, scriptSig1, CTransaction(), 0, Script_param::SCRIPT_VERIFY_STRICTENC, 0);
-    std::vector<valtype> stack2;
+    statype stack2;
     Script_util::EvalScript(stack2, scriptSig2, CTransaction(), 0, Script_param::SCRIPT_VERIFY_STRICTENC, 0);
 
     return Script_util::CombineSignatures(scriptPubKey, txTo, nIn, txType, vSolutions, stack1, stack2);
@@ -2278,7 +2278,7 @@ unsigned int CScript::GetSigOpCount(const CScript &scriptSig) const
     // pushes onto the stack:
     //
     const_iterator pc = scriptSig.begin();
-    std::vector<unsigned char> data;
+    script_vector data;
     while (pc < scriptSig.end())
     {
         ScriptOpcodes::opcodetype opcode;
@@ -2314,7 +2314,7 @@ bool CScript::HasCanonicalPushes() const
     while (pc < end())
     {
         ScriptOpcodes::opcodetype opcode;
-        std::vector<unsigned char> data;
+        script_vector data;
         if (! GetOp(pc, opcode, data)) {
             return false;
         }

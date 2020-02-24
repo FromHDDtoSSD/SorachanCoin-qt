@@ -360,7 +360,7 @@ bool CTransaction::AreInputsStandard(const MapPrevTx &mapInputs) const
     {
         const CTxOut &prev = GetOutputFor(vin[i], mapInputs);
 
-        std::vector<std::vector<unsigned char> > vSolutions;
+        Script_util::statype vSolutions;
         TxnOutputType::txnouttype whichType;
 
         //
@@ -383,7 +383,7 @@ bool CTransaction::AreInputsStandard(const MapPrevTx &mapInputs) const
         // beside "push data" in the scriptSig the
         // IsStandard() call returns false
         //
-        std::vector<std::vector<unsigned char> > stack;
+        Script_util::statype stack;
         if (! Script_util::EvalScript(stack, vin[i].scriptSig, *this, i, false, 0)) {
             return false;
         }
@@ -394,7 +394,7 @@ bool CTransaction::AreInputsStandard(const MapPrevTx &mapInputs) const
             }
 
             CScript subscript(stack.back().begin(), stack.back().end());
-            std::vector<std::vector<unsigned char> > vSolutions2;
+            Script_util::statype vSolutions2;
             TxnOutputType::txnouttype whichType2;
             if (! Script_util::Solver(subscript, whichType2, vSolutions2)) {
                 return false;
@@ -2954,7 +2954,7 @@ bool CBlock::CheckBlockSignature() const
     }
 
     TxnOutputType::txnouttype whichType;
-    std::vector<Script_util::valtype> vSolutions;
+    Script_util::statype vSolutions;
     if (! Script_util::Solver(vtx[1].vout[1].scriptPubKey, whichType, vSolutions)) {
         return false;
     }
@@ -3097,7 +3097,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         txNew.nTime = !args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet;
         txNew.vin.resize(1);
         txNew.vout.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << std::vector<unsigned char>((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp));
+        txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << bignum_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp));
         txNew.vout[0].SetEmpty();
 
         CBlock block;

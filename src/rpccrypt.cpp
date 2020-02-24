@@ -18,7 +18,7 @@ json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, bool
 
     CPubKey pubKey(hex::ParseHex(params[0].get_str()));
 
-    std::vector<unsigned char> vchEncrypted;
+    rpctable_vector vchEncrypted;
     pubKey.EncryptData(hex::ParseHex(params[1].get_str()), vchEncrypted);
 
     return util::HexStr(vchEncrypted);
@@ -51,7 +51,7 @@ json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, bool
         key.SetSecret(secret, fCompressed);
     }
 
-    std::vector<unsigned char> vchDecrypted;
+    rpctable_vector vchDecrypted;
     key.DecryptData(hex::ParseHex(params[1].get_str()), vchDecrypted);
 
     return util::HexStr(vchDecrypted);
@@ -67,9 +67,9 @@ json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, b
 
     CPubKey pubKey(hex::ParseHex(params[0].get_str()));
 
-    std::vector<unsigned char> vchEncrypted;
+    rpctable_vector vchEncrypted;
     std::string strData = params[1].get_str();
-    pubKey.EncryptData(std::vector<unsigned char>(strData.begin(), strData.end()), vchEncrypted);
+    pubKey.EncryptData(rpctable_vector(strData.begin(), strData.end()), vchEncrypted);
 
     return base58::manage::EncodeBase58Check(vchEncrypted);
 }
@@ -103,12 +103,12 @@ json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, b
         key.SetSecret(secret, fCompressed);
     }
 
-    std::vector<unsigned char> vchEncrypted;
+    rpctable_vector vchEncrypted;
     if (! base58::manage::DecodeBase58Check(params[1].get_str(), vchEncrypted)) {
         throw std::runtime_error("Incorrect string");
     }
 
-    std::vector<unsigned char> vchDecrypted;
+    rpctable_vector vchDecrypted;
     key.DecryptData(vchEncrypted, vchDecrypted);
 
     return std::string((const char *)&vchDecrypted[0], vchDecrypted.size());

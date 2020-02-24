@@ -219,7 +219,7 @@ void MultisigDialog::on_saveRedeemScriptButton_clicked()
 
     CWallet *wallet = model->getWallet();
     std::string redeemScript = ui->redeemScript->text().toStdString();
-    std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
+    script_vector scriptData(hex::ParseHex(redeemScript));
     CScript script(scriptData.begin(), scriptData.end());
     CScriptID scriptID = script.GetID();
 
@@ -244,7 +244,7 @@ void MultisigDialog::on_saveMultisigAddressButton_clicked()
         return;
     }
 
-    std::vector<unsigned char> scriptData(hex::ParseHex(redeemScript));
+    script_vector scriptData(hex::ParseHex(redeemScript));
     CScript script(scriptData.begin(), scriptData.end());
     CScriptID scriptID = script.GetID();
 
@@ -357,7 +357,7 @@ void MultisigDialog::on_transaction_textChanged()
     }
 
     // Decode the raw transaction
-    std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
+    datastream_vector txData(hex::ParseHex(ui->transaction->text().toStdString()));
     CDataStream ss(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
     try {
@@ -423,7 +423,7 @@ void MultisigDialog::on_signTransactionButton_clicked()
     CWallet *wallet = model->getWallet();
 
     // Decode the raw transaction
-    std::vector<unsigned char> txData(hex::ParseHex(ui->transaction->text().toStdString()));
+    datastream_vector txData(hex::ParseHex(ui->transaction->text().toStdString()));
     CDataStream ss(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
     try {
@@ -462,7 +462,7 @@ void MultisigDialog::on_signTransactionButton_clicked()
         if(entry) {
             QString redeemScriptStr = entry->getRedeemScript();
             if(redeemScriptStr.size() > 0) {
-                std::vector<unsigned char> scriptData(hex::ParseHex(redeemScriptStr.toStdString()));
+                script_vector scriptData(hex::ParseHex(redeemScriptStr.toStdString()));
                 CScript redeemScript(scriptData.begin(), scriptData.end());
                 wallet->AddCScript(redeemScript);
             }
@@ -534,7 +534,7 @@ void MultisigDialog::on_sendTransactionButton_clicked()
     }
 
     // Decode the raw transaction
-    std::vector<unsigned char> txData(hex::ParseHex(ui->signedTransaction->text().toStdString()));
+    datastream_vector txData(hex::ParseHex(ui->signedTransaction->text().toStdString()));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
     try {
