@@ -7,13 +7,14 @@
 #ifdef USE_QUANTUM // SorachanCoin-qt.pro
 
 #include <openssl/rand.h>
+#include <openssl/crypto.h> // for OPENSSL_cleanse()
 #include <blake2.h>
 #include <assert.h>
 #include <vector>
 #include <bitset>
 #include <debugcs/debugcs.h>
 
-#ifdef _WIN32
+#ifdef WIN32
 # include <windows.h>
 # include <wincrypt.h>
 #else
@@ -69,7 +70,7 @@ private:
     public:
         explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn) {}
         void readonly() const {
-#if defined(_WIN32)
+#if defined(WIN32)
             DWORD old;
             if(! ::VirtualProtect(ptr, size, PAGE_READONLY, &old)) {
                 throw std::runtime_error("secure_list::manage failure.");
@@ -81,7 +82,7 @@ private:
 #endif
         }
         void readwrite() const {
-#if defined(_WIN32)
+#if defined(WIN32)
             DWORD old;
             if(! ::VirtualProtect(ptr, size, PAGE_READWRITE, &old)) {
                 throw std::runtime_error("secure_list::manage failure.");
@@ -93,7 +94,7 @@ private:
 #endif
         }
         ~manage() noexcept {
-#if defined(_WIN32)
+#if defined(WIN32)
             DWORD old;
             (void)::VirtualProtect(ptr, size, PAGE_NOACCESS, &old);
 #else
@@ -103,7 +104,7 @@ private:
     };
 public:
     static void *secure_malloc(size_t sizeIn) {
-#if defined(_WIN32)
+#if defined(WIN32)
         void *ptr = ::VirtualAlloc(nullptr, sizeIn + alloc_info_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
         void *ptr = nullptr;
@@ -113,6 +114,15 @@ public:
 #endif
         if(! ptr) {
             throw std::runtime_error("secure_alloc memory allocate failure.");
+        }
+#if defined(WIN32)
+        bool lock_ret = false;
+        lock_ret = (::VirtualLock(ptr, sizeIn + alloc_info_size) != FALSE) ? true: false;
+#else
+        lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true: false;
+#endif
+        if(! lock_ret) {
+            throw std::runtime_error("secure_alloc virtual lock failure.");
         }
         alloc_info *pinfo = reinterpret_cast<alloc_info *>(ptr);
         pinfo->data.type = LOCK_UNLOCK;
@@ -132,9 +142,14 @@ public:
             manage mem(fptr, size + alloc_info_size);
             mem.readwrite();
             fRandom ? secure_memrandom(fptr, size + alloc_info_size): secure_memzero(fptr, size + alloc_info_size);
+#if defined(WIN32)
+            (void)::VirtualUnlock(fptr, size + alloc_info_size);
+#else
+            (void)::munlock(fptr, size + alloc_info_size);
+#endif
         }
 
-#if defined(_WIN32)
+#if defined(WIN32)
         (void)::VirtualFree(fptr, 0U, MEM_RELEASE);
 #else
         (void)::munmap(fptr, size + alloc_info_size);
@@ -142,7 +157,9 @@ public:
     }
 
     static void secure_memzero(void *ptr, size_t sizeIn) noexcept {
-#if defined(_WIN32)
+        OPENSSL_cleanse(ptr, sizeIn);
+        /**
+#if defined(WIN32)
         ::SecureZeroMemory(ptr, sizeIn);
 #else
         volatile unsigned char *volatile pnt_ = (volatile unsigned char *volatile)ptr;
@@ -152,6 +169,7 @@ public:
             pnt_[i++] = 0U;
         }
 #endif
+        **/
     }
     static void secure_memrandom(void *ptr, size_t sizeIn) noexcept {
         volatile unsigned char *volatile pnt_ = (volatile unsigned char *volatile)ptr;
@@ -173,45 +191,47 @@ public:
         secure_memrandom(dummy, sizeIn);
     }
 
-    static void secure_mprotect_noaccess(void *ptr) {
+    static void secure_mprotect_noaccess(const void *ptr) {
         //
         // success, return 0. error, return -1.(mprotect)
         //
         size_t size;
+        void *__ptr = const_cast<void *>(ptr);
         {
-            void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
+            void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
             manage mem(fptr, alloc_info_size);
             mem.readonly();
             const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
             size = pinfo->data.size;
         }
-#if defined(_WIN32)
+#if defined(WIN32)
         DWORD old;
-        int ret = ::VirtualProtect(ptr, size, PAGE_NOACCESS, &old) ? 0: -1;
+        int ret = ::VirtualProtect(__ptr, size, PAGE_NOACCESS, &old) ? 0: -1;
 #else
-        int ret = ::mprotect(ptr, size, PROT_NONE);
+        int ret = ::mprotect(__ptr, size, PROT_NONE);
 #endif
         if(ret != 0) {
             throw std::runtime_error("secure_mprotect_noaccess failure.");
         }
     }
-    static void secure_mprotect_readonly(void *ptr) {
+    static void secure_mprotect_readonly(const void *ptr) {
         //
         // success, return 0. error, return -1.(mprotect)
         //
         size_t size;
+        void *__ptr = const_cast<void *>(ptr);
         {
-            void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
+            void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
             manage mem(fptr, alloc_info_size);
             mem.readonly();
             const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
             size = pinfo->data.size;
         }
-#if defined(_WIN32)
+#if defined(WIN32)
         DWORD old;
-        int ret = ::VirtualProtect(ptr, size, PAGE_READONLY, &old) ? 0: -1;
+        int ret = ::VirtualProtect(__ptr, size, PAGE_READONLY, &old) ? 0: -1;
 #else
-        int ret = ::mprotect(ptr, size, PROT_READ);
+        int ret = ::mprotect(__ptr, size, PROT_READ);
 #endif
         if(ret != 0) {
             throw std::runtime_error("secure_mprotect_readonly failure.");
@@ -229,7 +249,7 @@ public:
             const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
             size = pinfo->data.size;
         }
-#if defined(_WIN32)
+#if defined(WIN32)
         DWORD old;
         int ret = ::VirtualProtect(ptr, size, PAGE_READWRITE, &old) ? 0: -1;
 #else
@@ -379,16 +399,16 @@ namespace secure_segment
 {
 
 template <typename T>
-class s_allocator : public std::allocator<T>
+class secure_protect_allocator : public std::allocator<T>
 {
 public:
     typedef typename std::allocator<T>::pointer pointer;
     typedef typename std::allocator<T>::const_pointer const_pointer;
     typedef typename std::allocator<T>::size_type size_type;
-    s_allocator() noexcept {}
-    s_allocator(const s_allocator &) noexcept {}
+    secure_protect_allocator() noexcept {}
+    secure_protect_allocator(const secure_protect_allocator &) noexcept {}
 
-    pointer allocate(size_type sizeIn, const_pointer inp = nullptr) noexcept {
+    pointer allocate(size_type sizeIn, const_pointer inp = nullptr) {
         void *ptr = quantum_lib::secure_malloc(sizeIn);
         return static_cast<pointer>(ptr);
     }
@@ -397,12 +417,12 @@ public:
     }
 
     template <typename U>
-    s_allocator(const s_allocator<U> &) {}
+    secure_protect_allocator(const secure_protect_allocator<U> &) {}
 
     template <typename U>
     struct rebind
     {
-        typedef s_allocator<U> other;
+        typedef secure_protect_allocator<U> other;
     };
 };
 
@@ -410,8 +430,8 @@ template <typename T>
 class vector
 {
 private:
-    typedef typename std::vector<T, s_allocator<T> > vector_t;
-    mutable std::vector<T, s_allocator<T> > vec; // Note: Can not inherits std. (No virtual)
+    typedef typename std::vector<T, secure_protect_allocator<T> > vector_t;
+    mutable std::vector<T, secure_protect_allocator<T> > vec; // Note: Can not inherits std. (No virtual)
 
     void readonly() const noexcept {
         T *ptr = vec.data();

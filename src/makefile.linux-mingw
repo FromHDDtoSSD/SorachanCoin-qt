@@ -104,7 +104,7 @@ OBJS= \
     obj/cryptogram.o \
     obj/ipcollector.o
 
-all: novacoind.exe
+all: SorachanCoind.exe
 
 #
 # LevelDB support
@@ -167,12 +167,12 @@ DEFS += -DHAVE_BUILD_INFO
 obj/%.o: %.cpp $(HEADERS)
 	$(CXX) -c $(CFLAGS) -o $@ $<
 
-novacoind.exe: $(OBJS:obj/%=obj/%)
+SorachanCoind.exe: $(OBJS:obj/%=obj/%)
 	$(CXX) $(CFLAGS) $(LDFLAGS) -o $@ $(LIBPATHS) $^ $(LIBS) -lshlwapi
-	$(STRIP) novacoind.exe
+	$(STRIP) SorachanCoind.exe
 
 clean:
-	-rm -f novacoind.exe
+	-rm -f SorachanCoind.exe
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/*.d

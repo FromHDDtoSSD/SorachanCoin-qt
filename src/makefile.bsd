@@ -140,7 +140,7 @@ OBJS= \
     obj/cryptogram.o \
     obj/ipcollector.o
 
-all: novacoind
+all: SorachanCoind
 
 #
 # LevelDB support
@@ -209,11 +209,11 @@ obj/%.o: %.cpp
 	      -e '/^$$/ d' -e 's/$$/ :/' < $(@:%.o=%.d) >> $(@:%.o=%.P); \
 	  rm -f $(@:%.o=%.d)
 
-novacoind: $(OBJS:obj/%=obj/%)
+SorachanCoind: $(OBJS:obj/%=obj/%)
 	$(LINK) $(xCXXFLAGS) -o $@ $^ $(xLDFLAGS) $(LIBS)
 
 clean:
-	-rm -f novacoind
+	-rm -f SorachanCoind
 	-rm -f obj/*.o
 	-rm -f obj/*.P
 	-rm -f obj/*.d

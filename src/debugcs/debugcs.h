@@ -9,24 +9,34 @@
 #include <string>
 #include <sstream>
 
-#ifdef _WIN32
+#ifdef WIN32
 # include <windows.h>
 #else
 # include <unistd.h>
 #endif
 
-class debugcs
-{
+#ifdef DEBUG
+# define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()
+#else
+# define DEBUGCS_OUTPUT(s)
+#endif
+
+class debugcs {
+#if defined(WIN32) && defined(DEBUG)
+    mutable CRITICAL_SECTION cs;
+#endif
 public:
     static debugcs &instance() noexcept {
         static debugcs obj;
         return obj;
     }
     template <typename T> const debugcs &operator<<(const T &obj) const noexcept {
-#if defined(_WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
+        ::EnterCriticalSection(&cs);
         std::ostringstream stream;
         stream << obj;
         ::fprintf_s(stdout, stream.str().c_str());
+        ::LeaveCriticalSection(&cs);
 #else
         static_cast<const T &>(obj);
 #endif
@@ -41,7 +51,9 @@ private:
     debugcs &operator=(const debugcs &); // {}
 
     debugcs() noexcept {
-#if defined(_WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
+        ::InitializeCriticalSection(&cs);
+
         //
         // Open Debug Console
         //
@@ -52,11 +64,12 @@ private:
 #endif
     }
     ~debugcs() noexcept {
-#if defined(_WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
         //
         // Close Debug Console
         //
         ::FreeConsole();
+        ::DeleteCriticalSection(&cs);
 #endif
     }
 };

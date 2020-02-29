@@ -5,16 +5,21 @@
 #include <memory>
 #include <quantum/quantum.h>
 #include <prevector/prevector.h>
+#include <prevector/prevector_s.h>
 #ifdef USE_QUANTUM
 
-#if defined(_WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
 # include <wincon.h>
 # include <process.h>
 #endif
 
-#define HASH_CHECK
-#define LAMPORT_CHECK
-#define VECTOR_CHECK
+#if defined(WIN32) && defined(DEBUG)
+# define MEMORY_CHECK
+# define SECURE_PREVECTOR_CHECK
+# define HASH_CHECK
+# define LAMPORT_CHECK
+# define VECTOR_CHECK
+#endif
 
 class Quantum_startup
 {
@@ -22,6 +27,38 @@ private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;
 
+    static void memory_check() noexcept {}
+    template <int rsv, typename T> static void secure_prevector_check(int n, int m) noexcept {
+        for(int i=0; i < n; ++i)
+        {
+            prevector<rsv, T> v(100, T());
+            prevector_s<rsv, T> vchs(100, T());
+            std::vector<T> vv(100, T());
+
+            for (int j = 0; j < m; ++j)
+            {
+                v.push_back(j + i);
+                vchs.push_back(j + i);
+                vv.push_back(j + i);
+            }
+
+            for (int j = 0; j < m / 2; ++j)
+            {
+                typename prevector<rsv, T>::iterator ite = v.begin();
+                v.erase(ite);
+                typename prevector_s<rsv, T>::iterator vite = vchs.begin();
+                vchs.erase(vite);
+                typename std::vector<T>::iterator vvite = vv.begin();
+                vv.erase(vvite);
+            }
+
+            for (int j = 0; j < m / 2; ++j)
+            {
+                auto __ref = vchs[j];
+                assert(vv[j] == (T)__ref);
+            }
+        }
+    }
     static void hash_check() noexcept {
         Lamport::CPrivateKey pKey;
         Lamport::BLAKE2KeyHash h(pKey);
@@ -93,6 +130,12 @@ private:
     static unsigned int __stdcall benchmark(void *) noexcept {
         for(int i=0; i < 5; ++i)
         {
+#ifdef MEMORY_CHECK
+            memory_check();
+#endif
+#ifdef SECURE_PREVECTOR_CHECK
+            secure_prevector_check<PREVECTOR_N, uint8_t>(10, 30);
+#endif
 #ifdef HASH_CHECK
             hash_check();
 #endif
@@ -107,7 +150,7 @@ private:
     }
 private:
     Quantum_startup() noexcept {
-#if defined(_WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG)
         //
         // Lamport benchmark [Thread Safe]
         //

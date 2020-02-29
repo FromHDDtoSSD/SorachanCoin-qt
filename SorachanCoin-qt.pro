@@ -18,8 +18,8 @@ macx: {
 
 DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
 
-RELEASE=1
-DEBUGCS=1
+RELEASE=0
+DEBUG_ENABLE=1
 
 USE_DBUS=0
 BITCOIN_NEED_QT_PLUGINS=0
@@ -125,7 +125,7 @@ contains(RELEASE, 1) {
     QMAKE_CXXCFLAGS += -g -O0
 }
 
-contains(DEBUGCS, 1) {
+contains(DEBUG_ENABLE, 1) {
     DEFINES += DEBUG
 }
 
@@ -368,6 +368,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/ies.h \
     src/ipcollector.h \
     src/prevector/prevector.h \
+    src/prevector/prevector_s.h \
     src/quantum/quantum.h \
     src/debugcs/debugcs.h \
     src/compat/compat.h \

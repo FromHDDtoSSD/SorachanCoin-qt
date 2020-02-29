@@ -18,12 +18,6 @@
 
 #include <compat/compat.h> // IS_TRIVIALLY_CONSTRUCTIBLE
 
-#ifdef DEBUG
-# define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()
-#else
-# define DEBUGCS_OUTPUT(s)
-#endif
-
 #pragma pack(push, 1)
 /**
  * Implements a drop-in replacement for std::vector<T> which stores up to N
@@ -265,7 +259,7 @@ private:
     bool is_direct() const noexcept { return _size <= N; }
 
     void change_capacity(size_type new_capacity) {
-        DEBUGCS_OUTPUT("change_capacity");
+        DEBUGCS_OUTPUT("prevector: void change_capacity(size_type new_capacity)");
         if (new_capacity <= N) {
             if (! is_direct()) {
                 T *indirect = indirect_ptr(0);
@@ -292,7 +286,7 @@ private:
             } else {
                 _invch = new(std::nothrow) std::vector<unsigned char>();
                 if(! _invch) {
-                    std::runtime_error("prevector memory allocate failure.");
+                    throw std::runtime_error("prevector memory allocate failure.");
                 }
                 _invch->resize((size_t)sizeof(T) * new_capacity);
                 T *src = direct_ptr(0);
@@ -343,7 +337,7 @@ private:
 
 public:
     void assign(size_type n, const T &val) {
-        DEBUGCS_OUTPUT("assign1");
+        DEBUGCS_OUTPUT("prevector: void assign(size_type n, const T &val)");
         clear();
         if (capacity() < n) {
             change_capacity(n);
@@ -353,7 +347,7 @@ public:
 
     template <typename InputIterator>
     void assign(InputIterator first, InputIterator last) {
-        DEBUGCS_OUTPUT("assign2");
+        DEBUGCS_OUTPUT("prevector: void assign(InputIterator first, InputIterator last)");
         size_type n = last - first;
         clear();
         if (capacity() < n) {
@@ -363,42 +357,42 @@ public:
     }
 
     prevector() noexcept : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector1");
+        DEBUGCS_OUTPUT("prevector prevector() noexcept");
     }
 
     explicit prevector(size_type n) : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector2");
+        DEBUGCS_OUTPUT("prevector: explicit prevector(size_type n)");
         resize(n);
     }
 
     //explicit prevector(size_type n, const T &val = T()) : _size(0), _invch(nullptr) { // FIXED: overload ambiguous
     explicit prevector(size_type n, const T &val) : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector3");
+        DEBUGCS_OUTPUT("prevector: prevector(size_type n, const T &val)");
         change_capacity(n);
         fill(size(), val, n);
     }
 
     template <typename InputIterator>
     prevector(InputIterator first, InputIterator last) : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector4");
+        DEBUGCS_OUTPUT("prevector: prevector(InputIterator first, InputIterator last)");
         const size_type n = last - first;
         change_capacity(n);
         copy(size(), first, last, n);
     }
 
     prevector(const prevector<N, T, Size, Diff> &other) : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector5");
+        DEBUGCS_OUTPUT("prevector: prevector(const prevector<N, T, Size, Diff> &other)");
         change_capacity(other.size());
         copy(size(), other.begin(), other.end(), other.size());
     }
 
     prevector(prevector<N, T, Size, Diff> &&other) noexcept : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector6");
+        DEBUGCS_OUTPUT("prevector: prevector(prevector<N, T, Size, Diff> &&other) noexcept");
         swap(other);
     }
 
     prevector &operator=(const prevector<N, T, Size, Diff> &other) {
-        DEBUGCS_OUTPUT("prevector=1");
+        DEBUGCS_OUTPUT("prevector: prevector &prevector=(const prevector<N, T, Size, Diff> &other)");
         if (&other == this) {
             return *this;
         }
@@ -409,57 +403,57 @@ public:
     }
 
     prevector &operator=(prevector<N, T, Size, Diff> &&other) noexcept {
-        DEBUGCS_OUTPUT("prevector=2");
+        DEBUGCS_OUTPUT("prevector: prevector &prevector=(prevector<N, T, Size, Diff> &&other) noexcept");
         swap(other);
         return *this;
     }
 
     size_type size() const noexcept {
-        DEBUGCS_OUTPUT("size");
+        DEBUGCS_OUTPUT("prevector: size_type size() const noexcept");
         return is_direct() ? _size : _size - N - 1;
     }
 
     bool empty() const noexcept {
-        DEBUGCS_OUTPUT("empty");
+        DEBUGCS_OUTPUT("prevector: bool empty() const noexcept");
         return (size() == 0);
     }
 
     iterator begin() noexcept {
-        DEBUGCS_OUTPUT("begin1");
+        DEBUGCS_OUTPUT("prevector: iterator begin() noexcept");
         return iterator(item_ptr(0));
     }
     const_iterator begin() const noexcept {
-        DEBUGCS_OUTPUT("begin2");
+        DEBUGCS_OUTPUT("prevector: const_iterator begin() const noexcept");
         return const_iterator(item_ptr(0));
     }
     iterator end() noexcept {
-        DEBUGCS_OUTPUT("end1");
+        DEBUGCS_OUTPUT("prevector: iterator end() noexcept");
         return iterator(item_ptr(size()));
     }
     const_iterator end() const noexcept {
-        DEBUGCS_OUTPUT("end2");
+        DEBUGCS_OUTPUT("prevector: const_iterator end() const noexcept");
         return const_iterator(item_ptr(size()));
     }
 
     reverse_iterator rbegin() noexcept {
-        DEBUGCS_OUTPUT("rbegin1");
+        DEBUGCS_OUTPUT("prevector: reverse_iterator rbegin() noexcept");
         return reverse_iterator(item_ptr(size() - 1));
     }
     const_reverse_iterator rbegin() const noexcept {
-        DEBUGCS_OUTPUT("rbegin2");
+        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rbegin() const noexcept");
         return const_reverse_iterator(item_ptr(size() - 1));
     }
     reverse_iterator rend() noexcept {
-        DEBUGCS_OUTPUT("rend1");
+        DEBUGCS_OUTPUT("prevector: reverse_iterator rend() noexcept");
         return reverse_iterator(item_ptr(-1));
     }
     const_reverse_iterator rend() const noexcept {
-        DEBUGCS_OUTPUT("rend2");
+        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rend() const noexcept");
         return const_reverse_iterator(item_ptr(-1));
     }
 
     size_t capacity() const noexcept {
-        DEBUGCS_OUTPUT("capacity");
+        DEBUGCS_OUTPUT("prevector: size_t capacity() const noexcept");
         if (is_direct()) {
             return N;
         } else {
@@ -468,17 +462,17 @@ public:
     }
 
     T &operator[](size_type pos) noexcept {
-        DEBUGCS_OUTPUT("operator[]1");
+        DEBUGCS_OUTPUT("prevector: T &operator[](size_type pos) noexcept");
         return *item_ptr(pos);
     }
 
     const T &operator[](size_type pos) const noexcept {
-        DEBUGCS_OUTPUT("operator[]2");
+        DEBUGCS_OUTPUT("prevector: const T &operator[](size_type pos) const noexcept");
         return *item_ptr(pos);
     }
 
     void resize(size_type new_size, const T &val = T()) {
-        DEBUGCS_OUTPUT("resize");
+        DEBUGCS_OUTPUT("prevector: void resize(size_type new_size, const T &val = T())");
         const size_type cur_size = size();
         if (cur_size == new_size) {
             return;
@@ -495,24 +489,24 @@ public:
     }
 
     void reserve(size_type new_capacity) {
-        DEBUGCS_OUTPUT("reserve");
+        DEBUGCS_OUTPUT("prevector: void reserve(size_type new_capacity)");
         if (new_capacity > capacity()) {
             change_capacity(new_capacity);
         }
     }
 
     void shrink_to_fit() {
-        DEBUGCS_OUTPUT("shrink_to_fit");
+        DEBUGCS_OUTPUT("prevector: void shrink_to_fit()");
         change_capacity(size());
     }
 
     void clear() {
-        DEBUGCS_OUTPUT("clear");
+        DEBUGCS_OUTPUT("prevector: void clear()");
         resize(0);
     }
 
     iterator insert(iterator pos, const T &value) {
-        DEBUGCS_OUTPUT("insert1");
+        DEBUGCS_OUTPUT("prevector: iterator insert(iterator pos, const T &value)");
         size_type p = pos - begin();
         size_type new_size = size() + 1;
         if (capacity() < new_size) {
@@ -525,7 +519,7 @@ public:
     }
 
     void insert(iterator pos, size_type count, const T &value) {
-        DEBUGCS_OUTPUT("insert2");
+        DEBUGCS_OUTPUT("prevector: void insert(iterator pos, size_type count, const T &value)");
         size_type p = pos - begin();
         size_type new_size = size() + count;
         if (capacity() < new_size) {
@@ -537,7 +531,7 @@ public:
 
     template <typename InputIterator>
     void insert(iterator pos, InputIterator first, InputIterator last) {
-        DEBUGCS_OUTPUT("insert3");
+        DEBUGCS_OUTPUT("prevectot: insert(iterator pos, InputIterator first, InputIterator last)");
         size_type p = pos - begin();
         difference_type count = last - first;
         size_type new_size = size() + count;
@@ -549,12 +543,12 @@ public:
     }
 
     iterator erase(iterator pos) noexcept {
-        DEBUGCS_OUTPUT("erase1");
+        DEBUGCS_OUTPUT("prevector: iterator erase(iterator pos) noexcept");
         return erase(pos, pos + 1);
     }
 
     iterator erase(iterator first, iterator last) noexcept {
-        DEBUGCS_OUTPUT("erase2");
+        DEBUGCS_OUTPUT("prevector: iterator erase(iterator first, iterator last) noexcept");
         iterator p = first;
         char *endp = (char *)&(*end());
         if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
@@ -572,7 +566,7 @@ public:
     }
 
     void push_back(const T &value) {
-        DEBUGCS_OUTPUT("push_back");
+        DEBUGCS_OUTPUT("prevector: void push_back(const T &value)");
         size_type new_size = size() + 1;
         if (capacity() < new_size) {
             change_capacity(new_size + (new_size >> 1));
@@ -582,38 +576,39 @@ public:
     }
 
     void pop_back() noexcept {
-        DEBUGCS_OUTPUT("pop_back");
+        DEBUGCS_OUTPUT("prevector: void pop_back() noexcept");
         erase(end() - 1, end());
     }
 
     T &front() noexcept {
-        DEBUGCS_OUTPUT("front1");
+        DEBUGCS_OUTPUT("prevector: T &front() noexcept");
         return *item_ptr(0);
     }
 
     const T &front() const noexcept {
-        DEBUGCS_OUTPUT("front2");
+        DEBUGCS_OUTPUT("prevector: const T &front() const noexcept");
         return *item_ptr(0);
     }
 
     T &back() noexcept {
-        DEBUGCS_OUTPUT("back1");
+        DEBUGCS_OUTPUT("prevector: T &back() noexcept");
         return *item_ptr(size() - 1);
     }
 
     const T &back() const noexcept {
-        DEBUGCS_OUTPUT("back2");
+        DEBUGCS_OUTPUT("prevector: const T &back() const noexcept");
         return *item_ptr(size() - 1);
     }
 
     void swap(prevector<N, T, Size, Diff> &other) noexcept {
-        DEBUGCS_OUTPUT("swap");
+        DEBUGCS_OUTPUT("prevector: void swap(prevector<N, T, Size, Diff> &other) noexcept");
+        std::swap(_invch, other._invch);
         std::swap(_union, other._union);
         std::swap(_size, other._size);
     }
 
-    virtual ~prevector() noexcept {
-        DEBUGCS_OUTPUT("~prevector");
+    ~prevector() noexcept {
+        DEBUGCS_OUTPUT("prevector: ~prevector() noexcept");
         if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             clear();
         }
@@ -625,7 +620,7 @@ public:
     }
 
     bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector==");
+        DEBUGCS_OUTPUT("prevector: bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept");
         if (other.size() != size()) {
             return false;
         }
@@ -644,12 +639,12 @@ public:
     }
 
     bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector!=");
+        DEBUGCS_OUTPUT("prevector: bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept");
         return !(*this == other);
     }
 
     bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("operator<");
+        DEBUGCS_OUTPUT("prevector: bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept");
         if (size() < other.size()) {
             return true;
         }
@@ -674,12 +669,12 @@ public:
     }
 
     bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("operator>");
+        DEBUGCS_OUTPUT("prevector: bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept");
         return ((! operator<(other)) && (! operator==(other)));
     }
 
     size_t allocated_memory() const noexcept {
-        DEBUGCS_OUTPUT("allocated_memory");
+        DEBUGCS_OUTPUT("prevector: size_t allocated_memory() const noexcept");
         if (is_direct()) {
             return 0;
         } else {
@@ -688,22 +683,22 @@ public:
     }
 
     value_type *data() noexcept {
-        DEBUGCS_OUTPUT("data1");
+        DEBUGCS_OUTPUT("prevector: value_type *data() noexcept");
         return item_ptr(0);
     }
 
     const value_type *data() const noexcept {
-        DEBUGCS_OUTPUT("data2");
+        DEBUGCS_OUTPUT("prevector: const value_type *data() const noexcept");
         return item_ptr(0);
     }
 
     const value_type &at(int pos) const noexcept {
-        DEBUGCS_OUTPUT("at1");
+        DEBUGCS_OUTPUT("prevector: const value_type &at(int pos) const noexcept");
         return operator[](pos);
     }
 
     value_type &at(int pos) noexcept {
-        DEBUGCS_OUTPUT("at2");
+        DEBUGCS_OUTPUT("prevector: value_type &at(int pos) noexcept");
         return operator[](pos);
     }
 
@@ -711,20 +706,22 @@ public:
     // Note:
     // The following operator isn't used because their interpretation is ambiguous.
     //
-    //operator std::vector<T>() const noexcept {
-    //    DEBUGCS_OUTPUT("cast overload std::vector<T>()");
-    //    std::vector<T> obj(data(), data() + size());
+    //template <typename A = std::allocator<T> >
+    //operator std::vector<T, A>() const noexcept {
+    //    DEBUGCS_OUTPUT("prevector: cast overload std::vector<T, A>() const noexcept");
+    //    std::vector<T, A> obj(data(), data() + size());
     //    return obj;
     //}
 
     template <typename A = std::allocator<T> > std::vector<T, A> get_std_vector() const noexcept {
-        DEBUGCS_OUTPUT("get_std_vector");
+        DEBUGCS_OUTPUT("prevector: std::vector<T, A> get_std_vector() const noexcept");
         std::vector<T, A> obj(data(), data() + size());
         return obj;
     }
 
-    static prevector<N, T, Size, Diff> get_prevector(const std::vector<T> &v) noexcept {
-        DEBUGCS_OUTPUT("get_prevector");
+    template <typename A = std::allocator<T> >
+    static prevector<N, T, Size, Diff> get_prevector(const std::vector<T, A> &v) noexcept {
+        DEBUGCS_OUTPUT("prevector: prevector<N, T, Size, Diff> get_prevector(const std::vector<T, A> &v)");
         prevector<N, T, Size, Diff> obj(v.data(), v.data() + v.size());
         return obj;
     }
