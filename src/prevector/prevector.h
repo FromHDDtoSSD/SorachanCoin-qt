@@ -732,11 +732,13 @@ public:
 // PREVECTOR Common N
 //
 const int PREVECTOR_N = 512;
+const int PREVECTOR_BUFFER_N = 2048;
 
 //
 // PREVECTOR mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector
 //
 #define CSCRIPT_PREVECTOR_ENABLE
+#define BUFFER_PREVECTOR_ENABLE
 
 #endif

@@ -1345,7 +1345,6 @@ public:
     template<typename T>
     unsigned int GetSerializeSize(const T &obj) const {
         // Tells the size of the object if serialized to this stream
-        // return ::GetSerializeSize(obj, nType, nVersion);
         return ::GetSerializeSize(obj);
     }
 
@@ -1371,8 +1370,14 @@ public:
 };
 
 //
-// D, Wrapper around a FILE * that implements a ring buffer to deserialize from. It guarantees the ability to rewind a given number of bytes.
+// D, Wrapper around a FILE * that implements a ring buffer to deserialize from.
+// It guarantees the ability to rewind a given number of bytes.
 //
+#ifdef BUFFER_PREVECTOR_ENABLE
+    typedef prevector<PREVECTOR_BUFFER_N, char> bufferedfile_vector;
+#else
+    typedef std::vector<char> bufferedfile_vector;
+#endif
 class CBufferedFile
 {
 private:
@@ -1385,13 +1390,13 @@ private:
     uint64_t nReadPos;          // how many bytes have been read from this
     uint64_t nReadLimit;        // up to which position we're allowed to read
     uint64_t nRewind;           // how many bytes we guarantee to rewind
-    std::vector<char> vchBuf;   // the buffer
+    bufferedfile_vector vchBuf; // the buffer
 
     short state;
     short exceptmask;
 
-    int nType;
-    int nVersion;
+    //int nType;
+    //int nVersion;
 
     void setstate(short bits, const char *psz) {
         state |= bits;
@@ -1404,7 +1409,7 @@ private:
     bool Fill() {
         unsigned int pos        = (unsigned int)(nSrcPos % vchBuf.size());
         unsigned int readNow    = (unsigned int)(vchBuf.size() - pos);
-        unsigned int nAvail        = (unsigned int)(vchBuf.size() - (nSrcPos - nReadPos) - nRewind);
+        unsigned int nAvail     = (unsigned int)(vchBuf.size() - (nSrcPos - nReadPos) - nRewind);
         if (nAvail < readNow) {
             readNow = nAvail;
         }
@@ -1423,14 +1428,14 @@ private:
     }
 
 public:
-    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int nTypeIn, int nVersionIn) :
+    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int=0, int=0) :
     src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit(std::numeric_limits<uint64_t>::max()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
-    state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit), nType(nTypeIn), nVersion(nVersionIn) {}
+    state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
 
-    void SetType(int n)          { nType = n; }
-    int GetType() const          { return nType; }
-    void SetVersion(int n)       { nVersion = n; }
-    int GetVersion() const       { return nVersion; }
+    //void SetType(int n)          { nType = n; }
+    //int GetType() const          { return nType; }
+    //void SetVersion(int n)       { nVersion = n; }
+    //int GetVersion() const       { return nVersion; }
 
     // check whether no error occurred
     bool good() const {
@@ -1519,11 +1524,14 @@ public:
     }
 
     // Unserialize from this stream
+    // unused operator
+    /*
     template<typename T>
     CBufferedFile &operator>>(T &obj) {
-        ::Unserialize(*this, obj, nType, nVersion);
+        ::Unserialize(*this, obj);
         return *this;
     }
+    */
 
     // search for a given byte in the stream, and remain positioned on it
     void FindByte(char ch) {
@@ -1535,7 +1543,7 @@ public:
             if (vchBuf[nReadPos % vchBuf.size()] == ch) {
                 break;
             }
-            nReadPos++;
+            ++nReadPos;
         }
     }
 };
