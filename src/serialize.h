@@ -870,6 +870,12 @@ public:
     int GetVersion() const       { return nVersion; }
 };
 
+class CTypeVersionBehave
+{
+public:
+    void AddType(int) {}
+};
+
 //
 // A, Support for IMPLEMENT_SERIALIZE and READWRITE macro
 //
@@ -881,9 +887,9 @@ class CSerCtr {
     CSerCtr(); // {}
     CSerCtr(const CSerCtr &); // {}
     CSerCtr &operator=(const CSerCtr &); // {}
-    bool fGetSize;
-    bool fWrite;
-    bool fRead;
+    const bool fGetSize;
+    const bool fWrite;
+    const bool fRead;
 public:
     explicit CSerCtr(CSerActionGetSerializeSize) noexcept : fGetSize(true), fWrite(false), fRead(false) {}
     explicit CSerCtr(CSerActionSerialize) noexcept : fGetSize(false), fWrite(true), fRead(false) {}
@@ -1267,7 +1273,7 @@ public:
 // If you're returning the file pointer, return file.release().
 // If you need to close the file early, use file.fclose() instead of fclose(file).
 //
-class CAutoFile : public CTypeVersion
+class CAutoFile : public CTypeVersionBehave
 {
 private:
     CAutoFile(); // {}
@@ -1279,30 +1285,30 @@ private:
     short exceptmask;
 
 public:
-    CAutoFile(FILE *filenew, int nTypeIn, int nVersionIn) : CTypeVersion(nTypeIn, nVersionIn) {
+    CAutoFile(FILE *filenew, int=0, int=0) noexcept {
         file = filenew;
         state = 0;
         exceptmask = std::ios::badbit | std::ios::failbit;
     }
 
-    ~CAutoFile() {
+    ~CAutoFile() noexcept {
         fclose();
     }
 
-    void fclose() {
-        if (file != NULL && file != stdin && file != stdout && file != stderr) {
+    void fclose() noexcept {
+        if (file != nullptr && file != stdin && file != stdout && file != stderr) {
             ::fclose(file);
         }
-        file = NULL;
+        file = nullptr;
     }
 
-    FILE *release()             { FILE *ret = file; file = NULL; return ret; }
-    operator FILE *()           { return file; }
-    FILE *operator->()          { return file; }
-    FILE &operator*()           { return *file; }
-    FILE **operator&()          { return &file; }
-    FILE *operator=(FILE *pnew) { return file = pnew; }
-    bool operator!()            { return (file == NULL); }
+    FILE *release() noexcept             { FILE *ret = file; file = nullptr; return ret; }
+    operator FILE *() noexcept           { return file; }
+    FILE *operator->() noexcept          { return file; }
+    FILE &operator*() noexcept           { return *file; }
+    FILE **operator&() noexcept          { return &file; }
+    FILE *operator=(FILE *pnew) noexcept { return file = pnew; }
+    bool operator!() noexcept            { return (file == nullptr); }
 
     //
     // Stream subset
@@ -1314,19 +1320,18 @@ public:
         }
     }
 
-    bool fail() const            { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
-    bool good() const            { return state == 0; }
-    void clear(short n = 0)      { state = n; }
-    short exceptions() const     { return exceptmask; }
-    short exceptions(short mask) { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
-    void ReadVersion()           { *this >> nVersion; }
-    void WriteVersion()          { *this << nVersion; }
+    bool fail() const noexcept            { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
+    bool good() const noexcept            { return state == 0; }
+    void clear(short n = 0) noexcept      { state = n; }
+    short exceptions() const noexcept     { return exceptmask; }
+    short exceptions(short mask) noexcept { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
 
     CAutoFile &read(char *pch, size_t nSize) {
         if (! file) {
-            throw std::ios_base::failure("CAutoFile::read : file handle is NULL");
+            throw std::ios_base::failure("CAutoFile::read : file handle is nullptr");
         }
-        if (::fread(pch, 1, nSize, file) != nSize) {
+        size_t _nSize = nSize / sizeof(char);
+        if (::fread(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
             setstate(std::ios::failbit, ::feof(file) ? "CAutoFile::read : end of file" : "CAutoFile::read : fread failed");
         }
         return *this;
@@ -1334,16 +1339,17 @@ public:
 
     CAutoFile &write(const char *pch, size_t nSize) {
         if (! file) {
-            throw std::ios_base::failure("CAutoFile::write : file handle is NULL");
+            throw std::ios_base::failure("CAutoFile::write : file handle is nullptr");
         }
-        if (::fwrite(pch, 1, nSize, file) != nSize) {
+        size_t _nSize = nSize / sizeof(char);
+        if (::fwrite(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
             setstate(std::ios::failbit, "CAutoFile::write : write failed");
         }
         return *this;
     }
 
     template<typename T>
-    unsigned int GetSerializeSize(const T &obj) const {
+    unsigned int GetSerializeSize(const T &obj) const noexcept {
         // Tells the size of the object if serialized to this stream
         return ::GetSerializeSize(obj);
     }
@@ -1352,7 +1358,7 @@ public:
     CAutoFile &operator<<(const T &obj) {
         // Serialize to this stream
         if (! file) {
-            throw std::ios_base::failure("CAutoFile::operator<< : file handle is NULL");
+            throw std::ios_base::failure("CAutoFile::operator<< : file handle is nullptr");
         }
         ::Serialize(*this, obj);
         return *this;
@@ -1362,7 +1368,7 @@ public:
     CAutoFile &operator>>(T &obj) {
         // Unserialize from this stream
         if (! file) {
-            throw std::ios_base::failure("CAutoFile::operator>> : file handle is NULL");
+            throw std::ios_base::failure("CAutoFile::operator>> : file handle is nullptr");
         }
         ::Unserialize(*this, obj);
         return *this;
@@ -1395,9 +1401,6 @@ private:
     short state;
     short exceptmask;
 
-    //int nType;
-    //int nVersion;
-
     void setstate(short bits, const char *psz) {
         state |= bits;
         if (state & exceptmask) {
@@ -1417,7 +1420,7 @@ private:
             return false;
         }
 
-        size_t read = ::fread((void *)&vchBuf[pos], 1, readNow, src);
+        size_t read = ::fread((void *)&vchBuf[pos], sizeof(char), readNow, src) * sizeof(char);
         if (read == 0) {
             setstate(std::ios_base::failbit, feof(src) ? "CBufferedFile::Fill : end of file" : "CBufferedFile::Fill : fread failed");
             return false;
@@ -1428,22 +1431,17 @@ private:
     }
 
 public:
-    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int=0, int=0) :
+    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int=0, int=0) noexcept :
     src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit(std::numeric_limits<uint64_t>::max()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
     state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
 
-    //void SetType(int n)          { nType = n; }
-    //int GetType() const          { return nType; }
-    //void SetVersion(int n)       { nVersion = n; }
-    //int GetVersion() const       { return nVersion; }
-
     // check whether no error occurred
-    bool good() const {
+    bool good() const noexcept {
         return state == 0;
     }
 
     // check whether we're at the end of the source file
-    bool eof() const {
+    bool eof() const noexcept {
         return nReadPos == nSrcPos && ::feof(this->src);
     }
 
@@ -1479,12 +1477,12 @@ public:
     }
 
     // return the current reading position
-    uint64_t GetPos() const {
+    uint64_t GetPos() const noexcept {
         return nReadPos;
     }
 
     // rewind to a given reading position
-    bool SetPos(uint64_t nPos) {
+    bool SetPos(uint64_t nPos) noexcept {
         nReadPos = nPos;
         if (nReadPos + nRewind < nSrcPos) {
             nReadPos = nSrcPos - nRewind;
@@ -1497,7 +1495,7 @@ public:
         }
     }
 
-    bool Seek(uint64_t nPos) {
+    bool Seek(uint64_t nPos) noexcept {
         long nLongPos = (long)nPos;
         if (nPos != (uint64_t)nLongPos) {    // If nPos variable type size is larger than long, it is invalid(false).
             return false;
@@ -1515,7 +1513,7 @@ public:
 
     // prevent reading beyond a certain position
     // no argument removes the limit
-    bool SetLimit(uint64_t nPos = std::numeric_limits<uint64_t>::max()) {
+    bool SetLimit(uint64_t nPos = std::numeric_limits<uint64_t>::max()) noexcept {
         if (nPos < nReadPos) {
             return false;
         }
@@ -1534,7 +1532,7 @@ public:
     */
 
     // search for a given byte in the stream, and remain positioned on it
-    void FindByte(char ch) {
+    void FindByte(char ch) noexcept {
         for ( ; ; )
         {
             if (nReadPos == nSrcPos) {
