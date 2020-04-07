@@ -104,7 +104,8 @@ json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockInde
     txGen.SetMerkleBranch(&block);
 
     result.push_back(json_spirit::Pair("confirmations", (int)txGen.GetDepthInMainChain()));
-    result.push_back(json_spirit::Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, version::PROTOCOL_VERSION)));
+    //result.push_back(json_spirit::Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, version::PROTOCOL_VERSION)));
+    result.push_back(json_spirit::Pair("size", (int)::GetSerializeSize(block)));
     result.push_back(json_spirit::Pair("height", blockindex->nHeight));
     result.push_back(json_spirit::Pair("version", block.nVersion));
     result.push_back(json_spirit::Pair("merkleroot", block.hashMerkleRoot.GetHex()));

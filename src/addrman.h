@@ -338,7 +338,7 @@ public:
         READWRITE(this->nTried);
 
         CAddrMan *am = const_cast<CAddrMan *>(this);
-        if (fWrite) {
+        if (ser_ctr.isWrite()) {
 
             int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT;
 

@@ -1062,7 +1062,7 @@ public:
 
     IMPLEMENT_SERIALIZE
     (
-        nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, nType, nVersion, ser_action);
+        nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, ser_action);
         nVersion = this->nVersion;
         READWRITE(this->hashBlock);
         READWRITE(this->vMerkleBranch);
@@ -1416,7 +1416,7 @@ public:
         if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY))) {
             READWRITE(this->vtx);
             READWRITE(this->vchBlockSig);
-        } else if (fRead) {
+        } else if (ser_ctr.isRead()) {
             const_cast<CBlock *>(this)->vtx.clear();
             const_cast<CBlock *>(this)->vchBlockSig.clear();
         }
@@ -1740,7 +1740,7 @@ public:
             READWRITE(this->prevoutStake);
             READWRITE(this->nStakeTime);
             READWRITE(this->hashProofOfStake);
-        } else if (fRead) {
+        } else if (ser_ctr.isRead()) {
             const_cast<CDiskBlockIndex *>(this)->prevoutStake.SetNull();
             const_cast<CDiskBlockIndex *>(this)->nStakeTime = 0;
             const_cast<CDiskBlockIndex *>(this)->hashProofOfStake = 0;

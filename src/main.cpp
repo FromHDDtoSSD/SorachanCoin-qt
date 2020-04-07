@@ -192,7 +192,8 @@ bool block_process::manage::AddOrphanTx(const CTransaction &tx)
     // have been mined or received.
     // 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
 
-    size_t nSize = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);
+    //size_t nSize = tx.GetSerializeSize(SER_NETWORK, CTransaction::CURRENT_VERSION);
+    size_t nSize = tx.GetSerializeSize();
     if (nSize > block_transaction::MAX_ORPHAN_SERIALIZESIZE) {
         printf("ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
         return false;
@@ -517,7 +518,12 @@ bool CTransaction::CheckTransaction() const
     //
     // Size limits
     //
+    /*
     if (::GetSerializeSize(*this, SER_NETWORK, version::PROTOCOL_VERSION) > block_param::MAX_BLOCK_SIZE) {
+        return DoS(100, print::error("CTransaction::CheckTransaction() : size limits failed"));
+    }
+    */
+    if (::GetSerializeSize(*this) > block_param::MAX_BLOCK_SIZE) {
         return DoS(100, print::error("CTransaction::CheckTransaction() : size limits failed"));
     }
 
@@ -755,7 +761,8 @@ bool CTxMemPool::accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *
         // reasonable number of ECDSA signature verifications.
         //
         int64_t nFees = tx.GetValueIn(mapInputs) - tx.GetValueOut();
-        unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+        //unsigned int nSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+        unsigned int nSize = ::GetSerializeSize(tx);
 
         // Don't accept it if it can't get into a block
         int64_t txMinFee = tx.GetMinFee(1000, true, CTransaction::GMF_RELAY, nSize);
@@ -1651,7 +1658,8 @@ bool CTransaction::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<uint256
 
         if (IsCoinStake()) {
             if (nTime >  Checkpoints::manage::GetLastCheckpointTime()) {
-                unsigned int nTxSize = GetSerializeSize(SER_NETWORK, version::PROTOCOL_VERSION);
+                //unsigned int nTxSize = GetSerializeSize(SER_NETWORK, version::PROTOCOL_VERSION);
+                unsigned int nTxSize = GetSerializeSize();
 
                 //
                 // coin stake tx earns reward instead of paying fee
@@ -1830,7 +1838,8 @@ bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=fa
         //
         nTxPos = 1;
     } else {
-        nTxPos = pindex->nBlockPos + ::GetSerializeSize(CBlock(), SER_DISK, version::CLIENT_VERSION) - (2 * compact_size::manage::GetSizeOfCompactSize(0)) + compact_size::manage::GetSizeOfCompactSize(vtx.size());
+        //nTxPos = pindex->nBlockPos + ::GetSerializeSize(CBlock(), SER_DISK, version::CLIENT_VERSION) - (2 * compact_size::manage::GetSizeOfCompactSize(0)) + compact_size::manage::GetSizeOfCompactSize(vtx.size());
+        nTxPos = pindex->nBlockPos + ::GetSerializeSize(CBlock()) - (2 * compact_size::manage::GetSizeOfCompactSize(0)) + compact_size::manage::GetSizeOfCompactSize(vtx.size());
     }
 
     std::map<uint256, CTxIndex> mapQueuedChanges;
@@ -1863,7 +1872,8 @@ bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=fa
 
         CDiskTxPos posThisTx(pindex->nFile, pindex->nBlockPos, nTxPos);
         if (! fJustCheck) {
-            nTxPos += ::GetSerializeSize(tx, SER_DISK, version::CLIENT_VERSION);
+            //nTxPos += ::GetSerializeSize(tx, SER_DISK, version::CLIENT_VERSION);
+            nTxPos += ::GetSerializeSize(tx);
         }
 
         MapPrevTx mapInputs;
@@ -2436,7 +2446,12 @@ bool CBlock::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*=true*/,
     unsigned int nSigOps = 0; // total sigops
 
     // Size limits
+    /*
     if (vtx.empty() || vtx.size() > block_param::MAX_BLOCK_SIZE || ::GetSerializeSize(*this, SER_NETWORK, version::PROTOCOL_VERSION) > block_param::MAX_BLOCK_SIZE) {
+        return DoS(100, print::error("CheckBlock() : size limits failed"));
+    }
+    */
+    if (vtx.empty() || vtx.size() > block_param::MAX_BLOCK_SIZE || ::GetSerializeSize(*this) > block_param::MAX_BLOCK_SIZE) {
         return DoS(100, print::error("CheckBlock() : size limits failed"));
     }
 
@@ -2629,7 +2644,12 @@ bool CBlock::AcceptBlock()
     }
 
     // Write block to history file
+    /*
     if (! file_open::CheckDiskSpace(::GetSerializeSize(*this, SER_DISK, version::CLIENT_VERSION))) {
+        return print::error("CBlock::AcceptBlock() : out of disk space");
+    }
+    */
+    if (! file_open::CheckDiskSpace(::GetSerializeSize(*this))) {
         return print::error("CBlock::AcceptBlock() : out of disk space");
     }
 
@@ -3474,6 +3494,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         // Each connection can only send one version message
         if (pfrom->nVersion != 0) {
             pfrom->Misbehaving(1);
+            debugcs::instance() << "receive version message failure: nVersion=" << pfrom->nVersion << debugcs::endl();
             return false;
         }
 
@@ -3599,7 +3620,10 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             Checkpoints::manage::AskForPendingSyncCheckpoint(pfrom);
         }
     } else if (pfrom->nVersion == 0) {
+        //
         // Must have a version message before anything else
+        //
+        debugcs::instance() << "receive version message: pfrom->nVersion == 0 Misbehaving" << debugcs::endl();
         pfrom->Misbehaving(1);
         return false;
     } else if (strCommand == "verack") {

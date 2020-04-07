@@ -209,7 +209,7 @@ public:
         READWRITE(FLATDATA(this->ip));
         unsigned short portN = htons(this->port);
         READWRITE(portN);
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->port = ntohs(portN);
         }
     )

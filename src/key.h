@@ -153,17 +153,22 @@ public:
     const unsigned char &operator[](unsigned int pos) const { return vbytes[pos]; }
 
     //! Implement serialization, as if this was a byte vector.
+    /*
     unsigned int GetSerializeSize(int nType, int nVersion) const {
         return size() + 1;
     }
+    */
+    unsigned int GetSerializeSize() const {
+        return size() + 1;
+    }
     template <typename Stream>
-    void Serialize(Stream &s, int nType, int nVersion) const {
+    void Serialize(Stream &s) const {
         unsigned int len = size();
         compact_size::manage::WriteCompactSize(s, len);
         s.write((char *)vbytes, len);
     }
     template <typename Stream>
-    void Unserialize(Stream &s, int nType, int nVersion) {
+    void Unserialize(Stream &s) {
         unsigned int len = compact_size::manage::ReadCompactSize(s);
         if (len <= 65) {
             s.read((char *)vbytes, len);

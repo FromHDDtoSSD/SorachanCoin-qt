@@ -529,12 +529,12 @@ public:
     IMPLEMENT_SERIALIZE
     (
         CWalletTx *pthis = const_cast<CWalletTx *>(this);
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->Init(NULL);
         }
 
         char fSpent = false;
-        if (! fRead) {
+        if (! ser_ctr.isRead()) {
             pthis->mapValue["fromaccount"] = pthis->strFromAccount;
 
             std::string str;
@@ -554,7 +554,7 @@ public:
             }
         }
 
-        nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx*)this, nType, nVersion,ser_action);
+        nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx*)this, ser_action);
         READWRITE(this->vtxPrev);
         READWRITE(this->mapValue);
         READWRITE(this->vOrderForm);
@@ -563,7 +563,7 @@ public:
         READWRITE(this->fFromMe);
         READWRITE(fSpent);
 
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->strFromAccount = pthis->mapValue["fromaccount"];
 
             if (mapValue.count("spent")) {
@@ -776,7 +776,7 @@ public:
         READWRITE(this->nTime);
         READWRITE(this->strOtherAccount);
 
-        if (! fRead) {
+        if (! ser_ctr.isRead()) {
             mapValuePos::WriteOrderPos(this->nOrderPos, me.mapValue);
 
             if (!(this->mapValue.empty() && this->_ssExtra.empty())) {
@@ -791,7 +791,7 @@ public:
         READWRITE(this->strComment);
 
         size_t nSepPos = this->strComment.find("\0", 0, 1);
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             me.mapValue.clear();
             if (std::string::npos != nSepPos) {
                 CDataStream ss(datastream_signed_vector(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);

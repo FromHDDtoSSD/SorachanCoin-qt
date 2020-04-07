@@ -255,7 +255,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             }
 
             // Priority is sum(valuein * age) / txsize
-            unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
             dPriority /= nTxSize;
 
             // This is a more accurate fee-per-kilobyte than is used by the client code, because the
@@ -300,7 +301,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Size limits
             //
-            unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
             if (nBlockSize + nTxSize >= nBlockMaxSize) {
                 continue;
             }

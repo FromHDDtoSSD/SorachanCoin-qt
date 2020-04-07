@@ -170,8 +170,8 @@ void seed::RandAddSeed()
 {
     // Seed with CPU performance counter
     int64_t nCounter = ::GetPerformanceCounter();
-    RAND_add(&nCounter, sizeof(nCounter), 1.5);
-    ::memset(&nCounter, 0, sizeof(nCounter));
+    ::RAND_add(&nCounter, sizeof(nCounter), 1.5);
+    ::OPENSSL_cleanse(&nCounter, sizeof(nCounter));
 }
 
 void seed::RandAddSeedPerfmon()

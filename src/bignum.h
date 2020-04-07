@@ -493,19 +493,19 @@ public:
         return ToString(16);
     }
 
-    unsigned int GetSerializeSize(int nType=0, int nVersion = version::PROTOCOL_VERSION) const {
-        return ::GetSerializeSize(getvch(), nType, nVersion);
+    unsigned int GetSerializeSize() const {
+        return ::GetSerializeSize(getvch());
     }
 
     template<typename Stream>
-    void Serialize(Stream &s, int nType=0, int nVersion = version::PROTOCOL_VERSION) const {
-        ::Serialize(s, getvch(), nType, nVersion);
+    void Serialize(Stream &s) const {
+        ::Serialize(s, getvch());
     }
 
     template<typename Stream>
-    void Unserialize(Stream &s, int nType=0, int nVersion = version::PROTOCOL_VERSION) {
+    void Unserialize(Stream &s) {
         bignum_vector vch;
-        ::Unserialize(s, vch, nType, nVersion);
+        ::Unserialize(s, vch);
         setvch(vch);
     }
 

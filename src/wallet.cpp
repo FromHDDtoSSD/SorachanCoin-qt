@@ -2209,7 +2209,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                 }
 
                 // Choose coins to use
-                std::set<std::pair<const CWalletTx *,unsigned int> > setCoins;
+                std::set<std::pair<const CWalletTx *, unsigned int> > setCoins;
                 int64_t nValueIn = 0;
                 if (! SelectCoins(nTotalValue, wtxNew.nTime, setCoins, nValueIn, coinControl)) {
                     return false;
@@ -2258,14 +2258,14 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                 }
 
                 // Fill vin
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx *,unsigned int) &coin, setCoins)
+                BOOST_FOREACH(const PAIRTYPE(const CWalletTx *, unsigned int) &coin, setCoins)
                 {
                     wtxNew.vin.push_back(CTxIn(coin.first->GetHash(),coin.second));
                 }
 
                 // Sign
                 int nIn = 0;
-                BOOST_FOREACH(const PAIRTYPE(const CWalletTx *,unsigned int) &coin, setCoins)
+                BOOST_FOREACH(const PAIRTYPE(const CWalletTx *, unsigned int) &coin, setCoins)
                 {
                     if (! Script_util::SignSignature(*this, *coin.first, wtxNew, nIn++)) {
                         return false;
@@ -2273,7 +2273,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                 }
 
                 // Limit size
-                unsigned int nBytes = ::GetSerializeSize(*(CTransaction*)&wtxNew, SER_NETWORK, version::PROTOCOL_VERSION);
+                unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
                 if (nBytes >= block_param::MAX_BLOCK_SIZE_GEN / 5) {
                     return false;
                 }
@@ -2381,7 +2381,8 @@ bool CWallet::MergeCoins(const int64_t &nAmount, const int64_t &nMinValue, const
         //
         // Assuming that average scriptsig size is 110 bytes
         //
-        int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew, SER_NETWORK, version::PROTOCOL_VERSION) + wtxNew.vin.size() * 110;
+        //int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew, SER_NETWORK, version::PROTOCOL_VERSION) + wtxNew.vin.size() * 110;
+        int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew) + wtxNew.vin.size() * 110;
         dWeight += (double)nCredit * pcoin.first->GetDepthInMainChain();
 
         double dFinalPriority = dWeight /= nBytes;
@@ -2424,7 +2425,8 @@ bool CWallet::MergeCoins(const int64_t &nAmount, const int64_t &nMinValue, const
     // Create transactions if there are some unhandled coins left
     //
     if (wtxNew.vout[0].nValue > 0) {
-        int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew, SER_NETWORK, version::PROTOCOL_VERSION) + wtxNew.vin.size() * 110;
+        //int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew, SER_NETWORK, version::PROTOCOL_VERSION) + wtxNew.vin.size() * 110;
+        int64_t nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew) + wtxNew.vin.size() * 110;
 
         double dFinalPriority = dWeight /= nBytes;
         bool fAllowFree = CTransaction::AllowFree(dFinalPriority);
@@ -2652,7 +2654,8 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         }
 
         // Limit size
-        unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, version::PROTOCOL_VERSION);
+        //unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, version::PROTOCOL_VERSION);
+        unsigned int nBytes = ::GetSerializeSize(txNew);
         if (nBytes >= block_param::MAX_BLOCK_SIZE_GEN / 5) {
             return print::error("CreateCoinStake : exceeded coinstake size limit\n");
         }

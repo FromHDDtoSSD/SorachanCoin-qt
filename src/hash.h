@@ -52,7 +52,7 @@ public:
     // Serialize to this stream
     template<typename T>
     CHashWriter &operator<<(const T &obj) {
-        ::Serialize(*this, obj, nType, nVersion);
+        ::Serialize(*this, obj);
         return *this;
     }
 };

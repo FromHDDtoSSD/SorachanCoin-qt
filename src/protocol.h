@@ -111,7 +111,7 @@ public:
     (
         CAddress *pthis = const_cast<CAddress *>(this);
         CService *pip = (CService *)pthis;
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->Init();
         }
         if (nType & SER_DISK) {

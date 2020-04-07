@@ -13,7 +13,7 @@
 # include <process.h>
 #endif
 
-#if defined(WIN32) && defined(DEBUG)
+#if defined(WIN32) && defined(DEBUG_ALGO_CHECK)
 # define MEMORY_CHECK
 # define SECURE_PREVECTOR_CHECK
 # define HASH_CHECK

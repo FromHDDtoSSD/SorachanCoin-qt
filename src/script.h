@@ -369,11 +369,13 @@ public:
         return *this;
     }
 
+    //
+    // It has to operate "CScript &operator<<(const script_vector &)".
+    // No directly insert with data. (NG: insert( ... ))
+    //
     CScript &operator<<(const CPubKey &key) {
-        //std::vector<uint8_t> vchKey(key.begin(), key.end());
-        //return (*this) << vchKey;
-        insert(end(), key.begin(), key.end());
-        return *this;
+        script_vector vchKey(key.begin(), key.end());
+        return (*this) << vchKey;
     }
 
     CScript &operator<<(const CBigNum &b) {
@@ -450,11 +452,13 @@ public:
             pvchRet->clear();
         }
         if (pc >= end()) {
+            //debugcs::instance() << "CScript_GetOp2 pc >= end() OK." << debugcs::endl();
             return false;
         }
 
         // Read instruction
         if (end() - pc < 1) {
+            debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure A." << debugcs::endl();
             return false;
         }
         uint32_t opcode = *pc++;
@@ -466,23 +470,27 @@ public:
                 nSize = opcode;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA1) {
                 if (end() - pc < 1) {
+                    debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure B." << debugcs::endl();
                     return false;
                 }
                 nSize = *pc++;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA2) {
                 if (end() - pc < 2) {
+                    debugcs::instance() << "CScript_GetOp2 end() - pc < 2 Failure." << debugcs::endl();
                     return false;
                 }
                 ::memcpy(&nSize, &pc[0], 2);
                 pc += 2;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA4) {
                 if (end() - pc < 4) {
+                    debugcs::instance() << "CScript_GetOp2 end() - pc < 4 Failure." << debugcs::endl();
                     return false;
                 }
                 ::memcpy(&nSize, &pc[0], 4);
                 pc += 4;
             }
             if (end() - pc < 0 || (uint32_t)(end() - pc) < nSize) {
+                debugcs::instance() << "CScript_GetOp2 check Failure. end() - pc: " << end() - pc << " / nSize: " << nSize << debugcs::endl();
                 return false;
             }
             if (pvchRet) {
@@ -492,6 +500,7 @@ public:
         }
 
         opcodeRet = (ScriptOpcodes::opcodetype)opcode;
+        //debugcs::instance() << "GetOp2 OP_CODE: " << opcode << debugcs::endl();
         return true;
     }
 

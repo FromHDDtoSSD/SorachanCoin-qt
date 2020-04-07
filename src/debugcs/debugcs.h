@@ -15,7 +15,7 @@
 # include <unistd.h>
 #endif
 
-#ifdef DEBUG
+#ifdef DEBUG_ALGO
 # define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()
 #else
 # define DEBUGCS_OUTPUT(s)
