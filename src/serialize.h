@@ -57,87 +57,123 @@ inline T &REF(const T &val)
 // of const serialization operations from a template
 //
 template<typename T>
-inline T* NCONST_PTR(const T* val)
+inline T *NCONST_PTR(const T *val)
 {
-    return const_cast<T*>(val);
+    return const_cast<T *>(val);
 }
 
 //! Safely convert odd char pointer types to standard ones.
-inline char* CharCast(char* c) { return c; }
-inline char* CharCast(unsigned char* c) { return (char*)c; }
-inline const char* CharCast(const char* c) { return c; }
-inline const char* CharCast(const unsigned char* c) { return (const char*)c; }
+inline char *CharCast(char *c) { return c; }
+inline char *CharCast(unsigned char *c) { return (char *)c; }
+inline const char *CharCast(const char *c) { return c; }
+inline const char *CharCast(const unsigned char *c) { return (const char *)c; }
 
 /*
- * [under development]
- * Lowest-level serialization and conversion.
- * @note Sizes of these types are verified in the tests
- */
+* Lowest-level serialization and conversion.
+* @note Sizes of these types are verified in the tests
+*/
+enum _CINV_MSG_TYPE: int;
 class ser_data : private no_instance
 {
 private:
-    static inline uint64_t double_to_uint64(double x) {
-        union { double x; uint64_t y; } tmp;
-        tmp.x = x;
-        return tmp.y;
-    }
-    static inline uint32_t float_to_uint32(float x) {
-        union { float x; uint32_t y; } tmp;
-        tmp.x = x;
-        return tmp.y;
-    }
-    static inline double uint64_to_double(uint64_t y) {
-        union { double x; uint64_t y; } tmp;
-        tmp.y = y;
-        return tmp.x;
-    }
-    static inline float uint32_to_float(uint32_t y) {
-        union { float x; uint32_t y; } tmp;
-        tmp.y = y;
-        return tmp.x;
-    }
+    static inline uint32_t float_to_uint32(float s) { union { float x; uint32_t y; } tmp; tmp.x = s; return tmp.y; }
+    static inline uint64_t double_to_uint64(double s) { union { double x; uint64_t y; } tmp; tmp.x = s; return tmp.y; }
+    static inline float uint32_to_float(uint32_t s) { union { float x; uint32_t y; } tmp; tmp.y = s; return tmp.x; }
+    static inline double uint64_to_double(uint64_t s) { union { double x; uint64_t y; } tmp; tmp.y = s; return tmp.x; }
 
-    static uint8_t _htole(uint8_t s) {return s;}
-    static uint16_t _htole(uint16_t s) {return ::htole16(s);}
-    static uint16_t _htole(uint32_t s) {return ::htole32(s);}
-    static uint16_t _htole(uint64_t s) {return ::htole64(s);}
+    static inline uint8_t _htole(uint8_t s) { return s; }
+    static inline uint16_t _htole(uint16_t s) { return ::htole16(s); }
+    static inline uint32_t _htole(uint32_t s) { return ::htole32(s); }
+    static inline uint64_t _htole(uint64_t s) { return ::htole64(s); }
+    static inline uint8_t _htole(int8_t s) { return (uint8_t)s; }
+    static inline uint16_t _htole(int16_t s) { return ::htole16((uint16_t)s); }
+    static inline uint32_t _htole(int32_t s) { return ::htole32((uint32_t)s); }
+    static inline uint64_t _htole(int64_t s) { return ::htole64((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _htole(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::htole32((uint32_t)s); }
+    static inline uint32_t _htole(float s) { uint32_t tmp = float_to_uint32(s); return ::htole32(tmp); }
+    static inline uint64_t _htole(double s) { uint64_t tmp = double_to_uint64(s); return ::htole64(tmp); }
 
-    static uint8_t _htobe(uint8_t s) {return s;}
-    static uint16_t _htobe(uint16_t s) {return ::htobe16(s);}
-    static uint16_t _htobe(uint32_t s) {return ::htobe32(s);}
-    static uint16_t _htobe(uint64_t s) {return ::htobe64(s);}
+    static inline uint8_t _htobe(uint8_t s) { return s; }
+    static inline uint16_t _htobe(uint16_t s) { return ::htobe16(s); }
+    static inline uint32_t _htobe(uint32_t s) { return ::htobe32(s); }
+    static inline uint64_t _htobe(uint64_t s) { return ::htobe64(s); }
+    static inline uint8_t _htobe(int8_t s) { return (uint8_t)s; }
+    static inline uint16_t _htobe(int16_t s) { return ::htobe16((uint16_t)s); }
+    static inline uint32_t _htobe(int32_t s) { return ::htobe32((uint32_t)s); }
+    static inline uint64_t _htobe(int64_t s) { return ::htobe64((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _htobe(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::htobe32((uint32_t)s); }
+    static inline uint32_t _htobe(float s) { uint32_t tmp = float_to_uint32(s); return ::htobe32(tmp); }
+    static inline uint64_t _htobe(double s) { uint64_t tmp = double_to_uint64(s); return ::htobe64(tmp); }
 
-    static uint8_t _letoh(uint8_t s) {return s;}
-    static uint16_t _letoh(uint16_t s) {return ::le16toh(s);}
-    static uint16_t _letoh(uint32_t s) {return ::le32toh(s);}
-    static uint16_t _letoh(uint64_t s) {return ::le64toh(s);}
+    static inline uint8_t _letoh(uint8_t s) { return s; }
+    static inline uint16_t _letoh(uint16_t s) { return ::le16toh(s); }
+    static inline uint32_t _letoh(uint32_t s) { return ::le32toh(s); }
+    static inline uint64_t _letoh(uint64_t s) { return ::le64toh(s); }
+    static inline uint8_t _letoh(int8_t s) { return (uint8_t)s; }
+    static inline uint16_t _letoh(int16_t s) { return ::le16toh((uint16_t)s); }
+    static inline uint32_t _letoh(int32_t s) { return ::le32toh((uint32_t)s); }
+    static inline uint64_t _letoh(int64_t s) { return ::le64toh((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _letoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::le32toh((uint32_t)s); }
+    static inline float _letoh(uint32_t s, int) { uint32_t tmp = ::le32toh(s); return uint32_to_float(tmp); }
+    static inline double _letoh(uint64_t s, int) { uint64_t tmp = ::le64toh(s); return uint64_to_double(tmp); }
 
-    static uint8_t _betoh(uint8_t s) {return s;}
-    static uint16_t _betoh(uint16_t s) {return ::be16toh(s);}
-    static uint16_t _betoh(uint32_t s) {return ::be32toh(s);}
-    static uint16_t _betoh(uint64_t s) {return ::be64toh(s);}
+    static inline uint8_t _betoh(uint8_t s) { return s; }
+    static inline uint16_t _betoh(uint16_t s) { return ::be16toh(s); }
+    static inline uint32_t _betoh(uint32_t s) { return ::be32toh(s); }
+    static inline uint64_t _betoh(uint64_t s) { return ::be64toh(s); }
+    static inline uint8_t _betoh(int8_t s) { return (uint8_t)s; }
+    static inline uint16_t _betoh(int16_t s) { return ::be16toh((uint16_t)s); }
+    static inline uint32_t _betoh(int32_t s) { return ::be32toh((uint32_t)s); }
+    static inline uint64_t _betoh(int64_t s) { return ::be64toh((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _betoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::be32toh((uint32_t)s); }
+    static inline float _betoh(uint32_t s, int) { uint32_t tmp = ::be32toh(s); return uint32_to_float(tmp); }
+    static inline double _betoh(uint64_t s, int) { uint64_t tmp = ::be64toh(s); return uint64_to_double(tmp); }
 
 public:
-    template<typename Stream, typename T> static inline void write(Stream &s, T obj) {
-        obj = _htole(obj);
-        s.write((char *)&obj, sizeof(T));
+    template<typename Stream, typename T> static inline void write(Stream &s, const T obj) {
+        T tmp = _htole(obj);
+        s.write((char *)&tmp, sizeof(T));
     }
-    template<typename Stream, typename T> static inline void writebe(Stream &s, T obj) {
-        obj = _htobe(obj);
-        s.write((char *)&obj, sizeof(T));
+    template<typename Stream, typename T> static inline void writebe(Stream &s, const T obj) {
+        T tmp = _htobe(obj);
+        s.write((char *)&tmp, sizeof(T));
     }
-    template<typename Stream, typename T> static inline T read(Stream &s) {
-        T obj;
-        s.read((char *)&obj, sizeof(T));
-        return _letoh(obj);
+    template<typename Stream, typename T> static inline void read(Stream &s, T &obj) {
+        T tmp;
+        s.read((char *)&tmp, sizeof(T));
+        obj = _letoh(tmp);
     }
-    template<typename Stream, typename T> static inline T readbe(Stream &s) {
-        T obj;
-        s.read((char *)&obj, sizeof(T));
-        return _betoh(obj);
+    template<typename Stream, typename T> static inline void readbe(Stream &s, T &obj) {
+        T tmp;
+        s.read((char *)&tmp, sizeof(T));
+        obj = _betoh(tmp);
+    }
+
+    //
+    // _letoh(tmp, 0) or _betoh(tmp, 0): add dummy int type.
+    // Note: conflict overload, float or double
+    //
+    template<typename Stream> static inline void read(Stream &s, float &obj) {
+        uint32_t tmp;
+        s.read((char *)&tmp, sizeof(uint32_t));
+        obj = _letoh(tmp, 0);
+    }
+    template<typename Stream> static inline void readbe(Stream &s, float &obj) {
+        uint32_t tmp;
+        s.read((char *)&tmp, sizeof(uint32_t));
+        obj = _betoh(tmp, 0);
+    }
+    template<typename Stream> static inline void read(Stream &s, double &obj) {
+        uint64_t tmp;
+        s.read((char *)&tmp, sizeof(uint64_t));
+        obj = _letoh(tmp, 0);
+    }
+    template<typename Stream> static inline void readbe(Stream &s, double &obj) {
+        uint64_t tmp;
+        s.read((char *)&tmp, sizeof(uint64_t));
+        obj = _betoh(tmp, 0);
     }
 };
-
 
 //
 // Templates for serializing to anything that looks like a stream,
@@ -158,14 +194,10 @@ enum
 //
 // Serialize types
 //
-// Signed long type and Unsigned long type remove due to avoid overload ambiguity of the compiler.
-// If none of the specialized versions above matched, default to calling member function.
-// "int nType" is changed to "long nType" to keep from getting an ambiguous overload error.
-// The compiler will only cast int to long if none of the other templates matched.
-// Thanks to Boost serialization for this idea.
-//
-#define WRITEDATA(s, obj)   s.write((char *)&(obj), sizeof(obj))
-#define READDATA(s, obj)    s.read((char *)&(obj), sizeof(obj))
+//#define WRITEDATA(s, obj)   s.write((char *)&(obj), sizeof(obj))
+//#define READDATA(s, obj)    s.read((char *)&(obj), sizeof(obj))
+#define WRITEDATA(s, obj)   ser_data::write(s, obj)
+#define READDATA(s, obj)    ser_data::read(s, obj)
 
 inline unsigned int GetSerializeSize(char a            ) { return sizeof(a); }
 inline unsigned int GetSerializeSize(signed char a     ) { return sizeof(a); }
@@ -206,7 +238,6 @@ template<typename Stream> inline void Unserialize(Stream &s, double &a          
 //
 // other types of basic
 //
-enum _CINV_MSG_TYPE: int;
 inline unsigned int GetSerializeSize(_CINV_MSG_TYPE a                           ) { return sizeof(a); }
 template<typename Stream> inline void Serialize(Stream &s, _CINV_MSG_TYPE a     ) { WRITEDATA(s, a); }
 template<typename Stream> inline void Unserialize(Stream &s, _CINV_MSG_TYPE &a  ) { READDATA(s, a); }
@@ -372,7 +403,8 @@ inline unsigned int GetSerializeSize(const std::basic_string<C> &str)
 template<typename Stream, typename C>
 inline void Serialize(Stream &os, const std::basic_string<C> &str)
 {
-    compact_size::manage::WriteCompactSize(os, str.size());
+    //assert(sizeof(str[0]) == 1);
+    compact_size::manage::WriteCompactSize(os, str.size() * sizeof(str[0]));
     if (! str.empty()) {
         os.write((char *)&str[0], (int)(str.size() * sizeof(str[0])));
     }
@@ -873,14 +905,15 @@ private:
     // CDataStream(const CDataStream &); // {}
     CDataStream &operator=(const CDataStream &); // {}
 
-    typedef CSerializeData vector_type;
-    vector_type vch;
-
     unsigned int nReadPos;
     short state;
     short exceptmask;
-public:
 
+protected:
+    typedef CSerializeData vector_type;
+    vector_type vch;
+
+public:
     typedef vector_type::allocator_type   allocator_type;
     typedef vector_type::size_type        size_type;
     typedef vector_type::difference_type  difference_type;
@@ -1075,7 +1108,7 @@ public:
         return read(nullptr, nSize);
     }
 
-    CDataStream &write(const char *pch, int nSize) noexcept {
+    CDataStream &write(const char *pch, int nSize) {
         // Write to the end of the buffer
         assert(nSize >= 0);
         vch.insert(vch.end(), pch, pch + nSize);
@@ -1100,7 +1133,7 @@ public:
     // << and >> write and read (Serialize, Unserialize)
     //
     template<typename T>
-    CDataStream &operator<<(const T &obj) noexcept {
+    CDataStream &operator<<(const T &obj) {
         // Serialize to this stream
         ::Serialize(*this, obj);
         return *this;
@@ -1127,17 +1160,103 @@ public:
         ret += b;
         return ret;
     }
+};
+
+//
+// move stream by pointer.
+//
+// Note: Forming an object by "std::move" turned out to take a long time to process.
+// For this reason, a pointers are used for move to an object.
+//
+class CMoveStream final : public CDataStream
+{
+private:
+    CMoveStream(); // {}
+    // CMoveStream(const CMoveStream &); // {}
+    // CMoveStream(const CMoveStream &&); // {}
+    CMoveStream &operator=(const CMoveStream &); // {}
+    // CMoveStream &operator=(const CMoveStream &&); // {}
+
+    typedef prevector<PREVECTOR_N, void *> move_vector;
+    move_vector mch;
+
+public:
+    explicit CMoveStream(int=0, int=0) noexcept : CDataStream(0, 0) {
+        Init();
+    }
+
+    CMoveStream(const_iterator pbegin, const_iterator pend, int=0, int=0) : CDataStream(pbegin, pend) {
+        Init();
+    }
+
+#if !defined(_MSC_VER) || _MSC_VER >= 1300
+    CMoveStream(const char *pbegin, const char *pend, int=0, int=0) : CDataStream(pbegin, pend) {
+        Init();
+    }
+#endif
+
+    CMoveStream(const vector_type &vchIn, int=0, int=0) : CDataStream(vchIn) {
+        Init();
+    }
+
+    CMoveStream(const datastream_signed_vector &vchIn, int=0, int=0) : CDataStream(vchIn) {
+        Init();
+    }
+
+    CMoveStream(const datastream_vector &vchIn, int=0, int=0) : CDataStream(vchIn) {
+        Init();
+    }
+
+    void Init(int=0, int=0) noexcept {
+        CDataStream::Init(0, 0);
+    }
+
+    //
+    // << and >> write and read (Serialize, Unserialize)
+    //
+    template<typename T>
+    CMoveStream &operator<<(const T &obj) {
+        // Serialize to this stream
+        // debugcs::instance() << "CMoveStream: CMoveStream &operator<<(const T &obj)" << debugcs::endl();
+        CDataStream::operator<<(obj);
+        return *this;
+    }
+
+    template<typename T>
+    CMoveStream &operator<<(const T *&obj) {
+        // Serialize to this stream by pointer
+        mch.push_back((void *)obj);
+        return *this;
+    }
+
+    template<typename T>
+    CMoveStream &operator>>(T &obj) {
+        // Unserialize from this stream
+        CDataStream::operator>>(obj);
+        return *this;
+    }
+
+    template<typename T>
+    CMoveStream &operator>>(T *&obj) {
+        // Unserialize from this stream by pointer
+        obj = (T *)mch.front();
+        mch.erase(mch.begin());
+        return *this;
+    }
 
     //
     // operator+ mv
     //
-    friend CDataStream operator+(const CDataStream &&a, const CDataStream &&b) {
-        debugcs::instance() << "mv CDataStream operator+(const CDataStream &&a, const CDataStream &&b)" << debugcs::endl();
-        CDataStream ret(a);
-        ret += b;
+    friend CMoveStream operator+(const CMoveStream &&a, const CMoveStream &&b) {
+        debugcs::instance() << "CMoveStream operator+(const CMoveStream &&a, const CMoveStream &&b)" << debugcs::endl();
+        CMoveStream ret(std::move(a));
+        ret += std::move(b);
         return ret;
     }
 };
+
+// replace from CDataStream to CMoveStream
+#define CDataStream CMoveStream
 
 //
 // C, RAII wrapper for FILE *.
