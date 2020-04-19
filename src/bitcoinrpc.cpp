@@ -169,9 +169,9 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() > 1) {
         throw std::runtime_error(
-            ("stop <detach>\n"
+            sts_c("stop <detach>\n"
             "<detach> is true or false to detach the database or not for this stop only\n"
-            "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value).").c_str());
+            "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value)."));
     }
 
     // Shutdown will take long enough that the response should get back
@@ -180,7 +180,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
     }
 
     entry::StartShutdown();
-    return std::string((coin_param::strCoinName + " server stopping").c_str());
+    return std::string(sts_c(coin_param::strCoinName + " server stopping"));
 }
 
 //
@@ -662,7 +662,7 @@ private:
 void bitrpc::ThreadRPCServer(void *parg)
 {
     // Make this thread recognisable as the RPC listener
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpclist").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-rpclist"));
 
     try {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
@@ -1066,7 +1066,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
     //    LOCK(cs_THREAD_RPCHANDLER);
 
     // Make this thread recognisable as the RPC handler
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-rpchand"));
 
     {
         LOCK(cs_THREAD_RPCHANDLER);

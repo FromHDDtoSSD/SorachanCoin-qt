@@ -59,7 +59,7 @@ void net_node::Shutdown(void *parg)
     static bool fTaken;
 
     // Make this thread recognisable as the shutdown thread
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-shutoff").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-shutoff"));
 
     bool fFirstThread = false;
     {
@@ -139,10 +139,10 @@ bool entry::AppInit(int argc, char *argv[])
             //
             // First part of help message is specific to bitcoind / RPC client
             //
-            std::string strUsage = _((coin_param::strCoinName + " version").c_str()) + (
+            std::string strUsage = _(sts_c(coin_param::strCoinName + " version")) + (
                   " " + format_version::FormatFullVersion() + "\n\n" + _("Usage:") + "\n" +
                   "  " + coin_param::strCoinName + "d [options]                     " + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _(("Send command to -server or " + coin_param::strCoinName + "d").c_str()) + "\n" +
+                  "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _(sts_c("Send command to -server or " + coin_param::strCoinName + "d")) + "\n" +
                   "  " + coin_param::strCoinName + "d [options] help                " + _("List commands") + "\n" +
                   "  " + coin_param::strCoinName + "d [options] help <command>      " + _("Get help for a command") + "\n"
                   ).c_str();
@@ -158,7 +158,7 @@ bool entry::AppInit(int argc, char *argv[])
         //
         for (int i = 1; i < argc; ++i)
         {
-            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], (coin_param::strCoinName + ":").c_str())) {
+            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], sts_c(coin_param::strCoinName + ":"))) {
                 args_bool::fCommandLine = true;
             }
         }
@@ -239,8 +239,8 @@ std::string entry::HelpMessage()
 {
     std::string strUsage = _("Options:") + "\n" +
         "  -?                     " + _("This help message") + "\n" +
-        "  -conf=<file>           " + _(("Specify configuration file (default: " + coin_param::strCoinNameL + ".conf)").c_str()) + "\n" +
-        "  -pid=<file>            " + _(("Specify pid file (default: " + coin_param::strCoinNameL + "d.pid)").c_str()) + "\n" +
+        "  -conf=<file>           " + _(sts_c("Specify configuration file (default: " + coin_param::strCoinNameL + ".conf)")) + "\n" +
+        "  -pid=<file>            " + _(sts_c("Specify pid file (default: " + coin_param::strCoinNameL + "d.pid)")) + "\n" +
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -wallet=<file>         " + _("Specify wallet file (within data directory)") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
@@ -251,7 +251,7 @@ std::string entry::HelpMessage()
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
         "  -torname=<host.onion>  " + _("Send the specified hidden service name when connecting to Tor nodes (default: none)") + "\n"
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
-        "  -port=<port>           " + _(("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet[tcp_port::nMainnet_default]) + "or testnet: " + std::to_string(tcp_port::uTestnet[tcp_port::nTestnet_default]) + ")").c_str()) + "\n" +
+        "  -port=<port>           " + _(sts_c("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet[tcp_port::nMainnet_default]) + "or testnet: " + std::to_string(tcp_port::uTestnet[tcp_port::nTestnet_default]) + ")")) + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
@@ -300,7 +300,7 @@ std::string entry::HelpMessage()
 #endif
         "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n" +
         "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n" +
-        "  -rpcport=<port>        " + _(("Listen for JSON-RPC connections on <port> (default: " + std::to_string(tcp_port::uJsonRpcMain) + " or testnet: " + std::to_string(tcp_port::uJsonRpcTest) + ")").c_str()) + "\n" +
+        "  -rpcport=<port>        " + _(sts_c("Listen for JSON-RPC connections on <port> (default: " + std::to_string(tcp_port::uJsonRpcMain) + " or testnet: " + std::to_string(tcp_port::uJsonRpcTest) + ")")) + "\n" +
         "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n" +
         "  -rpcconnect=<ip>       " + _("Send commands to node running on <ip> (default: 127.0.0.1)") + "\n" +
         "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n" +
@@ -602,7 +602,7 @@ bool entry::AppInit2()
     std::ostringstream strErrors;
 
     if (args_bool::fDaemon) {
-        fprintf(stdout, (coin_param::strCoinName + " server starting\n").c_str());
+        fprintf(stdout, sts_c(coin_param::strCoinName + " server starting\n"));
     }
 
     if (block_info::nScriptCheckThreads) {
@@ -944,7 +944,7 @@ bool entry::AppInit2()
         } else if (nLoadWalletRet == DB_TOO_NEW) {
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of coin") << "\n";
         } else if (nLoadWalletRet == DB_NEED_REWRITE) {
-            strErrors << _(("Wallet needed to be rewritten: restart " + coin_param::strCoinName + " to complete").c_str()) << "\n";
+            strErrors << _(sts_c("Wallet needed to be rewritten: restart " + coin_param::strCoinName + " to complete")) << "\n";
             printf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         } else {

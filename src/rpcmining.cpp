@@ -239,11 +239,11 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
     }
 
     if (net_node::vNodes.empty()) {
-        throw bitjson::JSONRPCError(-9, (coin_param::strCoinName + " is not connected!").c_str());
+        throw bitjson::JSONRPCError(-9, sts_c(coin_param::strCoinName + " is not connected!"));
     }
 
     if (block_process::manage::IsInitialBlockDownload()) {
-        throw bitjson::JSONRPCError(-10, (coin_param::strCoinName + " is downloading blocks...").c_str());
+        throw bitjson::JSONRPCError(-10, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
     typedef std::map<uint256, std::pair<CBlock *, CScript> > mapNewBlock_t;
@@ -383,10 +383,10 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
     }
 
     if (net_node::vNodes.empty()) {
-        throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, (coin_param::strCoinName + " is not connected!").c_str());
+        throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, sts_c(coin_param::strCoinName + " is not connected!"));
     }
     if (block_process::manage::IsInitialBlockDownload()) {
-        throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, (coin_param::strCoinName + " is downloading blocks...").c_str());
+        throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
     typedef std::map<uint256, std::pair<CBlock *, CScript> > mapNewBlock_t;
@@ -539,10 +539,10 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
     }
     if (net_node::vNodes.empty()) {
-        throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, (coin_param::strCoinName + " is not connected!").c_str());
+        throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, sts_c(coin_param::strCoinName + " is not connected!"));
     }
     if (block_process::manage::IsInitialBlockDownload()) {
-        throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, (coin_param::strCoinName + " is downloading blocks...").c_str());
+        throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
     static CReserveKey reservekey(entry::pwalletMain);

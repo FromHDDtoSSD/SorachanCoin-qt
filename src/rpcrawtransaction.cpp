@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::listunspent(const json_spirit::Array &params, bool
         {
             CBitcoinAddress address(input.get_str());
             if (! address.IsValid()) {
-                throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(("Invalid " + coin_param::strCoinName + " address: ").c_str()) + input.get_str());
+                throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(sts_c("Invalid " + coin_param::strCoinName + " address: ")) + input.get_str());
             }
             if (setAddress.count(address)) {
                 throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ") + input.get_str());
@@ -695,16 +695,16 @@ json_spirit::Value CRPCTable::createmultisig(const json_spirit::Array &params, b
             // Case 1: Bitcoin address and we have full public key
             CKeyID keyID;
             if (! address.GetKeyID(keyID)) {
-                throw std::runtime_error(strprintf("%s does not refer to a key",ks.c_str()));
+                throw std::runtime_error(strprintf("%s does not refer to a key", ks.c_str()));
             }
 
             CPubKey vchPubKey;
             if (! entry::pwalletMain->GetPubKey(keyID, vchPubKey)) {
-                throw std::runtime_error(strprintf("no full public key for address %s",ks.c_str()));
+                throw std::runtime_error(strprintf("no full public key for address %s", ks.c_str()));
             }
 
             if (! vchPubKey.IsFullyValid()) {
-                throw std::runtime_error(" Invalid public key: "+ks);
+                throw std::runtime_error(std::string(" Invalid public key: ") + ks);
             }
 
             pubkeys[i] = vchPubKey;

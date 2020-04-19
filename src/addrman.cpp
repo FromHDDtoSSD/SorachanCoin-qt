@@ -274,7 +274,7 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId, int nOrigin)
 
 void CAddrMan::Good_(const CService &addr, int64_t nTime)
 {
-    // printf("Good: addr=%s\n", addr.ToString().c_str());
+    // printf(sts_c("Good: addr=%s\n", addr.ToString()));
     int nId;
     CAddrInfo *pinfo = Find(addr, &nId);
 
@@ -320,7 +320,7 @@ void CAddrMan::Good_(const CService &addr, int64_t nTime)
         return;
     }
 
-    printf("Moving %s to tried\n", addr.ToString().c_str());
+    printf("Moving %s to tried\n", addr.ToString());
 
     // move nId to the tried tables
     MakeTried(info, nId, nUBucket);

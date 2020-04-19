@@ -8,12 +8,7 @@
 
 #include <string>
 #include <sstream>
-
-#ifdef WIN32
-# include <windows.h>
-#else
-# include <unistd.h>
-#endif
+#include "compat/compat.h" // windows.h
 
 #ifdef DEBUG_ALGO
 # define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()

@@ -194,8 +194,6 @@ enum
 //
 // Serialize types
 //
-//#define WRITEDATA(s, obj)   s.write((char *)&(obj), sizeof(obj))
-//#define READDATA(s, obj)    s.read((char *)&(obj), sizeof(obj))
 #define WRITEDATA(s, obj)   ser_data::write(s, obj)
 #define READDATA(s, obj)    ser_data::read(s, obj)
 
@@ -1260,116 +1258,12 @@ public:
 
 //
 // C, RAII wrapper for FILE *.
+// D, Wrapper around a FILE * that implements a ring buffer to deserialize from.
+// It guarantees the ability to rewind a given number of bytes.
 //
 // Will automatically close the file when it goes out of scope if not null.
 // If you're returning the file pointer, return file.release().
 // If you need to close the file early, use file.fclose() instead of fclose(file).
-//
-class CAutoFile : public CTypeVersionBehave
-{
-private:
-    CAutoFile(); // {}
-    // CAutoFile(const CAutoFile &); // {}
-    CAutoFile &operator=(const CAutoFile &); // {}
-
-    FILE *file;
-    short state;
-    short exceptmask;
-
-public:
-    CAutoFile(FILE *filenew, int=0, int=0) noexcept {
-        file = filenew;
-        state = 0;
-        exceptmask = std::ios::badbit | std::ios::failbit;
-    }
-
-    ~CAutoFile() noexcept {
-        fclose();
-    }
-
-    void fclose() noexcept {
-        if (file != nullptr && file != stdin && file != stdout && file != stderr) {
-            ::fclose(file);
-        }
-        file = nullptr;
-    }
-
-    FILE *release() noexcept             { FILE *ret = file; file = nullptr; return ret; }
-    operator FILE *() noexcept           { return file; }
-    FILE *operator->() noexcept          { return file; }
-    FILE &operator*() noexcept           { return *file; }
-    FILE **operator&() noexcept          { return &file; }
-    FILE *operator=(FILE *pnew) noexcept { return file = pnew; }
-    bool operator!() noexcept            { return (file == nullptr); }
-
-    //
-    // Stream subset
-    //
-    void setstate(short bits, const char *psz) {
-        state |= bits;
-        if (state & exceptmask) {
-            throw std::ios_base::failure(psz);
-        }
-    }
-
-    bool fail() const noexcept            { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
-    bool good() const noexcept            { return state == 0; }
-    void clear(short n = 0) noexcept      { state = n; }
-    short exceptions() const noexcept     { return exceptmask; }
-    short exceptions(short mask) noexcept { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
-
-    CAutoFile &read(char *pch, size_t nSize) {
-        if (! file) {
-            throw std::ios_base::failure("CAutoFile::read : file handle is nullptr");
-        }
-        size_t _nSize = nSize / sizeof(char);
-        if (::fread(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
-            setstate(std::ios::failbit, ::feof(file) ? "CAutoFile::read : end of file" : "CAutoFile::read : fread failed");
-        }
-        return *this;
-    }
-
-    CAutoFile &write(const char *pch, size_t nSize) {
-        if (! file) {
-            throw std::ios_base::failure("CAutoFile::write : file handle is nullptr");
-        }
-        size_t _nSize = nSize / sizeof(char);
-        if (::fwrite(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
-            setstate(std::ios::failbit, "CAutoFile::write : write failed");
-        }
-        return *this;
-    }
-
-    template<typename T>
-    unsigned int GetSerializeSize(const T &obj) const noexcept {
-        // Tells the size of the object if serialized to this stream
-        return ::GetSerializeSize(obj);
-    }
-
-    template<typename T>
-    CAutoFile &operator<<(const T &obj) {
-        // Serialize to this stream
-        if (! file) {
-            throw std::ios_base::failure("CAutoFile::operator<< : file handle is nullptr");
-        }
-        ::Serialize(*this, obj);
-        return *this;
-    }
-
-    template<typename T>
-    CAutoFile &operator>>(T &obj) {
-        // Unserialize from this stream
-        if (! file) {
-            throw std::ios_base::failure("CAutoFile::operator>> : file handle is nullptr");
-        }
-        ::Unserialize(*this, obj);
-        return *this;
-    }
-};
-
-//
-// D, Wrapper around a FILE * that implements a ring buffer to deserialize from.
-// It guarantees the ability to rewind a given number of bytes.
 //
 #ifdef BUFFER_PREVECTOR_ENABLE
     typedef prevector<PREVECTOR_BUFFER_N, char> bufferedfile_vector;
@@ -1380,7 +1274,7 @@ class CBufferedFile
 {
 private:
     CBufferedFile(); // {}
-    CBufferedFile(const CBufferedFile &); // {}
+    // CBufferedFile(const CBufferedFile &); // {}
     CBufferedFile &operator=(const CBufferedFile &); // {}
 
     FILE *src;                  // source file
@@ -1423,7 +1317,7 @@ private:
     }
 
 public:
-    CBufferedFile(FILE *fileIn, uint64_t nBufSize, uint64_t nRewindIn, int=0, int=0) noexcept :
+    CBufferedFile(FILE *fileIn, uint64_t nBufSize=PREVECTOR_BUFFER_N, uint64_t nRewindIn=0) :
     src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit(std::numeric_limits<uint64_t>::max()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
     state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
 
@@ -1514,14 +1408,11 @@ public:
     }
 
     // Unserialize from this stream
-    // unused operator
-    /*
     template<typename T>
     CBufferedFile &operator>>(T &obj) {
         ::Unserialize(*this, obj);
         return *this;
     }
-    */
 
     // search for a given byte in the stream, and remain positioned on it
     void FindByte(char ch) noexcept {
@@ -1535,6 +1426,110 @@ public:
             }
             ++nReadPos;
         }
+    }
+};
+
+class CAutoFile : public CTypeVersionBehave
+{
+private:
+    CAutoFile(); // {}
+    // CAutoFile(const CAutoFile &); // {}
+    CAutoFile &operator=(const CAutoFile &); // {}
+
+    FILE *file;
+    short state;
+    short exceptmask;
+    CBufferedFile buffer;
+
+public:
+    CAutoFile(FILE *filenew, int=0, int=0) noexcept : buffer(filenew) {
+        file = filenew;
+        state = 0;
+        exceptmask = std::ios::badbit | std::ios::failbit;
+    }
+
+    ~CAutoFile() noexcept {
+        fclose();
+    }
+
+    void fclose() noexcept {
+        if (file != nullptr && file != stdin && file != stdout && file != stderr) {
+            ::fclose(file);
+        }
+        file = nullptr;
+    }
+
+    FILE *release() noexcept             { FILE *ret = file; file = nullptr; return ret; }
+    operator FILE *() noexcept           { return file; }
+    FILE *operator->() noexcept          { return file; }
+    FILE &operator*() noexcept           { return *file; }
+    FILE **operator&() noexcept          { return &file; }
+    FILE *operator=(FILE *pnew) noexcept { return file = pnew; }
+    bool operator!() noexcept            { return (file == nullptr); }
+
+    //
+    // Stream subset
+    //
+    void setstate(short bits, const char *psz) {
+        state |= bits;
+        if (state & exceptmask) {
+            throw std::ios_base::failure(psz);
+        }
+    }
+
+    bool fail() const noexcept            { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
+    bool good() const noexcept            { return state == 0; }
+    void clear(short n = 0) noexcept      { state = n; }
+    short exceptions() const noexcept     { return exceptmask; }
+    short exceptions(short mask) noexcept { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
+
+    CAutoFile &read(char *pch, size_t nSize) {
+        // debugcs::instance() << "CAutoFile: CAutoFile &read(char *pch, size_t nSize) nSize: " << nSize << debugcs::endl();
+        if (! file) {
+            throw std::ios_base::failure("CAutoFile::read : file handle is nullptr");
+        }
+        size_t _nSize = nSize / sizeof(char);
+        if (::fread(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
+            setstate(std::ios::failbit, ::feof(file) ? "CAutoFile::read : end of file" : "CAutoFile::read : fread failed");
+        }
+        return *this;
+    }
+
+    CAutoFile &write(const char *pch, size_t nSize) {
+        if (! file) {
+            throw std::ios_base::failure("CAutoFile::write : file handle is nullptr");
+        }
+        size_t _nSize = nSize / sizeof(char);
+        if (::fwrite(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
+            setstate(std::ios::failbit, "CAutoFile::write : write failed");
+        }
+        return *this;
+    }
+
+    template<typename T>
+    unsigned int GetSerializeSize(const T &obj) const noexcept {
+        // Tells the size of the object if serialized to this stream
+        return ::GetSerializeSize(obj);
+    }
+
+    template<typename T>
+    CAutoFile &operator<<(const T &obj) {
+        // Serialize to this stream
+        if (! file) {
+            throw std::ios_base::failure("CAutoFile::operator<< : file handle is nullptr");
+        }
+        ::Serialize(*this, obj);
+        return *this;
+    }
+
+    template<typename T>
+    CAutoFile &operator>>(T &obj) {
+        // Unserialize from this stream
+        if (! file) {
+            throw std::ios_base::failure("CAutoFile::operator>> : file handle is nullptr");
+        }
+        ::Unserialize(*this, obj);
+        return *this;
     }
 };
 

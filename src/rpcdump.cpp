@@ -119,7 +119,7 @@ json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, bo
         rpctable_vector data(hex::ParseHex(params[0].get_str()));
         script = CScript(data.begin(), data.end());
     } else {
-        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + coin_param::strCoinName + " address or script").c_str());
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, sts_c("Invalid " + coin_param::strCoinName + " address or script"));
     }
 
     std::string strLabel = "";
@@ -241,7 +241,7 @@ json_spirit::Value CRPCTable::dumpprivkey(const json_spirit::Array &params, bool
     std::string strAddress = params[0].get_str();
     CBitcoinAddress address;
     if (! address.SetString(strAddress)) {
-        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + coin_param::strCoinName + " address").c_str());
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, sts_c("Invalid " + coin_param::strCoinName + " address"));
     }
     if (CWallet::fWalletUnlockMintOnly) {
         throw bitjson::JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for minting only.");
@@ -279,7 +279,7 @@ json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, bool fHe
 
     CBitcoinAddress address;
     if (! address.SetString(strAddress)) {
-        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + coin_param::strCoinName + " address").c_str());
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, sts_c("Invalid " + coin_param::strCoinName + " address"));
     }
     if (CWallet::fWalletUnlockMintOnly) {
         throw bitjson::JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for minting only.");

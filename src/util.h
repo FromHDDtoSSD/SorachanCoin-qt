@@ -148,16 +148,21 @@ public:
     // Use a dummy argument to work around this, and use a macro to keep similar semantics.
     //
 
-    /** Overload strprintf for char*, so that GCC format type warnings can be given */
+    /** Overload strprintf for char *, so that GCC format type warnings can be given */
     static std::string ATTR_WARN_PRINTF(1,3) real_strprintf(const char *format, int dummy, ...);
 
     /** Overload strprintf for std::string, to be able to use it with _ (translation). This will not support GCC format type warnings (-Wformat) so be careful. */
     static std::string real_strprintf(const std::string &format, int dummy, ...);
 
     static bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
+    static bool error(const std::string &str);
 };
 #define printf(format, ...) print::OutputDebugStringF(format, ##__VA_ARGS__)
 #define strprintf(format, ...) print::real_strprintf(format, 0, __VA_ARGS__)
+#define sts_c(imp) std::string(imp).c_str()
+#define return_error(imp) \
+    std::string err = imp; \
+    return print::error(err);
 
 //
 // C-Runtime overload

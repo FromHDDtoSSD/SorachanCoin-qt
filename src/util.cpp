@@ -369,6 +369,12 @@ bool print::error(const char *format, ...)
     return false;
 }
 
+bool print::error(const std::string &str)
+{
+    printf("ERROR: %s\n", str.c_str());
+    return false;
+}
+
 void init::InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet)
 {
     // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
@@ -956,7 +962,7 @@ void config::createConf()
 
 boost::filesystem::path iofs::GetConfigFile()
 {
-    boost::filesystem::path pathConfigFile(map_arg::GetArg("-conf", (coin_param::strCoinName + ".conf").c_str()));
+    boost::filesystem::path pathConfigFile(map_arg::GetArg("-conf", sts_c(coin_param::strCoinName + ".conf")));
     if (! pathConfigFile.is_complete()) {
         pathConfigFile = iofs::GetDataDir(false) / pathConfigFile;
     }
@@ -992,7 +998,7 @@ void config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, 
 
 boost::filesystem::path iofs::GetPidFile()
 {
-    boost::filesystem::path pathPidFile(map_arg::GetArg("-pid", (coin_param::strCoinName + ".pid").c_str()));
+    boost::filesystem::path pathPidFile(map_arg::GetArg("-pid", sts_c(coin_param::strCoinName + ".pid")));
     if (! pathPidFile.is_complete()) { pathPidFile = iofs::GetDataDir() / pathPidFile; }
     return pathPidFile;
 }
@@ -1105,7 +1111,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 
                 if (! fMatch) {
                     fDone = true;
-                    std::string strMessage = _(("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly.").c_str());
+                    std::string strMessage = _(sts_c("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly."));
                     excep::set_strMiscWarning( strMessage );
                     printf("*** %s\n", strMessage.c_str());
                     CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", coin_param::strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);

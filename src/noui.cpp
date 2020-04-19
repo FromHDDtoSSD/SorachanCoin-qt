@@ -16,9 +16,9 @@ int CClientUIInterface::noui_ThreadSafeMessageBox(const std::string &message, co
     return 4;
 }
 
-bool CClientUIInterface::noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption)
+bool CClientUIInterface::noui_ThreadSafeAskFee(int64_t /*nFeeRequired*/, const std::string &/*strCaption*/)
 {
-    static_cast<int64_t>(nFeeRequired);
-    static_cast<const std::string &>(strCaption);
+    //static_cast<int64_t>(nFeeRequired);
+    //static_cast<const std::string &>(strCaption);
     return true;
 }

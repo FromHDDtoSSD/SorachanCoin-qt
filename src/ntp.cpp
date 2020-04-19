@@ -341,7 +341,7 @@ void ntp::ThreadNtpSamples(void *parg)
     net_node::vnThreadsRunning[THREAD_NTP]++;
 
     // Make this thread recognisable as time synchronization thread
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-ntp-samples").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-ntp-samples"));
 
     CMedianFilter<int64_t> vTimeOffsets(200,0);
 
@@ -400,7 +400,7 @@ void ntp::ThreadNtpSamples(void *parg)
 
         if (bitsystem::GetNodesOffset() == INT_MAX && util::abs64(nNtpOffset) > 40 * 60) {
             // If there is not enough node offsets data and NTP time offset is greater than 40 minutes then give a warning.
-            std::string strMessage = _(("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly.").c_str());
+            std::string strMessage = _(sts_c("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly."));
             excep::set_strMiscWarning( strMessage );
             printf("*** %s\n", strMessage.c_str());
             CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", coin_param::strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);

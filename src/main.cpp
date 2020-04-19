@@ -1795,7 +1795,7 @@ bool CBlock::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
 void block_check::thread::ThreadScriptCheck(void *)
 {
     net_node::vnThreadsRunning[THREAD_SCRIPTCHECK]++;
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-scriptch").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-scriptch"));
     scriptcheckqueue.Thread();
     net_node::vnThreadsRunning[THREAD_SCRIPTCHECK]--;
 }
@@ -2611,7 +2611,9 @@ bool CBlock::AcceptBlock()
 
     // Don't accept blocks with future timestamps
     if (pindexPrev->nHeight > 1 && nMedianTimePast + nMaxOffset < GetBlockTime()) {
-        return print::error(("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：" + std::to_string(nMedianTimePast) + " nMaxOffset：" + std::to_string(nMaxOffset) + " GetBlockTime()：" + std::to_string(GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->nHeight)).c_str());
+        return_error("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast："
+                     + std::to_string(nMedianTimePast) + " nMaxOffset：" + std::to_string(nMaxOffset) + " GetBlockTime()："
+                     + std::to_string(GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->nHeight));
     }
 
     // Check that all transactions are finalized
@@ -3459,11 +3461,13 @@ bool block_process::manage::AlreadyHave(CTxDB &txdb, const CInv &inv)
                     mapOrphanTransactions.count(inv.get_hash()) ||
                     txdb.ContainsTx(inv.get_hash());
         }
-        break;
+        //break;
     case _CINV_MSG_TYPE::MSG_BLOCK:
         return  block_info::mapBlockIndex.count(inv.get_hash()) ||
                 block_process::mapOrphanBlocks.count(inv.get_hash());
-        break;
+        //break;
+    case _CINV_MSG_TYPE::MSG_ERROR:
+        break; // do nothing
     }
 
     // Don't know what it is, just say we already got one
