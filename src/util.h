@@ -6,13 +6,12 @@
 #ifndef BITCOIN_UTIL_H
 #define BITCOIN_UTIL_H
 
-
 #include "uint256.h"
 
 #ifndef WIN32
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/resource.h>
+# include <sys/types.h>
+# include <sys/time.h>
+# include <sys/resource.h>
 #endif
 
 #include <map>
@@ -22,11 +21,11 @@
 #include <boost/foreach.hpp>
 
 #ifndef Q_MOC_RUN
-#include <boost/thread.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/path.hpp>
-#include <boost/date_time/gregorian/gregorian_types.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+# include <boost/thread.hpp>
+# include <boost/filesystem.hpp>
+# include <boost/filesystem/path.hpp>
+# include <boost/date_time/gregorian/gregorian_types.hpp>
+# include <boost/date_time/posix_time/posix_time_types.hpp>
 #endif
 
 #include <stdarg.h>
@@ -34,7 +33,7 @@
 #include <openssl/rand.h>
 
 #if defined(__USE_MINGW_ANSI_STDIO)
-#undef __USE_MINGW_ANSI_STDIO // This constant forces MinGW to conduct stupid behavior
+# undef __USE_MINGW_ANSI_STDIO // This constant forces MinGW to conduct stupid behavior
 #endif
 #include <inttypes.h>
 
@@ -45,7 +44,7 @@
 //
 namespace block_info
 {
-    extern unsigned char gpchMessageStart[4];// = { 0xe4, 0xe8, 0xe9, 0xe5 };
+    extern unsigned char gpchMessageStart[4]; // = { 0xe4, 0xe8, 0xe9, 0xe5 };
 }
 
 //
@@ -76,27 +75,27 @@ public:
 
 namespace args_bool
 {
-    extern bool_arg fUseMemoryLog;//(false);
-    extern bool_arg fConfChange;//(false);
-    extern bool_arg fUseFastIndex;//(false);
-    extern bool_arg fNoListen;//(false);
-    extern bool_arg fDebug;//(false);
-    extern bool_arg fDebugNet;//(false);
-    extern bool_arg fPrintToConsole;//(false);
-    extern bool_arg fPrintToDebugger;//(false);
-    extern bool_arg fRequestShutdown;//(false);
-    extern bool_arg fShutdown;//(false)
-    extern bool_arg fDaemon;//(false)
-    extern bool_arg fServer;//(false)
-    extern bool_arg fCommandLine;//(false)
-    extern bool_arg fTestNet;//(false)
-    extern bool_arg fLogTimestamps;//(false)
-    extern bool_arg fReopenDebugLog;//(false)
+    extern bool_arg fUseMemoryLog; //(false);
+    extern bool_arg fConfChange; //(false);
+    extern bool_arg fUseFastIndex; //(false);
+    extern bool_arg fNoListen; //(false);
+    extern bool_arg fDebug; //(false);
+    extern bool_arg fDebugNet; //(false);
+    extern bool_arg fPrintToConsole; //(false);
+    extern bool_arg fPrintToDebugger; //(false);
+    extern bool_arg fRequestShutdown; //(false);
+    extern bool_arg fShutdown; //(false)
+    extern bool_arg fDaemon; //(false)
+    extern bool_arg fServer; //(false)
+    extern bool_arg fCommandLine; //(false)
+    extern bool_arg fTestNet; //(false)
+    extern bool_arg fLogTimestamps; //(false)
+    extern bool_arg fReopenDebugLog; //(false)
 }
 
 namespace args_uint
 {
-    extern unsigned int nNodeLifespan;// = 0;
+    extern unsigned int nNodeLifespan; // = 0;
 }
 
 //
@@ -105,9 +104,7 @@ namespace args_uint
 // Parameters count from 1.
 //
 #ifdef __GNUC__
- #define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
-#else
- #define ATTR_WARN_PRINTF(X,Y)
+# define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
 #endif
 
 //
@@ -138,24 +135,36 @@ public:
 class print : public trace
 {
 public:
-    static int ATTR_WARN_PRINTF(1,2) OutputDebugStringF(const char *pszFormat, ...);
+#ifdef __GNUC__
+    static int ATTR_WARN_PRINTF(1, 2) OutputDebugStringF(const char *pszFormat, ...);
+#else
+    static int OutputDebugStringF(const char *pszFormat, ...);
+#endif
     static std::string vstrprintf(const char *format, va_list ap);
 
     //
     // Rationale for the real_strprintf / strprintf construction:
-    // It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3). 
+    // It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3).
     //
     // Use a dummy argument to work around this, and use a macro to keep similar semantics.
     //
 
-    /** Overload strprintf for char *, so that GCC format type warnings can be given */
-    static std::string ATTR_WARN_PRINTF(1,3) real_strprintf(const char *format, int dummy, ...);
+    /** Overload strprintf for char*, so that GCC format type warnings can be given */
+#ifdef __GNUC__
+    static std::string ATTR_WARN_PRINTF(1, 3) real_strprintf(const char *format, int dummy, ...);
+#else
+    static std::string real_strprintf(const char *format, int dummy, ...);
+#endif
 
     /** Overload strprintf for std::string, to be able to use it with _ (translation). This will not support GCC format type warnings (-Wformat) so be careful. */
     static std::string real_strprintf(const std::string &format, int dummy, ...);
 
-    static bool ATTR_WARN_PRINTF(1,2) error(const char *format, ...);
+#ifdef __GNUC__
+    static bool ATTR_WARN_PRINTF(1, 2) error(const char *format, ...);
     static bool error(const std::string &str);
+#else
+    static bool error(const char *format, ...);
+#endif
 };
 #define printf(format, ...) print::OutputDebugStringF(format, ##__VA_ARGS__)
 #define strprintf(format, ...) print::real_strprintf(format, 0, __VA_ARGS__)
@@ -182,7 +191,7 @@ inline int64_t atoi64(const char *psz)
 #ifdef _MSC_VER
     return ::_atoi64(psz);
 #else
-    return ::strtoll(psz, NULL, 10);
+    return ::strtoll(psz, nullptr, 10);
 #endif
 }
 
@@ -191,28 +200,28 @@ inline int64_t atoi64(const std::string &str)
 #ifdef _MSC_VER
     return ::_atoi64(str.c_str());
 #else
-    return ::strtoll(str.c_str(), NULL, 10);
+    return ::strtoll(str.c_str(), nullptr, 10);
 #endif
 }
 
 inline int32_t strtol(const char *psz)
 {
-    return ::strtol(psz, NULL, 10);
+    return ::strtol(psz, nullptr, 10);
 }
 
 inline int32_t strtol(const std::string &str)
 {
-    return ::strtol(str.c_str(), NULL, 10);
+    return ::strtol(str.c_str(), nullptr, 10);
 }
 
 inline uint32_t strtoul(const char *psz)
 {
-    return ::strtoul(psz, NULL, 10);
+    return ::strtoul(psz, nullptr, 10);
 }
 
 inline uint32_t strtoul(const std::string &str)
 {
-    return ::strtoul(str.c_str(), NULL, 10);
+    return ::strtoul(str.c_str(), nullptr, 10);
 }
 
 inline int atoi(const std::string &str)
@@ -227,11 +236,11 @@ inline int64_t GetPerformanceCounter()
 {
     int64_t nCounter = 0;
 #ifdef WIN32
-    ::QueryPerformanceCounter((LARGE_INTEGER*)&nCounter);
+    ::QueryPerformanceCounter((LARGE_INTEGER *)&nCounter);
 #else
     timeval t;
-    ::gettimeofday(&t, NULL);
-    nCounter = (int64_t) t.tv_sec * 1000000 + t.tv_usec;
+    ::gettimeofday(&t, nullptr);
+    nCounter = (int64_t)t.tv_sec * 1000000 + t.tv_usec;
 #endif
     return nCounter;
 }
@@ -243,8 +252,8 @@ private:
 
     static std::string FormatException(const std::exception *pex, const char *pszThread) {
 #ifdef WIN32
-        char pszModule[MAX_PATH] = "";
-        ::GetModuleFileNameA(NULL, pszModule, sizeof(pszModule));
+        char pszModule[MAX_PATH];
+        ::GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
 #else
         const char *pszModule = coin_param::strCoinName.c_str();
 #endif
@@ -293,40 +302,25 @@ namespace util
     const int64_t COIN = 1000000;
     const int64_t CENT = 10000;
 
-    // Align by increasing pointer, must have extra space at end of buffer
-    /*
-    template <size_t nBytes, typename T>
-    static T *alignup(T *p) {
-        union
-        {
-            T *ptr;
-            size_t n;
-        } u;
-        u.ptr = p;
-        u.n = (u.n + (nBytes-1)) & ~(nBytes-1);
-        return u.ptr;
-    }
-    */
-
 #ifdef WIN32 // Windows MAX_PATH 256, ::Sleep(msec)
- #define MSG_NOSIGNAL        0
- #define MSG_DONTWAIT        0
+# define MSG_NOSIGNAL        0
+# define MSG_DONTWAIT        0
 
- #ifndef S_IRUSR
-  #define S_IRUSR            0400
-  #define S_IWUSR            0200
- #endif
- inline void Sleep(int64_t n) {
-     ::Sleep(n);
- }
+# ifndef S_IRUSR
+#  define S_IRUSR            0400
+#  define S_IWUSR            0200
+# endif
+    inline void Sleep(int64_t n) {
+        ::Sleep(n);
+    }
 #else
- #define MAX_PATH            1024
+# define MAX_PATH            1024
     inline void Sleep(int64_t n) {
         //
-        // Boost has a year 2038 problem— if the request sleep time is past epoch+2^31 seconds the sleep returns instantly. 
+        // Boost has a year 2038 problem if the request sleep time is past epoch+2^31 seconds the sleep returns instantly.
         // So we clamp our sleeps here to 10 years and hope that boost is fixed by 2028.
         //
-        boost::thread::sleep(boost::get_system_time() + boost::posix_time::milliseconds(n>315576000000LL?315576000000LL:n));
+        boost::thread::sleep(boost::get_system_time() + boost::posix_time::milliseconds(n>315576000000LL ? 315576000000LL : n));
     }
 #endif
 
@@ -352,22 +346,22 @@ namespace util
 
     inline std::string leftTrim(std::string src, char chr) {
         std::string::size_type pos = src.find_first_not_of(chr, 0);
-        if(pos > 0) {
+        if (pos > 0) {
             src.erase(0, pos);
         }
         return src;
     }
 
     template<typename T>
-    inline std::string HexStr(const T itbegin, const T itend, bool fSpaces=false) {
+    inline std::string HexStr(const T itbegin, const T itend, bool fSpaces = false) {
         std::string rv;
         static const char hexmap[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
                                          '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
         rv.reserve((itend - itbegin) * 3);
-        for(T it = itbegin; it < itend; ++it)
+        for (T it = itbegin; it < itend; ++it)
         {
             unsigned char val = (unsigned char)(*it);
-            if(fSpaces && it != itbegin) {
+            if (fSpaces && it != itbegin) {
                 rv.push_back(' ');
             }
 
@@ -378,27 +372,27 @@ namespace util
         return rv;
     }
 
-    inline std::string HexStr(const util_vector &vch, bool fSpaces=false) {
+    inline std::string HexStr(const util_vector &vch, bool fSpaces = false) {
         return util::HexStr(vch.begin(), vch.end(), fSpaces);
     }
 
     template<typename T>
-    inline void PrintHex(const T pbegin, const T pend, const char *pszFormat="%s", bool fSpaces=true) {
+    inline void PrintHex(const T pbegin, const T pend, const char *pszFormat = "%s", bool fSpaces = true) {
         printf(pszFormat, util::HexStr(pbegin, pend, fSpaces).c_str());
     }
 
-    inline void PrintHex(const util_vector &vch, const char *pszFormat="%s", bool fSpaces=true) {
+    inline void PrintHex(const util_vector &vch, const char *pszFormat = "%s", bool fSpaces = true) {
         printf(pszFormat, util::HexStr(vch, fSpaces).c_str());
     }
 
     inline int64_t GetTimeMillis() {
         return (boost::posix_time::microsec_clock::universal_time() -
-                boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
+            boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_milliseconds();
     }
 
     inline int64_t GetTimeMicros() {
         return (boost::posix_time::microsec_clock::universal_time() -
-                boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
+            boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_microseconds();
     }
 
     inline std::string DateTimeStrFormat(const char *pszFormat, int64_t nTime) {
@@ -433,7 +427,22 @@ namespace util
 
     inline uint32_t ByteReverse(uint32_t value) {
         value = ((value & 0xFF00FF00) >> 8) | ((value & 0x00FF00FF) << 8);
-        return (value<<16) | (value>>16);
+        return (value << 16) | (value >> 16);
+    }
+
+    //
+    // Loop shutdown
+    //
+    inline void LoopSleep(int64_t t) {
+        const int64_t interval = 20;
+        const int64_t counter = t / interval;
+        for(int64_t i = 0; i < counter; ++i)
+        {
+            if(args_bool::fShutdown) {
+                return;
+            }
+            util::Sleep(interval);
+        }
     }
 }
 
@@ -445,7 +454,9 @@ template <typename T> class CMedianFilter
 {
 private:
     CMedianFilter(const CMedianFilter &); // {}
+    CMedianFilter(const CMedianFilter &&); // {}
     CMedianFilter &operator=(const CMedianFilter &); // {}
+    CMedianFilter &operator=(const CMedianFilter &&); // {}
 
     std::vector<T> vValues;
     std::vector<T> vSorted;
@@ -460,7 +471,7 @@ public:
     }
 
     void input(T value) {
-        if(vValues.size() == nSize) {
+        if (vValues.size() == nSize) {
             vValues.erase(vValues.begin());
         }
 
@@ -474,9 +485,9 @@ public:
     T median() const {
         size_t size = vSorted.size();
         assert(size > 0);
-        if(size & 1) {    // Odd number of elements
+        if (size & 1) {    // Odd number of elements
             return vSorted[size / 2];
-        } else {        // Even number of elements
+        } else {           // Even number of elements
             return (vSorted[size / 2 - 1] + vSorted[size / 2]) / 2;
         }
     }
@@ -485,7 +496,7 @@ public:
         return static_cast<int>(vValues.size());
     }
 
-    std::vector<T> sorted () const {
+    std::vector<T> sorted() const {
         return vSorted;
     }
 };
@@ -512,7 +523,7 @@ private:
         return 0;
     }
 
-    static CMedianFilter<int64_t> vTimeOffsets;//(200,0);
+    static CMedianFilter<int64_t> vTimeOffsets; //(200,0);
 
 public:
     //
@@ -523,14 +534,13 @@ public:
     //  - The user (asking the user to fix the system clock if the first two disagree)
     //
     static int64_t GetTime() {
-        int64_t now = ::time(NULL);
+        int64_t now = ::time(nullptr);
         assert(now > 0);
         return now;
     }
     static int64_t GetAdjustedTime() {
         return bitsystem::GetTime() + bitsystem::GetTimeOffset();
     }
-
 
     static int GetRandInt(int nMax) {
         return static_cast<int>(bitsystem::GetRand(nMax));
@@ -542,7 +552,7 @@ public:
 
         // The range of the random source must be a multiple of the modulus
         // to give every possible output value an equal possibility
-        uint64_t nRange = (std::numeric_limits<uint64_t>::max() / nMax) * nMax;
+        uint64_t nRange = ((std::numeric_limits<uint64_t>::max)() / nMax) * nMax;
         uint64_t nRand = 0;
         do
         {
@@ -553,7 +563,7 @@ public:
     }
     static uint256 GetRandHash() {
         uint256 hash;
-        RAND_bytes((unsigned char *)&hash, sizeof(hash));
+        ::RAND_bytes((unsigned char *)&hash, sizeof(hash));
         return hash;
     }
     static int64_t GetNodesOffset() {
@@ -583,7 +593,7 @@ namespace bitstr
             i1 = i2 + 1;
         }
     }
-    inline std::string FormatMoney(int64_t n, bool fPlus=false) {
+    inline std::string FormatMoney(int64_t n, bool fPlus = false) {
         // Note: not using straight sprintf here because we do NOT want
         // localized number formatting.
         int64_t n_abs = (n > 0 ? n : -n);
@@ -603,7 +613,8 @@ namespace bitstr
 
         if (n < 0) {
             str.insert(0u, 1, '-');
-        } else if (fPlus && n > 0) {
+        }
+        else if (fPlus && n > 0) {
             str.insert(0u, 1, '+');
         }
 
@@ -621,7 +632,7 @@ namespace bitstr
         {
             ++p;
         }
-        for (; *p; p++)
+        for (; *p; ++p)
         {
             if (*p == '.') {
                 ++p;
@@ -641,7 +652,7 @@ namespace bitstr
             }
             strWhole.insert(strWhole.end(), *p);
         }
-        for (; *p; p++)
+        for (; *p; ++p)
         {
             if (! ::isspace(*p)) {
                 return false;
@@ -680,7 +691,7 @@ public:
         {
             while (::isspace(*psz))
             {
-                psz++;
+                ++psz;
             }
 
             signed char c = phexdigit[(unsigned char)*psz++];
@@ -715,7 +726,7 @@ public:
 
 namespace base64
 {
-    std::vector<unsigned char> DecodeBase64(const char *p, bool *pfInvalid = NULL);
+    std::vector<unsigned char> DecodeBase64(const char *p, bool *pfInvalid = nullptr);
     std::string DecodeBase64(const std::string &str);
 
     std::string EncodeBase64(const unsigned char *pch, size_t len);
@@ -724,7 +735,7 @@ namespace base64
 
 namespace base32
 {
-    std::vector<unsigned char> DecodeBase32(const char *p, bool *pfInvalid = NULL);
+    std::vector<unsigned char> DecodeBase32(const char *p, bool *pfInvalid = nullptr);
     std::string DecodeBase32(const std::string &str);
 
     std::string EncodeBase32(const unsigned char *pch, size_t len);
@@ -737,7 +748,7 @@ private:
     static const std::locale formats[5];
 
     static std::time_t pt_to_time_t(const boost::posix_time::ptime &pt) {
-        boost::posix_time::ptime timet_start(boost::gregorian::date(1970,1,1));
+        boost::posix_time::ptime timet_start(boost::gregorian::date(1970, 1, 1));
         boost::posix_time::time_duration diff = pt - timet_start;
         return diff.ticks() / boost::posix_time::time_duration::rep_type::ticks_per_second;
     }
@@ -775,6 +786,7 @@ public:
     static const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
     static boost::filesystem::path GetConfigFile();
     static boost::filesystem::path GetPidFile();
+
 #ifndef WIN32
     static void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
 #endif
@@ -828,42 +840,42 @@ namespace cmd
 #define CUINTBEGIN(a)       ((const uint32_t *)&(a))
 
 #ifndef THROW_WITH_STACKTRACE
-#define THROW_WITH_STACKTRACE(exception)  \
-{                                         \
-    trace::LogStackTrace();               \
-    throw (exception);                    \
+# define THROW_WITH_STACKTRACE(exception)  \
+{                                          \
+    trace::LogStackTrace();                \
+    throw (exception);                     \
 }
 #endif
 
 #if defined(_MSC_VER) || defined(__MSVCRT__)
- /* Silence compiler warnings on Windows related to MinGWs inttypes.h */
- #undef PRIu64
- #undef PRId64
- #undef PRIx64
+/* Silence compiler warnings on Windows related to MinGWs inttypes.h */
+# undef PRIu64
+# undef PRId64
+# undef PRIx64
 
- #define PRIu64 "I64u"
- #define PRId64 "I64d"
- #define PRIx64 "I64x"
+# define PRIu64 "I64u"
+# define PRId64 "I64d"
+# define PRIx64 "I64x"
 #endif
 
 /* Format characters for (s)size_t and ptrdiff_t */
 #if defined(_MSC_VER) || defined(__MSVCRT__)
-  /* (s)size_t and ptrdiff_t have the same size specifier in MSVC:
-     http://msdn.microsoft.com/en-us/library/tcxf1dw6%28v=vs.100%29.aspx
-   */
-  #define PRIszx    "Ix"
-  #define PRIszu    "Iu"
-  #define PRIszd    "Id"
-  #define PRIpdx    "Ix"
-  #define PRIpdu    "Iu"
-  #define PRIpdd    "Id"
+/* (s)size_t and ptrdiff_t have the same size specifier in MSVC:
+http://msdn.microsoft.com/en-us/library/tcxf1dw6%28v=vs.100%29.aspx
+*/
+# define PRIszx    "Ix"
+# define PRIszu    "Iu"
+# define PRIszd    "Id"
+# define PRIpdx    "Ix"
+# define PRIpdu    "Iu"
+# define PRIpdd    "Id"
 #else /* C99 standard */
-  #define PRIszx    "zx"
-  #define PRIszu    "zu"
-  #define PRIszd    "zd"
-  #define PRIpdx    "tx"
-  #define PRIpdu    "tu"
-  #define PRIpdd    "td"
+# define PRIszx    "zx"
+# define PRIszu    "zu"
+# define PRIszd    "zd"
+# define PRIpdx    "tx"
+# define PRIpdu    "tu"
+# define PRIpdd    "td"
 #endif
 
 // This is needed because the foreach macro can't get over the comma in pair<t1, t2>
@@ -881,20 +893,20 @@ private:
 public:
 
     /**
-     * Read argv[]
-     */
+    * Read argv[]
+    */
     static void ParseParameters(int argc, const char *const argv[]);
 
     /**
-     * ReadConfigFile (bitcoin.cpp)
-     */
+    * ReadConfigFile (bitcoin.cpp)
+    */
     static void ReadConfigFile() {
         config::ReadConfigFile(mapArgs, mapMultiArgs);
     }
 
     /**
-     * mapArgs interface
-     */
+    * mapArgs interface
+    */
     static size_t GetMapArgsCount(const std::string &target) {
         return mapArgs.count(target);
     }
@@ -906,19 +918,19 @@ public:
     }
 
     /**
-     * mapMultiArgs interface
-     */
+    * mapMultiArgs interface
+    */
     static std::vector<std::string> GetMapMultiArgsString(const std::string &key) {
         return mapMultiArgs[key];
     }
 
     /**
-     * Return string argument or default value
-     *
-     * @param strArg Argument to get (e.g. "-foo")
-     * @param default (e.g. "1")
-     * @return command-line argument or default value
-     */
+    * Return string argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. "1")
+    * @return command-line argument or default value
+    */
     static std::string GetArg(const std::string &strArg, const std::string &strDefault) {
         if (mapArgs.count(strArg)) {
             return mapArgs[strArg];
@@ -927,12 +939,12 @@ public:
     }
 
     /**
-     * Return 64-bit integer argument or default value
-     *
-     * @param strArg Argument to get (e.g. "-foo")
-     * @param default (e.g. 1)
-     * @return command-line argument (0 if invalid number) or default value
-     */
+    * Return 64-bit integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
     static int64_t GetArg(const std::string &strArg, int64_t nDefault) {
         if (mapArgs.count(strArg)) {
             return ::atoi64(mapArgs[strArg]);
@@ -941,12 +953,12 @@ public:
     }
 
     /**
-     * Return 32-bit integer argument or default value
-     *
-     * @param strArg Argument to get (e.g. "-foo")
-     * @param default (e.g. 1)
-     * @return command-line argument (0 if invalid number) or default value
-     */
+    * Return 32-bit integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
     static int32_t GetArgInt(const std::string &strArg, int32_t nDefault) {
         if (mapArgs.count(strArg)) {
             return ::strtol(mapArgs[strArg]);
@@ -955,12 +967,12 @@ public:
     }
 
     /**
-     * Return 32-bit unsigned integer argument or default value
-     *
-     * @param strArg Argument to get (e.g. "-foo")
-     * @param default (e.g. 1)
-     * @return command-line argument (0 if invalid number) or default value
-     */
+    * Return 32-bit unsigned integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
     static uint32_t GetArgUInt(const std::string &strArg, uint32_t nDefault) {
         if (mapArgs.count(strArg)) {
             return ::strtoul(mapArgs[strArg]);
@@ -969,13 +981,13 @@ public:
     }
 
     /**
-     * Return boolean argument or default value
-     *
-     * @param strArg Argument to get (e.g. "-foo")
-     * @param default (true or false)
-     * @return command-line argument or default value
-     */
-    static bool GetBoolArg(const std::string &strArg, bool fDefault=false) {
+    * Return boolean argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (true or false)
+    * @return command-line argument or default value
+    */
+    static bool GetBoolArg(const std::string &strArg, bool fDefault = false) {
         if (mapArgs.count(strArg)) {
             if (mapArgs[strArg].empty()) {
                 return true;
@@ -986,12 +998,12 @@ public:
     }
 
     /**
-     * Set an argument if it doesn't already have a value
-     *
-     * @param strArg Argument to set (e.g. "-foo")
-     * @param strValue Value (e.g. "1")
-     * @return true if argument gets set, false if it already had a value
-     */
+    * Set an argument if it doesn't already have a value
+    *
+    * @param strArg Argument to set (e.g. "-foo")
+    * @param strValue Value (e.g. "1")
+    * @return true if argument gets set, false if it already had a value
+    */
     static bool SoftSetArg(const std::string &strArg, const std::string &strValue) {
         if (mapArgs.count(strArg) || mapMultiArgs.count(strArg)) {
             return false;
@@ -1002,37 +1014,38 @@ public:
     }
 
     /**
-     * Set a boolean argument if it doesn't already have a value
-     *
-     * @param strArg Argument to set (e.g. "-foo")
-     * @param fValue Value (e.g. false)
-     * @return true if argument gets set, false if it already had a value
-     */
+    * Set a boolean argument if it doesn't already have a value
+    *
+    * @param strArg Argument to set (e.g. "-foo")
+    * @param fValue Value (e.g. false)
+    * @return true if argument gets set, false if it already had a value
+    */
     static bool SoftSetBoolArg(const std::string &strArg, bool fValue) {
         if (fValue) {
             return map_arg::SoftSetArg(strArg, std::string("1"));
-        } else {
+        }
+        else {
             return map_arg::SoftSetArg(strArg, std::string("0"));
         }
     }
 
     /**
-     * Timing-attack-resistant comparison.
-     * Takes time proportional to length
-     * of first argument.
-     */
+    * Timing-attack-resistant comparison.
+    * Takes time proportional to length
+    * of first argument.
+    */
     template <typename T>
     static bool TimingResistantEqual(const T &a, const T &b) {
         if (b.size() == 0) {
             return a.size() == 0;
         }
-        
+
         size_t accumulator = a.size() ^ b.size();
         for (size_t i = 0; i < a.size(); ++i)
         {
             accumulator |= a[i] ^ b[i % b.size()];
         }
-        
+
         return accumulator == 0;
     }
 };
@@ -1042,10 +1055,11 @@ namespace bitthread
     class manage : private no_instance
     {
     public:
-        static bool NewThread(void (*pfn)(void *), void *parg) {
+        static bool NewThread(void(*pfn)(void *), void *parg) {
             try {
                 boost::thread(pfn, parg); // thread detaches when out of scope
-            } catch (boost::thread_resource_error &e) {
+            }
+            catch (boost::thread_resource_error &e) {
                 printf("Error creating thread: %s\n", e.what());
                 return false;
             }
@@ -1061,21 +1075,21 @@ namespace bitthread
             ::ExitThread(nExitCode);
         }
 #else
- #define THREAD_PRIORITY_LOWEST          PRIO_MAX
- #define THREAD_PRIORITY_BELOW_NORMAL    2
- #define THREAD_PRIORITY_NORMAL          0
- #define THREAD_PRIORITY_ABOVE_NORMAL    0
+# define THREAD_PRIORITY_LOWEST          PRIO_MAX
+# define THREAD_PRIORITY_BELOW_NORMAL    2
+# define THREAD_PRIORITY_NORMAL          0
+# define THREAD_PRIORITY_ABOVE_NORMAL    0
 
         static void SetThreadPriority(int nPriority) {
-        //
-        // It's unclear if it's even possible to change thread priorities on Linux,
-        // but we really and truly need it for the generation threads.
-        //
- #ifdef PRIO_THREAD
+            //
+            // It's unclear if it's even possible to change thread priorities on Linux,
+            // but we really and truly need it for the generation threads.
+            //
+# ifdef PRIO_THREAD
             ::setpriority(PRIO_THREAD, 0, nPriority);
- #else
+# else
             ::setpriority(PRIO_PROCESS, 0, nPriority);
- #endif
+# endif
         }
         static void ExitThread(size_t nExitCode) {
             ::pthread_exit((void *)nExitCode);
@@ -1110,4 +1124,3 @@ namespace bitthread
 }
 
 #endif
-//@
