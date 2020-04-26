@@ -1,7 +1,15 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2020 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+/*******
+** MACRO define (optional):
+**
+** POW_NOMP_POOL: In operation, we confirmed stable operation of NOMP POOL.
+** TEST: rpc check --- main(int argc, char *argv[]) function
+********/
 
 #include "init.h"
 #include "util.h"
@@ -19,8 +27,8 @@
 #include <boost/iostreams/stream.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/filesystem/fstream.hpp>
 #include <boost/shared_ptr.hpp>
+#include <boost/filesystem/fstream.hpp>
 #include <list>
 
 #define printf print::OutputDebugStringF
@@ -48,7 +56,7 @@ void bitrpc::RPCTypeCheck(const json_spirit::Array &params, const std::list<json
             std::string err = strprintf("Expected type %s, got %s", json_spirit::Value_type_name[t], json_spirit::Value_type_name[v.type()]);
             throw bitjson::JSONRPCError(RPC_TYPE_ERROR, err);
         }
-        i++;
+        ++i;
     }
 }
 
@@ -169,9 +177,9 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() > 1) {
         throw std::runtime_error(
-            sts_c("stop <detach>\n"
-            "<detach> is true or false to detach the database or not for this stop only\n"
-            "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value)."));
+            ("stop <detach>\n"
+             "<detach> is true or false to detach the database or not for this stop only\n"
+             "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value).").c_str());
     }
 
     // Shutdown will take long enough that the response should get back
@@ -180,15 +188,15 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
     }
 
     entry::StartShutdown();
-    return std::string(sts_c(coin_param::strCoinName + " server stopping"));
+    return std::string((coin_param::strCoinName + " server stopping").c_str());
 }
 
 //
 // Call Table
 //
 const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[91] =
-{ //  name                      function                 safemd  unlocked
-  //  ------------------------  -----------------------  ------  --------
+{   //  name                        function                      safemd  unlocked
+    //  ------------------------    -----------------------       ------  --------
     { "help",                       &help,                        true,   true },
     { "stop",                       &stop,                        true,   true },
     { "getbestblockhash",           &getbestblockhash,            true,   false },
@@ -196,16 +204,16 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[91] =
     { "getconnectioncount",         &getconnectioncount,          true,   false },
     { "getaddrmaninfo",             &getaddrmaninfo,              true,   false },
     { "getpeerinfo",                &getpeerinfo,                 true,   false },
-    { "addnode",                    &addnode,                     true,   true  },
-    { "getaddednodeinfo",           &getaddednodeinfo,            true,   true  },
+    { "addnode",                    &addnode,                     true,   true },
+    { "getaddednodeinfo",           &getaddednodeinfo,            true,   true },
     { "getdifficulty",              &getdifficulty,               true,   false },
     { "getinfo",                    &getinfo,                     true,   false },
     { "getsubsidy",                 &getsubsidy,                  true,   false },
     { "getmininginfo",              &getmininginfo,               true,   false },
     { "scaninput",                  &scaninput,                   true,   true },
     { "getnewaddress",              &getnewaddress,               true,   false },
-    { "getnettotals",               &getnettotals,                true,   true  },
-    { "ntptime",                    &ntptime,                     true,   true  },
+    { "getnettotals",               &getnettotals,                true,   true },
+    { "ntptime",                    &ntptime,                     true,   true },
     { "getaccountaddress",          &getaccountaddress,           true,   false },
     { "setaccount",                 &setaccount,                  true,   false },
     { "getaccount",                 &getaccount,                  false,  false },
@@ -253,8 +261,8 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[91] =
     { "dumpwallet",                 &dumpwallet,                  true,   false },
     { "importwallet",               &importwallet,                false,  false },
     { "importprivkey",              &importprivkey,               false,  false },
-    { "importaddress",              &importaddress,               false,  true  },
-    { "removeaddress",              &removeaddress,               false,  true  },
+    { "importaddress",              &importaddress,               false,  true },
+    { "removeaddress",              &removeaddress,               false,  true },
     { "listunspent",                &listunspent,                 false,  false },
     { "getrawtransaction",          &getrawtransaction,           false,  false },
     { "createrawtransaction",       &createrawtransaction,        false,  false },
@@ -264,22 +272,22 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[91] =
     { "signrawtransaction",         &signrawtransaction,          false,  false },
     { "sendrawtransaction",         &sendrawtransaction,          false,  false },
     { "getcheckpoint",              &getcheckpoint,               true,   false },
-    { "reservebalance",             &reservebalance,              false,  true},
-    { "checkwallet",                &checkwallet,                 false,  true},
-    { "repairwallet",               &repairwallet,                false,  true},
-    { "resendwallettransactions",   &resendwallettransactions,    false,  true},
-    { "makekeypair",                &makekeypair,                 false,  true},
-    { "newmalleablekey",            &newmalleablekey,             false,  false},
-    { "adjustmalleablekey",         &adjustmalleablekey,          false,  false},
-    { "adjustmalleablepubkey",      &adjustmalleablepubkey,       false,  false},
-    { "listmalleableviews",         &listmalleableviews,          false,  false},
-    { "dumpmalleablekey",           &dumpmalleablekey,            false,  false},
+    { "reservebalance",             &reservebalance,              false,  true },
+    { "checkwallet",                &checkwallet,                 false,  true },
+    { "repairwallet",               &repairwallet,                false,  true },
+    { "resendwallettransactions",   &resendwallettransactions,    false,  true },
+    { "makekeypair",                &makekeypair,                 false,  true },
+    { "newmalleablekey",            &newmalleablekey,             false,  false },
+    { "adjustmalleablekey",         &adjustmalleablekey,          false,  false },
+    { "adjustmalleablepubkey",      &adjustmalleablepubkey,       false,  false },
+    { "listmalleableviews",         &listmalleableviews,          false,  false },
+    { "dumpmalleablekey",           &dumpmalleablekey,            false,  false },
     { "importmalleablekey",         &importmalleablekey,          true,   false },
     { "encryptdata",                &encryptdata,                 false,  false },
     { "decryptdata",                &decryptdata,                 false,  false },
     { "encryptmessage",             &encryptmessage,              false,  false },
     { "decryptmessage",             &decryptmessage,              false,  false },
-    { "sendalert",                  &sendalert,                   false,  false},
+    { "sendalert",                  &sendalert,                   false,  false },
 };
 
 CRPCTable::CRPCTable()
@@ -296,7 +304,7 @@ const CRPCTable::CRPCCommand *CRPCTable::operator[](std::string name) const
 {
     std::map<std::string, const CRPCCommand *>::const_iterator it = mapCommands.find(name);
     if (it == mapCommands.end()) {
-        return NULL;
+        return nullptr;
     }
     return (*it).second;
 }
@@ -310,15 +318,15 @@ std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string
 {
     std::ostringstream s;
     s << "POST / HTTP/1.1\r\n"
-      << "User-Agent: "
-      << coin_param::strCoinName.c_str()
-      << "-json-rpc/" << format_version::FormatFullVersion() << "\r\n"
-      << "Host: 127.0.0.1\r\n"
-      << "Content-Type: application/json\r\n"
-      << "Content-Length: " << strMsg.size() << "\r\n"
-      << "Connection: close\r\n"
-      << "Accept: application/json\r\n";
-    
+        << "User-Agent: "
+        << coin_param::strCoinName.c_str()
+        << "-json-rpc/" << format_version::FormatFullVersion() << "\r\n"
+        << "Host: 127.0.0.1\r\n"
+        << "Content-Type: application/json\r\n"
+        << "Content-Length: " << strMsg.size() << "\r\n"
+        << "Connection: close\r\n"
+        << "Accept: application/json\r\n";
+
     BOOST_FOREACH(const PAIRTYPE(std::string, std::string)&item, mapRequestHeaders)
     {
         s << item.first << ": " << item.second << "\r\n";
@@ -359,22 +367,22 @@ std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepali
     else { cStatus = ""; }
 
     return strprintf(
-            "HTTP/1.1 %d %s\r\n"
-            "Date: %s\r\n"
-            "Connection: %s\r\n"
-            "Content-Length: %" PRIszu "\r\n"
-            "Content-Type: application/json\r\n"
-            "Server: %s-json-rpc/%s\r\n"
-            "\r\n"
-            "%s",
-            nStatus,
-            cStatus,
-            bitjson::rfc1123Time().c_str(),
-            keepalive ? "keep-alive" : "close",
-            strMsg.size(),
-            coin_param::strCoinName.c_str(),
-            format_version::FormatFullVersion().c_str(),
-            strMsg.c_str());
+        "HTTP/1.1 %d %s\r\n"
+        "Date: %s\r\n"
+        "Connection: %s\r\n"
+        "Content-Length: %" PRIszu "\r\n"
+        "Content-Type: application/json\r\n"
+        "Server: %s-json-rpc/%s\r\n"
+        "\r\n"
+        "%s",
+        nStatus,
+        cStatus,
+        bitjson::rfc1123Time().c_str(),
+        keepalive ? "keep-alive" : "close",
+        strMsg.size(),
+        coin_param::strCoinName.c_str(),
+        format_version::FormatFullVersion().c_str(),
+        strMsg.c_str());
 }
 
 int http::ReadHTTPStatus(std::basic_istream<char> &stream, int &proto)
@@ -391,7 +399,7 @@ int http::ReadHTTPStatus(std::basic_istream<char> &stream, int &proto)
 
     proto = 0;
     const char *ver = ::strstr(str.c_str(), "HTTP/1.");
-    if (ver != NULL) {
+    if (ver != nullptr) {
         proto = atoi(ver + 7);
     }
 
@@ -414,7 +422,7 @@ int http::ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string,
             std::string strHeader = str.substr(0, nColon);
             boost::trim(strHeader);
             boost::to_lower(strHeader);
-            std::string strValue = str.substr(nColon+1);
+            std::string strValue = str.substr(nColon + 1);
             boost::trim(strValue);
             mapHeadersRet[strHeader] = strValue;
             if (strHeader == "content-length") {
@@ -436,7 +444,7 @@ int http::ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::
 
     // Read header
     int nLen = http::ReadHTTPHeader(stream, mapHeadersRet);
-    if (nLen < 0 || nLen > (int)compact_size::MAX_SIZE) {
+    if (nLen < 0 || nLen >(int)compact_size::MAX_SIZE) {
         return HTTP_INTERNAL_SERVER_ERROR;
     }
 
@@ -463,7 +471,7 @@ int http::ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::
 bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders)
 {
     std::string strAuth = mapHeaders["authorization"];
-    if (strAuth.substr(0,6) != "Basic ") {
+    if (strAuth.substr(0, 6) != "Basic ") {
         return false;
     }
 
@@ -473,7 +481,7 @@ bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders)
 }
 
 //
-// JSON-RPC protocol.  Bitcoin speaks version 1.0 for maximum compatibility,
+// JSON-RPC protocol. Bitcoin speaks version 1.0 for maximum compatibility,
 // but uses JSON-RPC 1.1/2.0 standards for parts of the 1.0 standard that were
 // unspecified (HTTP errors and contents of 'error').
 //
@@ -529,15 +537,15 @@ bool bitrpc::ClientAllowed(const boost::asio::ip::address &address)
     //
     // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses
     //
-    if ( address.is_v6() && (address.to_v6().is_v4_compatible() || address.to_v6().is_v4_mapped()) ) {
+    if (address.is_v6() && (address.to_v6().is_v4_compatible() || address.to_v6().is_v4_mapped())) {
         return bitrpc::ClientAllowed(address.to_v6().to_v4());
     }
 
     if (address == boost::asio::ip::address_v4::loopback()
-     || address == boost::asio::ip::address_v6::loopback()
-     || (address.is_v4()
-      // Check whether IPv4 addresses match 127.0.0.0/8 (loopback subnet)
-      && (address.to_v4().to_ulong() & 0xff000000) == 0x7f000000)) {
+        || address == boost::asio::ip::address_v6::loopback()
+        || (address.is_v4()
+            // Check whether IPv4 addresses match 127.0.0.0/8 (loopback subnet)
+            && (address.to_v4().to_ulong() & 0xff000000) == 0x7f000000)) {
         return true;
     }
 
@@ -592,7 +600,11 @@ public:
     }
 
     bool connect(const std::string &server, const std::string &port) {
+#if BOOST_VERSION >= 106900
+        boost::asio::ip::tcp::resolver resolver(stream.get_executor());
+#else
         boost::asio::ip::tcp::resolver resolver(stream.get_io_service());
+#endif
         boost::asio::ip::tcp::resolver::query query(server.c_str(), port.c_str());
         boost::asio::ip::tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
         boost::asio::ip::tcp::resolver::iterator end;
@@ -623,7 +635,7 @@ class AcceptedConnection
 public:
     virtual ~AcceptedConnection() {}
 
-    virtual std::iostream& stream() = 0;
+    virtual std::iostream &stream() = 0;
     virtual std::string peer_address_to_string() const = 0;
     virtual void close() = 0;
 };
@@ -637,7 +649,11 @@ private:
     AcceptedConnectionImpl &operator=(const AcceptedConnectionImpl &); // {}
 
 public:
-    AcceptedConnectionImpl(boost::asio::io_service& io_service, boost::asio::ssl::context &context, bool fUseSSL) : sslStream(io_service, context), _d(sslStream, fUseSSL), _stream(_d) {}
+#if BOOST_VERSION >= 106900
+    AcceptedConnectionImpl(boost::asio::executor &io_service, boost::asio::ssl::context &context, bool fUseSSL) : sslStream(io_service, context), _d(sslStream, fUseSSL), _stream(_d) {}
+#else
+    AcceptedConnectionImpl(boost::asio::io_service &io_service, boost::asio::ssl::context &context, bool fUseSSL) : sslStream(io_service, context), _d(sslStream, fUseSSL), _stream(_d) {}
+#endif
 
     virtual std::iostream &stream() {
         return _stream;
@@ -662,7 +678,7 @@ private:
 void bitrpc::ThreadRPCServer(void *parg)
 {
     // Make this thread recognisable as the RPC listener
-    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-rpclist"));
+    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpclist").c_str());
 
     try {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
@@ -673,32 +689,48 @@ void bitrpc::ThreadRPCServer(void *parg)
         excep::PrintException(&e, "ThreadRPCServer()");
     } catch (...) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        excep::PrintException(NULL, "ThreadRPCServer()");
+        excep::PrintException(nullptr, "ThreadRPCServer()");
     }
     printf("ThreadRPCServer exited\n");
 }
 
-// Forward declaration required for RPCListen
-// template <typename Protocol, typename SocketAcceptorService>
-// static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error);
-
 //
 // Sets up I/O resources to accept and handle a new connection.
 //
-#if BOOST_VERSION >= 106600
+#if BOOST_VERSION >= 106900
+template <typename Protocol>
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL)
+{
+    // Accept connection
+    AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_executor(), context, fUseSSL);
+    if(conn == nullptr) {
+        throw std::runtime_error("RPCListen memory allocate failure.");
+    }
+
+    acceptor->async_accept(
+        conn->sslStream.lowest_layer(),
+        conn->peer,
+        boost::bind(&RPCAcceptHandler<Protocol>,
+            acceptor,
+            boost::ref(context),
+            fUseSSL,
+            conn,
+            boost::asio::placeholders::error));
+}
+#elif BOOST_VERSION >= 106600
 template <typename Protocol>
 void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL)
 {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
-    if(conn == NULL) {
+    if (conn == nullptr) {
         throw std::runtime_error("RPCListen memory allocate failure.");
     }
 
     acceptor->async_accept(
-            conn->sslStream.lowest_layer(),
-            conn->peer,
-            boost::bind(&RPCAcceptHandler<Protocol>,
+        conn->sslStream.lowest_layer(),
+        conn->peer,
+        boost::bind(&RPCAcceptHandler<Protocol>,
             acceptor,
             boost::ref(context),
             fUseSSL,
@@ -711,14 +743,14 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
 {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
-    if(conn == NULL) {
+    if (conn == nullptr) {
         throw std::runtime_error("RPCListen memory allocate failure.");
     }
 
     acceptor->async_accept(
-            conn->sslStream.lowest_layer(),
-            conn->peer,
-            boost::bind(&RPCAcceptHandler<Protocol, SocketAcceptorService>,
+        conn->sslStream.lowest_layer(),
+        conn->peer,
+        boost::bind(&RPCAcceptHandler<Protocol, SocketAcceptorService>,
             acceptor,
             boost::ref(context),
             fUseSSL,
@@ -742,7 +774,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
     }
 
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
-    if(tcp_conn == NULL) {
+    if (tcp_conn == nullptr) {
         throw std::runtime_error("RPCAcceptHandler AcceptedConnectionImpl, downcast Error.");
     }
 
@@ -783,7 +815,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
     }
 
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
-    if(tcp_conn == NULL) {
+    if (tcp_conn == nullptr) {
         throw std::runtime_error("RPCAcceptHandler AcceptedConnectionImpl, downcast Error.");
     }
 
@@ -826,23 +858,24 @@ void bitrpc::ThreadRPCServer2(void *parg)
         strWhatAmI += (coin_param::strCoinName + "d").c_str();
         if (map_arg::GetMapArgsCount("-server")) {
             strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
-        } else if (map_arg::GetMapArgsCount("-daemon")) {
+        }
+        else if (map_arg::GetMapArgsCount("-daemon")) {
             strWhatAmI = strprintf(_("To use the %s option"), "\"-daemon\"");
         }
 
         CClientUIInterface::uiInterface.ThreadSafeMessageBox(strprintf(
-                            _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
-                            "It is recommended you use the following random password:\n"
-                            "rpcuser=%srpc\n"
-                            "rpcpassword=%s\n"
-                            "(you do not need to remember this password)\n"
-                            "If the file does not exist, create it with owner-readable-only file permissions.\n"),
-                            strWhatAmI.c_str(),
-                            iofs::GetConfigFile().string().c_str(),
-                            coin_param::strCoinNameL.c_str(),
-                            base58::manage::EncodeBase58(&rand_pwd[0], &rand_pwd[0] + 32).c_str()),
+            _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
+                "It is recommended you use the following random password:\n"
+                "rpcuser=%srpc\n"
+                "rpcpassword=%s\n"
+                "(you do not need to remember this password)\n"
+                "If the file does not exist, create it with owner-readable-only file permissions.\n"),
+            strWhatAmI.c_str(),
+            iofs::GetConfigFile().string().c_str(),
+            coin_param::strCoinNameL.c_str(),
+            base58::manage::EncodeBase58(&rand_pwd[0], &rand_pwd[0] + 32).c_str()),
 
-                            _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
+            _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
 
         entry::StartShutdown();
         return;
@@ -876,7 +909,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
         }
         if (boost::filesystem::exists(pathPKFile)) {
             context.use_private_key_file(pathPKFile.string(), boost::asio::ssl::context::pem);
-        } else { 
+        } else {
             printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
         }
 
@@ -884,12 +917,12 @@ void bitrpc::ThreadRPCServer2(void *parg)
 #if BOOST_VERSION >= 106600
         SSL_CTX_set_cipher_list(context.native_handle(), strCiphers.c_str());
 #else
-                SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
+        SSL_CTX_set_cipher_list(context.impl(), strCiphers.c_str());
 #endif
     }
 
 #if BOOST_VERSION >= 106600
-    boost::asio::io_context io_context;            
+    boost::asio::io_context io_context;
 #else
     // already boost::asio::io_service instance
 #endif
@@ -907,7 +940,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
 #else
     boost::shared_ptr<boost::asio::ip::tcp::acceptor> acceptor(new boost::asio::ip::tcp::acceptor(io_service));
 #endif
-    boost::signals2::signal<void ()> StopRequests;
+    boost::signals2::signal<void()> StopRequests;
 
     bool fListening = false;
     std::string strerr;
@@ -924,14 +957,14 @@ void bitrpc::ThreadRPCServer2(void *parg)
         acceptor->listen(boost::asio::socket_base::max_connections);
 
         RPCListen(acceptor, context, fUseSSL);
-        
+
         //
         // Cancel outstanding listen-requests for this acceptor when shutting down
         //
-        StopRequests.connect(boost::signals2::slot<void ()>(static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
+        StopRequests.connect(boost::signals2::slot<void()>(static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
 
         fListening = true;
-    } catch(const boost::system::system_error &e) {
+    } catch (const boost::system::system_error &e) {
         strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4: %s"), endpoint.port(), e.what());
     }
 
@@ -957,11 +990,11 @@ void bitrpc::ThreadRPCServer2(void *parg)
             //
             // Cancel outstanding listen-requests for this acceptor when shutting down
             //
-            StopRequests.connect(boost::signals2::slot<void ()>( static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
+            StopRequests.connect(boost::signals2::slot<void()>(static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
 
             fListening = true;
         }
-    } catch(const boost::system::system_error &e) {
+    } catch (const boost::system::system_error &e) {
         strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv4: %s"), endpoint.port(), e.what());
     }
 
@@ -972,7 +1005,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
     }
 
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-    while (! args_bool::fShutdown)
+    while (!args_bool::fShutdown)
     {
 #if BOOST_VERSION >= 106600
         io_context.run_one();
@@ -1060,18 +1093,24 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq)
 
 void bitrpc::ThreadRPCServer3(void *parg)
 {
-    //printf("ThreadRPCServer3 started\n");
+    printf("ThreadRPCServer3 started\n");
 
-    //{
-    //    LOCK(cs_THREAD_RPCHANDLER);
-
-    // Make this thread recognisable as the RPC handler
-    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-rpchand"));
-
+#ifdef POW_NOMP_POOL
     {
         LOCK(cs_THREAD_RPCHANDLER);
-        net_node::vnThreadsRunning[THREAD_RPCHANDLER]++;
+#endif
+
+    // Make this thread recognisable as the RPC handler
+    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
+
+#ifndef POW_NOMP_POOL
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+#endif
+        ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
     }
+#endif
     AcceptedConnection *conn = (AcceptedConnection *)parg;
 
     bool fRun = true;
@@ -1081,10 +1120,14 @@ void bitrpc::ThreadRPCServer3(void *parg)
             conn->close();
             delete conn;
 
+#ifndef POW_NOMP_POOL
             {
                 LOCK(cs_THREAD_RPCHANDLER);
+#endif
                 --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
             }
+#endif
             return;
         }
         std::map<std::string, std::string> mapHeaders;
@@ -1137,7 +1180,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
                 // Send reply
                 strReply = json::JSONRPCReply(result, json_spirit::Value::null, jreq.id);
 
-            // array of requests
+                // array of requests
             } else if (valRequest.type() == json_spirit::array_type) {
                 strReply = JSONRPCExecBatch(valRequest.get_array());
             } else {
@@ -1157,12 +1200,18 @@ void bitrpc::ThreadRPCServer3(void *parg)
     }
 
     delete conn;
+#ifndef POW_NOMP_POOL
     {
         LOCK(cs_THREAD_RPCHANDLER);
-        net_node::vnThreadsRunning[THREAD_RPCHANDLER]--;
+#endif
+        --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
     }
+#endif
 
-    //} // LOCK(cs_THREAD_RPCHANDLER)
+#ifdef POW_NOMP_POOL
+    } // LOCK(cs_THREAD_RPCHANDLER)
+#endif
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
@@ -1209,7 +1258,7 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
     if (map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
         throw std::runtime_error(strprintf(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
-            "If the file does not exist, create it with owner-readable-only file permissions."),
+                "If the file does not exist, create it with owner-readable-only file permissions."),
             iofs::GetConfigFile().string().c_str()));
     }
 
@@ -1220,7 +1269,8 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
 #else
     boost::asio::io_service io_service;
     boost::asio::ssl::context context(io_service, boost::asio::ssl::context::sslv23);
-#endif    
+#endif
+
     context.set_options(boost::asio::ssl::context::no_sslv2);
 #if BOOST_VERSION >= 106600
     boost::asio::io_context io_context;
@@ -1228,7 +1278,8 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
     // Note: template<typename Arg> boost::asio::ssl::stream(Arg && arg, context & ctx)
 #else
     boost::asio::ssl::stream<boost::asio::ip::tcp::socket> sslStream(io_service, context);
-#endif    
+#endif
+
     SSLIOStreamDevice<boost::asio::ip::tcp> d(sslStream, fUseSSL);
     boost::iostreams::stream<SSLIOStreamDevice<boost::asio::ip::tcp> > stream(d);
     if (!d.connect(map_arg::GetArg("-rpcconnect", net_basis::strLocal), map_arg::GetArg("-rpcport", itostr(GetDefaultRPCPort())))) {
@@ -1384,8 +1435,8 @@ int bitrpc::CommandLineRPC(int argc, char *argv[])
         //
         while (argc > 1 && util::IsSwitchChar(argv[1][0]))
         {
-            argc--;
-            argv++;
+            --argc;
+            ++argv;
         }
 
         // Method
@@ -1403,7 +1454,7 @@ int bitrpc::CommandLineRPC(int argc, char *argv[])
 
         // Parse reply
         const json_spirit::Value &result = find_value(reply, "result");
-        const json_spirit::Value &error  = find_value(reply, "error");
+        const json_spirit::Value &error = find_value(reply, "error");
 
         if (error.type() != json_spirit::null_type) {
             // Error
@@ -1424,7 +1475,7 @@ int bitrpc::CommandLineRPC(int argc, char *argv[])
         strPrint = std::string("error: ") + e.what();
         nRet = 87;
     } catch (...) {
-        excep::PrintException(NULL, "CommandLineRPC()");
+        excep::PrintException(nullptr, "CommandLineRPC()");
     }
 
     if (! strPrint.empty()) {
@@ -1441,15 +1492,15 @@ int main(int argc, char *argv[])
     _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE);
     _CrtSetReportFile(_CRT_WARN, CreateFile("NUL", GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, 0));
 #endif
-    ::setbuf(stdin, NULL);
-    ::setbuf(stdout, NULL);
-    ::setbuf(stderr, NULL);
+    ::setbuf(stdin, nullptr);
+    ::setbuf(stdout, nullptr);
+    ::setbuf(stderr, nullptr);
 
     try
     {
         if (argc >= 2 && string(argv[1]) == "-server") {
             printf("server ready\n");
-            bitrpc::ThreadRPCServer(NULL);
+            bitrpc::ThreadRPCServer(nullptr);
         } else {
             return bitrpc::CommandLineRPC(argc, argv);
         }
@@ -1461,4 +1512,3 @@ int main(int argc, char *argv[])
     return 0;
 }
 #endif
-

@@ -2,21 +2,24 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
-// @@
+// 
 #ifndef BITCOIN_TXDB_BDB_H
 #define BITCOIN_TXDB_BDB_H
+#ifndef USE_LEVELDB
 
-/** 
- ** Access to the transaction database (blkindex.dat) 
- */
+/**
+** Access to the transaction database (blkindex.dat)
+*/
 class CTxDB : public CDB
 {
 public:
-    CTxDB(const char *pszMode="r+") : CDB("blkindex.dat", pszMode) {}
+    CTxDB(const char *pszMode = "r+") : CDB("blkindex.dat", pszMode) {}
 
 private:
     CTxDB(const CTxDB &); // {}
-    CTxDB &operator=(const CTxDB&); // {}
+    CTxDB(const CTxDB &&); // {}
+    CTxDB &operator=(const CTxDB &); // {}
+    CTxDB &operator=(const CTxDB &&); // {}
 
     bool LoadBlockIndexGuts();
     CBlockIndex *InsertBlockIndex(uint256 hash);
@@ -37,7 +40,7 @@ public:
 
     bool ReadHashBestChain(uint256 &hashBestChain);
     bool WriteHashBestChain(uint256 hashBestChain);
-    
+
     bool ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust);
     bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
 
@@ -46,11 +49,13 @@ public:
 
     bool ReadCheckpointPubKey(std::string &strPubKey);
     bool WriteCheckpointPubKey(const std::string &strPubKey);
-    
+
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
-    
+
     bool LoadBlockIndex();
 };
+
+#endif // #ifndef USE_LEVELDB
 
 #endif

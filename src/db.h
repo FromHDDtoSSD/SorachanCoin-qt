@@ -7,6 +7,7 @@
 #define BITCOIN_DB_H
 
 #include "main.h"
+#include "db_addr.h"
 
 #include <map>
 #include <string>
@@ -42,7 +43,9 @@ class CDBCommon
 {
 private:
     CDBCommon(const CDBCommon &); // {}
+    CDBCommon(const CDBCommon &&); // {}
     CDBCommon &operator=(const CDBCommon &); // {}
+    CDBCommon &operator=(const CDBCommon &&); // {}
 protected:
     bool IsChainFile(std::string strFile) const;
 public:
@@ -60,7 +63,9 @@ private:
     ~CDBEnv();
 
     CDBEnv(const CDBEnv &); // {}
+    CDBEnv(const CDBEnv &&); // {}
     CDBEnv &operator=(const CDBEnv &); // {}
+    CDBEnv &operator=(const CDBEnv &&); // {}
 
     bool fDetachDB;
     bool fDbEnvInit;
@@ -71,7 +76,7 @@ private:
     void EnvShutdown();
 
 public:
-    static CDBEnv bitdb;    // Singleton object instance, db.cpp
+    static CDBEnv bitdb;   // Singleton object instance, db.cpp
 
     mutable CCriticalSection cs_db;
     DbEnv dbenv;
@@ -84,26 +89,26 @@ public:
     }
 
     /*
-     * Verify that database file strFile is OK. If it is not,
-     * call the callback to try to recover.
-     * This must be called BEFORE strFile is opened.
-     * Returns true if strFile is OK.
-     */
+    * Verify that database file strFile is OK. If it is not,
+    * call the callback to try to recover.
+    * This must be called BEFORE strFile is opened.
+    * Returns true if strFile is OK.
+    */
     enum VerifyResult
-    { 
-        VERIFY_OK, 
-        RECOVER_OK, 
-        RECOVER_FAIL 
+    {
+        VERIFY_OK,
+        RECOVER_OK,
+        RECOVER_FAIL
     };
-    VerifyResult Verify(std::string strFile, bool (*recoverFunc)(CDBEnv &dbenv, std::string strFile));
+    VerifyResult Verify(std::string strFile, bool(*recoverFunc)(CDBEnv &dbenv, std::string strFile));
 
     /*
-     * Salvage data from a file that Verify says is bad.
-     * fAggressive sets the DB_AGGRESSIVE flag (see berkeley DB->verify() method documentation).
-     * Appends binary key/value pairs to vResult, returns true if successful.
-     * NOTE: reads the entire database into memory, so cannot be used
-     * for huge databases.
-     */
+    * Salvage data from a file that Verify says is bad.
+    * fAggressive sets the DB_AGGRESSIVE flag (see berkeley DB->verify() method documentation).
+    * Appends binary key/value pairs to vResult, returns true if successful.
+    * NOTE: reads the entire database into memory, so cannot be used
+    * for huge databases.
+    */
     typedef std::pair<std::vector<unsigned char>, std::vector<unsigned char> > KeyValPair;
     bool Salvage(std::string strFile, bool fAggressive, std::vector<KeyValPair> &vResult);
 
@@ -115,34 +120,36 @@ public:
     void SetDetach(bool fDetachDB_) {
         fDetachDB = fDetachDB_;
     }
-    bool GetDetach() { 
+    bool GetDetach() const {
         return fDetachDB;
     }
 
     void CloseDb(const std::string &strFile);
     bool RemoveDb(const std::string &strFile);
 
-    DbTxn *TxnBegin(int flags=DB_TXN_WRITE_NOSYNC) {
-        DbTxn *ptxn = NULL;
-        int ret = dbenv.txn_begin(NULL, &ptxn, flags);
+    DbTxn *TxnBegin(int flags = DB_TXN_WRITE_NOSYNC) {
+        DbTxn *ptxn = nullptr;
+        int ret = dbenv.txn_begin(nullptr, &ptxn, flags);
         if (!ptxn || ret != 0) {
-            return NULL;
+            return nullptr;
         }
         return ptxn;
     }
 };
 
 /**
- ** RAII class that provides access to a Berkeley database
- ** CTxDB(Berkeley), CWalletDB
- ** Type Db Dbt : Berkeley DB
- */
+** RAII class that provides access to a Berkeley database
+** CTxDB(Berkeley), CWalletDB
+** Type Db Dbt : Berkeley DB
+*/
 class CDB : public CDBCommon
 {
 private:
     CDB(); // {}
     CDB(const CDB &); // {}
+    CDB(const CDB &&); // {}
     CDB &operator=(const CDB &); // {}
+    CDB &operator=(const CDB &&); // {}
 
 protected:
     Db *pdb;
@@ -150,8 +157,8 @@ protected:
     DbTxn *activeTxn;
     bool fReadOnly;
 
-    explicit CDB(const char *pszFile, const char *pszMode="r+");    // open DB
-    ~CDB() { 
+    explicit CDB(const char *pszFile, const char *pszMode = "r+");    // open DB
+    ~CDB() {
         Close();
     }
 
@@ -166,7 +173,7 @@ protected:
         }
 
         // Key
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
@@ -176,13 +183,13 @@ protected:
         datValue.set_flags(DB_DBT_MALLOC);
         int ret = pdb->get(activeTxn, &datKey, &datValue, 0);
         ::memset(datKey.get_data(), 0, datKey.get_size());
-        if (datValue.get_data() == NULL) {
+        if (datValue.get_data() == nullptr) {
             return false;
         }
 
         // Unserialize value
         try {
-            CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(), SER_DISK, version::CLIENT_VERSION);
+            CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(), 0, 0);
             ssValue >> value;
         } catch (const std::exception &) {
             return false;
@@ -195,7 +202,7 @@ protected:
     }
 
     template<typename K, typename T>
-    bool Write(const K &key, const T &value, bool fOverwrite=true) {
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
         if (! pdb) {
             return false;
         }
@@ -204,13 +211,13 @@ protected:
         }
 
         // Key
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
 
         // Value
-        CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssValue(0, 0);
         ssValue.reserve(10000);
         ssValue << value;
         Dbt datValue(&ssValue[0], (uint32_t)ssValue.size());
@@ -234,7 +241,7 @@ protected:
         }
 
         // Key
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
@@ -254,7 +261,7 @@ protected:
         }
 
         // Key
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
@@ -269,20 +276,20 @@ protected:
 
     Dbc *GetCursor() {
         if (! pdb) {
-            return NULL;
+            return nullptr;
         }
 
-        Dbc *pcursor = NULL;
-        int ret = pdb->cursor(NULL, &pcursor, 0);
+        Dbc *pcursor = nullptr;
+        int ret = pdb->cursor(nullptr, &pcursor, 0);
         if (ret != 0) {
-            return NULL;
+            return nullptr;
         }
         return pcursor;
     }
 
-    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ... 
+    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
     static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT) {
-        // Read at cursor, return: 0 success, 1` ERROE_CODE
+        // Read at cursor, return: 0 success, 1 ERROE_CODE
         Dbt datKey;
         if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
             datKey.set_data(&ssKey[0]);
@@ -300,7 +307,8 @@ protected:
         int ret = pcursor->get(&datKey, &datValue, fFlags);
         if (ret != 0) {
             return ret;
-        } else if (datKey.get_data() == NULL || datValue.get_data() == NULL) {
+        }
+        else if (datKey.get_data() == NULL || datValue.get_data() == NULL) {
             return 99999;
         }
 
@@ -341,7 +349,7 @@ public:
         }
 
         int ret = activeTxn->commit(0);
-        activeTxn = NULL;
+        activeTxn = nullptr;
         return (ret == 0);
     }
 
@@ -351,7 +359,7 @@ public:
         }
 
         int ret = activeTxn->abort();
-        activeTxn = NULL;
+        activeTxn = nullptr;
         return (ret == 0);
     }
 
@@ -366,30 +374,7 @@ public:
 
     ///////
 
-    static bool Rewrite(const std::string &strFile, const char *pszSkip = NULL);
-};
-
-/**
- ** Access to the (IP) address database (peers.dat) 
- */
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> addrdb_vector;
-#else
-typedef std::vector<uint8_t> addrdb_vector;
-#endif
-class CAddrDB
-{
-private:
-    CAddrDB(const CAddrDB &); // {}
-    CAddrDB &operator=(const CAddrDB &); // {}
-
-    boost::filesystem::path pathAddr;
-
-public:
-    CAddrDB();
-    bool Write(const CAddrMan &addr);
-    bool Read(CAddrMan &addr);
+    static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
 };
 
 #endif
-//@

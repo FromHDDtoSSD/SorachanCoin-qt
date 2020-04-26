@@ -11,12 +11,12 @@
 // go back to BDB for any reason. Once we're confident enough with LevelDB to stick
 // with it, this can be deleted.
 //
+
 #ifdef USE_LEVELDB
- #include "txdb-leveldb.h"
+# include "txdb-leveldb.h"
 #else
- #include "db.h"
- #include "txdb-bdb.h"
+# include "db.h"
+# include "txdb-bdb.h"
 #endif
 
 #endif
-//@

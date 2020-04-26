@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2012 The Bitcoin Developers.
+// Copyright (c) 2018-2020 The SorachanCoin developers
 // Authored by Google, Inc.
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-// @@
+// 
 #ifndef BITCOIN_LEVELDB_H
 #define BITCOIN_LEVELDB_H
 
@@ -32,7 +33,7 @@
 class CTxDB
 {
 public:
-    CTxDB(const char *pszMode="r+");
+    CTxDB(const char *pszMode = "r+");
     ~CTxDB() {
         //
         // Note that this is not the same as Close() because it deletes only
@@ -48,7 +49,9 @@ public:
 
 private:
     CTxDB(const CTxDB &); // {}
+    CTxDB(const CTxDB &&); // {}
     CTxDB &operator=(const CTxDB &); // {}
+    CTxDB &operator=(const CTxDB &&); // {}
 
     //
     // global pointer for LevelDB object instance
@@ -83,7 +86,7 @@ protected:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         std::string strValue;
@@ -102,7 +105,7 @@ protected:
         }
         if (readFromDb) {
             leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
-            if (! status.ok()) {
+            if (!status.ok()) {
                 if (status.IsNotFound()) {
                     return false;
                 }
@@ -117,7 +120,7 @@ protected:
         // Unserialize value
         //
         try {
-            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), SER_DISK, version::CLIENT_VERSION);
+            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
             ssValue >> value;
         } catch (const std::exception &) {
             return false;
@@ -129,14 +132,14 @@ protected:
     template<typename K, typename T>
     bool Write(const K &key, const T &value) {
         if (this->fReadOnly) {
-            assert(! "Write called on database in read-only mode");
+            assert(!"Write called on database in read-only mode");
         }
 
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
 
-        CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssValue(0, 0);
         ssValue.reserve(10000);
         ssValue << value;
 
@@ -160,10 +163,10 @@ protected:
             return false;
         }
         if (this->fReadOnly) {
-            assert(! "Erase called on database in read-only mode");
+            assert(!"Erase called on database in read-only mode");
         }
 
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         if (this->activeBatch) {
@@ -177,7 +180,7 @@ protected:
 
     template<typename K>
     bool Exists(const K &key) {
-        CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+        CDataStream ssKey(0, 0);
         ssKey.reserve(1000);
         ssKey << key;
         std::string unused;
@@ -198,7 +201,7 @@ public:
     bool TxnCommit();
     bool TxnAbort() {
         delete this->activeBatch;
-        this->activeBatch = NULL;
+        this->activeBatch = nullptr;
         return true;
     }
 
