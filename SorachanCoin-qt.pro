@@ -21,7 +21,8 @@ DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MAC
 RELEASE=0
 DEBUG_ENABLE=1
 DEBUG_ALGO_ENABLE=0
-DEBUG_ALGO_CHECK_ENABLE=0
+DEBUG_ALGO_CHECK_ENABLE=1
+DEBUG_TEST_RUNTIME_ENABLE=1
 
 USE_DBUS=0
 BITCOIN_NEED_QT_PLUGINS=0
@@ -135,6 +136,9 @@ contains(DEBUG_ALGO_ENABLE, 1) {
 }
 contains(DEBUG_ALGO_CHECK_ENABLE, 1) {
     DEFINES += DEBUG_ALGO_CHECK
+}
+contains(DEBUG_TEST_RUNTIME_ENABLE, 1) {
+    DEFINES += DEBUG_RUNTIME_TEST
 }
 
 !win32 {
@@ -384,7 +388,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/debugcs/debugcs.h \
     src/compat/compat.h \
     src/compat/byteswap.h \
-    src/compat/endian.h
+    src/compat/endian.h \
+    src/compat/sanity.h \
+    src/bench/bench.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -473,7 +479,12 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/cryptogram.cpp \
     src/ecies.cpp \
     src/ipcollector.cpp \
-    src/quantum/quantum.cpp
+    src/quantum/quantum.cpp \
+    src/bench/bench.cpp \
+    src/bench/prevector.cpp \
+    src/compat/glibc_compat.cpp \
+    src/compat/glibc_sanity.cpp \
+    src/compat/glibcxx_sanity.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

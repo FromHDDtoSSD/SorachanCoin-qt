@@ -6,6 +6,7 @@
 #include <quantum/quantum.h>
 #include <prevector/prevector.h>
 #include <prevector/prevector_s.h>
+#include <compat/sanity.h>
 #ifdef USE_QUANTUM
 
 #if defined(WIN32) && defined(DEBUG)
@@ -13,7 +14,18 @@
 # include <process.h>
 #endif
 
+//
+// TEST: treat runtime.
+//
+#if DEBUG_RUNTIME_TEST
+//# define SANITY_TEST
+#endif
+
+//
+// CHECK: treat algo.
+//
 #if defined(WIN32) && defined(DEBUG_ALGO_CHECK)
+# define PREVECTOR_CHECK
 # define MEMORY_CHECK
 # define SECURE_PREVECTOR_CHECK
 # define HASH_CHECK
@@ -24,25 +36,61 @@
 class Quantum_startup
 {
 private:
+    static const int _test_count = 3;
+private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;
 
-    static void memory_check() noexcept {}
-    template <int rsv, typename T> static void secure_prevector_check(int n, int m) noexcept {
-        for(int i=0; i < n; ++i)
-        {
-            prevector<rsv, T> v(100, T());
-            prevector_s<rsv, T> vchs(100, T());
-            std::vector<T> vv(100, T());
+    static void sanity_check() noexcept {
+        bool a = test_sanity::glibc_sanity_test();
+        bool b = test_sanity::glibcxx_sanity_test();
+        assert(a && b);
+        debugcs::instance() << "SorachanCoin sanity_check(): OK" << debugcs::endl();
+    }
 
-            for (int j = 0; j < m; ++j)
+    template <int rsv, typename T>
+    static void prevector_check(int n, int m) noexcept {
+        _bench_func("prevector_check() Des Tri", &check_prevector::PrevectorDestructorTrivial);
+        _bench_func("prevector_check() Des Nontri", &check_prevector::PrevectorDestructorNontrivial);
+        _bench_func("prevector_check() Cle Tri", &check_prevector::PrevectorClearTrivial);
+        _bench_func("prevector_check() Cle Nontri", &check_prevector::PrevectorClearNontrivial);
+        _bench_func("prevector_check() Res Tri", &check_prevector::PrevectorResizeTrivial);
+        _bench_func("prevector_check() Res Nontri", &check_prevector::PrevectorResizeNontrivial);
+        _bench_func("prevector_check() Deseria Tri", &check_prevector::PrevectorDeserializeTrivial);
+        _bench_func("prevector_check() Deseria Nontri", &check_prevector::PrevectorDeserializeNontrivial);
+
+        _bench_func("std_check() Des Tri", &check_prevector::StdvectorDestructorTrivial);
+        _bench_func("std_check() Des Nontri", &check_prevector::StdvectorDestructorNontrivial);
+        _bench_func("std_check() Cle Tri", &check_prevector::StdvectorClearTrivial);
+        _bench_func("std_check() Cle Nontri", &check_prevector::StdvectorClearNontrivial);
+        _bench_func("std_check() Res Tri", &check_prevector::StdvectorResizeTrivial);
+        _bench_func("std_check() Res Nontri", &check_prevector::StdvectorResizeNontrivial);
+        _bench_func("std_check() Deseria Tri", &check_prevector::StdvectorDeserializeTrivial);
+        _bench_func("std_check() Deseria Nontri", &check_prevector::StdvectorDeserializeNontrivial);
+
+        _bench_func("prevector_s_check() Des Tri", &check_prevector::Prevector_s_DestructorTrivial, 1, 1);
+        _bench_func("prevector_s_check() Des Nontri", &check_prevector::Prevector_s_DestructorNontrivial, 1, 1);
+        _bench_func("prevector_s_check() Cle Tri", &check_prevector::Prevector_s_ClearTrivial, 1, 1);
+        _bench_func("prevector_s_check() Cle Nontri", &check_prevector::Prevector_s_ClearNontrivial, 1, 1);
+        _bench_func("prevector_s_check() Res Tri", &check_prevector::Prevector_s_ResizeTrivial, 1, 1);
+        _bench_func("prevector_s_check() Res Nontri", &check_prevector::Prevector_s_ResizeNontrivial, 1, 1);
+        _bench_func("prevector_s_check() Deseria Tri", &check_prevector::Prevector_s_DeserializeTrivial, 1, 1);
+        _bench_func("prevector_s_check() Deseria Nontri", &check_prevector::Prevector_s_DeserializeNontrivial, 1, 1);
+
+        for(int i = 0; i < n; ++i)
+        {
+            prevector<rsv, T> v(10, T());
+            prevector_s<rsv, T> vchs(10, T());
+            std::vector<T> vv(10, T());
+
+            for(int j = 0; j < m; ++j)
             {
                 v.push_back(j + i);
                 vchs.push_back(j + i);
                 vv.push_back(j + i);
             }
 
-            for (int j = 0; j < m / 2; ++j)
+            for(int j = 0; j < m / 2; ++j)
             {
                 typename prevector<rsv, T>::iterator ite = v.begin();
                 v.erase(ite);
@@ -52,13 +100,21 @@ private:
                 vv.erase(vvite);
             }
 
-            for (int j = 0; j < m / 2; ++j)
+            for(int j = 0; j < m / 2; ++j)
             {
-                auto __ref = vchs[j];
-                assert(vv[j] == (T)__ref);
+                typename prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
+                assert(vv[j] == *((T *)ptr + j));
             }
         }
+
+        debugcs::instance() << "SorachanCoin prevector_check(): OK" << debugcs::endl();
     }
+
+    static void memory_check() noexcept {
+        assert(1);
+        debugcs::instance() << "SorachanCoin memory_check(): OK" << debugcs::endl();
+    }
+
     static void hash_check() noexcept {
         Lamport::CPrivateKey pKey;
         Lamport::BLAKE2KeyHash h(pKey);
@@ -66,10 +122,11 @@ private:
         byte referenceHash[Lamport::BLAKE2KeyHash::kBytesSize];
         CSecureSegmentRW<byte> guard = pKey.get_secure()->unlockAndInitRW(true);
         quantum_hash::blake2_generichash(referenceHash, Lamport::BLAKE2KeyHash::kBytesSize, guard.get_addr(), guard.get_size());
-        assert(::memcmp(h.get_addr(), referenceHash, 32) == 0);
+        assert(::memcmp(h.get_addr(), referenceHash, Lamport::BLAKE2KeyHash::kBytesSize) == 0);
+        debugcs::instance() << "SorachanCoin hash_check(): OK" << debugcs::endl();
     }
     template <int rsv, typename T> static void vector_check(int n, int m) noexcept {
-        char data[] = {'S', 'O', 'R', 'A', 'C', 'H', 'A', 'N', 'C', 'O', 'I', 'N'};
+        char data[] = { 'S', 'O', 'R', 'A', 'C', 'H', 'A', 'N', 'C', 'O', 'I', 'N' };
         secure_segment::vector<char> vch(std::begin(data), std::end(data));
         auto ite = vch.begin();
         assert(*ite == 'S' && *(ite + 6) == 'A');
@@ -106,41 +163,50 @@ private:
         }
     }
     void static lamport_check() noexcept {
-        const size_t buf_size = 1024;
+        const size_t buf_size = PREVECTOR_N;
+
         quantum_lib::secure_stackzero(buf_size);
-        std::vector<byte> vdata;
+        prevector<PREVECTOR_N, byte> vdata;
         vdata.resize(buf_size, 0x00);
         byte *data = &vdata.at(0);
+
         ::RAND_bytes(data, buf_size);
         Lamport::CLamport lamport;
         std::shared_ptr<Lamport::CPublicKey> pubKey = lamport.create_pubkey(data, buf_size);
-
         assert(lamport.check(data, buf_size, pubKey) == true);
 
-        byte *offset = pubKey->get_addr();
-        for(int i=0; i < pubKey->get_size(); ++i)
+        /*
+        const byte *offset = pubKey->get_addr();
+        const size_t size = pubKey->get_size();
+        for (size_t i = 0; i < size; ++i)
         {
-            char buf[8] = {0};
-            ::sprintf_s(buf, sizeof(buf) / sizeof(buf[0]), "%X", offset[i]);
-            debugcs::instance() << buf;
+            char buf[8] = { 0 };
+            ::sprintf_s(buf, 8, "%X", offset[i]);
+            debugcs::instance() << buf << debugcs::endl();
         }
         debugcs::instance() << debugcs::endl() << "--------------------------------" << debugcs::endl() << debugcs::endl();
+        */
+
+        debugcs::instance() << "SorachanCoin lamport_check(): OK" << debugcs::endl();
     }
 
     static unsigned int __stdcall benchmark(void *) noexcept {
-        for(int i=0; i < 5; ++i)
+        for (int i = 0; i < _test_count; ++i)
         {
+#ifdef SANITY_TEST
+            sanity_check();
+#endif
+#ifdef PREVECTOR_CHECK
+            prevector_check<PREVECTOR_N, uint8_t>(10, 300);
+#endif
 #ifdef MEMORY_CHECK
             memory_check();
-#endif
-#ifdef SECURE_PREVECTOR_CHECK
-            secure_prevector_check<PREVECTOR_N, uint8_t>(10, 30);
 #endif
 #ifdef HASH_CHECK
             hash_check();
 #endif
 #ifdef VECTOR_CHECK
-            vector_check<PREVECTOR_N, uint8_t>(10, 30);
+            vector_check<PREVECTOR_N, uint8_t>(10, 300);
 #endif
 #ifdef LAMPORT_CHECK
             lamport_check();
@@ -154,16 +220,16 @@ private:
         //
         // Lamport benchmark [Thread Safe]
         //
-        HANDLE hHandle[16]; // count of threads
-        for(int i=0; i < sizeof(hHandle) / sizeof(hHandle[0]); ++i)
+        HANDLE hHandle[2]; // count of threads
+        for (int i = 0; i < sizeof(hHandle) / sizeof(hHandle[0]); ++i)
         {
             hHandle[i] = (HANDLE)::_beginthreadex(nullptr, 0, Quantum_startup::benchmark, nullptr, 0, nullptr);
-            if(hHandle[i] == INVALID_HANDLE_VALUE){
+            if (hHandle[i] == INVALID_HANDLE_VALUE) {
                 assert(0);
             }
         }
         ::WaitForMultipleObjects(sizeof(hHandle) / sizeof(hHandle[0]), hHandle, true, INFINITE);
-        for(int i=0; i < sizeof(hHandle) / sizeof(hHandle[0]); ++i)
+        for (int i = 0; i < sizeof(hHandle) / sizeof(hHandle[0]); ++i)
         {
             ::CloseHandle(hHandle[i]);
         }

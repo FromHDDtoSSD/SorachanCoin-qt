@@ -35,9 +35,9 @@
  *   - T* indirect: a pointer to an array of capacity elements of type T
  *     (only the first _size are initialized).
  *
- */
+*/
 template <unsigned int N, typename T, typename Size = uint32_t,
-          typename Diff = int32_t>
+    typename Diff = int32_t>
 class prevector {
 public:
     typedef Size size_type;
@@ -241,7 +241,7 @@ private:
         struct {
             size_type capacity;
             unsigned char *indirect;
-        };
+        } _s;
     } _union;
 
     T *direct_ptr(difference_type pos) noexcept {
@@ -251,10 +251,10 @@ private:
         return reinterpret_cast<const T *>(_union.direct) + pos;
     }
     T *indirect_ptr(difference_type pos) noexcept {
-        return reinterpret_cast<T *>(_union.indirect) + pos;
+        return reinterpret_cast<T *>(_union._s.indirect) + pos;
     }
     const T *indirect_ptr(difference_type pos) const noexcept {
-        return reinterpret_cast<const T *>(_union.indirect) + pos;
+        return reinterpret_cast<const T *>(_union._s.indirect) + pos;
     }
     bool is_direct() const noexcept { return _size <= N; }
 
@@ -281,19 +281,19 @@ private:
                 // FIXED: Assign here std::vector instead of malloc/realloc and
                 // increase N to avoid using this re-allocation as much possible.
                 _invch->resize((size_t)sizeof(T) * new_capacity);
-                _union.indirect = &_invch->at(0);
-                _union.capacity = new_capacity;
+                _union._s.indirect = &_invch->at(0);
+                _union._s.capacity = new_capacity;
             } else {
                 _invch = new(std::nothrow) std::vector<unsigned char>();
-                if(! _invch) {
+                if (! _invch) {
                     throw std::runtime_error("prevector memory allocate failure.");
                 }
                 _invch->resize((size_t)sizeof(T) * new_capacity);
                 T *src = direct_ptr(0);
                 T *dst = reinterpret_cast<T *>(&_invch->at(0));
                 ::memcpy(dst, src, size() * sizeof(T));
-                _union.indirect = &_invch->at(0);
-                _union.capacity = new_capacity;
+                _union._s.indirect = &_invch->at(0);
+                _union._s.capacity = new_capacity;
                 _size += N + 1;
             }
         }
@@ -457,7 +457,7 @@ public:
         if (is_direct()) {
             return N;
         } else {
-            return _union.capacity;
+            return _union._s.capacity;
         }
     }
 
@@ -615,7 +615,7 @@ public:
         if (! is_direct()) {
             delete _invch;
             _invch = nullptr;
-            _union.indirect = nullptr;
+            _union._s.indirect = nullptr;
         }
     }
 
@@ -670,7 +670,7 @@ public:
 
     bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept {
         DEBUGCS_OUTPUT("prevector: bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept");
-        return ((! operator<(other)) && (! operator==(other)));
+        return ((!operator<(other)) && (!operator==(other)));
     }
 
     size_t allocated_memory() const noexcept {
@@ -678,7 +678,7 @@ public:
         if (is_direct()) {
             return 0;
         } else {
-            return ((size_t)(sizeof(T))) * _union.capacity;
+            return ((size_t)(sizeof(T))) * _union._s.capacity;
         }
     }
 
@@ -706,12 +706,12 @@ public:
     // Note:
     // The following operator isn't used because their interpretation is ambiguous.
     //
-    //template <typename A = std::allocator<T> >
-    //operator std::vector<T, A>() const noexcept {
-    //    DEBUGCS_OUTPUT("prevector: cast overload std::vector<T, A>() const noexcept");
-    //    std::vector<T, A> obj(data(), data() + size());
-    //    return obj;
-    //}
+    // template <typename A = std::allocator<T> >
+    // operator std::vector<T, A>() const noexcept {
+    //     DEBUGCS_OUTPUT("prevector: cast overload std::vector<T, A>() const noexcept");
+    //     std::vector<T, A> obj(data(), data() + size());
+    //     return obj;
+    // }
 
     template <typename A = std::allocator<T> > std::vector<T, A> get_std_vector() const noexcept {
         DEBUGCS_OUTPUT("prevector: std::vector<T, A> get_std_vector() const noexcept");
