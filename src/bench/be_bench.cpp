@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2020 The SorachanCoin Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,10 +11,11 @@
 #include <algorithm>
 #include <regex>
 #include <numeric>
+#include <debugcs/debugcs.h>
 
 void benchmark::ConsolePrinter::header()
 {
-    std::cout << "# Benchmark, evals, iterations, total, min, max, median" << std::endl;
+    debugcs::instance() << "# Benchmark, evals, iterations, total, min, max, median" << debugcs::endl();
 }
 
 void benchmark::ConsolePrinter::result(const State& state)
@@ -38,8 +40,8 @@ void benchmark::ConsolePrinter::result(const State& state)
         }
     }
 
-    std::cout << std::setprecision(6);
-    std::cout << state.m_name << ", " << state.m_num_evals << ", " << state.m_num_iters << ", " << total << ", " << front << ", " << back << ", " << median << std::endl;
+    //std::cout << std::setprecision(6);
+    debugcs::instance() << state.m_name << ", " << state.m_num_evals << ", " << state.m_num_iters << ", " << total << ", " << front << ", " << back << ", " << median << debugcs::endl();
 }
 
 void benchmark::ConsolePrinter::footer() {}
@@ -50,33 +52,33 @@ benchmark::PlotlyPrinter::PlotlyPrinter(std::string plotly_url, int64_t width, i
 
 void benchmark::PlotlyPrinter::header()
 {
-    std::cout << "<html><head>"
+    debugcs::instance() << "<html><head>"
         << "<script src=\"" << m_plotly_url << "\"></script>"
         << "</head><body><div id=\"myDiv\" style=\"width:" << m_width << "px; height:" << m_height << "px\"></div>"
         << "<script> var data = ["
-        << std::endl;
+        << debugcs::endl();
 }
 
 void benchmark::PlotlyPrinter::result(const State& state)
 {
-    std::cout << "{ " << std::endl
-        << "  name: '" << state.m_name << "', " << std::endl
+    debugcs::instance() << "{ " << debugcs::endl()
+        << "  name: '" << state.m_name << "', " << debugcs::endl()
         << "  y: [";
 
     const char* prefix = "";
     for(const auto& e : state.m_elapsed_results) {
-        std::cout << prefix << std::setprecision(6) << e;
+        debugcs::instance() << prefix << std::setprecision(6) << e;
         prefix = ", ";
     }
-    std::cout << "]," << std::endl
+    debugcs::instance() << "]," << debugcs::endl()
         << "  boxpoints: 'all', jitter: 0.3, pointpos: 0, type: 'box',"
-        << std::endl
-        << "}," << std::endl;
+        << debugcs::endl()
+        << "}," << debugcs::endl();
 }
 
 void benchmark::PlotlyPrinter::footer()
 {
-    std::cout << "]; var layout = { showlegend: false, yaxis: { rangemode: 'tozero', autorange: true } };"
+    debugcs::instance() << "]; var layout = { showlegend: false, yaxis: { rangemode: 'tozero', autorange: true } };"
         << "Plotly.newPlot('myDiv', data, layout);"
         << "</script></body></html>";
 }
@@ -96,10 +98,10 @@ benchmark::BenchRunner::BenchRunner(std::string name, benchmark::BenchFunction f
 void benchmark::BenchRunner::RunAll(Printer& printer, uint64_t num_evals, double scaling, const std::string& filter, bool is_list_only)
 {
     if(!std::ratio_less_equal<benchmark::clock::period, std::micro>::value) {
-        std::cerr << "WARNING: Clock precision is worse than microsecond - benchmarks may be less accurate!\n";
+        debugcs::instance() << "WARNING: Clock precision is worse than microsecond - benchmarks may be less accurate!" << debugcs::endl();
     }
 #ifdef DEBUG
-    std::cerr << "WARNING: This is a debug build - may result in slower benchmarks.\n";
+    debugcs::instance() << "WARNING: This is a debug build - may result in slower benchmarks." << debugcs::endl();
 #endif
 
     std::regex reFilter(filter);

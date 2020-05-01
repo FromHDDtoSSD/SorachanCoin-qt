@@ -19,6 +19,7 @@ struct nontrivial_t {
     IMPLEMENT_SERIALIZE()
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) { int nSerSize=0; READWRITE(x); }
+    bool operator==(const struct nontrivial_t &obj) const { return (x == obj.x); }
 };
 static_assert(!IS_TRIVIALLY_CONSTRUCTIBLE<nontrivial_t>::value,
     "expected nontrivial_t to not be trivially constructible");
@@ -111,11 +112,11 @@ PREVECTOR_TEST(Deserialize, 6800, 52000)
     void Prevector_s_ ## name ## Nontrivial(benchmark::State& state) {                       \
         Prevector ## name<nontrivial_t, prevector_s<PREVECTOR_S_N, nontrivial_t> >(state);   \
     }                                                                                        \
-    BENCHMARK(Prevector ## name ## Nontrivial, nontrivops);                                  \
+    BENCHMARK(Prevector_s_ ## name ## Nontrivial, nontrivops);                               \
     void Prevector_s_ ## name ## Trivial(benchmark::State& state) {                          \
         Prevector ## name<trivial_t, prevector_s<PREVECTOR_S_N, trivial_t> >(state);         \
     }                                                                                        \
-    BENCHMARK(Prevector ## name ## Trivial, trivops);
+    BENCHMARK(Prevector_s_ ## name ## Trivial, trivops);
 
 PREVECTOR_S_TEST(Clear, 28300, 88600)
 PREVECTOR_S_TEST(Destructor, 28800, 88900)
@@ -126,15 +127,75 @@ PREVECTOR_S_TEST(Deserialize, 6800, 52000)
     void Stdvector ## name ## Nontrivial(benchmark::State& state) {         \
         Prevector ## name<nontrivial_t, std::vector<nontrivial_t> >(state); \
     }                                                                       \
-    BENCHMARK(Prevector ## name ## Nontrivial, nontrivops);                 \
+    BENCHMARK(Stdvector ## name ## Nontrivial, nontrivops);                 \
     void Stdvector ## name ## Trivial(benchmark::State& state) {            \
         Prevector ## name<trivial_t, std::vector<trivial_t> >(state);       \
     }                                                                       \
-    BENCHMARK(Prevector ## name ## Trivial, trivops);
+    BENCHMARK(Stdvector ## name ## Trivial, trivops);
 
 STDVECTOR_TEST(Clear, 28300, 88600)
 STDVECTOR_TEST(Destructor, 28800, 88900)
 STDVECTOR_TEST(Resize, 28900, 90300)
 STDVECTOR_TEST(Deserialize, 6800, 52000)
+
+template <int rsv, typename T>
+static void PrevectorAssertcheck(benchmark::State& state)
+{
+    const int n = 10;
+    const int m = rsv;
+    while(state.KeepRunning()) {
+        for(int i = 0; i < n; ++i)
+        {
+            prevector<rsv, T> v(10, T());
+            prevector_s<rsv, T> vchs(10, T());
+            std::vector<T> vv(10, T());
+
+            for(int j = 0; j < m; ++j)
+            {
+                if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+                    const T *p = reinterpret_cast<const T *>(&j);
+                    v.push_back(*p);
+                    vchs.push_back(*p);
+                    vv.push_back(*p);
+                } else {
+                    v.push_back(T());
+                    vchs.push_back(T());
+                    vv.push_back(T());
+                }
+            }
+
+            for(int j = 0; j < m / 2; ++j)
+            {
+                typename prevector<rsv, T>::iterator ite = v.begin();
+                v.erase(ite);
+                typename prevector_s<rsv, T>::iterator vite = vchs.begin();
+                vchs.erase(vite);
+                typename std::vector<T>::iterator vvite = vv.begin();
+                vv.erase(vvite);
+            }
+
+            for(int j = 0; j < m / 2; ++j)
+            {
+                typename prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
+                assert(vv[j] == *((T *)ptr + j));
+
+                std::vector<T> comp = (std::vector<T>)v.get_std_vector();
+                assert(v[j] == comp[j]);
+            }
+        }
+    }
+}
+
+#define VECTOR_ASSERTCHECK(rsv, nontrivops, trivops)                  \
+    void PrevectorAssertcheckNontrivial(benchmark::State& state) {    \
+        PrevectorAssertcheck<rsv, nontrivial_t>(state);               \
+    }                                                                 \
+    BENCHMARK(PrevectorAssertcheckNontrivial, nontrivops);            \
+    void PrevectorAssertcheckTrivial(benchmark::State& state) {       \
+        PrevectorAssertcheck<rsv, trivial_t>(state);                  \
+    }                                                                 \
+    BENCHMARK(PrevectorAssertcheckTrivial, trivops);
+
+VECTOR_ASSERTCHECK(PREVECTOR_N, 28300, 88600)
 
 } // namespace check_prevector

@@ -473,12 +473,14 @@ private:
             } else {
                 _invch = new(std::nothrow) std::vector<unsigned char, A>();
                 if (! _invch) {
-                    throw std::runtime_error("prevector_s memory allocate failure.");
+                    throw std::runtime_error("prevector_s failed to allocate memory.");
                 }
                 _invch->resize((size_t)sizeof(T) * new_capacity);
                 T *src = direct_ptr(0);
                 T *dst = reinterpret_cast<T *>(&_invch->at(0));
+                quantum_lib::secure_mprotect_readonly(src);
                 ::memcpy(dst, src, size() * sizeof(T));
+                quantum_lib::secure_mprotect_noaccess(src);
                 _union._s.indirect = &_invch->at(0);
                 _union._s.capacity = new_capacity;
                 quantum_lib::secure_mprotect_noaccess(_union._s.indirect);

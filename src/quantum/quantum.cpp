@@ -26,11 +26,11 @@
 //
 #if defined(WIN32) && defined(DEBUG_ALGO_CHECK)
 # define PREVECTOR_CHECK
+# define AES_CHECK
 # define MEMORY_CHECK
-# define SECURE_PREVECTOR_CHECK
 # define HASH_CHECK
 # define LAMPORT_CHECK
-# define VECTOR_CHECK
+# define SECURE_VECTOR_CHECK
 #endif
 
 class Quantum_startup
@@ -50,23 +50,23 @@ private:
 
     template <int rsv, typename T>
     static void prevector_check(int n, int m) noexcept {
-        _bench_func("prevector_check() Des Tri", &check_prevector::PrevectorDestructorTrivial);
-        _bench_func("prevector_check() Des Nontri", &check_prevector::PrevectorDestructorNontrivial);
-        _bench_func("prevector_check() Cle Tri", &check_prevector::PrevectorClearTrivial);
-        _bench_func("prevector_check() Cle Nontri", &check_prevector::PrevectorClearNontrivial);
-        _bench_func("prevector_check() Res Tri", &check_prevector::PrevectorResizeTrivial);
-        _bench_func("prevector_check() Res Nontri", &check_prevector::PrevectorResizeNontrivial);
-        _bench_func("prevector_check() Deseria Tri", &check_prevector::PrevectorDeserializeTrivial);
-        _bench_func("prevector_check() Deseria Nontri", &check_prevector::PrevectorDeserializeNontrivial);
+        _bench_func("prevector_check() Des Tri", &check_prevector::PrevectorDestructorTrivial, 3, 3);
+        _bench_func("prevector_check() Des Nontri", &check_prevector::PrevectorDestructorNontrivial, 3, 3);
+        _bench_func("prevector_check() Cle Tri", &check_prevector::PrevectorClearTrivial, 3, 3);
+        _bench_func("prevector_check() Cle Nontri", &check_prevector::PrevectorClearNontrivial, 3, 3);
+        _bench_func("prevector_check() Res Tri", &check_prevector::PrevectorResizeTrivial, 3, 3);
+        _bench_func("prevector_check() Res Nontri", &check_prevector::PrevectorResizeNontrivial, 3, 3);
+        _bench_func("prevector_check() Deseria Tri", &check_prevector::PrevectorDeserializeTrivial, 3, 3);
+        _bench_func("prevector_check() Deseria Nontri", &check_prevector::PrevectorDeserializeNontrivial, 3, 3);
 
-        _bench_func("std_check() Des Tri", &check_prevector::StdvectorDestructorTrivial);
-        _bench_func("std_check() Des Nontri", &check_prevector::StdvectorDestructorNontrivial);
-        _bench_func("std_check() Cle Tri", &check_prevector::StdvectorClearTrivial);
-        _bench_func("std_check() Cle Nontri", &check_prevector::StdvectorClearNontrivial);
-        _bench_func("std_check() Res Tri", &check_prevector::StdvectorResizeTrivial);
-        _bench_func("std_check() Res Nontri", &check_prevector::StdvectorResizeNontrivial);
-        _bench_func("std_check() Deseria Tri", &check_prevector::StdvectorDeserializeTrivial);
-        _bench_func("std_check() Deseria Nontri", &check_prevector::StdvectorDeserializeNontrivial);
+        _bench_func("std_check() Des Tri", &check_prevector::StdvectorDestructorTrivial, 3, 3);
+        _bench_func("std_check() Des Nontri", &check_prevector::StdvectorDestructorNontrivial, 3, 3);
+        _bench_func("std_check() Cle Tri", &check_prevector::StdvectorClearTrivial, 3, 3);
+        _bench_func("std_check() Cle Nontri", &check_prevector::StdvectorClearNontrivial, 3, 3);
+        _bench_func("std_check() Res Tri", &check_prevector::StdvectorResizeTrivial, 3, 3);
+        _bench_func("std_check() Res Nontri", &check_prevector::StdvectorResizeNontrivial, 3, 3);
+        _bench_func("std_check() Deseria Tri", &check_prevector::StdvectorDeserializeTrivial, 3, 3);
+        _bench_func("std_check() Deseria Nontri", &check_prevector::StdvectorDeserializeNontrivial, 3, 3);
 
         _bench_func("prevector_s_check() Des Tri", &check_prevector::Prevector_s_DestructorTrivial, 1, 1);
         _bench_func("prevector_s_check() Des Nontri", &check_prevector::Prevector_s_DestructorNontrivial, 1, 1);
@@ -77,38 +77,22 @@ private:
         _bench_func("prevector_s_check() Deseria Tri", &check_prevector::Prevector_s_DeserializeTrivial, 1, 1);
         _bench_func("prevector_s_check() Deseria Nontri", &check_prevector::Prevector_s_DeserializeNontrivial, 1, 1);
 
-        for(int i = 0; i < n; ++i)
-        {
-            prevector<rsv, T> v(10, T());
-            prevector_s<rsv, T> vchs(10, T());
-            std::vector<T> vv(10, T());
-
-            for(int j = 0; j < m; ++j)
-            {
-                v.push_back(j + i);
-                vchs.push_back(j + i);
-                vv.push_back(j + i);
-            }
-
-            for(int j = 0; j < m / 2; ++j)
-            {
-                typename prevector<rsv, T>::iterator ite = v.begin();
-                v.erase(ite);
-                typename prevector_s<rsv, T>::iterator vite = vchs.begin();
-                vchs.erase(vite);
-                typename std::vector<T>::iterator vvite = vv.begin();
-                vv.erase(vvite);
-            }
-
-            for(int j = 0; j < m / 2; ++j)
-            {
-                typename prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
-                assert(vv[j] == *((T *)ptr + j));
-            }
-        }
+        _bench_func("prevector_s_check() Assertcheck Tri", &check_prevector::PrevectorAssertcheckTrivial, 1, 1);
+        _bench_func("prevector_s_check() Assertcheck Nontri", &check_prevector::PrevectorAssertcheckNontrivial, 1, 1);
 
         debugcs::instance() << "SorachanCoin prevector_check(): OK" << debugcs::endl();
     }
+
+#ifdef LATEST_CRYPTO_ENABLE
+    static void aes_check() noexcept {
+        _bench_func("bench_AES128_check()", &latest_crypto::bench_AES128, 1, 1);
+        _bench_func("bench_AES192_check()", &latest_crypto::bench_AES192, 1, 1);
+        _bench_func("bench_AES256_check()", &latest_crypto::bench_AES256, 1, 1);
+        latest_crypto::check_all_aes();
+
+        debugcs::instance() << "SorachanCoin aes_check(): OK" << debugcs::endl();
+    }
+#endif
 
     static void memory_check() noexcept {
         assert(1);
@@ -125,42 +109,11 @@ private:
         assert(::memcmp(h.get_addr(), referenceHash, Lamport::BLAKE2KeyHash::kBytesSize) == 0);
         debugcs::instance() << "SorachanCoin hash_check(): OK" << debugcs::endl();
     }
-    template <int rsv, typename T> static void vector_check(int n, int m) noexcept {
+    template <int rsv, typename T> static void secure_vector_check(int n, int m) noexcept {
         char data[] = { 'S', 'O', 'R', 'A', 'C', 'H', 'A', 'N', 'C', 'O', 'I', 'N' };
         secure_segment::vector<char> vch(std::begin(data), std::end(data));
         auto ite = vch.begin();
         assert(*ite == 'S' && *(ite + 6) == 'A');
-
-        for (int i = 0; i < n; ++i)
-        {
-            prevector<rsv, T> v(100, T());
-            std::vector<T> vch(100, T());
-
-            for (int j = 0; j < m; ++j)
-            {
-                v.push_back(j + i);
-                vch.push_back(j + i);
-            }
-
-            for (int j = 0; j < m / 2; ++j)
-            {
-                typename prevector<rsv, T>::iterator ite = v.begin();
-                v.erase(ite);
-                typename std::vector<T>::iterator vite = vch.begin();
-                vch.erase(vite);
-            }
-
-            for (int j = 0; j < m / 2; ++j)
-            {
-                assert(v[j] == vch[j]);
-
-                std::vector<uint8_t> comp = (std::vector<uint8_t>)v.get_std_vector();
-                assert(v[j] == comp[j]);
-
-                prevector<rsv, uint8_t> comp2(vch.begin(), vch.end());
-                assert(vch[j] == comp2[j]);
-            }
-        }
     }
     void static lamport_check() noexcept {
         const size_t buf_size = PREVECTOR_N;
@@ -199,14 +152,17 @@ private:
 #ifdef PREVECTOR_CHECK
             prevector_check<PREVECTOR_N, uint8_t>(10, 300);
 #endif
+#if defined(AES_CHECK) && defined(LATEST_CRYPTO_ENABLE)
+            aes_check();
+#endif
 #ifdef MEMORY_CHECK
             memory_check();
 #endif
 #ifdef HASH_CHECK
             hash_check();
 #endif
-#ifdef VECTOR_CHECK
-            vector_check<PREVECTOR_N, uint8_t>(10, 300);
+#ifdef SECURE_VECTOR_CHECK
+            secure_vector_check<PREVECTOR_N, uint8_t>(10, 300);
 #endif
 #ifdef LAMPORT_CHECK
             lamport_check();

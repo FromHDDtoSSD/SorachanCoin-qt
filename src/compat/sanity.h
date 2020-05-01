@@ -58,6 +58,19 @@ namespace check_prevector
     void StdvectorResizeNontrivial(benchmark::State& state);
     void StdvectorDeserializeTrivial(benchmark::State& state);
     void StdvectorDeserializeNontrivial(benchmark::State& state);
+
+    void PrevectorAssertcheckNontrivial(benchmark::State& state);
+    void PrevectorAssertcheckTrivial(benchmark::State& state);
 }
+
+#ifdef LATEST_CRYPTO_ENABLE
+namespace latest_crypto
+{
+    void bench_AES128(benchmark::State& state);
+    void bench_AES192(benchmark::State& state);
+    void bench_AES256(benchmark::State& state);
+    int check_all_aes();
+}
+#endif
 
 #endif // BITCOIN_COMPAT_SANITY_H

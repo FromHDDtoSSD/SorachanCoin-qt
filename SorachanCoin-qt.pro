@@ -36,6 +36,7 @@ USE_IPV6=1
 USE_QRCODE=1
 
 USE_QUANTUM=1
+USE_LATEST_CRYPTO=1
 
 freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
 linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
@@ -262,6 +263,17 @@ contains(USE_QUANTUM, -) {
     LIBS += $$BLAKE2_LIB_PATH
 }
 
+#
+# use: qmake "USE_LATEST_CRYPTO=1" (using new core)
+#  or: qmake "USE_LATEST_CRYPTO=0" (using old core)
+#
+contains(USE_LATEST_CRYPTO, -) {
+    message(Building without LatestCrypto support)
+} else {
+    message(Building with LatestCrypto support)
+    DEFINES += LATEST_CRYPTO_ENABLE
+}
+
 # regenerate src/build.h
 #!windows|contains(USE_BUILD_INFO, 1) {
 #    genbuild.depends = FORCE
@@ -390,7 +402,18 @@ HEADERS += src/qt/bitcoingui.h \
     src/compat/byteswap.h \
     src/compat/endian.h \
     src/compat/sanity.h \
-    src/bench/bench.h
+    src/bench/bench.h \
+    src/crypto/ctaes/ctaes.h \
+    src/crypto/aes.h \
+    src/crypto/chacha20.h \
+    src/crypto/common.h \
+    src/crypto/hmac_sha256.h \
+    src/crypto/hmac_sha512.h \
+    src/crypto/ripemd160.h \
+    src/crypto/scrypt.h \
+    src/crypto/sha1.h \
+    src/crypto/sha256.h \
+    src/crypto/sha512.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -480,11 +503,30 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/ecies.cpp \
     src/ipcollector.cpp \
     src/quantum/quantum.cpp \
-    src/bench/bench.cpp \
-    src/bench/prevector.cpp \
+    src/bench/be_bench.cpp \
+    src/bench/be_prevector.cpp \
+    src/bench/be_aes.cpp \
     src/compat/glibc_compat.cpp \
     src/compat/glibc_sanity.cpp \
-    src/compat/glibcxx_sanity.cpp
+    src/compat/glibcxx_sanity.cpp \
+    src/crypto/ctaes/cr_bench.cpp \
+    src/crypto/ctaes/cr_ctaes.cpp \
+    src/crypto/ctaes/cr_test.cpp \
+    src/crypto/cr_aes.cpp \
+    src/crypto/cr_chacha20.cpp \
+    src/crypto/cr_hmac_sha256.cpp \
+    src/crypto/cr_hmac_sha512.cpp \
+    src/crypto/cr_ripemd160.cpp \
+    src/crypto/cr_scrypt.cpp \
+    src/crypto/cr_scrypt-sse2.cpp \
+    src/crypto/cr_sha1.cpp \
+    src/crypto/cr_sha256.cpp \
+    src/crypto/cr_sha256_avx2.cpp \
+    src/crypto/cr_sha256_shani.cpp \
+    src/crypto/cr_sha256_sse4.cpp \
+    src/crypto/cr_sha256_sse41.cpp \
+    src/crypto/cr_sha512.cpp \
+    
 
 RESOURCES += \
     src/qt/bitcoin.qrc
