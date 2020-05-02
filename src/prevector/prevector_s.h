@@ -6,7 +6,7 @@
 
 #ifndef _BITCOIN_PREVECTOR_S_H_
 #define _BITCOIN_PREVECTOR_S_H_
-#ifdef USE_QUANTUM
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
 
 #include <cassert>
 #include <cstdint>
@@ -16,11 +16,13 @@
 #include <iterator>
 #include <vector>
 #include <memory>
-#include "allocators.h"
+#include <allocators.h>
 #include <debugcs/debugcs.h>
 #include <quantum/quantum.h>
 
 #include <compat/compat.h> // IS_TRIVIALLY_CONSTRUCTIBLE
+
+namespace latest_crypto {
 
 template <typename T>
 class stack_ptr {
@@ -53,11 +55,11 @@ public:
         pmem->readonly();
 #define IMPLEMENT_MEMORY_SHARED_READWRITE \
         std::shared_ptr<memory> pmem(is_direct() ? new(std::nothrow) memory(_union.direct): new(std::nothrow) memory(_union._s.indirect)); \
-        if(pmem == nullptr) {throw std::runtime_error("shared memory allocate failure.");} \
+        if(pmem == nullptr) {throw std::runtime_error("shared_ptr failed to allocate memory.");} \
         pmem->readwtite();
 #define IMPLEMENT_MEMORY_SHARED_READONLY \
         std::shared_ptr<memory> pmem(is_direct() ? new(std::nothrow) memory(_union.direct): new(std::nothrow) memory(_union._s.indirect)); \
-        if(pmem == nullptr) {throw std::runtime_error("shared memory allocate failure.");} \
+        if(pmem == nullptr) {throw std::runtime_error("shared_ptr failed to allocate memory.");} \
         pmem->readonly();
 #define IMPLEMENT_MEMORY_SHARED_NONE_READWRITE \
         std::shared_ptr<memory> unused(nullptr);
@@ -414,7 +416,7 @@ private:
     } _union;
 
     void direct_alloc() {
-        if (! _union.direct) {
+        if(!_union.direct) {
             _union.direct = static_cast<char *>(quantum_lib::secure_malloc(sizeof(T) * N));
         }
         quantum_lib::secure_mprotect_noaccess(_union.direct);
@@ -441,8 +443,8 @@ private:
 
     void change_capacity(size_type new_capacity) {
         DEBUGCS_OUTPUT("prevector_s: void change_capacity(size_type new_capacity)");
-        if (new_capacity <= N) {
-            if (! is_direct()) {
+        if(new_capacity <= N) {
+            if(! is_direct()) {
                 memory dm(_union.direct);
                 dm.readwtite();
                 quantum_lib::secure_mprotect_readwrite(_union._s.indirect);
@@ -456,7 +458,7 @@ private:
                 _size -= N + 1;
             }
         } else {
-            if (! is_direct()) {
+            if(! is_direct()) {
                 // FIXME: Because malloc/realloc here won't call new_handler if
                 // allocation fails, assert success. These should instead use an
                 // allocator or new/delete so that handlers are called as
@@ -472,7 +474,7 @@ private:
                 quantum_lib::secure_mprotect_noaccess(_union._s.indirect);
             } else {
                 _invch = new(std::nothrow) std::vector<unsigned char, A>();
-                if (! _invch) {
+                if(! _invch) {
                     throw std::runtime_error("prevector_s failed to allocate memory.");
                 }
                 _invch->resize((size_t)sizeof(T) * new_capacity);
@@ -499,11 +501,11 @@ private:
     template <typename InputIterator>
     void copy(size_type pcur, InputIterator first, InputIterator last, size_type n) noexcept {
         //IMPLEMENT_MEMORY_READWRITE
-        if (IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+        if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             ::memcpy(item_ptr(pcur), &(*first), n * sizeof(T));
             _size += n;
         } else {
-            while (first != last)
+            while(first != last)
             {
                 new (static_cast<void *>(item_ptr(pcur++))) T(*first);
                 ++_size;
@@ -514,12 +516,12 @@ private:
 
     void fill(size_type pcur, const T &val, size_type n) noexcept {
         //IMPLEMENT_MEMORY_READWRITE
-        if (IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+        if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             const int *_val = reinterpret_cast<const int *>(&val);
             ::memset(item_ptr(pcur), *_val, n * sizeof(T));
             _size += n;
         } else {
-            while (pcur < n)
+            while(pcur < n)
             {
                 new (static_cast<void *>(item_ptr(pcur++))) T(val);
                 ++_size;
@@ -531,7 +533,7 @@ public:
     void assign(size_type n, const T &val) {
         DEBUGCS_OUTPUT("prevector_s: void assign(size_type n, const T &val)");
         clear();
-        if (capacity() < n) {
+        if(capacity() < n) {
             change_capacity(n);
         }
         {
@@ -545,7 +547,7 @@ public:
         DEBUGCS_OUTPUT("prevector_s: void assign(InputIterator first, InputIterator last)");
         size_type n = last - first;
         clear();
-        if (capacity() < n) {
+        if(capacity() < n) {
             change_capacity(n);
         }
         {
@@ -606,7 +608,7 @@ public:
 
     prevector_s &operator=(const prevector_s<N, T, Size, Diff> &other) {
         DEBUGCS_OUTPUT("prevector_s: prevctor_s &operator=(const prevector_s<N, T, Size, Diff> &other)");
-        if (&other == this) {
+        if(&other == this) {
             return *this;
         }
         direct_alloc();
@@ -679,7 +681,7 @@ public:
 
     size_t capacity() const noexcept {
         DEBUGCS_OUTPUT("prevector_s: size_t capacity() const noexcept");
-        if (is_direct()) {
+        if(is_direct()) {
             return N;
         } else {
             return _union._s.capacity;
@@ -701,16 +703,16 @@ public:
     void resize(size_type new_size, const T &val = T()) {
         DEBUGCS_OUTPUT("prevector_s: void resize(size_type new_size, const T &val = T())");
         const size_type cur_size = size();
-        if (cur_size == new_size) {
+        if(cur_size == new_size) {
             return;
         }
-        if (cur_size > new_size) {
+        if(cur_size > new_size) {
             IMPLEMENT_MEMORY_SHARED_READWRITE
             iterator ite(item_ptr(new_size), pmem);
             erase(ite, end());
             return;
         }
-        if (new_size > capacity()) {
+        if(new_size > capacity()) {
             change_capacity(new_size);
         }
         size_type increase = new_size - cur_size;
@@ -722,7 +724,7 @@ public:
 
     void reserve(size_type new_capacity) {
         DEBUGCS_OUTPUT("prevector_s: void reserve(size_type new_capacity)");
-        if (new_capacity > capacity()) {
+        if(new_capacity > capacity()) {
             change_capacity(new_capacity);
         }
     }
@@ -741,7 +743,7 @@ public:
         DEBUGCS_OUTPUT("prevector_s: itertaor insert(iterator pos, const T &value)");
         size_type p = pos - begin();
         size_type new_size = size() + 1;
-        if (capacity() < new_size) {
+        if(capacity() < new_size) {
             change_capacity(new_size + (new_size >> 1));
         }
         {
@@ -758,7 +760,7 @@ public:
         DEBUGCS_OUTPUT("prevector_s: void insert(iterator pos, size_type count, const T &value)");
         size_type p = pos - begin();
         size_type new_size = size() + count;
-        if (capacity() < new_size) {
+        if(capacity() < new_size) {
             change_capacity(new_size + (new_size >> 1));
         }
         {
@@ -774,7 +776,7 @@ public:
         size_type p = pos - begin();
         difference_type count = last - first;
         size_type new_size = size() + count;
-        if (capacity() < new_size) {
+        if(capacity() < new_size) {
             change_capacity(new_size + (new_size >> 1));
         }
         {
@@ -793,8 +795,8 @@ public:
         DEBUGCS_OUTPUT("prevector_s: iterator erase(iterator first, iterator last) noexcept");
         iterator p = first;
         char *endp = (char *)&(*end());
-        if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
-            while (p != last)
+        if(!IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+            while(p != last)
             {
                 (*p).~T();
                 --_size;
@@ -813,7 +815,7 @@ public:
     void push_back(const T &value) {
         DEBUGCS_OUTPUT("prevector_s: void push_back(const T &value)");
         size_type new_size = size() + 1;
-        if (capacity() < new_size) {
+        if(capacity() < new_size) {
             change_capacity(new_size + (new_size >> 1));
         }
         {
@@ -861,10 +863,10 @@ public:
 
     ~prevector_s() noexcept {
         DEBUGCS_OUTPUT("prevector_s: ~prevector_s() noexcept");
-        if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+        if(! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             clear();
         }
-        if (! is_direct()) {
+        if(! is_direct()) {
             quantum_lib::secure_mprotect_readwrite(_union._s.indirect);
             delete _invch;
             _invch = nullptr;
@@ -875,15 +877,15 @@ public:
 
     bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept {
         DEBUGCS_OUTPUT("prevector_s: bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept");
-        if (other.size() != size()) {
+        if(other.size() != size()) {
             return false;
         }
         const_iterator b1 = begin();
         const_iterator b2 = other.begin();
         const_iterator e1 = end();
-        while (b1 != e1)
+        while(b1 != e1)
         {
-            if ((*b1) != (*b2)) {
+            if((*b1) != (*b2)) {
                 return false;
             }
             ++b1;
@@ -899,21 +901,21 @@ public:
 
     bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept {
         DEBUGCS_OUTPUT("prevector_s: bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept");
-        if (size() < other.size()) {
+        if(size() < other.size()) {
             return true;
         }
-        if (size() > other.size()) {
+        if(size() > other.size()) {
             return false;
         }
         const_iterator b1 = begin();
         const_iterator b2 = other.begin();
         const_iterator e1 = end();
-        while (b1 != e1)
+        while(b1 != e1)
         {
-            if ((*b1) < (*b2)) {
+            if((*b1) < (*b2)) {
                 return true;
             }
-            if ((*b2) < (*b1)) {
+            if((*b2) < (*b1)) {
                 return false;
             }
             ++b1;
@@ -929,7 +931,7 @@ public:
 
     size_t allocated_memory() const noexcept {
         DEBUGCS_OUTPUT("prevector_s: size_t allocated_memory() const noexcept");
-        if (is_direct()) {
+        if(is_direct()) {
             return 0;
         } else {
             return ((size_t)(sizeof(T))) * _union._s.capacity;
@@ -995,6 +997,8 @@ const int PREVECTOR_S_N = 512;
 // PREVECTOR_S mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector<T, secure_allocator<T> >
 //
+
+} // namespace latest_crypto
 
 #endif
 #endif

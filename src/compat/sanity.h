@@ -17,6 +17,7 @@
 
 #include <bench/bench.h>
 
+// FIXME: When _bench_func( ... 2, 2), vector object has been brought to break.
 static inline void _bench_func(const char *name, void (*_f)(benchmark::State &), uint64_t num_evals = 10, double num_iters = 10) noexcept {
     benchmark::ConsolePrinter pobj;
     benchmark::State state(name, num_evals, num_iters, pobj);
@@ -41,6 +42,7 @@ namespace check_prevector
     void PrevectorDeserializeTrivial(benchmark::State& state);
     void PrevectorDeserializeNontrivial(benchmark::State& state);
 
+#ifdef LATEST_CRYPTO_ENABLE
     void Prevector_s_DestructorTrivial(benchmark::State& state);
     void Prevector_s_DestructorNontrivial(benchmark::State& state);
     void Prevector_s_ClearTrivial(benchmark::State& state);
@@ -49,6 +51,7 @@ namespace check_prevector
     void Prevector_s_ResizeNontrivial(benchmark::State& state);
     void Prevector_s_DeserializeTrivial(benchmark::State& state);
     void Prevector_s_DeserializeNontrivial(benchmark::State& state);
+#endif
 
     void StdvectorDestructorTrivial(benchmark::State& state);
     void StdvectorDestructorNontrivial(benchmark::State& state);
@@ -61,6 +64,14 @@ namespace check_prevector
 
     void PrevectorAssertcheckNontrivial(benchmark::State& state);
     void PrevectorAssertcheckTrivial(benchmark::State& state);
+
+#ifdef LATEST_CRYPTO_ENABLE
+    void Prevector_s_AssertcheckNontrivial(benchmark::State& state);
+    void Prevector_s_AssertcheckTrivial(benchmark::State& state);
+#endif
+
+    void SecurevectorAssertcheckNontrivial(benchmark::State& state);
+    void SecurevectorAssertcheckTrivial(benchmark::State& state);
 }
 
 #ifdef LATEST_CRYPTO_ENABLE
@@ -70,6 +81,14 @@ namespace latest_crypto
     void bench_AES192(benchmark::State& state);
     void bench_AES256(benchmark::State& state);
     int check_all_aes();
+}
+#endif
+
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+namespace latest_crypto
+{
+    void Blake2Assertcheck(benchmark::State& state);
+    void LamportAssertcheck(benchmark::State& state);
 }
 #endif
 

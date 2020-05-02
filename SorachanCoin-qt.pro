@@ -506,6 +506,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/bench/be_bench.cpp \
     src/bench/be_prevector.cpp \
     src/bench/be_aes.cpp \
+    src/bench/be_hash.cpp \
     src/compat/glibc_compat.cpp \
     src/compat/glibc_sanity.cpp \
     src/compat/glibcxx_sanity.cpp \
@@ -525,7 +526,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/crypto/cr_sha256_shani.cpp \
     src/crypto/cr_sha256_sse4.cpp \
     src/crypto/cr_sha256_sse41.cpp \
-    src/crypto/cr_sha512.cpp \
+    src/crypto/cr_sha512.cpp
     
 
 RESOURCES += \

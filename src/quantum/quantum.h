@@ -4,13 +4,14 @@
 //
 #ifndef SORACHANCOIN_QUANTUM_H
 #define SORACHANCOIN_QUANTUM_H
-#ifdef USE_QUANTUM // SorachanCoin-qt.pro
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)  // SorachanCoin-qt.pro
 
 #include <blake2.h>
 #include <assert.h>
 #include <vector>
 #include <bitset>
 #include <debugcs/debugcs.h>
+#include <memory>
 
 #ifdef WIN32
 # include <compat/compat.h>
@@ -29,6 +30,8 @@
 // MEMORY   libsodium:         https://github.com/jedisct1/libsodium
 // LAMPORT  Lamport Signature: https://github.com/GEO-Protocol/lib-crypto-lamport
 //
+
+namespace latest_crypto {
 
 //
 // Secure library
@@ -463,6 +466,9 @@ namespace secure_segment
         explicit vector(const typename vector_t::const_iterator &begin, const typename vector_t::const_iterator &end) noexcept : vec(begin, end) {
             noaccess();
         }
+        explicit vector(const typename std::vector<T>::const_iterator &begin, const typename std::vector<T>::const_iterator &end) noexcept : vec(begin, end) {
+            noaccess();
+        }
 
         vector(const vector &obj) noexcept {
             operator =(obj);
@@ -869,6 +875,8 @@ namespace Lamport {
     };
 
 } // namespace Lamport
+
+} // namespace latest_crypto
 
 #endif // USE_QUANTUM
 #endif // SORACHANCOIN_QUANTUM_HEADER

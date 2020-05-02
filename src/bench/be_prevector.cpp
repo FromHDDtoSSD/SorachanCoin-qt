@@ -18,7 +18,7 @@ struct nontrivial_t {
     nontrivial_t() :x(-1) {}
     IMPLEMENT_SERIALIZE()
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action) { int nSerSize=0; READWRITE(x); }
+    inline void SerializationOp(Stream& s, Operation ser_action) { int nSerSize = 0; READWRITE(x); }
     bool operator==(const struct nontrivial_t &obj) const { return (x == obj.x); }
 };
 static_assert(!IS_TRIVIALLY_CONSTRUCTIBLE<nontrivial_t>::value,
@@ -108,20 +108,22 @@ PREVECTOR_TEST(Destructor, 28800, 88900)
 PREVECTOR_TEST(Resize, 28900, 90300)
 PREVECTOR_TEST(Deserialize, 6800, 52000)
 
-#define PREVECTOR_S_TEST(name, nontrivops, trivops)                                          \
-    void Prevector_s_ ## name ## Nontrivial(benchmark::State& state) {                       \
-        Prevector ## name<nontrivial_t, prevector_s<PREVECTOR_S_N, nontrivial_t> >(state);   \
-    }                                                                                        \
-    BENCHMARK(Prevector_s_ ## name ## Nontrivial, nontrivops);                               \
-    void Prevector_s_ ## name ## Trivial(benchmark::State& state) {                          \
-        Prevector ## name<trivial_t, prevector_s<PREVECTOR_S_N, trivial_t> >(state);         \
-    }                                                                                        \
+#ifdef LATEST_CRYPTO_ENABLE
+#define PREVECTOR_S_TEST(name, nontrivops, trivops)                                                                        \
+    void Prevector_s_ ## name ## Nontrivial(benchmark::State& state) {                                                     \
+        Prevector ## name<nontrivial_t, latest_crypto::prevector_s<latest_crypto::PREVECTOR_S_N, nontrivial_t> >(state);   \
+    }                                                                                                                      \
+    BENCHMARK(Prevector_s_ ## name ## Nontrivial, nontrivops);                                                             \
+    void Prevector_s_ ## name ## Trivial(benchmark::State& state) {                                                        \
+        Prevector ## name<trivial_t, latest_crypto::prevector_s<latest_crypto::PREVECTOR_S_N, trivial_t> >(state);         \
+    }                                                                                                                      \
     BENCHMARK(Prevector_s_ ## name ## Trivial, trivops);
 
 PREVECTOR_S_TEST(Clear, 28300, 88600)
 PREVECTOR_S_TEST(Destructor, 28800, 88900)
 PREVECTOR_S_TEST(Resize, 28900, 90300)
 PREVECTOR_S_TEST(Deserialize, 6800, 52000)
+#endif
 
 #define STDVECTOR_TEST(name, nontrivops, trivops)                           \
     void Stdvector ## name ## Nontrivial(benchmark::State& state) {         \
@@ -147,7 +149,48 @@ static void PrevectorAssertcheck(benchmark::State& state)
         for(int i = 0; i < n; ++i)
         {
             prevector<rsv, T> v(10, T());
-            prevector_s<rsv, T> vchs(10, T());
+            std::vector<T> vv(10, T());
+
+            for(int j = 0; j < m; ++j)
+            {
+                if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+                    const T *p = reinterpret_cast<const T *>(&j);
+                    v.push_back(*p);
+                    vv.push_back(*p);
+                } else {
+                    v.push_back(T());
+                    vv.push_back(T());
+                }
+            }
+
+            for(int j = 0; j < m / 2; ++j)
+            {
+                typename prevector<rsv, T>::iterator ite = v.begin();
+                v.erase(ite);
+                typename std::vector<T>::iterator vvite = vv.begin();
+                vv.erase(vvite);
+            }
+
+            for(int j = 0; j < m / 2; ++j)
+            {
+                std::vector<T> comp = (std::vector<T>)v.get_std_vector();
+                assert(v[j] == comp[j]);
+            }
+        }
+    }
+}
+
+#ifdef LATEST_CRYPTO_ENABLE
+template <int rsv, typename T>
+static void Prevector_s_Assertcheck(benchmark::State& state)
+{
+    const int n = 10;
+    const int m = rsv;
+    while(state.KeepRunning()) {
+        for(int i = 0; i < n; ++i)
+        {
+            prevector<rsv, T> v(10, T());
+            latest_crypto::prevector_s<rsv, T> vchs(10, T());
             std::vector<T> vv(10, T());
 
             for(int j = 0; j < m; ++j)
@@ -168,7 +211,7 @@ static void PrevectorAssertcheck(benchmark::State& state)
             {
                 typename prevector<rsv, T>::iterator ite = v.begin();
                 v.erase(ite);
-                typename prevector_s<rsv, T>::iterator vite = vchs.begin();
+                typename latest_crypto::prevector_s<rsv, T>::iterator vite = vchs.begin();
                 vchs.erase(vite);
                 typename std::vector<T>::iterator vvite = vv.begin();
                 vv.erase(vvite);
@@ -176,7 +219,7 @@ static void PrevectorAssertcheck(benchmark::State& state)
 
             for(int j = 0; j < m / 2; ++j)
             {
-                typename prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
+                typename latest_crypto::prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
                 assert(vv[j] == *((T *)ptr + j));
 
                 std::vector<T> comp = (std::vector<T>)v.get_std_vector();
@@ -185,17 +228,55 @@ static void PrevectorAssertcheck(benchmark::State& state)
         }
     }
 }
+#endif
 
-#define VECTOR_ASSERTCHECK(rsv, nontrivops, trivops)                  \
-    void PrevectorAssertcheckNontrivial(benchmark::State& state) {    \
-        PrevectorAssertcheck<rsv, nontrivial_t>(state);               \
-    }                                                                 \
-    BENCHMARK(PrevectorAssertcheckNontrivial, nontrivops);            \
-    void PrevectorAssertcheckTrivial(benchmark::State& state) {       \
-        PrevectorAssertcheck<rsv, trivial_t>(state);                  \
-    }                                                                 \
-    BENCHMARK(PrevectorAssertcheckTrivial, trivops);
+#define VECTOR_ASSERTCHECK(name, rsv, nontrivops, trivops)           \
+    void name ## AssertcheckNontrivial(benchmark::State& state) {    \
+        name ## Assertcheck<rsv, nontrivial_t>(state);               \
+    }                                                                \
+    BENCHMARK(name ## AssertcheckNontrivial, nontrivops);            \
+    void name ## AssertcheckTrivial(benchmark::State& state) {       \
+        name ## Assertcheck<rsv, trivial_t>(state);                  \
+    }                                                                \
+    BENCHMARK(name ## AssertcheckTrivial, trivops);
 
-VECTOR_ASSERTCHECK(PREVECTOR_N, 28300, 88600)
+VECTOR_ASSERTCHECK(Prevector, PREVECTOR_N, 28300, 88600)
+#ifdef LATEST_CRYPTO_ENABLE
+VECTOR_ASSERTCHECK(Prevector_s_, latest_crypto::PREVECTOR_S_N, 28300, 88600)
+#endif
+
+template <typename T>
+static void SecurevectorAssertcheck(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        std::vector<T> data;
+        const char ch[] = { 'S', 'O', 'R', 'A', 'C', 'H', 'A', 'N', 'C', 'O', 'I', 'N' };
+        if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+            data.insert(data.end(), (const T *)std::begin(ch), (const T *)std::end(ch));
+        } else {
+            const T obj[] = { T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T() };
+            data.insert(data.end(), (const T *)std::begin(obj), (const T *)std::end(obj));
+        }
+        latest_crypto::secure_segment::vector<T> vch(data.begin(), data.end());
+        auto ite = vch.begin();
+        if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
+            assert(*ite == *((T *)(&ch[0])) && *(ite + 6) == *((T *)&ch[6]));
+        } else {
+            assert(*ite == T() && *(ite + 6) == T());
+        }
+    }
+}
+
+#define SECVECTOR_ASSERTCHECK(nontrivops, trivops)                    \
+    void SecurevectorAssertcheckNontrivial(benchmark::State& state) { \
+        SecurevectorAssertcheck<nontrivial_t>(state);                 \
+    }                                                                 \
+    BENCHMARK(SecurevectorAssertcheckNontrivial, nontrivops);         \
+    void SecurevectorAssertcheckTrivial(benchmark::State& state) {    \
+        SecurevectorAssertcheck<trivial_t>(state);                    \
+    }                                                                 \
+    BENCHMARK(SecurevectorAssertcheckTrivial, trivops);
+
+SECVECTOR_ASSERTCHECK(28300, 88600)
 
 } // namespace check_prevector
