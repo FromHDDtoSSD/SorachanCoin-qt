@@ -142,6 +142,9 @@ contains(DEBUG_TEST_RUNTIME_ENABLE, 1) {
     DEFINES += DEBUG_RUNTIME_TEST
 }
 
+# Crypto++ 8.1
+DEFINES += CRYPTOPP_NO_ASSIGN_TO_INTEGER
+
 !win32 {
     # for extra security against potential buffer overflows: enable GCCs Stack Smashing Protection
     QMAKE_CXXFLAGS *= -fstack-protector-all --param ssp-buffer-size=1
@@ -413,7 +416,39 @@ HEADERS += src/qt/bitcoingui.h \
     src/crypto/scrypt.h \
     src/crypto/sha1.h \
     src/crypto/sha256.h \
-    src/crypto/sha512.h
+    src/crypto/sha512.h \
+    src/cryptopp/aes.h \
+    src/cryptopp/algparam.h \
+    src/cryptopp/argnames.h \
+    src/cryptopp/config.h \
+    src/cryptopp/cryptlib.h \
+    src/cryptopp/filters.h \
+    src/cryptopp/fips140.h \
+    src/cryptopp/fltrimpl.h \
+    src/cryptopp/integer.h \
+    src/cryptopp/iterhash.h \
+    src/cryptopp/keccak.h \
+    src/cryptopp/misc.h \
+    src/cryptopp/mqueue.h \
+    src/cryptopp/osrng.h \
+    src/cryptopp/pch.h \
+    src/cryptopp/queue.h \
+    src/cryptopp/randpool.h \
+    src/cryptopp/rijndael.h \
+    src/cryptopp/rng.h \
+    src/cryptopp/secblock.h \
+    src/cryptopp/seckey.h \
+    src/cryptopp/sha.h \
+    src/cryptopp/shake.h \
+    src/cryptopp/simple.h \
+    src/cryptopp/smartptr.h \
+    src/cryptopp/stdcpp.h \
+    src/cryptopp/trap.h \
+    src/cryptopp/words.h \
+    src/univalue/univalue.h \
+    src/univalue/univalue_escapes.h \
+    src/univalue/univalue_utffilter.h \
+    src/univalue/univaluetest.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -507,6 +542,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/bench/be_prevector.cpp \
     src/bench/be_aes.cpp \
     src/bench/be_hash.cpp \
+    src/bench/be_univalue.cpp \
     src/compat/glibc_compat.cpp \
     src/compat/glibc_sanity.cpp \
     src/compat/glibcxx_sanity.cpp \
@@ -526,8 +562,23 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/crypto/cr_sha256_shani.cpp \
     src/crypto/cr_sha256_sse4.cpp \
     src/crypto/cr_sha256_sse41.cpp \
-    src/crypto/cr_sha512.cpp
-    
+    src/crypto/cr_sha512.cpp \
+    src/cryptopp/crp_algparam.cpp \
+    src/cryptopp/crp_cryptlib.cpp \
+    src/cryptopp/crp_filters.cpp \
+    src/cryptopp/crp_fips140.cpp \
+    src/cryptopp/crp_keccak_core.cpp \
+    src/cryptopp/crp_misc.cpp \
+    src/cryptopp/crp_mqueue.cpp \
+    src/cryptopp/crp_osrng.cpp \
+    src/cryptopp/crp_pch.cpp \
+    src/cryptopp/crp_queue.cpp \
+    src/cryptopp/crp_shake.cpp \
+    src/cryptopp/crp_simple.cpp \
+    src/univalue/univalue.cpp \
+    src/univalue/univalue_get.cpp \
+    src/univalue/univalue_read.cpp \
+    src/univalue/univalue_write.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

@@ -27,6 +27,7 @@
 # define AES_CHECK
 # define MEMORY_CHECK
 # define HASH_CHECK
+//# define JSON_CHECK // univalue is checking ... (still failure)
 #endif
 
 class Quantum_startup
@@ -115,12 +116,23 @@ private:
     static void hash_check() noexcept {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the hash testing ..." << debugcs::endl();
 
+        _bench_func("[hash] Ripemd160_check()", &latest_crypto::Ripemd160Assertcheck);
+        _bench_func("[hash] SHA256_check()", &latest_crypto::SHA256Assertcheck);
+        _bench_func("[hash] SHA512_check()", &latest_crypto::SHA512Assertcheck);
         _bench_func("[hash] blake2_check()", &latest_crypto::Blake2Assertcheck);
         _bench_func("[hash] lamport_check() Assertcheck", &latest_crypto::LamportAssertcheck);
 
-        debugcs::instance() << "[[[OK]]] SorachanCoin the checked lamport" << debugcs::endl();
+        debugcs::instance() << "[[[OK]]] SorachanCoin the checked blake2 and lamport" << debugcs::endl();
     }
 #endif
+
+    static void json_check() noexcept {
+        debugcs::instance() << "[[[BEGIN]]] SorachanCoin the JSON testing ..." << debugcs::endl();
+
+        _bench_func("[JSON] json_check()", &latest_json::JsonAssertcheck, 1, 1);
+
+        debugcs::instance() << "[[[OK]]] SorachanCoin the checked JSON" << debugcs::endl();
+    }
 
     static unsigned int __stdcall benchmark(void *) noexcept {
         for(int i = 0; i < _test_count; ++i)
@@ -139,6 +151,9 @@ private:
 #endif
 #if defined(HASH_CHECK) && defined(LATEST_CRYPTO_ENABLE)
             hash_check();
+#endif
+#ifdef JSON_CHECK
+            json_check();
 #endif
         }
         return 1;

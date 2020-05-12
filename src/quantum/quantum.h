@@ -466,9 +466,11 @@ namespace secure_segment
         explicit vector(const typename vector_t::const_iterator &begin, const typename vector_t::const_iterator &end) noexcept : vec(begin, end) {
             noaccess();
         }
+#ifndef _MSC_VER
         explicit vector(const typename std::vector<T>::const_iterator &begin, const typename std::vector<T>::const_iterator &end) noexcept : vec(begin, end) {
             noaccess();
         }
+#endif
 
         vector(const vector &obj) noexcept {
             operator =(obj);
@@ -577,25 +579,27 @@ namespace Lamport {
         //
         // Secure(count * size) + Random
         //
-        explicit CKeyBase(size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn) noexcept : data(nullptr), secure(nullptr) {
+        explicit CKeyBase(size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn) : data(nullptr), secure(nullptr) {
+            assert(kRandomNumbersCountIn * kRandomNumberSizeIn == get_size());
             alloc_secure_random(secure, kRandomNumbersCountIn, kRandomNumberSizeIn);
         }
 
         //
-        // Alloc only
+        // Alloc(size) only
         //
-        explicit CKeyBase(size_t sizeIn) noexcept : data(nullptr), secure(nullptr) {
+        explicit CKeyBase(size_t sizeIn) : data(nullptr), secure(nullptr) {
+            assert(sizeIn == get_size());
             alloc(data, nullptr, sizeIn);
         }
 
         //
-        // Copy
+        // Copy(data, size, secure_flag)
         //
-        explicit CKeyBase(const byte *dataIn, bool isSecure) noexcept : data(nullptr), secure(nullptr) {
+        explicit CKeyBase(const byte *dataIn, size_t sizeIn, bool isSecure) : data(nullptr), secure(nullptr) {
+            assert(sizeIn == get_size());
             if (isSecure) {
                 alloc_secure(secure, dataIn, get_size());
-            }
-            else {
+            } else {
                 alloc(data, dataIn, get_size());
             }
         }
@@ -613,7 +617,7 @@ namespace Lamport {
         // * @returns size if bytes of Lamport Key.
         // * Both PrivateKey and PublicKey are 16K long.
         //
-        const size_t get_size() const noexcept {
+        static const size_t get_size() noexcept {
             return Lamport::kRandomNumbersCount * Lamport::kRandomNumberSize;
         }
 
@@ -648,8 +652,8 @@ namespace Lamport {
         CPublicKey &operator=(const CPublicKey &); // {}
         CPublicKey &operator=(const CPublicKey &&); // {}
     public:
-        explicit CPublicKey(size_t sizeIn) noexcept : CKeyBase(sizeIn) {}
-        explicit CPublicKey(const byte *dataIn) noexcept : CKeyBase(dataIn, false) {}
+        explicit CPublicKey(size_t _size_check_) noexcept : CKeyBase(_size_check_) {}
+        explicit CPublicKey(const byte *dataIn, size_t _size_check_) : CKeyBase(dataIn, _size_check_, false) {} // Note: disable secure_alloc (dataIn, _size_check_, false).
         ~CPublicKey() noexcept {}
     };
 
@@ -663,8 +667,8 @@ namespace Lamport {
         CPrivateKey &operator=(const CPrivateKey &&); // {}
         bool isCropped;
     public:
-        CPrivateKey() noexcept : isCropped(false), CKeyBase(kRandomNumbersCount, kRandomNumberSize) {}
-        explicit CPrivateKey(byte *dataIn) noexcept : isCropped(false), CKeyBase(dataIn, true) {}
+        CPrivateKey() : isCropped(false), CKeyBase(kRandomNumbersCount, kRandomNumberSize) {} // Note: generate random private key and enable secure_alloc.
+        explicit CPrivateKey(const byte *dataIn, size_t _size_check_) : isCropped(false), CKeyBase(dataIn, _size_check_, true) {} // Note: enable secure_alloc (dataIn, _size_check_, true).
         bool is_ok() const noexcept {
             return isCropped;
         }
@@ -775,39 +779,23 @@ namespace Lamport {
             }
         }
     public:
-        CSignature() noexcept {}
-        explicit CSignature(const byte *dataIn) noexcept {
+        CSignature() noexcept {
+            ::memset(data, 0x00, get_size());
+        }
+        explicit CSignature(const byte *dataIn, size_t _size_check_) noexcept {
+            assert(_size_check_ == get_size());
             ::memcpy(data, dataIn, get_size());
         }
         virtual ~CSignature() noexcept {}
 
-        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
-            if (pKey->is_ok()) {
-                std::shared_ptr<CPublicKey> nullKey = nullptr;
-                return nullKey;
-            }
-
-            //
-            // 1, Create publicKey
-            //
-            std::shared_ptr<CPublicKey> pubKey = pKey->derivePublicKey();
-
-            //
-            // 2, hashed Signature data
-            //
-            byte messageHash[hashSize];
-            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
-            CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
-            collectSignature(data, guard.get_addr(), messageHash);
-
-            //
-            // 3, Cropping the private key.
-            // This is needed to prevent it reuse.
-            //
-            pKey->set_cropped();
-
-            return pubKey;
+        size_t get_size() const noexcept {
+            // signature has 8KB
+            return kSize;
         }
+        const byte *get_addr() const noexcept {
+            return data;
+        }
+
         bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept {
             if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr) {
                 return false;
@@ -844,12 +832,45 @@ namespace Lamport {
             return (::memcmp(pubKeySignature, hashedSignature, kSize) == 0) ? true : false;
         }
 
-        size_t get_size() const noexcept {
-            // signature has 8KB
-            return kSize;
+    protected:
+        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
+            if(pKey->is_ok()) {
+                std::shared_ptr<CPublicKey> nullKey = nullptr;
+                return nullKey;
+            }
+
+            //
+            // 1, Create publicKey
+            //
+            std::shared_ptr<CPublicKey> pubKey = pKey->derivePublicKey();
+
+            //
+            // 2, hashed Signature data
+            //
+            byte messageHash[hashSize];
+            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
+            CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
+            collectSignature(data, guard.get_addr(), messageHash);
+
+            //
+            // 3, Cropping the private key.
+            // This is needed to prevent it reuse.
+            //
+            pKey->set_cropped();
+
+            return pubKey;
         }
-        const byte *get_addr() const noexcept {
-            return data;
+
+        void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
+            byte previous[kSize];
+            ::memcpy(previous, data, sizeof(data));
+
+            byte messageHash[hashSize];
+            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
+            CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
+            collectSignature(data, guard.get_addr(), messageHash);
+            for(size_t i = 0; i < kSize; ++i)
+                data[i] = (byte)(data[i] + previous[i]);
         }
     };
 
@@ -862,7 +883,8 @@ namespace Lamport {
         CLamport &operator=(const CLamport &); // {}
         CLamport &operator=(const CLamport &&); // {}
     public:
-        CLamport() noexcept : privKey(), CSignature() {}
+        CLamport() noexcept : privKey(), CSignature() {} // Automatically, set random to privKey.
+        explicit CLamport(const byte *dataIn, size_t _size_check_) : privKey(dataIn, _size_check_), CSignature() {} // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
         ~CLamport() {}
 
         std::shared_ptr<CPublicKey> create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept {
@@ -871,6 +893,10 @@ namespace Lamport {
             // Note: Call to CSignature::derivePublicKey
             //
             return this->derivePublicKey(dataIn, dataSize, &privKey);
+        }
+
+        void create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept {
+            this->createHash(dataIn, dataSize, &privKey);
         }
     };
 

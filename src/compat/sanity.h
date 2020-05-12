@@ -87,9 +87,17 @@ namespace latest_crypto
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
 namespace latest_crypto
 {
+    void Ripemd160Assertcheck(benchmark::State& state);
+    void SHA256Assertcheck(benchmark::State& state);
+    void SHA512Assertcheck(benchmark::State& state);
     void Blake2Assertcheck(benchmark::State& state);
     void LamportAssertcheck(benchmark::State& state);
 }
 #endif
+
+namespace latest_json
+{
+    void JsonAssertcheck(benchmark::State& state);
+}
 
 #endif // BITCOIN_COMPAT_SANITY_H

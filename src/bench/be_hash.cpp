@@ -5,18 +5,155 @@
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
 
 #include <memory>
-#include <quantum/quantum.h>
 #include <prevector/prevector.h>
 #include <bench/bench.h>
 #include <compat/sanity.h>
+#include <hash.h>
 
+#include <openssl/sha.h>
+#include <openssl/rand.h>
+
+static const std::string bench_source = "We hope that the infectious diseases will converge as possible early.";
+
+#undef hash_basis
 namespace latest_crypto {
     typedef std::uint8_t byte;
 
+static void Ripemd160Assertcheck_(benchmark::State& state)
+{
+    prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
+    while(state.KeepRunning()) {
+        uint160 latest = hash_q::Hash160(std::begin(bench_source), std::end(bench_source));
+        uint160 old = hash_basis::Hash160(std::begin(bench_source), std::end(bench_source));
+        assert(latest == old);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint160 _latest = hash_q::Hash160(random_value.begin(), random_value.end());
+        uint160 _old = hash_basis::Hash160(random_value.begin(), random_value.end());
+        assert(_latest == _old);
+    }
+}
+
+static void SHA256Assertcheck_(benchmark::State& state)
+{
+    prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
+    while(state.KeepRunning()) {
+        uint256 latest1 = hash_q::Hash(std::begin(bench_source), std::end(bench_source));
+        uint256 old1 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source));
+        assert(latest1 == old1);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint256 _latest1 = hash_q::Hash(random_value.begin(), random_value.end());
+        uint256 _old1 = hash_basis::Hash(random_value.begin(), random_value.end());
+        assert(_latest1 == _old1);
+
+        uint256 latest2 = hash_q::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 old2 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        assert(latest2 == old2);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint256 _latest2 = hash_q::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _old2 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        assert(_latest2 == _old2);
+
+        uint256 latest3 = hash_q::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 old3 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        assert(latest3 == old3);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint256 _latest3 = hash_q::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _old3 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        assert(_latest3 == _old3);
+    }
+}
+
+    namespace openssl {
+        template<typename T1>
+        uint512 sha512(const T1 pbegin, const T1 pend) {
+            SHA512_CTX ctx;
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&pbegin[0], (pend - pbegin) * sizeof(pbegin[0]));
+            uint512 hash1;
+            ::SHA512_Final((unsigned char *)&hash1, &ctx);
+
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&hash1, sizeof(hash1));
+            uint512 hash2;
+            ::SHA512_Final((unsigned char *)&hash2, &ctx);
+            return hash2;
+        }
+        template<typename T1, typename T2>
+        uint512 sha512_2(const T1 p1begin, const T1 p1end, const T2 p2begin, const T2 p2end) {
+            SHA512_CTX ctx;
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&p1begin[0], (p1end - p1begin) * sizeof(p1begin[0]));
+            ::SHA512_Update(&ctx, (const char *)&p2begin[0], (p2end - p2begin) * sizeof(p2begin[0]));
+            uint512 hash1;
+            ::SHA512_Final((unsigned char *)&hash1, &ctx);
+
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&hash1, sizeof(hash1));
+            uint512 hash2;
+            ::SHA512_Final((unsigned char *)&hash2, &ctx);
+            return hash2;
+        }
+        template<typename T1, typename T2, typename T3>
+        uint512 sha512_3(const T1 p1begin, const T1 p1end, const T2 p2begin, const T2 p2end, const T3 p3begin, const T3 p3end) {
+            SHA512_CTX ctx;
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&p1begin[0], (p1end - p1begin) * sizeof(p1begin[0]));
+            ::SHA512_Update(&ctx, (const char *)&p2begin[0], (p2end - p2begin) * sizeof(p2begin[0]));
+            ::SHA512_Update(&ctx, (const char *)&p3begin[0], (p3end - p3begin) * sizeof(p3begin[0]));
+            uint512 hash1;
+            ::SHA512_Final((unsigned char *)&hash1, &ctx);
+
+            ::SHA512_Init(&ctx);
+            ::SHA512_Update(&ctx, (const char *)&hash1, sizeof(hash1));
+            uint512 hash2;
+            ::SHA512_Final((unsigned char *)&hash2, &ctx);
+            return hash2;
+        }
+    }
+
+static void SHA512Assertcheck_(benchmark::State& state)
+{
+    prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
+    while(state.KeepRunning()) {
+        uint512 latest1 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source));
+        uint512 old1 = openssl::sha512(std::begin(bench_source), std::end(bench_source));
+        assert(latest1 == old1);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint512 _latest1 = hash_q::Hash512(random_value.begin(), random_value.end());
+        uint512 _old1 = openssl::sha512(random_value.begin(), random_value.end());
+        assert(_latest1 == _old1);
+
+        uint512 latest2 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint512 old2 = openssl::sha512_2(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        assert(latest2 == old2);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint512 _latest2 = hash_q::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint512 _old2 = openssl::sha512_2(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        assert(_latest2 == _old2);
+
+        uint512 latest3 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint512 old3 = openssl::sha512_3(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        assert(latest3 == old3);
+
+        ::RAND_bytes(random_value.data(), random_value.size());
+        uint512 _latest3 = hash_q::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint512 _old3 = openssl::sha512_3(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        assert(_latest3 == _old3);
+    }
+}
+
 static void Blake2Assertcheck_(benchmark::State& state)
 {
+    prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)Lamport::CKeyBase::get_size(), (uint8_t)0x00);
     while(state.KeepRunning()) {
-        Lamport::CPrivateKey pKey;
+        ::RAND_bytes(random_value.data(), random_value.size());
+        Lamport::CPrivateKey pKey(random_value.data(), random_value.size());
         Lamport::BLAKE2KeyHash h(pKey);
 
         byte referenceHash[Lamport::BLAKE2KeyHash::kBytesSize];
@@ -37,9 +174,12 @@ static void LamportAssertcheck_(benchmark::State& state)
         byte *data = &vdata.at(0);
 
         ::RAND_bytes(data, buf_size);
-        Lamport::CLamport lamport;
+        Lamport::CLamport lamport; // Note: generate private key (ramdom).
         std::shared_ptr<Lamport::CPublicKey> pubKey = lamport.create_pubkey(data, buf_size);
         assert(lamport.check(data, buf_size, pubKey) == true);
+
+        assert(lamport.get_size() == 8192);
+        assert(pubKey->get_size() == 16384);
 
         byte tmp = data[0];
         if(tmp - (data[0] = 0xFF))
@@ -48,12 +188,33 @@ static void LamportAssertcheck_(benchmark::State& state)
             assert(lamport.check(data, buf_size, pubKey) == true); // If data is no change, it can be checking again and again.
 
         std::shared_ptr<Lamport::CPublicKey> pubKey2 = lamport.create_pubkey(data, buf_size);
-        assert(lamport.check(data, buf_size, pubKey2) == false); // Note: lamport object is used limit once.
+        assert(lamport.check(data, buf_size, pubKey2) == false); // Note: lamport object is used limit once. lamport object prevent reuse.
 
         {
             Lamport::CLamport lamport3;
             std::shared_ptr<Lamport::CPublicKey> pubKey3 = lamport3.create_pubkey(data, buf_size);
-            assert(lamport3.check(data, buf_size, pubKey3) == true);
+            assert(lamport3.check(data, buf_size, pubKey3) == true); // OK. new privKey.
+        }
+
+        {
+            CQHASH65536 lamhash;
+            uint65536 hash;
+            lamhash.Write(data, buf_size);
+            lamhash.Finalize((unsigned char *)&hash);
+
+            CQHASH65536 lamhash2;
+            uint65536 hash2;
+            lamhash2.Write(data, buf_size);
+            lamhash2.Write(data, buf_size);
+            lamhash2.Finalize((unsigned char *)&hash2);
+            assert(hash != hash2);
+
+            CQHASH65536 lamhash3;
+            uint65536 hash3;
+            lamhash3.Write(data, buf_size);
+            lamhash3.Write(data, buf_size);
+            lamhash3.Finalize((unsigned char *)&hash3);
+            assert(hash2 == hash3);
         }
 
 #ifdef LAMPORT_RESULT_VIEW
@@ -78,7 +239,10 @@ static void LamportAssertcheck_(benchmark::State& state)
 
 HASH_TEST(Blake2, 50000)
 HASH_TEST(Lamport, 50000)
+HASH_TEST(Ripemd160, 50000)
+HASH_TEST(SHA256, 50000)
+HASH_TEST(SHA512, 50000)
 
 } // namespace check_hash
 
-#endif // USE_QUANTUM
+#endif // USE_QUANTUM && LATEST_CRYPTO_ENABLE
