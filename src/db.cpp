@@ -259,6 +259,7 @@ void CDBEnv::CheckpointLSN(std::string strFile)
 
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(nullptr), activeTxn(nullptr)
 {
+    const int retry_counter = 10;
     if (pszFile == nullptr) {
         return;
     }
@@ -298,6 +299,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(n
                 }
             }
 
+            /*
             int ret = pdb->open(nullptr,     // Txn pointer
                 fMockDb ? nullptr : pszFile, // Filename
                 "main",                      // Logical db name
@@ -311,6 +313,28 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(n
                 --CDBEnv::bitdb.mapFileUseCount[strFile];
                 strFile.clear();
                 throw std::runtime_error(strprintf("CDB() : can't open database file %s, error %d", pszFile, ret));
+            }
+            */
+
+            for (int cc = 0; cc < retry_counter; ++cc) {
+                int ret = pdb->open(nullptr,     // Txn pointer
+                    fMockDb ? nullptr : pszFile, // Filename
+                    "main",                      // Logical db name
+                    DB_BTREE,                    // Database type
+                    nFlags,                      // Flags
+                    0);
+
+                //debugcs::instance() << "CDB::CDB open db: " << ret << debugcs::endl();
+                if (ret != 0) {
+                    if(cc < retry_counter - 1) {util::Sleep(3000); continue;}
+                    delete pdb;
+                    pdb = nullptr;
+                    --CDBEnv::bitdb.mapFileUseCount[strFile];
+                    strFile.clear();
+                    throw std::runtime_error(strprintf("CDB() : can't open database file %s, error %d", pszFile, ret));
+                } else {
+                    break;
+                }
             }
 
             if (fCreate && !Exists(std::string("version"))) {
