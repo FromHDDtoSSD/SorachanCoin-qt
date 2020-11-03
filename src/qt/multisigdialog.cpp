@@ -18,6 +18,7 @@
 #include "util.h"
 #include "wallet.h"
 #include "walletmodel.h"
+#include "net.h"
 
 #ifdef USE_LEVELDB
 #include "txdb-leveldb.h"

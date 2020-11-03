@@ -11,6 +11,10 @@
 #include "ntp.h"
 #include "base58.h"
 #include "miner.h"
+#include <boot/shutdown.h>
+#include <block/block_process.h>
+#include <miner/diff.h>
+#include <block/block_alert.h>
 
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
@@ -43,7 +47,7 @@ void CRPCTable::WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry)
     if (confirms) {
         entry.push_back(json_spirit::Pair("blockhash", wtx.hashBlock.GetHex()));
         entry.push_back(json_spirit::Pair("blockindex", wtx.nIndex));
-        entry.push_back(json_spirit::Pair("blocktime", (int64_t)(block_info::mapBlockIndex[wtx.hashBlock]->nTime)));
+        entry.push_back(json_spirit::Pair("blocktime", (int64_t)(block_info::mapBlockIndex[wtx.hashBlock]->get_nTime())));
     }
     entry.push_back(json_spirit::Pair("txid", wtx.GetHash().GetHex()));
     entry.push_back(json_spirit::Pair("time", (int64_t)wtx.GetTxTime()));
@@ -95,7 +99,7 @@ json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, bool fHe
 
     obj.push_back(json_spirit::Pair("timestamping", timestamping));
 
-    obj.push_back(json_spirit::Pair("moneysupply", ValueFromAmount(block_info::pindexBest->nMoneySupply)));
+    obj.push_back(json_spirit::Pair("moneysupply", ValueFromAmount(block_info::pindexBest->get_nMoneySupply())));
     obj.push_back(json_spirit::Pair("connections", (int)net_node::vNodes.size()));
     obj.push_back(json_spirit::Pair("proxy", (proxy.first.IsValid() ? proxy.first.ToStringIPPort() : std::string())));
     obj.push_back(json_spirit::Pair("ip", bitsocket::addrSeenByPeer.ToStringIP()));
@@ -113,7 +117,7 @@ json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, bool fHe
         obj.push_back(json_spirit::Pair("unlocked_until", (int64_t)nWalletUnlockTime / 1000));
     }
 
-    obj.push_back(json_spirit::Pair("errors", block_alert::manage::GetWarnings("statusbar")));
+    obj.push_back(json_spirit::Pair("errors", block_alert::GetWarnings("statusbar")));
     return obj;
 }
 
@@ -1432,7 +1436,7 @@ json_spirit::Value CRPCTable::listsinceblock(const json_spirit::Array &params, b
         }
     }
 
-    int depth = pindex ? (1 + block_info::nBestHeight - pindex->nHeight) : -1;
+    int depth = pindex ? (1 + block_info::nBestHeight - pindex->get_nHeight()) : -1;
 
     json_spirit::Array transactions;
 
@@ -1450,10 +1454,10 @@ json_spirit::Value CRPCTable::listsinceblock(const json_spirit::Array &params, b
     if (target_confirms == 1) {
         lastblock = block_info::hashBestChain;
     } else {
-        int target_height = block_info::pindexBest->nHeight + 1 - target_confirms;
+        int target_height = block_info::pindexBest->get_nHeight() + 1 - target_confirms;
 
         CBlockIndex *block;
-        for (block = block_info::pindexBest; block && block->nHeight > target_height; block = block->pprev) {}
+        for (block = block_info::pindexBest; block && block->get_nHeight() > target_height; block = block->set_pprev()) {}
 
         lastblock = block ? block->GetBlockHash() : 0;
     }
@@ -1518,7 +1522,7 @@ json_spirit::Value CRPCTable::gettransaction(const json_spirit::Array &params, b
                 if (mi != block_info::mapBlockIndex.end() && (*mi).second) {
                     CBlockIndex* pindex = (*mi).second;
                     if (pindex->IsInMainChain()) {
-                        entry.push_back(json_spirit::Pair("confirmations", 1 + block_info::nBestHeight - pindex->nHeight));
+                        entry.push_back(json_spirit::Pair("confirmations", 1 + block_info::nBestHeight - pindex->get_nHeight()));
                     } else {
                         entry.push_back(json_spirit::Pair("confirmations", 0));
                     }
@@ -1822,7 +1826,7 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, bo
     // slack space in .dat files; that is bad if the old data is
     // unencrypted private keys. So:
     //
-    entry::StartShutdown();
+    boot::StartShutdown();
     return (coin_param::strCoinName + " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.").c_str();
 }
 

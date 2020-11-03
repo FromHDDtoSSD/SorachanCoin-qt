@@ -24,6 +24,8 @@
 #include <QDateTime>
 #include <QtAlgorithms>
 
+#include <miner/diff.h>
+
 static int column_alignments[] = {
     Qt::AlignLeft|Qt::AlignVCenter,
     Qt::AlignLeft|Qt::AlignVCenter,
@@ -387,7 +389,7 @@ QString MintingTableModel::lookupAddress(const std::string &address, bool toolti
 
 QString MintingTableModel::formatTxPoSReward(KernelRecord *wtx) const
 {
-    int nBits = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->nBits;
+    int nBits = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->get_nBits();
     QString posReward = QString(QObject::tr("from %4 to %5")).arg(BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), wtx->getPoSReward(nBits, 0)), 
                                 BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), wtx->getPoSReward(nBits, mintingInterval)));
 

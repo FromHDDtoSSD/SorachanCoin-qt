@@ -107,9 +107,9 @@ void CRPCTable::TxToJSON(const CTransaction &tx, const uint256 &hashBlock, json_
         if (mi != block_info::mapBlockIndex.end() && (*mi).second) {
             CBlockIndex *pindex = (*mi).second;
             if (pindex->IsInMainChain()) {
-                entry.push_back(json_spirit::Pair("confirmations", 1 + block_info::nBestHeight - pindex->nHeight));
-                entry.push_back(json_spirit::Pair("time", (int64_t)pindex->nTime));
-                entry.push_back(json_spirit::Pair("blocktime", (int64_t)pindex->nTime));
+                entry.push_back(json_spirit::Pair("confirmations", 1 + block_info::nBestHeight - pindex->get_nHeight()));
+                entry.push_back(json_spirit::Pair("time", (int64_t)pindex->get_nTime()));
+                entry.push_back(json_spirit::Pair("blocktime", (int64_t)pindex->get_nTime()));
             } else {
                 entry.push_back(json_spirit::Pair("confirmations", 0));
             }

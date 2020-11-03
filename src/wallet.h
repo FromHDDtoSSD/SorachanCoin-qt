@@ -20,6 +20,8 @@
 #include "walletdb.h"
 #include "base58.h"
 
+#include <merkle/merkle_tx.h>
+
 class CAccountingEntry;
 class CWalletTx;
 class CReserveKey;

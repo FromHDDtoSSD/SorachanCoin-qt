@@ -837,7 +837,7 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
     file << strprintf("# Wallet dump created by %s %s (%s)\n", coin_param::strCoinName.c_str(), version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
     file << strprintf("# * Created on %s\n", dump::EncodeDumpTime(bitsystem::GetTime()).c_str());
     file << strprintf("# * Best block at time of backup was %i (%s),\n", block_info::nBestHeight, block_info::hashBestChain.ToString().c_str());
-    file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->nTime).c_str());
+    file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->get_nTime()).c_str());
     file << "\n";
 
     for (std::vector<std::pair<int64_t, CBitcoinAddress> >::const_iterator it = vAddresses.begin(); it != vAddresses.end(); it++)
@@ -905,7 +905,7 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocat
     }
 
     bool fGood = true;
-    int64_t nTimeBegin = block_info::pindexBest->nTime;
+    int64_t nTimeBegin = block_info::pindexBest->get_nTime();
 
     //
     // read through input file checking and importing keys into wallet.
@@ -1002,12 +1002,12 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocat
 
     // rescan block chain looking for coins from new keys
     CBlockIndex *pindex = block_info::pindexBest;
-    while (pindex && pindex->pprev && pindex->nTime > nTimeBegin - 7200)
+    while (pindex && pindex->get_pprev() && pindex->get_nTime() > nTimeBegin - 7200)
     {
-        pindex = pindex->pprev;
+        pindex = pindex->set_pprev();
     }
 
-    printf("Rescanning last %i blocks\n", block_info::pindexBest->nHeight - pindex->nHeight + 1);
+    printf("Rescanning last %i blocks\n", block_info::pindexBest->get_nHeight() - pindex->get_nHeight() + 1);
     pwallet->ScanForWalletTransactions(pindex);
     pwallet->ReacceptWalletTransactions();
     pwallet->MarkDirty();

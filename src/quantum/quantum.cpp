@@ -1,7 +1,6 @@
 // Copyright (c) 2018-2020 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
 
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
 
@@ -13,27 +12,57 @@
 #include <thread>
 
 //
-// TEST: treat runtime.
+// TEST: runtime.
 //
-#if DEBUG_RUNTIME_TEST
-//# define SANITY_TEST
+#ifdef DEBUG_RUNTIME_TEST
+# define SANITY_TEST
 #endif
 
 //
-// CHECK: treat algo.
+// CHECK: prevector, aes, memory, hash, json
 //
-#if defined(DEBUG_ALGO_CHECK)
+#ifdef DEBUG_ALGO_CHECK
 # define PREVECTOR_CHECK
 # define AES_CHECK
 # define MEMORY_CHECK
 # define HASH_CHECK
-//# define JSON_CHECK // univalue is checking ... (still failure)
+//# define JSON_CHECK // note: univalue is checking ... (still failure)
 #endif
+
+namespace latest_crypto {
+namespace Lamport {
+
+CLamport::CLamport(const CLamport &obj) : privKey(obj.privKey.get_addr(), obj.privKey.get_size()), CSignature() {
+    ::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
+}
+
+CLamport &CLamport::operator=(const CLamport &obj) noexcept {
+    privKey.operator=(obj.privKey);
+    ::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
+    return *this;
+}
+
+CLamport::CLamport() noexcept : privKey(), CSignature() {} // Automatically, set random to privKey.
+CLamport::CLamport(const byte *dataIn, size_t _size_check_) : privKey(dataIn, _size_check_), CSignature() {} // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
+CLamport::~CLamport() {}
+
+std::shared_ptr<CPublicKey> CLamport::create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept {
+    // std::shared_ptr<CPublicKey> debugKey = privKey.derivePublicKey();
+    // Note: Call to CSignature::derivePublicKey
+    return this->derivePublicKey(dataIn, dataSize, &privKey);
+}
+
+void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept {
+    this->createHash(dataIn, dataSize, &privKey);
+}
+
+}} // latest_crypto and Lamport
+
 
 class Quantum_startup
 {
 private:
-    static const int _test_count = 3;
+    static const int _test_count = 1;
 private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;

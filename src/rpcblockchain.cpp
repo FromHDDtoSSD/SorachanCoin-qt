@@ -10,6 +10,7 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <ostream>
+#include <miner/diff.h>
 
 double CRPCTable::GetDifficulty(const CBlockIndex *blockindex/* = NULL */)
 {
@@ -25,9 +26,9 @@ double CRPCTable::GetDifficulty(const CBlockIndex *blockindex/* = NULL */)
         }
     }
 
-    int nShift = (blockindex->nBits >> 24) & 0xff;
+    int nShift = (blockindex->get_nBits() >> 24) & 0xff;
 
-    double dDiff = (double)0x0000ffff / (double)(blockindex->nBits & 0x00ffffff);
+    double dDiff = (double)0x0000ffff / (double)(blockindex->get_nBits() & 0x00ffffff);
 
     while (nShift < 29)
     {
@@ -60,7 +61,7 @@ double CRPCTable::GetPoWMHashPS()
             pindexPrevWork = pindex;
         }
 
-        pindex = pindex->pnext;
+        pindex = pindex->set_pnext();
     }
 
     return GetDifficulty() * 4294.967296 / nTargetSpacingWork;
@@ -79,12 +80,12 @@ double CRPCTable::GetPoSKernelPS()
     {
         if (pindex->IsProofOfStake()) {
             dStakeKernelsTriedAvg += GetDifficulty(pindex) * 4294967296.0;
-            nStakesTime += pindexPrevStake ? (pindexPrevStake->nTime - pindex->nTime) : 0;
+            nStakesTime += pindexPrevStake ? (pindexPrevStake->get_nTime() - pindex->get_nTime()) : 0;
             pindexPrevStake = pindex;
             nStakesHandled++;
         }
 
-        pindex = pindex->pprev;
+        pindex = pindex->set_pprev();
     }
 
     if (! nStakesHandled) {
@@ -100,37 +101,37 @@ json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockInde
 
     result.push_back(json_spirit::Pair("hash", block.GetHash().GetHex()));
 
-    CMerkleTx txGen(block.vtx[0]);
+    CMerkleTx txGen(block.get_vtx(0));
     txGen.SetMerkleBranch(&block);
 
     result.push_back(json_spirit::Pair("confirmations", (int)txGen.GetDepthInMainChain()));
     //result.push_back(json_spirit::Pair("size", (int)::GetSerializeSize(block, SER_NETWORK, version::PROTOCOL_VERSION)));
     result.push_back(json_spirit::Pair("size", (int)::GetSerializeSize(block)));
-    result.push_back(json_spirit::Pair("height", blockindex->nHeight));
-    result.push_back(json_spirit::Pair("version", block.nVersion));
-    result.push_back(json_spirit::Pair("merkleroot", block.hashMerkleRoot.GetHex()));
-    result.push_back(json_spirit::Pair("mint", ValueFromAmount(blockindex->nMint)));
+    result.push_back(json_spirit::Pair("height", blockindex->get_nHeight()));
+    result.push_back(json_spirit::Pair("version", block.get_nVersion()));
+    result.push_back(json_spirit::Pair("merkleroot", block.get_hashMerkleRoot().GetHex()));
+    result.push_back(json_spirit::Pair("mint", ValueFromAmount(blockindex->get_nMint())));
     result.push_back(json_spirit::Pair("time", (int64_t)block.GetBlockTime()));
-    result.push_back(json_spirit::Pair("nonce", (uint64_t)block.nNonce));
-    result.push_back(json_spirit::Pair("bits", HexBits(block.nBits)));
+    result.push_back(json_spirit::Pair("nonce", (uint64_t)block.get_nNonce()));
+    result.push_back(json_spirit::Pair("bits", HexBits(block.get_nBits())));
     result.push_back(json_spirit::Pair("difficulty", GetDifficulty(blockindex)));
     result.push_back(json_spirit::Pair("blocktrust", util::leftTrim(blockindex->GetBlockTrust().GetHex(), '0')));
-    result.push_back(json_spirit::Pair("chaintrust", util::leftTrim(blockindex->nChainTrust.GetHex(), '0')));
-    if (blockindex->pprev) {
-        result.push_back(json_spirit::Pair("previousblockhash", blockindex->pprev->GetBlockHash().GetHex()));
+    result.push_back(json_spirit::Pair("chaintrust", util::leftTrim(blockindex->get_nChainTrust().GetHex(), '0')));
+    if (blockindex->get_pprev()) {
+        result.push_back(json_spirit::Pair("previousblockhash", blockindex->get_pprev()->GetBlockHash().GetHex()));
     }
-    if (blockindex->pnext) {
-        result.push_back(json_spirit::Pair("nextblockhash", blockindex->pnext->GetBlockHash().GetHex()));
+    if (blockindex->get_pnext()) {
+        result.push_back(json_spirit::Pair("nextblockhash", blockindex->get_pnext()->GetBlockHash().GetHex()));
     }
 
     result.push_back(json_spirit::Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
-    result.push_back(json_spirit::Pair("proofhash", blockindex->IsProofOfStake()? blockindex->hashProofOfStake.GetHex() : blockindex->GetBlockHash().GetHex()));
+    result.push_back(json_spirit::Pair("proofhash", blockindex->IsProofOfStake()? blockindex->get_hashProofOfStake().GetHex() : blockindex->GetBlockHash().GetHex()));
     result.push_back(json_spirit::Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
-    result.push_back(json_spirit::Pair("modifier", strprintf("%016" PRIx64, blockindex->nStakeModifier)));
-    result.push_back(json_spirit::Pair("modifierchecksum", strprintf("%08x", blockindex->nStakeModifierChecksum)));
+    result.push_back(json_spirit::Pair("modifier", strprintf("%016" PRIx64, blockindex->get_nStakeModifier())));
+    result.push_back(json_spirit::Pair("modifierchecksum", strprintf("%08x", blockindex->get_nStakeModifierChecksum())));
 
     json_spirit::Array txinfo;
-    BOOST_FOREACH (const CTransaction &tx, block.vtx)
+    BOOST_FOREACH (const CTransaction &tx, block.get_vtx())
     {
         if (fPrintTransactionDetail) {
             CDataStream ssTx(SER_NETWORK, version::PROTOCOL_VERSION);
@@ -146,7 +147,7 @@ json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockInde
     result.push_back(json_spirit::Pair("tx", txinfo));
 
     if ( block.IsProofOfStake() ) {
-        result.push_back(json_spirit::Pair("signature", util::HexStr(block.vchBlockSig.begin(), block.vchBlockSig.end())));
+        result.push_back(json_spirit::Pair("signature", util::HexStr(block.get_vchBlockSig().begin(), block.get_vchBlockSig().end())));
     }
 
     return result;
@@ -236,7 +237,7 @@ json_spirit::Value CRPCTable::getblockhash(const json_spirit::Array &params, boo
     }
 
     CBlockIndex *pblockindex = block_transaction::manage::FindBlockByHeight(nHeight);
-    return pblockindex->phashBlock->GetHex();
+    return pblockindex->get_phashBlock()->GetHex();
 }
 
 json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, bool fHelp)
@@ -278,12 +279,12 @@ json_spirit::Value CRPCTable::getblockbynumber(const json_spirit::Array &params,
 
     CBlock block;
     CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
-    while (pblockindex->nHeight > nHeight)
+    while (pblockindex->get_nHeight() > nHeight)
     {
-        pblockindex = pblockindex->pprev;
+        pblockindex = pblockindex->set_pprev();
     }
 
-    pblockindex = block_info::mapBlockIndex[*pblockindex->phashBlock];
+    pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
     block.ReadFromDisk(pblockindex, true);
 
     return blockToJSON(block, pblockindex, params.size() > 1 ? params[1].get_bool() : false);
@@ -354,12 +355,12 @@ json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params
 
     CBlock block;
     CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
-    while (pblockindex->nHeight > nHeight)
+    while (pblockindex->get_nHeight() > nHeight)
     {
-        pblockindex = pblockindex->pprev;
+        pblockindex = pblockindex->set_pprev();
     }
 
-    pblockindex = block_info::mapBlockIndex[*pblockindex->phashBlock];
+    pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
     block.ReadFromDisk(pblockindex, true);
 
     CDataStream ssBlock(SER_NETWORK, version::PROTOCOL_VERSION);
@@ -387,7 +388,7 @@ json_spirit::Value CRPCTable::getcheckpoint(const json_spirit::Array &params, bo
     result.push_back(json_spirit::Pair("synccheckpoint", Checkpoints::manage::getHashSyncCheckpoint().ToString().c_str()));
 
     CBlockIndex *pindexCheckpoint = block_info::mapBlockIndex[Checkpoints::manage::getHashSyncCheckpoint()];
-    result.push_back(json_spirit::Pair("height", pindexCheckpoint->nHeight));
+    result.push_back(json_spirit::Pair("height", pindexCheckpoint->get_nHeight()));
     result.push_back(json_spirit::Pair("timestamp", util::DateTimeStrFormat(pindexCheckpoint->GetBlockTime()).c_str()));
 
     if (Checkpoints::checkpointMessage.vchSig.size() != 0) {

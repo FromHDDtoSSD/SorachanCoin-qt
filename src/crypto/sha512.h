@@ -9,6 +9,7 @@
 
 #include <stdint.h>
 #include <stdlib.h>
+#include <openssl/crypto.h> // for OPENSSL_cleanse()
 
 namespace latest_crypto {
 
@@ -27,6 +28,12 @@ public:
     CSHA512& Write(const unsigned char* data, size_t len);
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CSHA512& Reset();
+
+    static constexpr size_t Size() {return OUTPUT_SIZE;}
+    void Clean() {
+        ::OPENSSL_cleanse(s, sizeof(s));
+        ::OPENSSL_cleanse(buf, sizeof(buf));
+    }
 };
 
 } // namespace latest_crypto

@@ -22,10 +22,12 @@
 #include "netbase.h"
 #include "addrman.h"
 #include "hash.h"
+#include <block/block.h>
 
 class CRequestTracker;
 class CNode;
-class CBlockIndex;
+//template<typename T> class CBlockIndex_impl;
+//using CBlockIndex = CBlockIndex_impl<uint256>;
 
 //
 // Port
@@ -831,7 +833,8 @@ public:
     static uint64_t GetTotalBytesSent();
 };
 
-class CTransaction;
+template <typename T> class CTransaction_impl;
+using CTransaction = CTransaction_impl<uint256>;
 class bitrelay : private no_instance
 {
 public:

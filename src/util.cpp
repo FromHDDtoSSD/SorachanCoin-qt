@@ -84,7 +84,6 @@ const std::locale dump::formats[5] = {
     std::locale(std::locale::classic(),new boost::posix_time::time_input_facet("%Y-%m-%d"))
 };
 LockedPageManager LockedPageManager::instance;    // allocators.h (Singleton class)
-unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
 bool_arg args_bool::fUseMemoryLog(false);
 bool_arg args_bool::fConfChange(false);
 bool_arg args_bool::fUseFastIndex(false);

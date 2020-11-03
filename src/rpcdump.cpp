@@ -6,6 +6,7 @@
 #include "bitcoinrpc.h"
 #include "ui_interface.h"
 #include "base58.h"
+#include <block/block_process.h>
 
 class CTxDump
 {

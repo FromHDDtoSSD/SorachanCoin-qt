@@ -255,8 +255,10 @@ typedef std::vector<uint8_t> rpctable_vector;
 class CWalletTx;
 class CWalletDB;
 class CAccountingEntry;
-class CBlock;
-class CBlockIndex;
+template<typename T> class CBlock_impl;
+using CBlock = CBlock_impl<uint256>;
+template<typename T> class CBlockIndex_impl;
+using CBlockIndex = CBlockIndex_impl<uint256>;
 
 class CRPCTable
 {

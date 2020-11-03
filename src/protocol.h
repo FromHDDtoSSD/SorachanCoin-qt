@@ -16,6 +16,7 @@
 #include <limits>
 #include "uint256.h"
 #include "util.h"
+#include <block/block_info.h>
 
 namespace protocol
 {

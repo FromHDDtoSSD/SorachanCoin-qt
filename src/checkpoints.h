@@ -21,8 +21,8 @@ typedef prevector<PREVECTOR_N, uint8_t> checkpoints_vector;
 typedef std::vector<uint8_t> checkpoints_vector;
 #endif
 
-class uint256;
-class CBlockIndex;
+template<typename T> class CBlockIndex_impl;
+using CBlockIndex = CBlockIndex_impl<uint256>;
 
 //
 // ppcoin: synchronized checkpoint

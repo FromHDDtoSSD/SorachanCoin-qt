@@ -100,7 +100,7 @@ void benchmark::BenchRunner::RunAll(Printer& printer, uint64_t num_evals, double
     if(!std::ratio_less_equal<benchmark::clock::period, std::micro>::value) {
         debugcs::instance() << "WARNING: Clock precision is worse than microsecond - benchmarks may be less accurate!" << debugcs::endl();
     }
-#ifdef DEBUG
+#ifdef DEBUG_ALGO_CHECK
     debugcs::instance() << "WARNING: This is a debug build - may result in slower benchmarks." << debugcs::endl();
 #endif
 

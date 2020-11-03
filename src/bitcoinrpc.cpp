@@ -4,12 +4,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-/*******
-** MACRO define (optional):
-**
-** POW_NOMP_POOL: In operation, we confirmed stable operation of NOMP POOL.
-** TEST: rpc check --- main(int argc, char *argv[]) function
-********/
+/*
+* TEST: rpc check --- main(int argc, char *argv[]) function
+*/
 
 #include "init.h"
 #include "util.h"
@@ -17,6 +14,9 @@
 #include "ui_interface.h"
 #include "bitcoinrpc.h"
 #include "db.h"
+#include <boot/shutdown.h>
+#include <block/block_process.h>
+#include <block/block_alert.h>
 
 #undef printf
 #include <boost/asio/ip/v6_only.hpp>
@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
         CDBEnv::bitdb.SetDetach(params[0].get_bool());
     }
 
-    entry::StartShutdown();
+    boot::StartShutdown();
     return std::string((coin_param::strCoinName + " server stopping").c_str());
 }
 
@@ -877,7 +877,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
 
             _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
 
-        entry::StartShutdown();
+        boot::StartShutdown();
         return;
     }
 
@@ -1000,7 +1000,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
 
     if (! fListening) {
         CClientUIInterface::uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
-        entry::StartShutdown();
+        boot::StartShutdown();
         return;
     }
 
@@ -1095,7 +1095,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
 {
     printf("ThreadRPCServer3 started\n");
 
-#ifdef POW_NOMP_POOL
+#ifdef LIMIT_NOMP_MODE
     {
         LOCK(cs_THREAD_RPCHANDLER);
 #endif
@@ -1103,12 +1103,12 @@ void bitrpc::ThreadRPCServer3(void *parg)
     // Make this thread recognisable as the RPC handler
     bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
 
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
     {
         LOCK(cs_THREAD_RPCHANDLER);
 #endif
         ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
     }
 #endif
     AcceptedConnection *conn = (AcceptedConnection *)parg;
@@ -1120,12 +1120,12 @@ void bitrpc::ThreadRPCServer3(void *parg)
             conn->close();
             delete conn;
 
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
             {
                 LOCK(cs_THREAD_RPCHANDLER);
 #endif
                 --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
             }
 #endif
             return;
@@ -1200,16 +1200,16 @@ void bitrpc::ThreadRPCServer3(void *parg)
     }
 
     delete conn;
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
     {
         LOCK(cs_THREAD_RPCHANDLER);
 #endif
         --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-#ifndef POW_NOMP_POOL
+#ifndef LIMIT_NOMP_MODE
     }
 #endif
 
-#ifdef POW_NOMP_POOL
+#ifdef LIMIT_NOMP_MODE
     } // LOCK(cs_THREAD_RPCHANDLER)
 #endif
 }
@@ -1228,7 +1228,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     //
     // Observe safe mode
     //
-    std::string strWarning = block_alert::manage::GetWarnings("rpc");
+    std::string strWarning = block_alert::GetWarnings("rpc");
     if (!strWarning.empty() && !map_arg::GetBoolArg("-disablesafemode") && !pcmd->okSafeMode) {
         printf("ThreadRPCServer3 execute Error2\n");
         throw bitjson::JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);

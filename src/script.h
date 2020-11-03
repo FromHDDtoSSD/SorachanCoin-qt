@@ -16,7 +16,8 @@
 #include "bignum.h"
 #include "base58.h"
 
-class CTransaction;
+template <typename T> class CTransaction_impl;
+using CTransaction = CTransaction_impl<uint256>;
 class CBitcoinAddress;
 
 namespace Script_param

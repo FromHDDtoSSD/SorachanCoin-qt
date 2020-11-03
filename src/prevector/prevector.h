@@ -1,6 +1,6 @@
 // Copyright (c) 2015-2016 The Bitcoin Core developers
 // Copyright (c) 2015-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -731,14 +731,20 @@ public:
 //
 // PREVECTOR Common N
 //
+const int PREVECTOR_DATASTREAM_N = 512;
 const int PREVECTOR_N = 512;
 const int PREVECTOR_BUFFER_N = 2048;
+const int PREVECTOR_BLOCK_N = 512;
 
 //
 // PREVECTOR mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector
 //
-#define CSCRIPT_PREVECTOR_ENABLE
-#define BUFFER_PREVECTOR_ENABLE
+#ifdef USE_PREVECTOR
+# define DATASTREAM_PREVECTOR_ENABLE
+# define CSCRIPT_PREVECTOR_ENABLE
+# define BUFFER_PREVECTOR_ENABLE
+# define BLOCK_PREVECTOR_ENABLE
+#endif
 
 #endif

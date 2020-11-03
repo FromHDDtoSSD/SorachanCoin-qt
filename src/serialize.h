@@ -29,21 +29,11 @@
 
 #include <allocators.h>
 #include <version.h>
+#include <const/no_instance.h>
 
 class CScript;
 class CDataStream;
 class CAutoFile;
-
-//
-// no instance
-//
-class no_instance
-{
-private:
-    no_instance(); // {}
-    no_instance(const no_instance &); // {}
-    no_instance(const no_instance &&); // {}
-};
 
 //
 // Used to bypass the rule against non-const reference to temporary
@@ -993,9 +983,9 @@ namespace imp_ser    // important
 //
 typedef std::vector<char, zero_after_free_allocator<char> > CSerializeData;
 
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> datastream_vector;
-typedef prevector<PREVECTOR_N, int8_t> datastream_signed_vector;
+#ifdef DATASTREAM_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_DATASTREAM_N, uint8_t> datastream_vector;
+typedef prevector<PREVECTOR_DATASTREAM_N, int8_t> datastream_signed_vector;
 #else
 typedef std::vector<uint8_t> datastream_vector;
 typedef std::vector<int8_t> datastream_signed_vector;
@@ -1004,10 +994,10 @@ typedef std::vector<int8_t> datastream_signed_vector;
 class CDataStream : public CTypeVersionBehave
 {
 private:
-    CDataStream(); // {}
-    // CDataStream(const CDataStream &); // {}
-    // CDataStream &operator=(const CDataStream &); // {}
-    // CDataStream &operator=(const CDataStream &&); // {}
+    // CDataStream()=delete;
+    // CDataStream(const CDataStream &)=delete;
+    // CDataStream &operator=(const CDataStream &)=delete;
+    // CDataStream &operator=(const CDataStream &&)=delete;
 
     unsigned int nReadPos;
     short state;
@@ -1028,8 +1018,12 @@ public:
     typedef vector_type::const_iterator   const_iterator;
     typedef vector_type::reverse_iterator reverse_iterator;
 
-    explicit CDataStream(int = 0, int = 0) noexcept {
+    CDataStream(int = 0, int = 0) noexcept {
         Init();
+    }
+
+    CDataStream(const CFlatData &obj) {
+        *this << obj;
     }
 
     CDataStream(const_iterator pbegin, const_iterator pend, int = 0, int = 0) : vch(pbegin, pend) {
@@ -1045,6 +1039,15 @@ public:
     CDataStream(const vector_type &vchIn, int = 0, int = 0) : vch(vchIn.begin(), vchIn.end()) {
         Init();
     }
+
+#ifdef DATASTREAM_PREVECTOR_ENABLE
+    CDataStream(const std::vector<char> &vchIn, int = 0, int = 0) : vch(vchIn.begin(), vchIn.end()) {
+        Init();
+    }
+    CDataStream(const std::vector<unsigned char> &vchIn, int = 0, int = 0) : vch(vchIn.begin(), vchIn.end()) {
+        Init();
+    }
+#endif
 
     CDataStream(const datastream_signed_vector &vchIn, int = 0, int = 0) : vch(vchIn.begin(), vchIn.end()) {
         Init();
@@ -1360,7 +1363,7 @@ public:
 };
 
 // replace from CDataStream to CMoveStream
-#define CDataStream CMoveStream
+// #define CDataStream CMoveStream
 
 //
 // C, RAII wrapper for FILE *.

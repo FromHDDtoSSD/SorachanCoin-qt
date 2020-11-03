@@ -5,8 +5,8 @@
 
 #include "uint256.h"
 
-
-class CTxIn;
+template <typename T> class CTxIn_impl;
+using CTxIn = CTxIn_impl<uint256>;
 class WalletModel;
 
 namespace Ui

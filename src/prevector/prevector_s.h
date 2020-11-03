@@ -997,6 +997,9 @@ const int PREVECTOR_S_N = 512;
 // PREVECTOR_S mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector<T, secure_allocator<T> >
 //
+#ifdef USE_PREVECTOR_S
+
+#endif
 
 } // namespace latest_crypto
 

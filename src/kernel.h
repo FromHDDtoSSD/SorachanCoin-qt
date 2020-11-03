@@ -7,6 +7,7 @@
 
 #include "main.h"
 #include "wallet.h"
+#include <block/block_check.h>
 
 class bitkernel : private no_instance
 {

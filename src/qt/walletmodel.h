@@ -6,6 +6,7 @@
 #include <map>
 
 #include "allocators.h" /* for SecureString */
+#include <uint256.h>
 
 class OptionsModel;
 class AddressTableModel;
@@ -15,7 +16,8 @@ class CWallet;
 class CKeyID;
 class CPubKey;
 class COutput;
-class COutPoint;
+template <typename T> class COutPoint_impl;
+using COutPoint = COutPoint_impl<uint256>;
 class uint256;
 class CCoinControl;
 
@@ -136,7 +138,7 @@ public:
     bool getPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const;
     void getOutputs(const std::vector<COutPoint> &vOutpoints, std::vector<COutput> &vOutputs);
     void listCoins(std::map<QString, std::vector<COutput> > &mapCoins) const;
-    bool isLockedCoin(uint256 hash, unsigned int n) const;
+    //bool isLockedCoin(uint256 hash, unsigned int n) const;
     void lockCoin(COutPoint &output);
     void unlockCoin(COutPoint &output);
     void listLockedCoins(std::vector<COutPoint> &vOutpts);

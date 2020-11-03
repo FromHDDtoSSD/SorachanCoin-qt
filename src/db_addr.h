@@ -9,6 +9,7 @@
 #define BITCOIN_ADDR_H
 
 #include "main.h"
+#include <addrman.h>
 
 #include <string>
 #include <vector>

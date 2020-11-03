@@ -9,27 +9,95 @@
 #include <bench/bench.h>
 #include <compat/sanity.h>
 #include <hash.h>
+#include <crypto/hmac_qhash65536.h>
 
 #include <openssl/sha.h>
 #include <openssl/rand.h>
 
 static const std::string bench_source = "We hope that the infectious diseases will converge as possible early.";
 
-#undef hash_basis
 namespace latest_crypto {
     typedef std::uint8_t byte;
+
+    class hash_basis_org : private no_instance    // bitcoin SHA256
+    {
+    public:
+        template<typename T1>
+        static uint256 Hash(const T1 pbegin, const T1 pend) {
+            static unsigned char pblank[1] = { 0 };
+            uint256 hash1;
+            ::SHA256((pbegin == pend ? pblank : (unsigned char *)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char *)&hash1);
+            uint256 hash2;
+            ::SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
+            return hash2;
+        }
+
+        template<typename T1, typename T2>
+        static uint256 Hash(const T1 p1begin, const T1 p1end,
+            const T2 p2begin, const T2 p2end) {
+            static unsigned char pblank[1] = { 0 };
+            uint256 hash1;
+            SHA256_CTX ctx;
+            ::SHA256_Init(&ctx);
+            ::SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char *)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+            ::SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char *)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+            ::SHA256_Final((unsigned char *)&hash1, &ctx);
+            uint256 hash2;
+            ::SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
+            return hash2;
+        }
+
+        template<typename T1, typename T2, typename T3>
+        static uint256 Hash(const T1 p1begin, const T1 p1end,
+            const T2 p2begin, const T2 p2end,
+            const T3 p3begin, const T3 p3end) {
+            static unsigned char pblank[1] = { 0 };
+            uint256 hash1;
+            SHA256_CTX ctx;
+            ::SHA256_Init(&ctx);
+            ::SHA256_Update(&ctx, (p1begin == p1end ? pblank : (unsigned char *)&p1begin[0]), (p1end - p1begin) * sizeof(p1begin[0]));
+            ::SHA256_Update(&ctx, (p2begin == p2end ? pblank : (unsigned char *)&p2begin[0]), (p2end - p2begin) * sizeof(p2begin[0]));
+            ::SHA256_Update(&ctx, (p3begin == p3end ? pblank : (unsigned char *)&p3begin[0]), (p3end - p3begin) * sizeof(p3begin[0]));
+            ::SHA256_Final((unsigned char *)&hash1, &ctx);
+            uint256 hash2;
+            ::SHA256((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
+            return hash2;
+        }
+
+        template<typename T>
+        static uint256 SerializeHash(const T &obj, int nType=SER_GETHASH, int nVersion=version::PROTOCOL_VERSION) {
+            //CHashWriter ss(nType, nVersion);
+            CHashWriter ss;
+            ss << obj;
+            return ss.GetHash();
+        }
+
+        template<typename T1>
+        static uint160 Hash160(const T1 pbegin, const T1 pend) {
+            static unsigned char pblank[1] = { 0 };
+            uint256 hash1;
+            ::SHA256((pbegin == pend ? pblank : (unsigned char *)&pbegin[0]), (pend - pbegin) * sizeof(pbegin[0]), (unsigned char *)&hash1);
+            uint160 hash2;
+            ::RIPEMD160((unsigned char *)&hash1, sizeof(hash1), (unsigned char *)&hash2);
+            return hash2;
+        }
+
+        static uint160 Hash160(const std::vector<uint8_t> &vch) {
+            return hash_basis_org::Hash160(vch.begin(), vch.end());
+        }
+    };
 
 static void Ripemd160Assertcheck_(benchmark::State& state)
 {
     prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
     while(state.KeepRunning()) {
-        uint160 latest = hash_q::Hash160(std::begin(bench_source), std::end(bench_source));
-        uint160 old = hash_basis::Hash160(std::begin(bench_source), std::end(bench_source));
+        uint160 latest = hash_basis::Hash160(std::begin(bench_source), std::end(bench_source));
+        uint160 old = hash_basis_org::Hash160(std::begin(bench_source), std::end(bench_source));
         assert(latest == old);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint160 _latest = hash_q::Hash160(random_value.begin(), random_value.end());
-        uint160 _old = hash_basis::Hash160(random_value.begin(), random_value.end());
+        uint160 _latest = hash_basis::Hash160(random_value.begin(), random_value.end());
+        uint160 _old = hash_basis_org::Hash160(random_value.begin(), random_value.end());
         assert(_latest == _old);
     }
 }
@@ -38,31 +106,31 @@ static void SHA256Assertcheck_(benchmark::State& state)
 {
     prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
     while(state.KeepRunning()) {
-        uint256 latest1 = hash_q::Hash(std::begin(bench_source), std::end(bench_source));
-        uint256 old1 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source));
+        uint256 latest1 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source));
+        uint256 old1 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source));
         assert(latest1 == old1);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint256 _latest1 = hash_q::Hash(random_value.begin(), random_value.end());
-        uint256 _old1 = hash_basis::Hash(random_value.begin(), random_value.end());
+        uint256 _latest1 = hash_basis::Hash(random_value.begin(), random_value.end());
+        uint256 _old1 = hash_basis_org::Hash(random_value.begin(), random_value.end());
         assert(_latest1 == _old1);
 
-        uint256 latest2 = hash_q::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
-        uint256 old2 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 latest2 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 old2 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest2 == old2);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint256 _latest2 = hash_q::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
-        uint256 _old2 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _latest2 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _old2 = hash_basis_org::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest2 == _old2);
 
-        uint256 latest3 = hash_q::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
-        uint256 old3 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 latest3 = hash_basis::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint256 old3 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest3 == old3);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint256 _latest3 = hash_q::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
-        uint256 _old3 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _latest3 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint256 _old3 = hash_basis_org::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest3 == _old3);
     }
 }
@@ -119,30 +187,30 @@ static void SHA512Assertcheck_(benchmark::State& state)
 {
     prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)512, (uint8_t)0x00);
     while(state.KeepRunning()) {
-        uint512 latest1 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source));
+        uint512 latest1 = hash_basis::Hash512(std::begin(bench_source), std::end(bench_source));
         uint512 old1 = openssl::sha512(std::begin(bench_source), std::end(bench_source));
         assert(latest1 == old1);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint512 _latest1 = hash_q::Hash512(random_value.begin(), random_value.end());
+        uint512 _latest1 = hash_basis::Hash512(random_value.begin(), random_value.end());
         uint512 _old1 = openssl::sha512(random_value.begin(), random_value.end());
         assert(_latest1 == _old1);
 
-        uint512 latest2 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint512 latest2 = hash_basis::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         uint512 old2 = openssl::sha512_2(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest2 == old2);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint512 _latest2 = hash_q::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint512 _latest2 = hash_basis::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint512 _old2 = openssl::sha512_2(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest2 == _old2);
 
-        uint512 latest3 = hash_q::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
+        uint512 latest3 = hash_basis::Hash512(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         uint512 old3 = openssl::sha512_3(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest3 == old3);
 
         ::RAND_bytes(random_value.data(), random_value.size());
-        uint512 _latest3 = hash_q::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
+        uint512 _latest3 = hash_basis::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint512 _old3 = openssl::sha512_3(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest3 == _old3);
     }
@@ -152,14 +220,23 @@ static void Blake2Assertcheck_(benchmark::State& state)
 {
     prevector<PREVECTOR_N, unsigned char> random_value((uint32_t)Lamport::CKeyBase::get_size(), (uint8_t)0x00);
     while(state.KeepRunning()) {
-        ::RAND_bytes(random_value.data(), random_value.size());
-        Lamport::CPrivateKey pKey(random_value.data(), random_value.size());
-        Lamport::BLAKE2KeyHash h(pKey);
+        // Blake2
+        for (int i=0; i < 1000; ++i) {
+            ::RAND_bytes(random_value.data(), random_value.size());
+            Lamport::CPrivateKey pKey(random_value.data(), random_value.size());
+            Lamport::BLAKE2KeyHash h(pKey);
 
-        byte referenceHash[Lamport::BLAKE2KeyHash::kBytesSize];
-        CSecureSegmentRW<byte> guard = pKey.get_secure()->unlockAndInitRW(true);
-        quantum_hash::blake2_generichash(referenceHash, Lamport::BLAKE2KeyHash::kBytesSize, guard.get_addr(), guard.get_size());
-        assert(::memcmp(h.get_addr(), referenceHash, Lamport::BLAKE2KeyHash::kBytesSize) == 0);
+            byte referenceHash[Lamport::BLAKE2KeyHash::kBytesSize];
+            CSecureSegmentRW<byte> guard = pKey.get_secure()->unlockAndInitRW(true);
+            quantum_hash::blake2_generichash(referenceHash, Lamport::BLAKE2KeyHash::kBytesSize, guard.get_addr(), guard.get_size());
+            assert(::memcmp(h.get_addr(), referenceHash, Lamport::BLAKE2KeyHash::kBytesSize) == 0);
+        }
+
+        // HMAC_LAMPORT_PRIVATE_HASH
+        for (int i=0; i < 500; ++i) {
+            uint131072 data = HMAC_LAMPORT_PRIVATE_HASH::CalculateDigest(random_value.data(), random_value.size());
+            assert(0 < data);
+        }
     }
 }
 

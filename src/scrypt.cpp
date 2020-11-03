@@ -29,18 +29,25 @@
 
 #include <stdlib.h>
 #include <stdint.h>
-
-#include "scrypt.h"
-#include "pbkdf2.h"
-
-#include "util.h"
-#include "net.h"
+#include <scrypt.h>
+#include <util.h>
+#include <crypto/sha256.h>
+#include <crypto/sha512.h>
+#include <crypto/blake2.h>
+#include <crypto/qhash65536.h>
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
 
 #if defined (OPTIMIZED_SALSA) && ( defined (__x86_64__) || defined (__i386__) || defined(__arm__) )
     extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
 #else
+
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+    using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
+    using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
+    using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
+    using pbkdf65536 = pbkdf2_impl<latest_crypto::CQHASH65536>;
+#endif
 
 //
 // Generic scrypt_core implementation
@@ -65,8 +72,7 @@ void bitscrypt::xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
     x13 = (B[13] ^= Bx[13]);
     x14 = (B[14] ^= Bx[14]);
     x15 = (B[15] ^= Bx[15]);
-    for (int i = 0; i < 8; i += 2)
-    {
+    for (int i = 0; i < 8; i += 2) {
 #define R(a, b) (((a) << (b)) | ((a) >> (32 - (b))))
         /* Operate on columns. */
         x04 ^= R(x00+x12, 7); x09 ^= R(x05+x01, 7);
@@ -116,19 +122,15 @@ void bitscrypt::xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
 
 void bitscrypt::scrypt_core(unsigned int *X, unsigned int *V)
 {
-    for (unsigned int i = 0; i < 1024; ++i)
-    {
+    for (unsigned int i = 0; i < 1024; ++i) {
         ::memcpy(&V[i * 32], X, 128);
         bitscrypt::xor_salsa8(&X[0], &X[16]);
         bitscrypt::xor_salsa8(&X[16], &X[0]);
     }
-    for (unsigned int i = 0; i < 1024; ++i)
-    {
+    for (unsigned int i = 0; i < 1024; ++i) {
         unsigned int j = 32 * (X[16] & 1023);
         for (unsigned int k = 0; k < 32; ++k)
-        {
             X[k] ^= V[j + k];
-        }
         bitscrypt::xor_salsa8(&X[0], &X[16]);
         bitscrypt::xor_salsa8(&X[16], &X[0]);
     }
@@ -147,12 +149,28 @@ uint256 bitscrypt::scrypt_nosalt(const void *input, size_t inputlen, void *scrat
     uint256 result = 0;
     V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
 
-    pbkdf2::PBKDF2_SHA256((const uint8_t *)input, inputlen, (const uint8_t *)input, inputlen, 1, (uint8_t *)X, 128);
+    pbkdf2::PBKDF2_HASH((const uint8_t *)input, inputlen, (const uint8_t *)input, inputlen, 1, (uint8_t *)X, 128);
     scrypt_core(X, V);
-    pbkdf2::PBKDF2_SHA256((const uint8_t *)input, inputlen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 32);
+    pbkdf2::PBKDF2_HASH((const uint8_t *)input, inputlen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 32);
 
     return result;
 }
+
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+uint65536 bitscrypt::scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad)
+{
+    unsigned int *V;
+    unsigned int X[32];
+    uint65536 result = 0;
+    V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
+
+    pbkdf65536::PBKDF2_HASH((const uint8_t *)input, inputlen, (const uint8_t *)input, inputlen, 1, (uint8_t *)X, 128);
+    scrypt_core(X, V);
+    pbkdf65536::PBKDF2_HASH((const uint8_t *)input, inputlen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 8192);
+
+    return result;
+}
+#endif
 
 uint256 bitscrypt::scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad)
 {
@@ -161,9 +179,9 @@ uint256 bitscrypt::scrypt(const void *data, size_t datalen, const void *salt, si
     uint256 result = 0;
     V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
 
-    pbkdf2::PBKDF2_SHA256((const uint8_t *)data, datalen, (const uint8_t *)salt, saltlen, 1, (uint8_t *)X, 128);
+    pbkdf2::PBKDF2_HASH((const uint8_t *)data, datalen, (const uint8_t *)salt, saltlen, 1, (uint8_t *)X, 128);
     scrypt_core(X, V);
-    pbkdf2::PBKDF2_SHA256((const uint8_t *)data, datalen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 32);
+    pbkdf2::PBKDF2_HASH((const uint8_t *)data, datalen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 32);
 
     return result;
 }
@@ -185,12 +203,10 @@ uint256 bitscrypt::scrypt_salted_multiround_hash(const void *input, size_t input
     uint256 resultHash = scrypt_salted_hash(input, inputlen, salt, saltlen);
     uint256 transitionalHash = resultHash;
 
-    for(unsigned int i = 1; i < nRounds; ++i)
-    {
+    for(unsigned int i = 1; i < nRounds; ++i) {
         resultHash = scrypt_salted_hash(input, inputlen, (const void *)&transitionalHash, 32);
         transitionalHash = resultHash;
     }
-
     return resultHash;
 }
 
@@ -199,3 +215,11 @@ uint256 bitscrypt::scrypt_blockhash(const void *input)
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
     return scrypt_nosalt(input, 80, scratchpad);
 }
+
+#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+uint65536 bitscrypt::scrypt_blockhash_65536(const void *input)
+{
+    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
+    return scrypt_nosalt_65536(input, 80, scratchpad);
+}
+#endif

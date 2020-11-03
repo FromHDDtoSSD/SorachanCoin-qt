@@ -10,6 +10,9 @@
 #include "miner.h"
 #include "kernel.h"
 #include "bitcoinrpc.h"
+#include <block/block_process.h>
+#include <miner/diff.h>
+#include <block/block_alert.h>
 
 #include <boost/format.hpp>
 #include <boost/assign/list_of.hpp>
@@ -52,14 +55,14 @@ json_spirit::Value CRPCTable::getmininginfo(const json_spirit::Array &params, bo
     diff.push_back(json_spirit::Pair("search-interval", (int)block_info::nLastCoinStakeSearchInterval));
     obj.push_back(json_spirit::Pair("difficulty", diff));
 
-    obj.push_back(json_spirit::Pair("blockvalue", (uint64_t)diff::reward::GetProofOfWorkReward(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false)->nBits)));
+    obj.push_back(json_spirit::Pair("blockvalue", (uint64_t)diff::reward::GetProofOfWorkReward(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false)->get_nBits())));
     obj.push_back(json_spirit::Pair("netmhashps", GetPoWMHashPS()));
     obj.push_back(json_spirit::Pair("netstakeweight", GetPoSKernelPS()));
-    obj.push_back(json_spirit::Pair("errors", block_alert::manage::GetWarnings("statusbar")));
+    obj.push_back(json_spirit::Pair("errors", block_alert::GetWarnings("statusbar")));
     obj.push_back(json_spirit::Pair("pooledtx", (uint64_t)CTxMemPool::mempool.size()));
 
     obj.push_back(json_spirit::Pair("stakeinputs", (uint64_t)miner::nStakeInputsMapSize));
-    obj.push_back(json_spirit::Pair("stakeinterest", diff::reward::GetProofOfStakeReward(0, diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->nBits, diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->nTime, true)));
+    obj.push_back(json_spirit::Pair("stakeinterest", diff::reward::GetProofOfStakeReward(0, diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->get_nBits(), diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->get_nTime(), true)));
 
     obj.push_back(json_spirit::Pair("testnet", (bool)args_bool::fTestNet));
     return obj;
@@ -180,8 +183,8 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, bool f
         //
         // Only count coins meeting min age requirement
         //
-        if (block_check::nStakeMinAge + block.nTime > interval.first) {
-            interval.first += (block_check::nStakeMinAge + block.nTime - interval.first);
+        if (block_check::nStakeMinAge + block.get_nTime() > interval.first) {
+            interval.first += (block_check::nStakeMinAge + block.get_nTime() - interval.first);
         }
         interval.second = interval.first + nDays * util::nOneDay;
 
@@ -202,7 +205,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, bool f
             // Build static part of kernel
             CDataStream ssKernel(SER_GETHASH, 0);
             ssKernel << nStakeModifier;
-            ssKernel << block.nTime << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << tx.nTime << nOut;
+            ssKernel << block.get_nTime() << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << tx.nTime << nOut;
             CDataStream::const_iterator itK = ssKernel.begin();
 
             std::vector<std::pair<uint256, uint32_t> > result;
@@ -242,7 +245,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         throw bitjson::JSONRPCError(-9, sts_c(coin_param::strCoinName + " is not connected!"));
     }
 
-    if (block_process::manage::IsInitialBlockDownload()) {
+    if (block_notify::IsInitialBlockDownload()) {
         throw bitjson::JSONRPCError(-10, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
@@ -288,15 +291,15 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         }
 
         // Update nTime
-        pblock->nTime = std::max(pindexPrev->GetMedianTimePast()+1, bitsystem::GetAdjustedTime());
-        pblock->nNonce = 0;
+        pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, bitsystem::GetAdjustedTime()));
+        pblock->set_nNonce(0);
 
         // Update nExtraNonce
         static unsigned int nExtraNonce = 0;
         miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->hashMerkleRoot] = std::make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
+        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).vin[0].scriptSig);
 
         // Prebuild hash buffers
         char pmidstate[32];
@@ -304,10 +307,10 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         char phash1[64];
         miner::FormatHashBuffers(pblock, pmidstate, pdata, phash1);
 
-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+        uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
-        CTransaction coinbaseTx = pblock->vtx[0];
-        std::vector<uint256> merkle = pblock->GetMerkleBranch(0);
+        CTransaction coinbaseTx = pblock->get_vtx(0);
+        auto merkle = pblock->GetMerkleBranch(0);
 
         json_spirit::Object result;
         result.push_back(json_spirit::Pair("data",     util::HexStr(BEGIN(pdata), END(pdata))));
@@ -350,21 +353,21 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, bool f
         }
 
         // Get saved block
-        if (! mapNewBlock.count(pdata->hashMerkleRoot)) {
+        if (! mapNewBlock.count(pdata->get_hashMerkleRoot())) {
             return false;
         }
-        CBlock *pblock = mapNewBlock[pdata->hashMerkleRoot].first;
+        CBlock *pblock = mapNewBlock[pdata->get_hashMerkleRoot()].first;
 
-        pblock->nTime = pdata->nTime;
-        pblock->nNonce = pdata->nNonce;
+        pblock->set_nTime(pdata->get_nTime());
+        pblock->set_nNonce(pdata->get_nNonce());
 
         if(coinbase.size() == 0) {
-            pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
+            pblock->set_vtx(0).vin[0].scriptSig = mapNewBlock[pdata->get_hashMerkleRoot()].second;
         } else {
-            CDataStream(coinbase, SER_NETWORK, version::PROTOCOL_VERSION) >> pblock->vtx[0]; // FIXME - HACK!
+            CDataStream(coinbase, SER_NETWORK, version::PROTOCOL_VERSION) >> pblock->set_vtx(0); // FIXME - HACK!
         }
 
-        pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+        pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
         return miner::CheckWork(pblock, *entry::pwalletMain, reservekey);
     }
 }
@@ -385,7 +388,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
     if (net_node::vNodes.empty()) {
         throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, sts_c(coin_param::strCoinName + " is not connected!"));
     }
-    if (block_process::manage::IsInitialBlockDownload()) {
+    if (block_notify::IsInitialBlockDownload()) {
         throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
@@ -441,14 +444,14 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
 
         // Update nTime
         pblock->UpdateTime(pindexPrev);
-        pblock->nNonce = 0;
+        pblock->set_nNonce(0);
 
         // Update nExtraNonce
         static unsigned int nExtraNonce = 0;
         miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->hashMerkleRoot] = std::make_pair(pblock, pblock->vtx[0].vin[0].scriptSig);
+        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).vin[0].scriptSig);
 
         //printf("ThreadRPCServer3 getwork hash\n");
 
@@ -460,7 +463,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
 
         //printf("ThreadRPCServer3 getwork hash target\n");
 
-        uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+        uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
         json_spirit::Object result;
         result.push_back(json_spirit::Pair("midstate", util::HexStr(BEGIN(pmidstate), END(pmidstate)))); // deprecated
@@ -485,15 +488,15 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
         }
 
         // Get saved block
-        if (! mapNewBlock.count(pdata->hashMerkleRoot)) {
+        if (! mapNewBlock.count(pdata->get_hashMerkleRoot())) {
             return false;
         }
-        CBlock *pblock = mapNewBlock[pdata->hashMerkleRoot].first;
+        CBlock *pblock = mapNewBlock[pdata->get_hashMerkleRoot()].first;
 
-        pblock->nTime = pdata->nTime;
-        pblock->nNonce = pdata->nNonce;
-        pblock->vtx[0].vin[0].scriptSig = mapNewBlock[pdata->hashMerkleRoot].second;
-        pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+        pblock->set_nTime(pdata->get_nTime());
+        pblock->set_nNonce(pdata->get_nNonce());
+        pblock->set_vtx(0).vin[0].scriptSig = mapNewBlock[pdata->get_hashMerkleRoot()].second;
+        pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
 
         return miner::CheckWork(pblock, *entry::pwalletMain, reservekey);
     }
@@ -541,7 +544,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     if (net_node::vNodes.empty()) {
         throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, sts_c(coin_param::strCoinName + " is not connected!"));
     }
-    if (block_process::manage::IsInitialBlockDownload()) {
+    if (block_notify::IsInitialBlockDownload()) {
         throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, sts_c(coin_param::strCoinName + " is downloading blocks..."));
     }
 
@@ -581,13 +584,13 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
 
     // Update nTime
     pblock->UpdateTime(pindexPrev);
-    pblock->nNonce = 0;
+    pblock->set_nNonce(0);
 
     json_spirit::Array transactions;
     std::map<uint256, int64_t> setTxIndex;
     int i = 0;
     CTxDB txdb("r");
-    BOOST_FOREACH(CTransaction &tx, pblock->vtx)
+    BOOST_FOREACH(CTransaction &tx, pblock->set_vtx())
     {
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
@@ -629,7 +632,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     json_spirit::Object aux;
     aux.push_back(json_spirit::Pair("flags", util::HexStr(block_info::COINBASE_FLAGS.begin(), block_info::COINBASE_FLAGS.end())));
 
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     static json_spirit::Array aMutable;
     if (aMutable.empty()) {
@@ -639,20 +642,20 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     }
 
     json_spirit::Object result;
-    result.push_back(json_spirit::Pair("version", pblock->nVersion));
-    result.push_back(json_spirit::Pair("previousblockhash", pblock->hashPrevBlock.GetHex()));
+    result.push_back(json_spirit::Pair("version", pblock->get_nVersion()));
+    result.push_back(json_spirit::Pair("previousblockhash", pblock->get_hashPrevBlock().GetHex()));
     result.push_back(json_spirit::Pair("transactions", transactions));
     result.push_back(json_spirit::Pair("coinbaseaux", aux));
-    result.push_back(json_spirit::Pair("coinbasevalue", (int64_t)pblock->vtx[0].vout[0].nValue));
+    result.push_back(json_spirit::Pair("coinbasevalue", (int64_t)pblock->get_vtx(0).vout[0].nValue));
     result.push_back(json_spirit::Pair("target", hashTarget.GetHex()));
     result.push_back(json_spirit::Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(json_spirit::Pair("mutable", aMutable));
     result.push_back(json_spirit::Pair("noncerange", "00000000ffffffff"));
     result.push_back(json_spirit::Pair("sigoplimit", (int64_t)block_param::MAX_BLOCK_SIGOPS));
     result.push_back(json_spirit::Pair("sizelimit", (int64_t)block_param::MAX_BLOCK_SIZE));
-    result.push_back(json_spirit::Pair("curtime", (int64_t)pblock->nTime));
-    result.push_back(json_spirit::Pair("bits", HexBits(pblock->nBits)));
-    result.push_back(json_spirit::Pair("height", (int64_t)(pindexPrev->nHeight+1)));
+    result.push_back(json_spirit::Pair("curtime", (int64_t)pblock->get_nTime()));
+    result.push_back(json_spirit::Pair("bits", HexBits(pblock->get_nBits())));
+    result.push_back(json_spirit::Pair("height", (int64_t)(pindexPrev->get_nHeight()+1)));
 
     return result;
 }

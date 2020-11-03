@@ -16,6 +16,10 @@
 #include <openssl/bio.h>
 
 #include "main.h"
+#include <block/block_process.h>
+#include <miner/diff.h>
+#include <util.h>
+#include <net.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -752,7 +756,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
                         }
                     }
 
-                    unsigned int &blocktime = block_info::mapBlockIndex[wtxIn.hashBlock]->nTime;
+                    unsigned int &blocktime = block_info::mapBlockIndex[wtxIn.hashBlock]->set_nTime();
                     wtx.nTimeSmart = std::max(latestEntry, std::min(blocktime, latestNow));
                 } else {
                     printf("AddToWallet() : found %s in block %s not in index\n", wtxIn.GetHash().ToString().substr(0,10).c_str(), wtxIn.hashBlock.ToString().c_str());
@@ -1527,13 +1531,13 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             CBlock block;
             block.ReadFromDisk(pindex, true);
-            BOOST_FOREACH(CTransaction &tx, block.vtx)
+            BOOST_FOREACH(CTransaction &tx, block.set_vtx())
             {
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate)) {
                     ++ret;
                 }
             }
-            pindex = pindex->pnext;
+            pindex = pindex->set_pnext();
         }
     }
     return ret;
@@ -2510,7 +2514,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     // The following combine threshold is important to security
     // Should not be adjusted if you don't understand the consequences
     //
-    int64_t nCombineThreshold = diff::reward::GetProofOfWorkReward(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false)->nBits) / 3;
+    int64_t nCombineThreshold = diff::reward::GetProofOfWorkReward(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false)->get_nBits()) / 3;
 
     int64_t nBalance = GetBalance();
     int64_t nCredit = wtx.vout[nOut].nValue;
@@ -2866,11 +2870,11 @@ void CWallet::PrintWallet(const CBlock &block)
 {
     {
         LOCK(cs_wallet);
-        if (block.IsProofOfStake() && mapWallet.count(block.vtx[1].GetHash())) {
-            const CWalletTx &wtx = mapWallet[block.vtx[1].GetHash()];
+        if (block.IsProofOfStake() && mapWallet.count(block.get_vtx(1).GetHash())) {
+            const CWalletTx &wtx = mapWallet[block.get_vtx(1).GetHash()];
             printf("    PoS: %d  %d  %" PRId64 "", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), wtx.GetCredit(MINE_ALL));
-        } else if (mapWallet.count(block.vtx[0].GetHash())) {
-            const CWalletTx &wtx = mapWallet[block.vtx[0].GetHash()];
+        } else if (mapWallet.count(block.get_vtx(0).GetHash())) {
+            const CWalletTx &wtx = mapWallet[block.get_vtx(0).GetHash()];
             printf("    PoW:  %d  %d  %" PRId64 "", wtx.GetDepthInMainChain(), wtx.GetBlocksToMaturity(), wtx.GetCredit(MINE_ALL));
         }
     }

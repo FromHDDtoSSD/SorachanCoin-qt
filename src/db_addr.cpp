@@ -5,6 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "db_addr.h"
+#include <block/block_info.h>
 
 //
 // CAddrDB

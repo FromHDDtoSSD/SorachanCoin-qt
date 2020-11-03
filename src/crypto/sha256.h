@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The SorachanCoin Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
+#include <openssl/crypto.h> // for OPENSSL_cleanse()
 
 namespace latest_crypto {
 
@@ -28,6 +30,12 @@ public:
     CSHA256& Write(const unsigned char* data, size_t len);
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CSHA256& Reset();
+
+    static constexpr size_t Size() {return OUTPUT_SIZE;}
+    void Clean() {
+        ::OPENSSL_cleanse(s, sizeof(s));
+        ::OPENSSL_cleanse(buf, sizeof(buf));
+    }
 };
 
 /** Autodetect the best available SHA256 implementation.

@@ -9,6 +9,9 @@
 #include "ui_interface.h"
 
 #include "bitcoinrpc.h"
+#include <block/block_process.h>
+#include <miner/diff.h>
+#include <block/block_alert.h>
 
 #include <QDateTime>
 #include <QTimer>
@@ -149,7 +152,7 @@ bool ClientModel::isTestNet() const
 
 bool ClientModel::inInitialBlockDownload() const
 {
-    return block_process::manage::IsInitialBlockDownload();
+    return block_notify::IsInitialBlockDownload();
 }
 
 int ClientModel::getNumBlocksOfPeers() const
@@ -159,7 +162,7 @@ int ClientModel::getNumBlocksOfPeers() const
 
 QString ClientModel::getStatusBarWarnings() const
 {
-    return QString::fromStdString(block_alert::manage::GetWarnings("statusbar"));
+    return QString::fromStdString(block_alert::GetWarnings("statusbar"));
 }
 
 OptionsModel *ClientModel::getOptionsModel()

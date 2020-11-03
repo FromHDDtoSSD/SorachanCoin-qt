@@ -8,6 +8,9 @@
 #include "miner.h"
 #include "kernel.h"
 #include "kernel_worker.h"
+#include <net.h>
+#include <block/block_process.h>
+#include <miner/diff.h>
 
 const unsigned int miner::pSHA256InitState[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 unsigned int miner::nMaxStakeSearchInterval = 60;
@@ -138,17 +141,17 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         txCoinBase.vout[0].scriptPubKey.SetDestination(reservekey.GetReservedKey().GetID());
 
         // Add our coinbase tx as first transaction
-        pblock->vtx.push_back(txCoinBase);
+        pblock->set_vtx().push_back(txCoinBase);
     } else {
         // Coinbase output must be empty for Proof-of-Stake block
         txCoinBase.vout[0].SetEmpty();
 
         // Syncronize timestamps
-        pblock->nTime = txCoinBase.nTime = txCoinStake->nTime;
+        pblock->set_nTime() = txCoinBase.nTime = txCoinStake->nTime;
 
         // Add coinbase and coinstake transactions
-        pblock->vtx.push_back(txCoinBase);
-        pblock->vtx.push_back(*txCoinStake);
+        pblock->set_vtx().push_back(txCoinBase);
+        pblock->set_vtx().push_back(*txCoinStake);
     }
 
     // Largest block you're willing to create:
@@ -178,7 +181,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     }
 
     CBlockIndex *pindexPrev = block_info::pindexBest;
-    pblock->nBits = diff::spacing::GetNextTargetRequired(pindexPrev, fProofOfStake);
+    pblock->set_nBits(diff::spacing::GetNextTargetRequired(pindexPrev, fProofOfStake));
 
     //
     // Collect memory pool transactions into the block
@@ -370,7 +373,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             std::swap(mapTestPool, mapTestPoolTmp);
 
             // Added
-            pblock->vtx.push_back(tx);
+            pblock->set_vtx().push_back(tx);
             nBlockSize += nTxSize;
             ++nBlockTx;
             nBlockSigOps += nTxSigOps;
@@ -402,10 +405,10 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         block_info::nLastBlockSize = nBlockSize;
 
         if (! fProofOfStake) {
-            pblock->vtx[0].vout[0].nValue = diff::reward::GetProofOfWorkReward(pblock->nBits, nFees);
+            pblock->set_vtx(0).vout[0].nValue = diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees);
 
             if (args_bool::fDebug) {
-                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->vtx[0].vout[0].nValue);
+                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).vout[0].nValue);
             }
         }
 
@@ -414,13 +417,13 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         }
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
+        pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
         if (! fProofOfStake) {
-            pblock->nTime  = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime  = std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime()));
+            pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->UpdateTime(pindexPrev);
         }
-        pblock->nNonce = 0;
+        pblock->set_nNonce(0);
     }
 
     return pblock.release();
@@ -433,17 +436,17 @@ void miner::IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigne
     //
     static uint256 hashPrevBlock = 0;
 
-    if (hashPrevBlock != pblock->hashPrevBlock) {
+    if (hashPrevBlock != pblock->get_hashPrevBlock()) {
         nExtraNonce = 0;
-        hashPrevBlock = pblock->hashPrevBlock;
+        hashPrevBlock = pblock->get_hashPrevBlock();
     }
     ++nExtraNonce;
 
-    unsigned int nHeight = pindexPrev->nHeight + 1;    // Height first in coinbase required for block.version=2
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS;
-    assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
+    unsigned int nHeight = pindexPrev->get_nHeight() + 1;    // Height first in coinbase required for block.version=2
+    pblock->set_vtx(0).vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS;
+    assert(pblock->get_vtx(0).vin[0].scriptSig.size() <= 100);
 
-    pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+    pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
 }
 
 void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char *phash1)
@@ -470,12 +473,12 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
 
     ::memset(&tmp, 0, sizeof(tmp));
 
-    tmp.block.nVersion       = pblock->nVersion;
-    tmp.block.hashPrevBlock  = pblock->hashPrevBlock;
-    tmp.block.hashMerkleRoot = pblock->hashMerkleRoot;
-    tmp.block.nTime          = pblock->nTime;
-    tmp.block.nBits          = pblock->nBits;
-    tmp.block.nNonce         = pblock->nNonce;
+    tmp.block.nVersion       = pblock->get_nVersion();
+    tmp.block.hashPrevBlock  = pblock->get_hashPrevBlock();
+    tmp.block.hashMerkleRoot = pblock->get_hashMerkleRoot();
+    tmp.block.nTime          = pblock->get_nTime();
+    tmp.block.nBits          = pblock->get_nBits();
+    tmp.block.nNonce         = pblock->get_nNonce();
 
     FormatHashBlocks(&tmp.block, sizeof(tmp.block));
     FormatHashBlocks(&tmp.hash1, sizeof(tmp.hash1));
@@ -496,7 +499,7 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
 bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 {
     uint256 hashBlock = pblock->GetHash();
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     if(! pblock->IsProofOfWork()) {
         return print::error("miner::CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex().c_str());
@@ -508,14 +511,14 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     //// debug print
     printf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("generated %s\n", bitstr::FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
+    printf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).vout[0].nValue).c_str());
 
     //
     // Found a solution
     //
     {
         LOCK(block_process::cs_main);
-        if (pblock->hashPrevBlock != block_info::hashBestChain) {
+        if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
             return print::error("miner::CheckWork() : generated block is stale");
         }
 
@@ -547,19 +550,19 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     }
 
     // verify hash target and signature of coinstake tx
-    if (! bitkernel::CheckProofOfStake(pblock->vtx[1], pblock->nBits, proofHash, hashTarget)) {
+    if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
         return print::error("miner::CheckStake() : proof-of-stake checking failed");
     }
 
     //// debug print
     printf("miner::CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("out %s\n", bitstr::FormatMoney(pblock->vtx[1].GetValueOut()).c_str());
+    printf("out %s\n", bitstr::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
 
     // Found a solution
     {
         LOCK(block_process::cs_main);
-        if (pblock->hashPrevBlock != block_info::hashBestChain) {
+        if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
             return print::error("miner::CheckStake() : generated block is stale");
         }
 
@@ -638,7 +641,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             }
 
             // Only load coins meeting min age requirement
-            if (block_check::nStakeMinAge + block.nTime > nTime - nMaxStakeSearchInterval) {
+            if (block_check::nStakeMinAge + block.get_nTime() > nTime - nMaxStakeSearchInterval) {
                 continue;
             }
 
@@ -651,7 +654,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             // Build static part of kernel
             CDataStream ssKernel(SER_GETHASH, 0);
             ssKernel << nStakeModifier;
-            ssKernel << block.nTime << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << pcoin->first->nTime << pcoin->second;
+            ssKernel << block.get_nTime() << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << pcoin->first->nTime << pcoin->second;
 
             // (txid, vout.n) => (kernel, (tx.nTime, nAmount))
             inputsMap[key] = std::make_pair(std::vector<unsigned char>(ssKernel.begin(), ssKernel.end()), std::make_pair(pcoin->first->nTime, pcoin->first->vout[pcoin->second].nValue));
@@ -738,7 +741,7 @@ void miner::ThreadStakeMiner(void *parg)
                     goto _endloop;
                 }
             }
-            while (net_node::vNodes.empty() || block_process::manage::IsInitialBlockDownload())
+            while (net_node::vNodes.empty() || block_notify::IsInitialBlockDownload())
             {
                 fTrySync = true;
                 util::Sleep(1000);
@@ -780,7 +783,7 @@ void miner::ThreadStakeMiner(void *parg)
                 miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
                 // ... and sign it
-                if (! key.Sign(pblock->GetHash(), pblock->vchBlockSig)) {
+                if (! key.Sign(pblock->GetHash(), pblock->set_vchBlockSig())) {
                     std::string strMessage = _("Warning: Proof-of-Stake miner is unable to sign the block (locked wallet?). Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
                     printf("*** %s\n", strMessage.c_str());

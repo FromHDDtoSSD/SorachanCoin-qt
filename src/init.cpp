@@ -13,6 +13,9 @@
 #include "ui_interface.h"
 #include "checkpoints.h"
 #include "miner.h"
+#include <boot/shutdown.h>
+#include <block/block_process.h>
+#include <block/block_check.h>
 #include <quantum/quantum.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
@@ -42,6 +45,7 @@ void entry::ExitTimeout(void *parg)
 #endif
 }
 
+/*
 void entry::StartShutdown()
 {
 #ifdef QT_GUI
@@ -52,6 +56,7 @@ void entry::StartShutdown()
     bitthread::manage::NewThread(net_node::Shutdown, NULL);
 #endif
 }
+*/
 
 void net_node::Shutdown(void *parg)
 {
@@ -826,7 +831,7 @@ bool entry::AppInit2()
     if (map_arg::GetBoolArg("-loadblockindextest")) {
         CTxDB txdb("r");
         txdb.LoadBlockIndex();
-        CBlock::PrintBlockTree();
+        CBlock_print::PrintBlockTree();
         return false;
     }
 
@@ -872,7 +877,7 @@ bool entry::AppInit2()
     printf(" block index %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
 
     if (map_arg::GetBoolArg("-printblockindex") || map_arg::GetBoolArg("-printblocktree")) {
-        CBlock::PrintBlockTree();
+        CBlock_print::PrintBlockTree();
         return false;
     }
 
@@ -1008,9 +1013,9 @@ bool entry::AppInit2()
             pindexRescan = locator.GetBlockIndex();
         }
     }
-    if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->nHeight > pindexRescan->nHeight) {
+    if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->get_nHeight() > pindexRescan->get_nHeight()) {
         CClientUIInterface::uiInterface.InitMessage(_("Rescanning..."));
-        printf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
+        printf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->get_nHeight() - pindexRescan->get_nHeight(), pindexRescan->get_nHeight());
         nStart = util::GetTimeMillis();
         entry::pwalletMain->ScanForWalletTransactions(pindexRescan, true);
         printf(" rescan      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
@@ -1028,7 +1033,7 @@ bool entry::AppInit2()
                 block_load::LoadExternalBlockFile(file);
             }
         }
-        entry::StartShutdown();
+        boot::StartShutdown();
     }
 
     boost::filesystem::path pathBootstrap = iofs::GetDataDir() / "bootstrap.dat";

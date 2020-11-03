@@ -17,11 +17,15 @@
 
 class CAddress;
 class CAddrMan;
-class CBlockLocator;
-class CDiskBlockIndex;
+//class CBlockLocator;
+template <typename T> class CBlockLocator_impl;
+using CBlockLocator = CBlockLocator_impl<uint256>;
+template<typename T> class CDiskBlockIndex_impl;
+using CDiskBlockIndex = CDiskBlockIndex_impl<uint256>;
 class CDiskTxPos;
 class CMasterKey;
-class COutPoint;
+template <typename T> class COutPoint_impl;
+using COutPoint = COutPoint_impl<uint256>;
 class CTxIndex;
 class CWallet;
 class CWalletTx;

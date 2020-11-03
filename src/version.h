@@ -15,8 +15,8 @@ namespace coin_param
     //
     const std::string strCoinName  = "SorachanCoin";
     const std::string strCoinNameL = "sorachancoin";
-    const std::string strEcho = "SorachanCoin_Echo";
-    const std::string strQuantum = "SorachanCoin_Quantum";
+    const std::string strEcho      = "SorachanCoin_Echo";
+    const std::string strQuantum   = "SorachanCoin_Quantum";
 }
 
 namespace version
@@ -70,9 +70,8 @@ namespace version
 }
 
 // display version
-#define DISPLAY_VERSION_MAJOR        1
+#define DISPLAY_VERSION_MAJOR        2
 #define DISPLAY_VERSION_MINOR        1
-#define DISPLAY_VERSION_REVISION     8
+#define DISPLAY_VERSION_REVISION     9
 
 #endif
-//@

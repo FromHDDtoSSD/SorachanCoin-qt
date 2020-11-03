@@ -9,6 +9,7 @@
 #include "wallet.h"
 #include "walletdb.h" // for BackupWallet
 #include "base58.h"
+#include <block/block_process.h>
 
 #include <QSet>
 #include <QTimer>
@@ -494,10 +495,12 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     }
 }
 
+/*
 bool WalletModel::isLockedCoin(uint256 hash, unsigned int n) const
 {
     return false;
 }
+*/
 
 void WalletModel::lockCoin(COutPoint& output)
 {

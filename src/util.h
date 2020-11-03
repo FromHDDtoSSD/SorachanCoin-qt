@@ -40,14 +40,6 @@
 #include "netbase.h" // for AddTimeData
 
 //
-// block_info 2
-//
-namespace block_info
-{
-    extern unsigned char gpchMessageStart[4]; // = { 0xe4, 0xe8, 0xe9, 0xe5 };
-}
-
-//
 // Args
 //
 class bool_arg

@@ -12,6 +12,8 @@
 #include <bitset>
 #include <debugcs/debugcs.h>
 #include <memory>
+#include <pbkdf2.h>
+#include <crypto/sha512.h>
 
 #ifdef WIN32
 # include <compat/compat.h>
@@ -514,56 +516,42 @@ namespace Lamport {
 
     class util
     {
-    private:
-        //util(); // {}
-        //util(const util &); // {}
-        //util(const util &&); // {}
-        //util &operator =(const util &); // {}
-        //util &operator =(const util &&); // {}
+    //private:
+        //util()=delete;
+        //util(const util &)=delete;
+        //util(const util &&)=delete;
+        //util &operator =(const util &)=delete;
+        //util &operator =(const util &&)=delete;
     protected:
         static void alloc(byte *&dest, const byte *dataIn, size_t size) {
             dest = new (std::nothrow) byte[size];
-            if (! dest) {
-                throw std::runtime_error("Lamport::util::alloc memory allocate failure.");
-            }
-            if (dataIn) {
-                ::memcpy(dest, dataIn, size);
-            }
+            if (! dest) throw std::runtime_error("Lamport::util::alloc memory allocate failure.");
+            if (dataIn) ::memcpy(dest, dataIn, size);
         }
         static void alloc_secure_random(CSecureSegment<byte> *&secure, size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn) {
             secure = new (std::nothrow) CSecureSegment<byte>(kRandomNumbersCountIn * kRandomNumberSizeIn);
-            if (! secure) {
-                throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
-            }
+            if (! secure) throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
             CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(false);
-
             byte *offset = guard.get_addr();
-            for (size_t i = 0; i < kRandomNumbersCountIn; ++i)
-            {
+            for (size_t i = 0; i < kRandomNumbersCountIn; ++i) {
                 quantum_lib::secure_randombytes_buf(offset, kRandomNumberSizeIn);
                 offset += kRandomNumberSizeIn;
             }
         }
         static void alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_t sizeIn) {
             secure = new (std::nothrow) CSecureSegment<byte>(sizeIn);
-            if (! secure) {
-                throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
-            }
+            if(! secure) throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
+            if(! dataIn) return;
             CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(false);
-
             byte *offset = guard.get_addr();
             ::memcpy(offset, dataIn, sizeIn);
         }
         static void release(byte *&data) noexcept {
-            if (data) {
-                delete[] data;
-            }
+            if (data) delete[] data;
             data = nullptr;
         }
         static void release(CSecureSegment<byte> *&secure) noexcept {
-            if (secure) {
-                delete secure;
-            }
+            if (secure) delete secure;
             secure = nullptr;
         }
     };
@@ -571,10 +559,10 @@ namespace Lamport {
     class CKeyBase : protected util
     {
     private:
-        CKeyBase(const CKeyBase &); // {}
-        CKeyBase(const CKeyBase &&); // {}
-        CKeyBase &operator=(const CKeyBase &); // {}
-        CKeyBase &operator=(const CKeyBase &&); // {}
+        CKeyBase(const CKeyBase &)=delete;
+        CKeyBase(const CKeyBase &&)=delete;
+        // CKeyBase &operator=(const CKeyBase &)=delete;
+        // CKeyBase &operator=(const CKeyBase &&)=delete;
     protected:
         //
         // Secure(count * size) + Random
@@ -612,6 +600,20 @@ namespace Lamport {
         byte *data;
         CSecureSegment<byte> *secure;
     public:
+        //
+        // Copy
+        //
+        CKeyBase &operator=(const CKeyBase &obj) {
+            if(data && obj.data)
+                ::memcpy(data, obj.data, get_size());
+            if(secure && obj.secure) {
+                CSecureSegmentRW<byte> dest = secure->unlockAndInitRW(false);
+                CSecureSegmentRW<byte> src  = obj.secure->unlockAndInitRW(true);
+                ::memcpy(dest.get_addr(), src.get_addr(), dest.get_size());
+            }
+            return *this;
+        }
+
         //
         // Key size
         // * @returns size if bytes of Lamport Key.
@@ -661,12 +663,20 @@ namespace Lamport {
     {
         friend class CSignature;
     private:
-        CPrivateKey(const CPrivateKey &); // {}
-        CPrivateKey(const CPrivateKey &&); // {}
-        CPrivateKey &operator=(const CPrivateKey &); // {}
-        CPrivateKey &operator=(const CPrivateKey &&); // {}
+        CPrivateKey(const CPrivateKey &)=delete;
+        CPrivateKey(const CPrivateKey &&)=delete;
+        //CPrivateKey &operator=(const CPrivateKey &)=delete;
+        //CPrivateKey &operator=(const CPrivateKey &&)=delete;
         bool isCropped;
     public:
+        //
+        // Copy
+        //
+        CPrivateKey &operator=(const CPrivateKey &obj) {
+            CKeyBase::operator=(obj);
+            return *this;
+        }
+
         CPrivateKey() : isCropped(false), CKeyBase(kRandomNumbersCount, kRandomNumberSize) {} // Note: generate random private key and enable secure_alloc.
         explicit CPrivateKey(const byte *dataIn, size_t _size_check_) : isCropped(false), CKeyBase(dataIn, _size_check_, true) {} // Note: enable secure_alloc (dataIn, _size_check_, true).
         bool is_ok() const noexcept {
@@ -795,6 +805,12 @@ namespace Lamport {
         const byte *get_addr() const noexcept {
             return data;
         }
+        byte *get_addr() noexcept {
+            return data;
+        }
+        void clean() noexcept {
+            quantum_lib::secure_memzero(data, get_size());
+        }
 
         bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept {
             if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr) {
@@ -862,6 +878,8 @@ namespace Lamport {
         }
 
         void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
+            using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
+            //using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
             byte previous[kSize];
             ::memcpy(previous, data, sizeof(data));
 
@@ -878,26 +896,19 @@ namespace Lamport {
     {
     private:
         CPrivateKey privKey;
-        CLamport(const CLamport &); // {}
-        CLamport(const CLamport &&); // {}
-        CLamport &operator=(const CLamport &); // {}
-        CLamport &operator=(const CLamport &&); // {}
+        //CLamport(const CLamport &)=delete;
+        //CLamport(const CLamport &&)=delete;
+        //CLamport &operator=(const CLamport &)=delete;
+        //CLamport &operator=(const CLamport &&)=delete;
     public:
-        CLamport() noexcept : privKey(), CSignature() {} // Automatically, set random to privKey.
-        explicit CLamport(const byte *dataIn, size_t _size_check_) : privKey(dataIn, _size_check_), CSignature() {} // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
-        ~CLamport() {}
+        CLamport(const CLamport &obj);
+        CLamport &operator=(const CLamport &obj) noexcept;
+        CLamport() noexcept; // Automatically, set random to privKey.
+        explicit CLamport(const byte *dataIn, size_t _size_check_); // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
+        ~CLamport();
 
-        std::shared_ptr<CPublicKey> create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept {
-            //
-            // std::shared_ptr<CPublicKey> debugKey = privKey.derivePublicKey();
-            // Note: Call to CSignature::derivePublicKey
-            //
-            return this->derivePublicKey(dataIn, dataSize, &privKey);
-        }
-
-        void create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept {
-            this->createHash(dataIn, dataSize, &privKey);
-        }
+        std::shared_ptr<CPublicKey> create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept;
+        void create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept;
     };
 
 } // namespace Lamport

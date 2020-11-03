@@ -3,6 +3,8 @@
 
 #include "wallet.h"
 #include "base58.h"
+#include <miner/diff.h>
+#include <block/block_check.h>
 
 bool KernelRecord::showTransaction(const CWalletTx &wtx)
 {

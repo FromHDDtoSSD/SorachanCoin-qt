@@ -5,6 +5,7 @@
 
 #include "protocol.h"
 #include "netbase.h"
+#include <block/block_info.h>
 
 #ifndef WIN32
 #include <arpa/inet.h>

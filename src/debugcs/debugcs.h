@@ -10,7 +10,7 @@
 #include <sstream>
 #include "compat/compat.h" // windows.h
 
-#ifdef DEBUG_ALGO
+#ifdef DEBUG_ALGO_CS_OUTPUT
 # define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()
 #else
 # define DEBUGCS_OUTPUT(s)
@@ -33,7 +33,7 @@ public:
         ::fprintf_s(stdout, stream.str().c_str());
         ::LeaveCriticalSection(&cs);
 #else
-        static_cast<const T &>(obj);
+        //static_cast<const T &>(obj);
 #endif
         return *this;
     }

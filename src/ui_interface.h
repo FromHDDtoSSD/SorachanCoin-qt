@@ -14,7 +14,7 @@
 
 class CBasicKeyStore;
 class CWallet;
-class uint256;
+//class uint256;
 
 //
 // General change type (added, updated, removed)

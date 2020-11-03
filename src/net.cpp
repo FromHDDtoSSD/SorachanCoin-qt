@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //
@@ -12,6 +12,9 @@
 #include "ui_interface.h"
 #include "miner.h"
 #include "ntp.h"
+#include <boot/shutdown.h>
+#include <block/block_process.h>
+#include <block/block_check.h>
 
 #ifdef WIN32
 # include <string.h>
@@ -144,7 +147,6 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     addrConnect.SetIP(*pNetAddr);
                     addrConnect.SetPort(port_target);
                     pszDest = nullptr;
-                    //printf("GetDefaultPort CService %s\n", addrConnect.ToString().c_str());
                 }
                 bool ret = pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, port_target) : netbase::manage::ConnectSocket(addrConnect, hSocket);
                 if(ret) {
@@ -156,21 +158,17 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                     vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
                     CDataStream sMsg(vchMsg);
                     std::string retstr;
-                    //printf("GetDefaultPort Connect %s\n", sMsg.str().c_str());
                     if(! IsNoneblockSend(hSocket)) {
                         netbase::manage::CloseSocket(hSocket);
-                        //printf("GetDefaultPort Connect failure A\n");
                         util::Sleep(20);
                         continue;
                     }
                     if(::send(hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT) <= 0) {
                         netbase::manage::CloseSocket(hSocket);
-                        //printf("GetDefaultPort Connect failure B\n");
                         util::Sleep(20);
                         continue;
                     }
                     bool ret = net_basis::RecvLine(hSocket, retstr);
-                    //printf("GetDefaultPort RecvLine %s\n", retstr.c_str());
                     if(ret && retstr == coin_param::strEcho) {
                         struct in_addr ipv4;
                         if(addrConnect.GetInAddr(&ipv4)) {
@@ -192,7 +190,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
 #endif
                         netbase::manage::CloseSocket(hSocket);
                         util::Sleep(20);
-                        printf("GetDefaultPort port_target %d\n", (int)port_target);
+                        //printf("GetDefaultPort port_target %d\n", (int)port_target);
                         return port_target;
                     } else {
                         netbase::manage::CloseSocket(hSocket);
@@ -210,7 +208,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                 std::map<NET_ADDR_TYPE, unsigned short>::const_iterator ite = map_port_info.find(key);
                 if(ite != map_port_info.end()) {
                     const std::pair<const NET_ADDR_TYPE, unsigned short> data = *ite;
-                    printf("GetDefaultPort map_port find %d\n", (int)data.second);
+                    //printf("GetDefaultPort map_port find %d\n", (int)data.second);
                     return data.second;
                 }
             }
@@ -221,8 +219,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
     // no connect or addnode or default (Ver1.0.0 - Ver1.0.4)
     //
 
-    // printf("GetDefaultPort default selected pNetAddr_%p pszDest_%p\n", pNetAddr, pszDest);
-    printf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default]);
+    //printf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default]);
     return p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default];
 }
 
@@ -252,7 +249,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         std::map<GET_PORT_TYPE, unsigned short>::const_iterator ite = map_port_type.find(type);
         if(ite != map_port_type.end()) {
             std::pair<GET_PORT_TYPE, unsigned short> data = *ite;
-            printf("GetListenPort map_port %d\n", (int)data.second);
+            //printf("GetListenPort map_port %d\n", (int)data.second);
             return data.second;
         } else {
             std::string strError;
@@ -263,7 +260,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
             {
                 unsigned short port_target = p_uport[i];
                 if(entry::BindListenPort(CService(inaddr_loopback, port_target), strError, true)) {
-                    printf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
+                    //printf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
                     std::pair<GET_PORT_TYPE, unsigned short> data = std::make_pair(type, port_target);
                     map_port_type.insert(data);
                     return port_target;
@@ -273,7 +270,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         }
 
         // can not bind
-        printf("GetListenPort can not bind port %d\n", (int)port_default);
+        //printf("GetListenPort can not bind port %d\n", (int)port_default);
         return port_default;
     }
 }
@@ -1920,7 +1917,7 @@ void net_node::ThreadMessageHandler2(void *parg)
         net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
         util::Sleep(100);
         if(args_bool::fRequestShutdown) {
-            entry::StartShutdown();
+            boot::StartShutdown();
         }
         net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
         if(args_bool::fShutdown) {
