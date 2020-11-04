@@ -30,6 +30,8 @@ public:
     CQHASH65536& Write(const unsigned char* data, size_t len);
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CQHASH65536& Reset();
+
+    ~CQHASH65536();
 };
 
 } // namespace latest_crypto

@@ -28,6 +28,10 @@ CQHASH65536::CQHASH65536() : plamport(nullptr) {
     Reset();
 }
 
+CQHASH65536::~CQHASH65536() {
+    Reset();
+}
+
 CQHASH65536& CQHASH65536::Write(const unsigned char* data, size_t len) {
     assert(OUTPUT_SIZE == plamport->get_size());
     if(!plamport) {

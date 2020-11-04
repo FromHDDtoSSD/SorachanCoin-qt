@@ -1,19 +1,16 @@
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef SORACHANCOIN_QUANTUM_H
 #define SORACHANCOIN_QUANTUM_H
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)  // SorachanCoin-qt.pro
 
-#include <blake2.h>
-#include <assert.h>
-#include <vector>
-#include <bitset>
-#include <debugcs/debugcs.h>
 #include <memory>
-#include <pbkdf2.h>
-#include <crypto/sha512.h>
+#include <assert.h>
+#include <cstdint>
+#include <vector>
+#include <crypto/blake2.h>
 
 #ifdef WIN32
 # include <compat/compat.h>
@@ -21,9 +18,6 @@
 #else
 # include <unistd.h>
 #endif
-
-#include <openssl/rand.h>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
 
 /*
 ** Reference:
@@ -41,11 +35,11 @@ namespace latest_crypto {
 class quantum_lib
 {
 private:
-    quantum_lib(); // {}
-    quantum_lib(const quantum_lib &); //{}
-    quantum_lib(const quantum_lib &&); //{}
-    quantum_lib &operator=(const quantum_lib &); // {}
-    quantum_lib &operator=(const quantum_lib &&); // {}
+    quantum_lib()=delete;
+    quantum_lib(const quantum_lib &)=delete;
+    quantum_lib(const quantum_lib &&)=delete;
+    quantum_lib &operator=(const quantum_lib &)=delete;
+    quantum_lib &operator=(const quantum_lib &&)=delete;
 
     typedef std::uint8_t byte;
     enum secure_type
@@ -72,203 +66,34 @@ private:
     class manage
     {
     private:
-        manage(const manage &); // {}
-        manage(const manage &&); // {}
-        manage &operator=(const manage &); // {}
-        manage &operator=(const manage &&); // {}
+        manage(const manage &)=delete;
+        manage(const manage &&)=delete;
+        manage &operator=(const manage &)=delete;
+        manage &operator=(const manage &&)=delete;
         void *ptr;
         size_t size;
     public:
         explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn) {}
-        void readonly() const {
-#if defined(WIN32)
-            DWORD old;
-            if (! ::VirtualProtect(ptr, size, PAGE_READONLY, &old)) {
-                throw std::runtime_error("secure_list::manage failure.");
-            }
-#else
-            if (::mprotect(ptr, size, PROT_READ) != 0) {
-                throw std::runtime_error("secure_list::manage failure.");
-            }
-#endif
-        }
-        void readwrite() const {
-#if defined(WIN32)
-            DWORD old;
-            if (! ::VirtualProtect(ptr, size, PAGE_READWRITE, &old)) {
-                throw std::runtime_error("secure_list::manage failure.");
-            }
-#else
-            if (::mprotect(ptr, size, PROT_READ | PORT_WRITE) != 0) {
-                throw std::runtime_error("secure_list::manage failure.");
-            }
-#endif
-        }
-        ~manage() noexcept {
-#if defined(WIN32)
-            DWORD old;
-            (void)::VirtualProtect(ptr, size, PAGE_NOACCESS, &old);
-#else
-            (void)::mprotect(ptr, size, PROT_NONE);
-#endif
-        }
+        void readonly() const;
+        void readwrite() const;
+        ~manage() noexcept;
     };
 public:
-    static void *secure_malloc(size_t sizeIn) {
-#if defined(WIN32)
-        void *ptr = ::VirtualAlloc(nullptr, sizeIn + alloc_info_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-        void *ptr = nullptr;
-        if ((ptr = ::mmap(nullptr, sizeIn + alloc_info_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_NOCORE, -1, 0)) == MAP_FAILED) {
-            ptr = nullptr;
-        }
-#endif
-        if (! ptr) {
-            throw std::runtime_error("secure_alloc memory allocate failure.");
-        }
-#if defined(WIN32)
-        bool lock_ret = false;
-        lock_ret = (::VirtualLock(ptr, sizeIn + alloc_info_size) != FALSE) ? true : false;
-#else
-        lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true : false;
-#endif
-        if (! lock_ret) {
-            throw std::runtime_error("secure_alloc virtual lock failure.");
-        }
-        alloc_info *pinfo = reinterpret_cast<alloc_info *>(ptr);
-        pinfo->data.type = LOCK_UNLOCK;
-        pinfo->data.size = sizeIn;
-        return reinterpret_cast<void *>((byte *)ptr + alloc_info_size);
-    }
-    static void secure_free(void *ptr, bool fRandom = false) noexcept {
-        void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
-        size_t size;
-        {
-            manage mem(fptr, alloc_info_size);
-            mem.readonly();
-            const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-            size = pinfo->data.size;
-        }
-        {
-            manage mem(fptr, size + alloc_info_size);
-            mem.readwrite();
-            fRandom ? secure_memrandom(fptr, size + alloc_info_size) : secure_memzero(fptr, size + alloc_info_size);
-#if defined(WIN32)
-            (void)::VirtualUnlock(fptr, size + alloc_info_size);
-#else
-            (void)::munlock(fptr, size + alloc_info_size);
-#endif
-        }
-
-#if defined(WIN32)
-        (void)::VirtualFree(fptr, 0U, MEM_RELEASE);
-#else
-        (void)::munmap(fptr, size + alloc_info_size);
-#endif
-    }
-
-    static void secure_memzero(void *ptr, size_t sizeIn) noexcept {
-        ::OPENSSL_cleanse(ptr, sizeIn);
-    }
-    static void secure_memrandom(void *ptr, size_t sizeIn) noexcept {
-        unsigned char *volatile pnt_ = (unsigned char *volatile)ptr;
-        unsigned char buf[1024];
-        (void)::RAND_bytes(buf, sizeof(buf) / sizeof(buf[0]));
-        size_t i = (size_t)0U;
-        while (i < sizeIn)
-        {
-            pnt_[i] = buf[i & (sizeof(buf) / sizeof(buf[0]) - 1)];
-            ++i;
-        }
-    }
+    static void *secure_malloc(size_t sizeIn);
+    static void secure_free(void *ptr, bool fRandom = false) noexcept;
+    static void secure_memzero(void *ptr, size_t sizeIn) noexcept;
+    static void secure_memrandom(void *ptr, size_t sizeIn) noexcept;
 #ifdef _MSC_VER
-    static void secure_stackzero(const size_t) noexcept {}
-    static void secure_stackrandom(const size_t) noexcept {}
+    static void secure_stackzero(const size_t) noexcept;
+    static void secure_stackrandom(const size_t) noexcept;
 #else
-    static void secure_stackzero(const size_t sizeIn) noexcept {
-        unsigned char dummy[sizeIn];
-        secure_memzero(dummy, sizeIn);
-    }
-    static void secure_stackrandom(const size_t sizeIn) noexcept {
-        unsigned char dummy[sizeIn];
-        secure_memrandom(dummy, sizeIn);
-    }
+    static void secure_stackzero(const size_t sizeIn) noexcept;
+    static void secure_stackrandom(const size_t sizeIn) noexcept;
 #endif
-
-    static void secure_mprotect_noaccess(const void *ptr) {
-        //
-        // success, return 0. error, return -1.(mprotect)
-        //
-        size_t size;
-        void *__ptr = const_cast<void *>(ptr);
-        {
-            void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
-            manage mem(fptr, alloc_info_size);
-            mem.readonly();
-            const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-            size = pinfo->data.size;
-        }
-#if defined(WIN32)
-        DWORD old;
-        int ret = ::VirtualProtect(__ptr, size, PAGE_NOACCESS, &old) ? 0 : -1;
-#else
-        int ret = ::mprotect(__ptr, size, PROT_NONE);
-#endif
-        if (ret != 0) {
-            throw std::runtime_error("secure_mprotect_noaccess failure.");
-        }
-    }
-    static void secure_mprotect_readonly(const void *ptr) {
-        //
-        // success, return 0. error, return -1.(mprotect)
-        //
-        size_t size;
-        void *__ptr = const_cast<void *>(ptr);
-        {
-            void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
-            manage mem(fptr, alloc_info_size);
-            mem.readonly();
-            const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-            size = pinfo->data.size;
-        }
-#if defined(WIN32)
-        DWORD old;
-        int ret = ::VirtualProtect(__ptr, size, PAGE_READONLY, &old) ? 0 : -1;
-#else
-        int ret = ::mprotect(__ptr, size, PROT_READ);
-#endif
-        if (ret != 0) {
-            throw std::runtime_error("secure_mprotect_readonly failure.");
-        }
-    }
-    static void secure_mprotect_readwrite(void *ptr) {
-        //
-        // success, return 0. error, return -1.(mprotect)
-        //
-        size_t size;
-        {
-            void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
-            manage mem(fptr, alloc_info_size);
-            mem.readonly();
-            const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-            size = pinfo->data.size;
-        }
-#if defined(WIN32)
-        DWORD old;
-        int ret = ::VirtualProtect(ptr, size, PAGE_READWRITE, &old) ? 0 : -1;
-#else
-        int ret = ::mprotect(ptr, size, PROT_READ | PORT_WRITE);
-#endif
-        if (ret != 0) {
-            throw std::runtime_error("secure_mprotect_readwrite failure.");
-        }
-    }
-
-    static void secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
-        if (::RAND_bytes(data, sizeIn) != 1) {
-            throw std::runtime_error("Quantum_lib RAND_byte failure.");
-        }
-    }
+    static void secure_mprotect_noaccess(const void *ptr);
+    static void secure_mprotect_readonly(const void *ptr);
+    static void secure_mprotect_readwrite(void *ptr);
+    static void secure_randombytes_buf(unsigned char *data, size_t sizeIn);
 };
 
 //
@@ -276,30 +101,8 @@ public:
 //
 namespace quantum_hash
 {
-    static void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) {
-        blake2s_state S;
-        (void)::blake2s_init(&S, size_hash);
-        static const size_t buffer_length = 32768;
-
-        size_t remain = size_data;
-        const std::uint8_t *p = data;
-        const int count = size_data / buffer_length;
-        int i = 0;
-        do  // Note: ::blake2s_update has "return 0" only.
-        {
-            if (remain <= buffer_length) {
-                (void)::blake2s_update(&S, p, remain);
-                break;
-            } else {
-                (void)::blake2s_update(&S, p, buffer_length);
-                remain -= buffer_length;
-                p += buffer_length;
-            }
-        } while (i++ < count);
-        if (::blake2s_final(&S, hash, size_hash) != 0) {
-            throw std::runtime_error("blakek2_generichash final error.");
-        }
-    }
+    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data);
+    void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data);
 }
 
 //
@@ -312,10 +115,9 @@ template <typename T>
 class CSecureSegmentRW
 {
 private:
-    CSecureSegmentRW(); // {}
-    //CSecureSegmentRW &operator=(const CSecureSegmentRW &); // {}
-    //CSecureSegmentRW &operator=(const CSecureSegmentRW &&); // {}
-
+    CSecureSegmentRW()=delete;
+    //CSecureSegmentRW &operator=(const CSecureSegmentRW &)=delete;
+    //CSecureSegmentRW &operator=(const CSecureSegmentRW &&)=delete;
     CSecureSegment<T> *segment;
 public:
     //explicit CSecureSegmentRW(CSecureSegment<T> &obj, bool readonly) noexcept : segment(&obj) {
@@ -358,11 +160,11 @@ class CSecureSegment
 {
     friend class CSecureSegmentRW<T>;
 private:
-    CSecureSegment(); // {}
-    CSecureSegment(const CSecureSegment &); // {}
-    CSecureSegment(const CSecureSegment &&); // {}
-    CSecureSegment &operator=(const CSecureSegment &); // {}
-    CSecureSegment &operator=(const CSecureSegment &&); // {}
+    CSecureSegment()=delete;
+    CSecureSegment(const CSecureSegment &)=delete;
+    CSecureSegment(const CSecureSegment &&)=delete;
+    CSecureSegment &operator=(const CSecureSegment &)=delete;
+    CSecureSegment &operator=(const CSecureSegment &&)=delete;
 
     size_t size;
     T *data;
@@ -386,9 +188,7 @@ public:
     }
 
     void release() noexcept {
-        if (data) {
-            quantum_lib::secure_free(data);
-        }
+        if (data) quantum_lib::secure_free(data);
         data = nullptr;
         size = 0;
     }
@@ -477,7 +277,7 @@ namespace secure_segment
         vector(const vector &obj) noexcept {
             operator =(obj);
         }
-        vector &operator =(const vector &obj) noexcept {
+        vector &operator=(const vector &obj) noexcept {
             readwrite();
             obj.readonly();
             this->vec = obj.vec;
@@ -523,37 +323,11 @@ namespace Lamport {
         //util &operator =(const util &)=delete;
         //util &operator =(const util &&)=delete;
     protected:
-        static void alloc(byte *&dest, const byte *dataIn, size_t size) {
-            dest = new (std::nothrow) byte[size];
-            if (! dest) throw std::runtime_error("Lamport::util::alloc memory allocate failure.");
-            if (dataIn) ::memcpy(dest, dataIn, size);
-        }
-        static void alloc_secure_random(CSecureSegment<byte> *&secure, size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn) {
-            secure = new (std::nothrow) CSecureSegment<byte>(kRandomNumbersCountIn * kRandomNumberSizeIn);
-            if (! secure) throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
-            CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(false);
-            byte *offset = guard.get_addr();
-            for (size_t i = 0; i < kRandomNumbersCountIn; ++i) {
-                quantum_lib::secure_randombytes_buf(offset, kRandomNumberSizeIn);
-                offset += kRandomNumberSizeIn;
-            }
-        }
-        static void alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_t sizeIn) {
-            secure = new (std::nothrow) CSecureSegment<byte>(sizeIn);
-            if(! secure) throw std::runtime_error("Lamport::util::alloc_secure memory allocate failure.");
-            if(! dataIn) return;
-            CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(false);
-            byte *offset = guard.get_addr();
-            ::memcpy(offset, dataIn, sizeIn);
-        }
-        static void release(byte *&data) noexcept {
-            if (data) delete[] data;
-            data = nullptr;
-        }
-        static void release(CSecureSegment<byte> *&secure) noexcept {
-            if (secure) delete secure;
-            secure = nullptr;
-        }
+        static void alloc(byte *&dest, const byte *dataIn, size_t size);
+        static void alloc_secure_random(CSecureSegment<byte> *&secure, size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn);
+        static void alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_t sizeIn);
+        static void release(byte *&data) noexcept;
+        static void release(CSecureSegment<byte> *&secure) noexcept;
     };
 
     class CKeyBase : protected util
@@ -585,11 +359,8 @@ namespace Lamport {
         //
         explicit CKeyBase(const byte *dataIn, size_t sizeIn, bool isSecure) : data(nullptr), secure(nullptr) {
             assert(sizeIn == get_size());
-            if (isSecure) {
-                alloc_secure(secure, dataIn, get_size());
-            } else {
-                alloc(data, dataIn, get_size());
-            }
+            if (isSecure) alloc_secure(secure, dataIn, get_size());
+            else alloc(data, dataIn, get_size());
         }
 
         virtual ~CKeyBase() noexcept {
@@ -648,11 +419,11 @@ namespace Lamport {
     {
         friend class CSignature;
     private:
-        CPublicKey(); // {}
-        CPublicKey(const CPublicKey &); // {}
-        CPublicKey(const CPublicKey &&); // {}
-        CPublicKey &operator=(const CPublicKey &); // {}
-        CPublicKey &operator=(const CPublicKey &&); // {}
+        CPublicKey()=delete;
+        CPublicKey(const CPublicKey &)=delete;
+        CPublicKey(const CPublicKey &&)=delete;
+        CPublicKey &operator=(const CPublicKey &)=delete;
+        CPublicKey &operator=(const CPublicKey &&)=delete;
     public:
         explicit CPublicKey(size_t _size_check_) noexcept : CKeyBase(_size_check_) {}
         explicit CPublicKey(const byte *dataIn, size_t _size_check_) : CKeyBase(dataIn, _size_check_, false) {} // Note: disable secure_alloc (dataIn, _size_check_, false).
@@ -690,24 +461,7 @@ namespace Lamport {
         // private: Call to CSignature only.
         //
     private:
-        std::shared_ptr<CPublicKey> derivePublicKey() const noexcept {
-            CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(true);
-            std::shared_ptr<CPublicKey> generatedKey = std::make_shared<CPublicKey>(kRandomNumbersCount * kRandomNumberSize);
-
-            //
-            // Numbers buffers initialisation via hashing private key numbers.
-            //
-            const unsigned char *source = static_cast<const unsigned char *>(guard.get_addr()); // Note: Segment(gurde) Read OK
-            unsigned char *destination = static_cast<unsigned char *>(generatedKey->get_addr());
-
-            for (size_t i = 0; i < kRandomNumbersCount; ++i)
-            {
-                quantum_hash::blake2_generichash(destination, kRandomNumberSize, source, kRandomNumberSize);
-                source += kRandomNumberSize;
-                destination += kRandomNumberSize;
-            }
-            return generatedKey; // Note: Segment(gurde) Called destructor => Read Lock
-        }
+        std::shared_ptr<CPublicKey> derivePublicKey() const noexcept;
     };
 
     /**
@@ -717,44 +471,32 @@ namespace Lamport {
     class BLAKE2KeyHash
     {
     public:
-        static const size_t kBytesSize = 32;
+        constexpr static size_t kBytesSize = 32;
     private:
-        BLAKE2KeyHash(); // {}
-        BLAKE2KeyHash(const BLAKE2KeyHash &); // {}
-        BLAKE2KeyHash(const BLAKE2KeyHash &&); // {}
-        BLAKE2KeyHash &operator=(const BLAKE2KeyHash &); // {}
-        BLAKE2KeyHash &operator=(const BLAKE2KeyHash &&); // {}
-
-        // Todo: [Dima Chizhevsky, Mykola Ilashchuk]: Think about heap usage here.
+        BLAKE2KeyHash()=delete;
+        BLAKE2KeyHash(const BLAKE2KeyHash &)=delete;
+        BLAKE2KeyHash(const BLAKE2KeyHash &&)=delete;
+        BLAKE2KeyHash &operator=(const BLAKE2KeyHash &)=delete;
+        BLAKE2KeyHash &operator=(const BLAKE2KeyHash &&)=delete;
         byte data[BLAKE2KeyHash::kBytesSize];
     public:
-        explicit BLAKE2KeyHash(const CPrivateKey &key) noexcept {
-            CSecureSegmentRW<byte> guard = key.get_secure()->unlockAndInitRW(true);
-            quantum_hash::blake2_generichash(data, BLAKE2KeyHash::kBytesSize, guard.get_addr(), key.get_size());
-        }
-        explicit BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) noexcept {
-            CSecureSegmentRW<byte> guard = key->get_secure()->unlockAndInitRW(true);
-            quantum_hash::blake2_generichash(data, BLAKE2KeyHash::kBytesSize, guard.get_addr(), key->get_size());
-        }
-        explicit BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) noexcept {
-            quantum_hash::blake2_generichash(data, BLAKE2KeyHash::kBytesSize, key->get_addr(), key->get_size());
-        }
-        explicit BLAKE2KeyHash(byte *buffer) noexcept {
-            ::memcpy(data, buffer, kBytesSize);
-        }
-
+        constexpr static size_t Size() {return kBytesSize;}
+        explicit BLAKE2KeyHash(const CPrivateKey &key) noexcept;
+        explicit BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) noexcept;
+        explicit BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) noexcept;
+        explicit BLAKE2KeyHash(byte *buffer) noexcept;
         const byte *get_addr() const noexcept {
             return data;
         }
-        friend bool operator ==(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
-            return ::memcmp(kh1.data, kh2.data, BLAKE2KeyHash::kBytesSize) == 0;
+        friend bool operator==(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
+            return (::memcmp(kh1.data, kh2.data, BLAKE2KeyHash::kBytesSize) == 0);
         }
-        friend bool operator !=(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
+        friend bool operator!=(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
             return !(kh1 == kh2);
         }
     };
 
-    class CSignature : public util
+    class CSignature
     {
     private:
         static const size_t hashSize = kRandomNumberSize;
@@ -763,31 +505,11 @@ namespace Lamport {
         static const int bitsInByte = 8;
         byte data[kSize];
     private:
-        CSignature(const CSignature &); // {}
-        CSignature(const CSignature &&); // {}
-        CSignature operator=(const CSignature &); // {}
-        CSignature operator=(const CSignature &&); // {}
-        void collectSignature(byte *signature, const byte *key, const byte *messageHash) const noexcept {
-            byte *signatureOffset = signature;
-            const byte *numbersPairOffset = key;
-
-            for (size_t i = 0; i < hashSize; ++i)
-            {
-                std::bitset<bitsInByte> byteOfMessageHash(messageHash[i]);
-
-                for (size_t b = 0; b < bitsInByte; ++b)
-                {
-                    const byte *source = numbersPairOffset + hashSize;
-                    if (byteOfMessageHash.test(b)) {
-                        source = numbersPairOffset;
-                    }
-
-                    ::memcpy(signatureOffset, source, hashSize);
-                    numbersPairOffset += hashSize * 2;
-                    signatureOffset += hashSize;
-                }
-            }
-        }
+        CSignature(const CSignature &)=delete;
+        CSignature(const CSignature &&)=delete;
+        CSignature operator=(const CSignature &)=delete;
+        CSignature operator=(const CSignature &&)=delete;
+        void collectSignature(byte *signature, const byte *key, const byte *messageHash) const noexcept;
     public:
         CSignature() noexcept {
             ::memset(data, 0x00, get_size());
@@ -802,94 +524,14 @@ namespace Lamport {
             // signature has 8KB
             return kSize;
         }
-        const byte *get_addr() const noexcept {
-            return data;
-        }
-        byte *get_addr() noexcept {
-            return data;
-        }
-        void clean() noexcept {
-            quantum_lib::secure_memzero(data, get_size());
-        }
 
-        bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept {
-            if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr) {
-                return false;
-            }
-
-            //
-            // Collecting hashed dataIn signature.
-            //
-            byte messageHash[hashSize];
-            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
-
-            //
-            // Collecting pub key signature.
-            //
-            byte pubKeySignature[kSize];
-            collectSignature(pubKeySignature, pubKey->get_addr(), messageHash);
-
-            //
-            // Collecting hashed signature.
-            //
-            byte hashedSignature[kSize];
-            const byte *originalSignatureOffset = data;
-            byte *hashedSignatureOffset = hashedSignature;
-            for (size_t i = 0; i < hashCount / 2; ++i)
-            {
-                quantum_hash::blake2_generichash(hashedSignatureOffset, hashSize, originalSignatureOffset, hashSize);
-                originalSignatureOffset += hashSize;
-                hashedSignatureOffset += hashSize;
-            }
-
-            //
-            // Comparing results.
-            //
-            return (::memcmp(pubKeySignature, hashedSignature, kSize) == 0) ? true : false;
-        }
-
+        const byte *get_addr() const noexcept {return data;}
+        byte *get_addr() noexcept {return data;}
+        void clean() noexcept {quantum_lib::secure_memzero(data, get_size());}
+        bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept;
     protected:
-        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
-            if(pKey->is_ok()) {
-                std::shared_ptr<CPublicKey> nullKey = nullptr;
-                return nullKey;
-            }
-
-            //
-            // 1, Create publicKey
-            //
-            std::shared_ptr<CPublicKey> pubKey = pKey->derivePublicKey();
-
-            //
-            // 2, hashed Signature data
-            //
-            byte messageHash[hashSize];
-            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
-            CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
-            collectSignature(data, guard.get_addr(), messageHash);
-
-            //
-            // 3, Cropping the private key.
-            // This is needed to prevent it reuse.
-            //
-            pKey->set_cropped();
-
-            return pubKey;
-        }
-
-        void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
-            using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
-            //using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
-            byte previous[kSize];
-            ::memcpy(previous, data, sizeof(data));
-
-            byte messageHash[hashSize];
-            quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
-            CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
-            collectSignature(data, guard.get_addr(), messageHash);
-            for(size_t i = 0; i < kSize; ++i)
-                data[i] = (byte)(data[i] + previous[i]);
-        }
+        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept;
+        void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept;
     };
 
     class CLamport : public CSignature
