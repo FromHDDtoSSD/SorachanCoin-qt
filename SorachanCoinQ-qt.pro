@@ -480,7 +480,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/transactionfilterproxy.h \
     src/qt/transactionview.h \
     src/qt/walletmodel.h \
-    src/bitcoinrpc.h \
     src/qt/overviewpage.h \
     src/qt/csvmodelwriter.h \
     src/crypter.h \
@@ -550,7 +549,18 @@ HEADERS += src/qt/bitcoingui.h \
     src/file_operate/file_open.h \
     src/file_operate/autofile.h \
     src/boot/shutdown.h \
-    src/miner/diff.h
+    src/miner/diff.h \
+    src/rpc/bitcoinrpc.h \
+    src/noexcept/throw.hpp \
+    src/noexcept/try.hpp \
+    src/noexcept/noexcept_detail/ceh.hpp \
+    src/noexcept/noexcept_detail/eh.hpp \
+    src/noexcept/noexcept_detail/error.hpp \
+    src/noexcept/noexcept_config/assert.hpp \
+    src/noexcept/noexcept_config/inline.hpp \
+    src/noexcept/noexcept_config/rtti.hpp \
+    src/noexcept/noexcept_config/thread_local.hpp \
+    src/noexcept/noexcept_config/throw_exception.hpp
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -603,14 +613,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/transactionfilterproxy.cpp \
     src/qt/transactionview.cpp \
     src/qt/walletmodel.cpp \
-    src/bitcoinrpc.cpp \
-    src/rpccrypt.cpp \
-    src/rpcdump.cpp \
-    src/rpcnet.cpp \
-    src/rpcmining.cpp \
-    src/rpcwallet.cpp \
-    src/rpcblockchain.cpp \
-    src/rpcrawtransaction.cpp \
     src/qt/overviewpage.cpp \
     src/qt/csvmodelwriter.cpp \
     src/crypter.cpp \
@@ -684,7 +686,18 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/prime/autocheckpoint.cpp \
     src/merkle/merkle_tx.cpp \
     src/merkle/merkle_tree.cpp \
-    src/miner/diff.cpp
+    src/miner/diff.cpp \
+    src/rpc/bitcoinrpc.cpp \
+    src/rpc/rpccrypt.cpp \
+    src/rpc/rpcdump.cpp \
+    src/rpc/rpcnet.cpp \
+    src/rpc/rpcmining.cpp \
+    src/rpc/rpcwallet.cpp \
+    src/rpc/rpcblockchain.cpp \
+    src/rpc/rpcrawtransaction.cpp \
+    src/noexcept/noexcept_detail/eh.cpp \
+    src/noexcept/noexcept_detail/error.cpp \
+    src/json/json_spirit_reader_template.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

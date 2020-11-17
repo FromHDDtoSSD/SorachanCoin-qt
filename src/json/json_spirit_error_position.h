@@ -1,20 +1,23 @@
-#ifndef JSON_SPIRIT_ERROR_POSITION
-#define JSON_SPIRIT_ERROR_POSITION
-
 //          Copyright John W. Wilkinson 2007 - 2009.
 // Distributed under the MIT License, see accompanying file LICENSE.txt
+//
+// Copyright (c) 2018-2021 The SorachanCoin developers
+//
+// C++11 json_spirit for noexcept
+// src/noexcept
+// https://github.com/zajo/boost-noexcept
 
-// Copyright (c) 2018-2020 The SorachanCoin developers
+#ifndef JSON_SPIRIT_ERROR_POSITION
+#define JSON_SPIRIT_ERROR_POSITION
 
 #include <string>
 
 namespace json_spirit
 {
-    //
     // An Error_position exception is thrown by the "read_or_throw" functions below on finding an error.
     // Note the "read_or_throw" functions are around 3 times slower than the standard functions "read"
     // functions that return a bool.
-    //
+    /*
     class Error_position
     {
     private:
@@ -31,6 +34,7 @@ namespace json_spirit
                    (column_ == lhs.column_));
         }
     };
+    */
 }
 
 #endif

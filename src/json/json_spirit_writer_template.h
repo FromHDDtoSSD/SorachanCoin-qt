@@ -1,20 +1,23 @@
+//          Copyright John W. Wilkinson 2007 - 2009.
+// Distributed under the MIT License, see accompanying file LICENSE.txt
+//
+// Copyright (c) 2018-2021 The SorachanCoin developers
+//
+// C++11 json_spirit for noexcept
+// src/noexcept
+// https://github.com/zajo/boost-noexcept
+
 #ifndef JSON_SPIRIT_WRITER_TEMPLATE
 #define JSON_SPIRIT_WRITER_TEMPLATE
 
-//          Copyright John W. Wilkinson 2007 - 2009.
-// Distributed under the MIT License, see accompanying file LICENSE.txt
-
-// json spirit version 4.03
-
-#include "json_spirit_value.h"
-
+#include <json_spirit_value.h>
 #include <cassert>
 #include <sstream>
 #include <iomanip>
 
 namespace json_spirit
 {
-    inline char to_hex_char(unsigned int c)
+    inline char to_hex_char(unsigned int c) noexcept
     {
         assert(c <= 0xF);
 
@@ -26,7 +29,7 @@ namespace json_spirit
     }
 
     template< class String_type >
-    String_type non_printable_to_string(unsigned int c)
+    String_type non_printable_to_string(unsigned int c) noexcept
     {
         String_type result(6, '\\');
 
@@ -41,7 +44,7 @@ namespace json_spirit
     }
 
     template< typename Char_type, class String_type >
-    bool add_esc_char(Char_type c, String_type& s)
+    bool add_esc_char(Char_type c, String_type& s) noexcept
     {
         switch (c)
         {
@@ -58,7 +61,7 @@ namespace json_spirit
     }
 
     template< class String_type >
-    String_type add_esc_chars(const String_type& s)
+    String_type add_esc_chars(const String_type& s) noexcept
     {
         typedef typename String_type::const_iterator Iter_type;
         typedef typename String_type::value_type     Char_type;
@@ -91,155 +94,131 @@ namespace json_spirit
 
     // this class generates the JSON text,
     // it keeps track of the indentation level etc.
-    //
-    template< class Value_type, class Ostream_type >
-    class Generator
-    {
-        typedef typename Value_type::Config_type Config_type;
-        typedef typename Config_type::String_type String_type;
-        typedef typename Config_type::Object_type Object_type;
-        typedef typename Config_type::Array_type Array_type;
-        typedef typename String_type::value_type Char_type;
-        typedef typename Object_type::value_type Obj_member_type;
+    template<typename Value_type, typename Ostream_type>
+    class Generator {
+        using Config_type = typename Value_type::Config_type;
+        using String_type = typename Config_type::String_type;
+        using Object_type = typename Config_type::Object_type;
+        using Array_type = typename Config_type::Array_type;
+        using Char_type = typename String_type::value_type;
+        using Obj_member_type = typename Object_type::value_type;
 
     public:
-
-        Generator(const Value_type& value, Ostream_type& os, bool pretty)
+        Generator(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status) noexcept
             : os_(os)
             , indentation_level_(0)
             , pretty_(pretty)
         {
-            output(value);
+            if(! status.fSuccess()) return;
+            output(value, status);
         }
 
     private:
-
-        void output(const Value_type& value)
-        {
+        void output(const Value_type &value, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
             switch (value.type())
             {
-            case obj_type:   output(value.get_obj());   break;
-            case array_type: output(value.get_array()); break;
-            case str_type:   output(value.get_str());   break;
-            case bool_type:  output(value.get_bool());  break;
-            case int_type:   output_int(value);         break;
+            case obj_type:   output(value.get_obj(status), status); break;
+            case array_type: output(value.get_array(status), status); break;
+            case str_type:   output(value.get_str(status), status); break;
+            case bool_type:  output(value.get_bool(status), status);  break;
+            case int_type:   output_int(value, status); break;
 
-                /// Bitcoin: Added std::fixed and changed precision from 16 to 8
-            case real_type:  os_ << std::showpoint << std::fixed << std::setprecision(8)
-                << value.get_real();     break;
+            /// Bitcoin: Added std::fixed and changed precision from 16 to 8
+            case real_type:  os_ << std::showpoint << std::fixed << std::setprecision(8) << value.get_real(status); break;
 
-            case null_type:  os_ << "null";               break;
+            case null_type:  os_ << "null"; break;
             default: assert(false);
             }
         }
 
-        void output(const Object_type& obj)
-        {
-            output_array_or_obj(obj, '{', '}');
+        void output(const Object_type &obj, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
+            output_array_or_obj(obj, '{', '}', status);
         }
 
-        void output(const Array_type& arr)
-        {
-            output_array_or_obj(arr, '[', ']');
+        void output(const Array_type &arr, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
+            output_array_or_obj(arr, '[', ']', status);
         }
 
-        void output(const Obj_member_type& member)
-        {
-            output(Config_type::get_name(member)); space();
+        void output(const Obj_member_type &member, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
+            output(Config_type::get_name(member), status); space();
             os_ << ':'; space();
-            output(Config_type::get_value(member));
+            output(Config_type::get_value(member), status);
         }
 
-        void output_int(const Value_type& value)
-        {
+        void output_int(const Value_type &value, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
             if (value.is_uint64())
-            {
-                os_ << value.get_uint64();
-            }
+                os_ << value.get_uint64(status);
             else
-            {
-                os_ << value.get_int64();
-            }
+                os_ << value.get_int64(status);
         }
 
-        void output(const String_type& s)
-        {
+        void output(const String_type &s, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
             os_ << '"' << add_esc_chars(s) << '"';
         }
 
-        void output(bool b)
-        {
+        void output(bool b, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
             os_ << to_str< String_type >(b ? "true" : "false");
         }
 
-        template< class T >
-        void output_array_or_obj(const T& t, Char_type start_char, Char_type end_char)
-        {
+        template<typename T>
+        void output_array_or_obj(const T &t, Char_type start_char, Char_type end_char, json_flags &status) noexcept {
+            if(! status.fSuccess()) return;
             os_ << start_char; new_line();
-
             ++indentation_level_;
-
-            for (typename T::const_iterator i = t.begin(); i != t.end(); ++i)
-            {
-                indent(); output(*i);
+            for (typename T::const_iterator i = t.begin(); i != t.end(); ++i) {
+                indent(); output(*i, status);
 
                 typename T::const_iterator next = i;
-
                 if (++next != t.end())
-                {
                     os_ << ',';
-                }
 
                 new_line();
             }
 
             --indentation_level_;
-
             indent(); os_ << end_char;
         }
 
-        void indent()
-        {
+        void indent() noexcept {
             if (!pretty_) return;
-
             for (int i = 0; i < indentation_level_; ++i)
-            {
                 os_ << "    ";
-            }
         }
 
-        void space()
-        {
+        void space() noexcept {
             if (pretty_) os_ << ' ';
         }
 
-        void new_line()
-        {
+        void new_line() noexcept {
             if (pretty_) os_ << '\n';
         }
 
-        Generator& operator=(const Generator&); // to prevent "assignment operator could not be generated" warning
+        Generator &operator=(const Generator &)=delete; // to prevent "assignment operator could not be generated" warning
+        Generator &operator=(const Generator &&)=delete;
 
         Ostream_type& os_;
         int indentation_level_;
         bool pretty_;
     };
 
-    template< class Value_type, class Ostream_type >
-    void write_stream(const Value_type& value, Ostream_type& os, bool pretty)
-    {
-        Generator< Value_type, Ostream_type >(value, os, pretty);
+    template<typename Value_type, typename Ostream_type>
+    void write_stream(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status) noexcept {
+        Generator< Value_type, Ostream_type >(value, os, pretty, status);
     }
 
-    template< class Value_type >
-    typename Value_type::String_type write_string(const Value_type& value, bool pretty)
-    {
-        typedef typename Value_type::String_type::value_type Char_type;
+    template<typename Value_type>
+    typename Value_type::String_type write_string(const Value_type &value, bool pretty, json_flags &status) noexcept {
+        using Char_type = typename Value_type::String_type::value_type;
 
-        std::basic_ostringstream< Char_type > os;
-
-        write_stream(value, os, pretty);
-
+        std::basic_ostringstream<Char_type> os;
+        write_stream(value, os, pretty, status);
         return os.str();
     }
 }

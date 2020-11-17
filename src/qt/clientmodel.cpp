@@ -8,7 +8,7 @@
 #include "main.h"
 #include "ui_interface.h"
 
-#include "bitcoinrpc.h"
+#include <rpc/bitcoinrpc.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <block/block_alert.h>
@@ -43,15 +43,15 @@ ClientModel::~ClientModel()
 
 double ClientModel::getPoSKernelPS()
 {
-    return CRPCTable::CRPCTable_GUI::GetPoSKernelPS();
+    return QtConsoleRPC::GetPoSKernelPS();
 }
 
 double ClientModel::getDifficulty(bool fProofofStake)
 {
     if (fProofofStake) {
-        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
+        return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
     } else {
-        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
+        return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
     }
 }
 

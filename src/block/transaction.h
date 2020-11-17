@@ -54,7 +54,7 @@ namespace block_transaction
         static void setnull_pblockindexFBBHLast() { pblockindexFBBHLast = nullptr; } // New Block
         static bool GetTransaction(const T &hash, CTransaction_impl<T> &tx, T &hashBlock);
         static CBlockIndex *FindBlockByHeight(int nHeight);
-        static bool MoneyRange(int64_t nValue) {
+        static bool MoneyRange(int64_t nValue) noexcept {
             return (nValue >= 0 && nValue <= block_param::MAX_MONEY);
         }
     };

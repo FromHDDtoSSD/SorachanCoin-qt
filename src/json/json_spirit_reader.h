@@ -1,19 +1,23 @@
+//          Copyright John W. Wilkinson 2007 - 2009.
+// Distributed under the MIT License, see accompanying file LICENSE.txt
+//
+// Copyright (c) 2018-2021 The SorachanCoin developers
+//
+// C++11 json_spirit for noexcept
+// src/noexcept
+// https://github.com/zajo/boost-noexcept
+
 #ifndef JSON_SPIRIT_READER
 #define JSON_SPIRIT_READER
 
-//          Copyright John W. Wilkinson 2007 - 2009.
-// Distributed under the MIT License, see accompanying file LICENSE.txt
-
-// Copyright (c) 2018-2020 The SorachanCoin developers
-
-#include "json_spirit_value.h"
-#include "json_spirit_error_position.h"
+#include <json/json_spirit_value.h>
+#include <json/json_spirit_error_position.h>
 #include <iostream>
 
 namespace json_spirit
 {
     // functions to reads a JSON values
-
+    /*
     bool read(const std::string &s, Value &value);
     bool read(std::istream &is, Value &value);
     bool read(std::string::const_iterator &begin, std::string::const_iterator end, Value &value);
@@ -49,6 +53,7 @@ namespace json_spirit
     void read_or_throw(std::wistream &is, wmValue &value);
     void read_or_throw(std::wstring::const_iterator &begin, std::wstring::const_iterator end, wmValue &value);
 #endif
+    */
 }
 
 #endif

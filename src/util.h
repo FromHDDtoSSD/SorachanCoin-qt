@@ -127,19 +127,18 @@ public:
 class print : public trace
 {
 public:
+    static int OutputDebugStringF(const std::string &err);
 #ifdef __GNUC__
     static int ATTR_WARN_PRINTF(1, 2) OutputDebugStringF(const char *pszFormat, ...);
 #else
     static int OutputDebugStringF(const char *pszFormat, ...);
 #endif
+
     static std::string vstrprintf(const char *format, va_list ap);
 
-    //
     // Rationale for the real_strprintf / strprintf construction:
     // It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3).
-    //
     // Use a dummy argument to work around this, and use a macro to keep similar semantics.
-    //
 
     /** Overload strprintf for char*, so that GCC format type warnings can be given */
 #ifdef __GNUC__
@@ -158,6 +157,8 @@ public:
     static bool error(const char *format, ...);
 #endif
 };
+
+#define printsf(str) print::OutputDebugStringF(str)
 #define printf(format, ...) print::OutputDebugStringF(format, ##__VA_ARGS__)
 #define strprintf(format, ...) print::real_strprintf(format, 0, __VA_ARGS__)
 #define sts_c(imp) std::string(imp).c_str()
@@ -612,56 +613,7 @@ namespace bitstr
 
         return str;
     }
-    inline bool ParseMoney(const std::string &str, int64_t &nRet) {
-        return bitstr::ParseMoney(str.c_str(), nRet);
-    }
-    inline bool ParseMoney(const char *pszIn, int64_t &nRet) {
-        std::string strWhole;
-        int64_t nUnits = 0;
-
-        const char *p = pszIn;
-        while (::isspace(*p))
-        {
-            ++p;
-        }
-        for (; *p; ++p)
-        {
-            if (*p == '.') {
-                ++p;
-                int64_t nMult = util::CENT * 10;
-                while (::isdigit(*p) && (nMult > 0))
-                {
-                    nUnits += nMult * (*p++ - '0');
-                    nMult /= 10;
-                }
-                break;
-            }
-            if (::isspace(*p)) {
-                break;
-            }
-            if (! ::isdigit(*p)) {
-                return false;
-            }
-            strWhole.insert(strWhole.end(), *p);
-        }
-        for (; *p; ++p)
-        {
-            if (! ::isspace(*p)) {
-                return false;
-            }
-        }
-        if (strWhole.size() > 10) { // guard against 63 bit overflow
-            return false;
-        }
-        if (nUnits < 0 || nUnits > util::COIN) {
-            return false;
-        }
-        int64_t nWhole = ::atoi64(strWhole);
-        int64_t nValue = nWhole * util::COIN + nUnits;
-
-        nRet = nValue;
-        return true;
-    }
+    bool ParseMoney(const char *pszIn, int64_t &nRet);
 }
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
@@ -669,48 +621,39 @@ typedef prevector<PREVECTOR_N, uint8_t> hex_vector;
 #else
 typedef std::vector<uint8_t> hex_vector;
 #endif
-
 class hex : private no_instance
 {
 private:
     static const signed char phexdigit[256];
-
 public:
-    static hex_vector ParseHex(const char *psz) {
+    static hex_vector ParseHex(const char *psz) noexcept {
         // convert hex dump to vector
         hex_vector vch;
-        for ( ; ; )
-        {
+        for (;;) {
             while (::isspace(*psz))
-            {
                 ++psz;
-            }
 
             signed char c = phexdigit[(unsigned char)*psz++];
-            if (c == (signed char)-1) {
+            if (c == (signed char)-1)
                 break;
-            }
 
             unsigned char n = (c << 4);
             c = phexdigit[(unsigned char)*psz++];
-            if (c == (signed char)-1) {
+            if (c == (signed char)-1)
                 break;
-            }
 
             n |= c;
             vch.push_back(n);
         }
         return vch;
     }
-    static hex_vector ParseHex(const std::string &str) {
+    static hex_vector ParseHex(const std::string &str) noexcept {
         return hex::ParseHex(str.c_str());
     }
-    static bool IsHex(const std::string &str) {
-        BOOST_FOREACH(unsigned char c, str)
-        {
-            if (hex::phexdigit[c] < 0) {
+    static bool IsHex(const std::string &str) noexcept {
+        for(unsigned char c: str) {
+            if (hex::phexdigit[c] < 0)
                 return false;
-            }
         }
         return (str.size() > 0) && (str.size() % 2 == 0);
     }

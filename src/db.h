@@ -121,7 +121,7 @@ public:
     void Flush(bool fShutdown);
     void CheckpointLSN(std::string strFile);
 
-    void SetDetach(bool fDetachDB_) {
+    void SetDetach(bool fDetachDB_) noexcept {
         fDetachDB = fDetachDB_;
     }
     bool GetDetach() const {

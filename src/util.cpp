@@ -213,8 +213,12 @@ void trace::LogStackTrace()
     }
 }
 
-int print::OutputDebugStringF(const char *pszFormat, ...)
-{
+int print::OutputDebugStringF(const std::string &err) {
+    const char *c_err = err.c_str();
+    return print::OutputDebugStringF(c_err);
+}
+
+int print::OutputDebugStringF(const char *pszFormat, ...) {
     int ret = 0;
     if (args_bool::fPrintToConsole) {
         // print to console
@@ -1072,6 +1076,44 @@ void iofs::ShrinkDebugFile()
         }
     }
 }
+
+bool bitstr::ParseMoney(const char *pszIn, int64_t &nRet) {
+    std::string strWhole;
+    int64_t nUnits = 0;
+
+    const char *p = pszIn;
+    while (::isspace(*p)) ++p;
+    for (; *p; ++p) {
+        if (*p == '.') {
+            ++p;
+            int64_t nMult = util::CENT * 10;
+            while (::isdigit(*p) && (nMult > 0)) {
+                nUnits += nMult * (*p++ - '0');
+                nMult /= 10;
+            }
+            break;
+        }
+        if (::isspace(*p))
+            break;
+        if (! ::isdigit(*p))
+            return false;
+        strWhole.insert(strWhole.end(), *p);
+    }
+    for (; *p; ++p) {
+        if (! ::isspace(*p))
+            return false;
+    }
+    if (strWhole.size() > 10) // guard against 63 bit overflow
+        return false;
+    if (nUnits < 0 || nUnits > util::COIN)
+        return false;
+    int64_t nWhole = ::atoi64(strWhole);
+    int64_t nValue = nWhole * util::COIN + nUnits;
+    nRet = nValue;
+    return true;
+}
+
+
 
 void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 {

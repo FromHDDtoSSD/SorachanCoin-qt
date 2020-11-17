@@ -609,8 +609,7 @@ bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const Sec
     return result;
 }
 
-int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb)
-{
+int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb) noexcept {
     int64_t nRet = nOrderPosNext++;
     if (pwalletdb) {
         pwalletdb->WriteOrderPosNext(nOrderPosNext);
@@ -2943,34 +2942,27 @@ bool CWallet::NewKeyPool(unsigned int nSize)
     return true;
 }
 
-bool CWallet::TopUpKeyPool(unsigned int nSize)
-{
+bool CWallet::TopUpKeyPool(unsigned int nSize/*=0*/) noexcept {
     {
         LOCK(cs_wallet);
-
-        if (IsLocked()) {
+        if (IsLocked())
             return false;
-        }
 
         CWalletDB walletdb(strWalletFile);
 
         // Top up key pool
         uint64_t nTargetSize;
-        if (nSize > 0) {
+        if (nSize > 0)
             nTargetSize = nSize;
-        } else {
+        else
             nTargetSize = std::max<uint64_t>(map_arg::GetArg("-keypool", 100), 0);
-        }
 
-        while (setKeyPool.size() < (nTargetSize + 1))
-        {
+        while (setKeyPool.size() < (nTargetSize + 1)) {
             uint64_t nEnd = 1;
-            if (! setKeyPool.empty()) {
+            if (! setKeyPool.empty())
                 nEnd = *(--setKeyPool.end()) + 1;
-            }
-            if (! walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey()))) {
-                throw std::runtime_error("TopUpKeyPool() : writing generated key failed");
-            }
+            if (! walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
+                return false;
 
             setKeyPool.insert(nEnd);
             printf("keypool added key %" PRIu64 ", size=%" PRIszu "\n", nEnd, setKeyPool.size());

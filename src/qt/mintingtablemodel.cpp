@@ -14,7 +14,7 @@
 
 #include "wallet.h"
 
-#include "bitcoinrpc.h"
+#include <rpc/bitcoinrpc.h>
 
 #include <QLocale>
 #include <QList>
@@ -399,7 +399,7 @@ QString MintingTableModel::formatTxPoSReward(KernelRecord *wtx) const
 double MintingTableModel::getDayToMint(KernelRecord *wtx) const
 {
     const CBlockIndex *p = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true);
-    double difficulty = CRPCTable::CRPCTable_GUI::GetDifficulty(p);
+    double difficulty = QtConsoleRPC::GetDifficulty(p);
 
     double prob = wtx->getProbToMintWithinNMinutes(difficulty, mintingInterval);
     prob = prob * 100;

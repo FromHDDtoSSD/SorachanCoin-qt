@@ -1,19 +1,23 @@
+//          Copyright John W. Wilkinson 2007 - 2009.
+// Distributed under the MIT License, see accompanying file LICENSE.txt
+//
+// Copyright (c) 2018-2021 The SorachanCoin developers
+//
+// C++11 json_spirit for noexcept
+// src/noexcept
+// https://github.com/zajo/boost-noexcept
+
 #ifndef JSON_SPIRIT_WRITER
 #define JSON_SPIRIT_WRITER
 
-//          Copyright John W. Wilkinson 2007 - 2009.
-// Distributed under the MIT License, see accompanying file LICENSE.txt
-
-// json spirit version 4.03
-
-#include "json_spirit_value.h"
+#include <json/json_spirit_value.h>
 #include <iostream>
 
 namespace json_spirit
 {
     // functions to convert JSON Values to text,
     // the "formatted" versions add whitespace to format the output nicely
-
+    /*
     void         write(const Value& value, std::ostream&  os);
     void         write_formatted(const Value& value, std::ostream&  os);
     std::string  write(const Value& value);
@@ -37,6 +41,7 @@ namespace json_spirit
     std::wstring write(const wmValue& value);
     std::wstring write_formatted(const wmValue& value);
 # endif
+    */
 }
 
 #endif
