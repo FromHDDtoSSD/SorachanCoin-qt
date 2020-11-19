@@ -526,7 +526,7 @@ bool entry::AppInit2()
     block_info::COINBASE_FLAGS << version::PROTOCOL_VERSION << DISPLAY_VERSION_MAJOR << DISPLAY_VERSION_MINOR << DISPLAY_VERSION_REVISION;
 
     if (map_arg::GetMapArgsCount("-paytxfee")) {
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-paytxfee"), block_info::nTransactionFee)) {
+        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-paytxfee").c_str(), block_info::nTransactionFee)) {
             return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
         }
         if (block_info::nTransactionFee > 0.25 * util::COIN) {
@@ -537,7 +537,7 @@ bool entry::AppInit2()
     args_bool::fConfChange = map_arg::GetBoolArg("-confchange", false);
 
     if (map_arg::GetMapArgsCount("-mininput")) {
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-mininput"), block_info::nMinimumInputValue)) {
+        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-mininput").c_str(), block_info::nMinimumInputValue)) {
             return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
         }
     }
@@ -798,7 +798,7 @@ bool entry::AppInit2()
     }
 
     if (map_arg::GetMapArgsCount("-reservebalance")) { // ppcoin: reserve balance amount
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance"), miner::nReserveBalance)) {
+        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance)) {
             InitError(_("Invalid amount for -reservebalance=<amount>"));
             return false;
         }

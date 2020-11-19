@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoin-qt
-VERSION = 1.1.8
+VERSION = 1.2.9
 
 INCLUDEPATH += src src/json src/qt
 
@@ -31,7 +31,22 @@ USE_UPNP=1
 USE_IPV6=1
 USE_QRCODE=1
 
+#
+# OPTION USE
+#
+# QUANTUM: LamportSignature, CQHASH65536 (later Ver2, must be using!)
+# KNOWLEDGE_DB: Blockchain Database (optional)
+#
 USE_QUANTUM=-
+USE_KNOWLEDGE_DB=-
+
+#
+# LIMIT FLAGS
+# Especially there is no necessary, all set flags to 0 below.
+#
+# NOMP_MODE: This official pool has been operating stably and continuously for over 6000 hours, and there is no problem even now.
+#
+LIMIT_NOMP_MODE=0
 
 freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
 linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
@@ -228,11 +243,14 @@ contains(USE_UPNP, -) {
     win32 {
         LIBS += -liphlpapi
     }
+    contains(64BIT_BUILD, 1) {
+        DEFINES += MINIUPNP_STATICLIB
+    }
 }
 
 #
-# use: qmake "USE_QUANTUM=1" ( enabled by default; default)
-#  or: qmake "USE_QUANTUM=0" (disabled by default)
+# use: qmake "USE_QUANTUM=1" ( enabled by default)
+#  or: qmake "USE_QUANTUM=0" (disabled by default; default)
 #  or: qmake "USE_QUANTUM=-" (not supported)
 #
 # BLAKE2HASH: https://github.com/BLAKE2/libb2
@@ -245,6 +263,29 @@ contains(USE_QUANTUM, -) {
 
     INCLUDEPATH += $$BLAKE2_INC_PATH
     LIBS += $$BLAKE2_LIB_PATH
+}
+
+#
+# use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)
+#  or: qmake "USE_KNOWLEDGE_DB=0" (disabled by default; default)
+#  or: qmake "USE_KNOWLEDGE_DB=-" (not supported)
+#
+contains(USE_KNOWLEDGE_DB, -) {
+    message(Building without KNOWLEDGE_DB support)
+} else {
+    message(Building with KNOWLEDGE_DB support)
+    DEFINES += USE_KNOWLEDGE_DB=$$USE_KNOWLEDGE_DB
+}
+
+#
+# use: qmake "LIMIT_NOMP_MODE=1" ( enabled by default)
+#  or: qmake "LIMIT_NOMP_MODE=0" (disabled by default; default)
+#
+contains(LIMIT_NOMP_MODE, 0) {
+    message(Building without NOMP_MODE limit)
+} else {
+    message(Building with NOMP_MODE limit)
+    DEFINES += POW_NOMP_POOL=$$LIMIT_NOMP_MODE
 }
 
 # regenerate src/build.h

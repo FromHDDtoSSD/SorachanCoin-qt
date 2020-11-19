@@ -12,21 +12,21 @@ CXX=g++
 xOPT_LEVEL=-O3
 
 INCLUDEPATHS= \
- -I"E:/cointools/boost_1_68_0" \
- -I"E:/cointools/db-4.8.30/build_unix" \
- -I"E:/cointools/libressl-2.8.2/include"
+ -I"E:/cointools64/boost_1_68_0" \
+ -I"E:/cointools64/db-4.8.30/build_unix" \
+ -I"E:/cointools64/libressl-2.8.2/include"
 
 LIBPATHS= \
- -L"E:/cointools/boost_1_68_0/stage/lib" \
- -L"E:/cointools/db-4.8.30/build_unix" \
- -L"E:/cointools/libressl-2.8.2"
+ -L"E:/cointools64/boost_1_68_0/stage/lib" \
+ -L"E:/cointools64/db-4.8.30/build_unix" \
+ -L"E:/cointools64/libressl-2.8.2"
 
 LIBS= \
- -l boost_system-mgw73-mt-x32-1_68 \
- -l boost_filesystem-mgw73-mt-x32-1_68 \
- -l boost_program_options-mgw73-mt-x32-1_68 \
- -l boost_thread-mgw73-mt-x32-1_68 \
- -l boost_chrono-mgw73-mt-x32-1_68 \
+ -l boost_system-mgw73-mt-x64-1_68 \
+ -l boost_filesystem-mgw73-mt-x64-1_68 \
+ -l boost_program_options-mgw73-mt-x64-1_68 \
+ -l boost_thread-mgw73-mt-x64-1_68 \
+ -l boost_chrono-mgw73-mt-x64-1_68 \
  -l ssl \
  -l crypto \
  -l db_cxx
@@ -36,16 +36,16 @@ ifneq (${BUILD_RELEASE}, 1)
  DEBUGFLAGS=-g
 endif
 CFLAGS=-mthreads $(xOPT_LEVEL) -msse2 -w -Wall -Wextra -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-unused-parameter $(DEBUGFLAGS) $(DEFS) $(INCLUDEPATHS)
-LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -Wl,--large-address-aware -static
+LDFLAGS=-Wl,--dynamicbase -Wl,--nxcompat -Wl, -static
 
 ifndef USE_UPNP
  override USE_UPNP=-
 endif
 
 ifneq (${USE_UPNP}, -)
- INCLUDEPATHS += -I"E:/cointools/miniupnpc-1.6"
- LIBPATHS += -L"E:/cointools/miniupnpc-1.6"
- LIBS += "E:/cointools/miniupnpc-1.6/libminiupnpc.a"
+ INCLUDEPATHS += -I"E:/cointools64/miniupnpc-1.6"
+ LIBPATHS += -L"E:/cointools64/miniupnpc-1.6"
+ LIBS += "E:/cointools64/miniupnpc-1.6/libminiupnpc.a"
  LIBS += -l iphlpapi
  DEFS += -DSTATICLIB -DUSE_UPNP=$(USE_UPNP)
 endif
@@ -107,11 +107,11 @@ OBJS= \
 all: SorachanCoind.exe
 
 ifneq (${USE_LEVELDB}, -)
- LIBS += "E:/cointools/leveldb-1.2/libleveldb.a" "E:/cointools/leveldb-1.2/libmemenv.a"
- DEFS += $(addprefix -I,"E:/cointools/leveldb-1.2/include") -DUSE_LEVELDB
- DEFS += $(addprefix -I,"E:/cointools/leveldb-1.2/helpers")
+ LIBS += "E:/cointools64/leveldb-1.2/libleveldb.a" "E:/cointools64/leveldb-1.2/libmemenv.a"
+ DEFS += $(addprefix -I,"E:/cointools64/leveldb-1.2/include") -DUSE_LEVELDB
+ DEFS += $(addprefix -I,"E:/cointools64/leveldb-1.2/helpers")
  OBJS += obj/txdb-leveldb.o
- obj/txdb-leveldb.o: E:/cointools/leveldb-1.2/libleveldb.a
+ obj/txdb-leveldb.o: E:/cointools64/leveldb-1.2/libleveldb.a
 else
  OBJS += obj/txdb-bdb.o
 endif

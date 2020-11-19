@@ -174,7 +174,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     // cost to you of processing a transaction.
     int64_t nMinTxFee = block_param::MIN_TX_FEE;
     if (map_arg::GetMapArgsCount("-mintxfee")) {
-        bitstr::ParseMoney(map_arg::GetMapArgsString("-mintxfee"), nMinTxFee);
+        bitstr::ParseMoney(map_arg::GetMapArgsString("-mintxfee").c_str(), nMinTxFee);
     }
 
     CBlockIndex *pindexPrev = block_info::pindexBest;

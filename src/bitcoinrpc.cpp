@@ -1,5 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2020 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1060,6 +1061,130 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq)
 
 void bitrpc::ThreadRPCServer3(void *parg)
 {
+    printf("ThreadRPCServer3 started\n");
+
+#ifdef POW_NOMP_POOL
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+#endif
+
+    // Make this thread recognisable as the RPC handler
+    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
+
+#ifndef POW_NOMP_POOL
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+#endif
+        ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
+    }
+#endif
+    AcceptedConnection *conn = (AcceptedConnection *)parg;
+
+    bool fRun = true;
+    for ( ; ; )
+    {
+        if (args_bool::fShutdown || !fRun) {
+            conn->close();
+            delete conn;
+
+#ifndef POW_NOMP_POOL
+            {
+                LOCK(cs_THREAD_RPCHANDLER);
+#endif
+                --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
+            }
+#endif
+            return;
+        }
+        std::map<std::string, std::string> mapHeaders;
+        std::string strRequest;
+
+        http::ReadHTTP(conn->stream(), mapHeaders, strRequest);
+        // printf("ThreadRPCServer3 strRequest %s\n", strRequest.c_str());
+
+        //
+        // Check authorization
+        //
+        if (mapHeaders.count("authorization") == 0) {
+            conn->stream() << http::HTTPReply(HTTP_UNAUTHORIZED, "", false) << std::flush;
+            break;
+        }
+        if (! bitrpc::HTTPAuthorized(mapHeaders)) {
+            printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
+
+            /* Deter brute-forcing short passwords. If this results in a DOS the user really shouldn't have their RPC port exposed.*/
+            if (map_arg::GetMapArgsString("-rpcpassword").size() < 20) {
+                util::Sleep(250);
+            }
+
+            conn->stream() << http::HTTPReply(HTTP_UNAUTHORIZED, "", false) << std::flush;
+            break;
+        }
+        if (mapHeaders["connection"] == "close") {
+            fRun = false;
+        }
+
+        // printf("ThreadRPCServer3 JSON\n");
+        bitjson::JSONRequest jreq;
+        try {
+            // Parse request
+            json_spirit::Value valRequest;
+            if (! read_string(strRequest, valRequest)) {
+                printf("ThreadRPCServer3 JSON ParseError\n");
+                throw bitjson::JSONRPCError(RPC_PARSE_ERROR, "Parse error");
+            }
+
+            std::string strReply;
+
+            // singleton request
+            if (valRequest.type() == json_spirit::obj_type) {
+                jreq.parse(valRequest);
+
+                //printf("ThreadRPCServer3 JSON EXE %s\n", jreq.strMethod.c_str());
+                json_spirit::Value result = CRPCTable::tableRPC.execute(jreq.strMethod, jreq.params);
+
+                // Send reply
+                strReply = json::JSONRPCReply(result, json_spirit::Value::null, jreq.id);
+
+                // array of requests
+            } else if (valRequest.type() == json_spirit::array_type) {
+                strReply = JSONRPCExecBatch(valRequest.get_array());
+            } else {
+                throw bitjson::JSONRPCError(RPC_PARSE_ERROR, "Top-level object parse error");
+            }
+
+            conn->stream() << http::HTTPReply(HTTP_OK, strReply, fRun) << std::flush;
+        } catch (const json_spirit::Object &objError) {
+            printf("ThreadRPCServer3 JSON Error1\n");
+            json::ErrorReply(conn->stream(), objError, jreq.id);
+            break;
+        } catch (const std::exception &e) {
+            printf("ThreadRPCServer3 JSON Error2\n");
+            json::ErrorReply(conn->stream(), bitjson::JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);
+            break;
+        }
+    }
+
+    delete conn;
+#ifndef POW_NOMP_POOL
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+#endif
+        --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+#ifndef POW_NOMP_POOL
+    }
+#endif
+
+#ifdef POW_NOMP_POOL
+    } // LOCK(cs_THREAD_RPCHANDLER)
+#endif
+}
+
+/*
+void bitrpc::ThreadRPCServer3(void *parg)
+{
     //printf("ThreadRPCServer3 started\n");
 
     //{
@@ -1103,7 +1228,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
         if (! bitrpc::HTTPAuthorized(mapHeaders)) {
             printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
 
-            /* Deter brute-forcing short passwords. If this results in a DOS the user really shouldn't have their RPC port exposed.*/
+            // Deter brute-forcing short passwords. If this results in a DOS the user really shouldn't have their RPC port exposed.
             if (map_arg::GetMapArgsString("-rpcpassword").size() < 20) {
                 util::Sleep(250);
             }
@@ -1164,6 +1289,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
 
     //} // LOCK(cs_THREAD_RPCHANDLER)
 }
+*/
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params) const
 {

@@ -598,9 +598,6 @@ namespace bitstr
 
         return str;
     }
-    inline bool ParseMoney(const std::string &str, int64_t &nRet) {
-        return bitstr::ParseMoney(str.c_str(), nRet);
-    }
     inline bool ParseMoney(const char *pszIn, int64_t &nRet) {
         std::string strWhole;
         int64_t nUnits = 0;

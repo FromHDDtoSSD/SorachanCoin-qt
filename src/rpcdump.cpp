@@ -275,7 +275,7 @@ json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, bool fHe
     std::string strAddress = params[0].get_str();
     SecureString strPassKey;
     strPassKey.reserve(100);
-    strPassKey = params[2].get_str().c_str();
+    strPassKey(const_cast<std::string &>(params[2].get_str()));
 
     CBitcoinAddress address;
     if (! address.SetString(strAddress)) {

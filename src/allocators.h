@@ -288,7 +288,70 @@ struct zero_after_free_allocator : public std::allocator<T>
 };
 
 // This is exactly like std::string, but with a custom allocator.
-typedef std::basic_string<char, std::char_traits<char>, secure_allocator<char> > SecureString;
+using String_with_s_allocator = std::basic_string<char, std::char_traits<char>, secure_allocator<char> >;
+class SecureString { // SorachanCoin: SecureString
+private:
+    String_with_s_allocator str_;
+public:
+    SecureString() noexcept {
+        str_ = "";
+    }
+    SecureString(const SecureString &obj) noexcept {
+        *this = obj;
+    }
+    SecureString(const SecureString &&obj) noexcept {
+        this->str_ = std::move(obj.str_);
+    }
+
+    const char *c_str() const noexcept {
+        return str_.c_str();
+    }
+    SecureString &operator=(const SecureString &obj) noexcept {
+        this->str_ = obj.str_;
+        return *this;
+    }
+    SecureString &operator=(const std::string &)=delete;
+    SecureString &operator=(const char *)=delete;
+    bool operator==(const SecureString &obj) const noexcept {
+        return (this->str_ == obj.str_);
+    }
+
+    std::size_t size() const noexcept {
+        return str_.size();
+    }
+    std::size_t length() const noexcept {
+        return str_.length();
+    }
+    void reserve(std::size_t size) noexcept {
+        str_.reserve(size);
+    }
+    void resize(std::size_t)=delete; // must be used reserve.
+    bool empty() const noexcept {
+        return str_.empty();
+    }
+    SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) noexcept {
+        str_.assign(str.str_, pos, n);
+        return *this;
+    }
+    SecureString &assign(const char *)=delete;
+
+    // insert [] or ()
+    char &operator[](std::size_t pos) const noexcept { // insert string directly
+        assert(0 <= pos && pos < str_.size());
+        return *(const_cast<char *>(str_.c_str()) + pos);
+    }
+    SecureString &operator()(std::string &obj) noexcept {
+        str_ = obj.c_str();
+        ::OPENSSL_cleanse(const_cast<char *>(obj.c_str()), sizeof(char) * obj.size());
+        return *this;
+    }
+    SecureString &operator()(const std::string &obj, unsigned short *p) noexcept { // to QString
+        std::size_t len = ::wcslen((const wchar_t *)p);
+        str_ = obj.c_str();
+        ::OPENSSL_cleanse(p, sizeof(unsigned short) * len);
+        return *this;
+    }
+};
 
 #endif
 //@

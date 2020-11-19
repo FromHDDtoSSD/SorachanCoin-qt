@@ -1687,11 +1687,7 @@ json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params,
     SecureString strWalletPass;
     strWalletPass.reserve(100);
 
-    //
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
-    //
-    strWalletPass = params[0].get_str().c_str();
+    strWalletPass(const_cast<std::string &>(params[0].get_str()));
 
     if (strWalletPass.length() > 0) {
         if (! entry::pwalletMain->Unlock(strWalletPass)) {
@@ -1735,17 +1731,13 @@ json_spirit::Value CRPCTable::walletpassphrasechange(const json_spirit::Array &p
         throw bitjson::JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrasechange was called.");
     }
 
-    //
-    // TODO: get rid of these .c_str() calls by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
-    //
     SecureString strOldWalletPass;
     strOldWalletPass.reserve(100);
-    strOldWalletPass = params[0].get_str().c_str();
+    strOldWalletPass(const_cast<std::string &>(params[0].get_str()));
 
     SecureString strNewWalletPass;
     strNewWalletPass.reserve(100);
-    strNewWalletPass = params[1].get_str().c_str();
+    strNewWalletPass(const_cast<std::string &>(params[1].get_str()));
 
     if (strOldWalletPass.length() < 1 || strNewWalletPass.length() < 1) {
         throw std::runtime_error(
@@ -1799,13 +1791,9 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, bo
         throw bitjson::JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an encrypted wallet, but encryptwallet was called.");
     }
 
-    //
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make params[0] mlock()'d to begin with.
-    //
     SecureString strWalletPass;
     strWalletPass.reserve(100);
-    strWalletPass = params[0].get_str().c_str();
+    strWalletPass(const_cast<std::string &>(params[0].get_str()));
 
     if (strWalletPass.length() < 1) {
         throw std::runtime_error(
@@ -1964,7 +1952,7 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, b
     }
 
     json_spirit::Object result;
-    if (map_arg::GetMapArgsCount("-reservebalance") && !bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance"), miner::nReserveBalance)) {
+    if (map_arg::GetMapArgsCount("-reservebalance") && !bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance)) {
         throw std::runtime_error("invalid reserve balance amount\n");
     }
 
