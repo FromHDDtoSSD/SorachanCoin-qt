@@ -11,6 +11,7 @@
 #include <boost/iostreams/device/file.hpp>
 #include <boost/iostreams/stream.hpp>
 #include <ostream>
+#include <thread> // CWaitforthread
 #include <miner/diff.h>
 
 double CRPCTable::GetDifficulty(const CBlockIndex *blockindex/* = nullptr */) noexcept {
@@ -143,11 +144,26 @@ json_spirit::Value CRPCTable::getblockcount(const json_spirit::Array &params, CB
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getblockcount\n"
-            "Returns the number of blocks in the longest block chain.");
+            "Returns the number of blocks in the longest block chain.",
+            "(numeric) The current block count.\n",
+            "\"getblockcount\", \"\"\n");
     }
 
     return data.JSONRPCSuccess(block_info::nBestHeight);
 }
+
+class CWaitforthread {
+private:
+    mutable std::thread th;
+public:
+    CWaitforthread() noexcept : th([]{::Sleep(100);}) {}
+    void wait() const noexcept {th.join();}
+};
+
+// waitforblock
+
+
+
 
 json_spirit::Value CRPCTable::getdifficulty(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 0) {
@@ -299,7 +315,7 @@ bool CRPCTable::ExportBlock(const std::string &strBlockHash, const CDataStream &
     }
 }
 
-json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "dumpblock <hash> [destination]\n"
@@ -328,7 +344,7 @@ json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrp
     return data.JSONRPCSuccess(util::HexStr(ssBlock.begin(), ssBlock.end()));
 }
 
-json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "dumpblockbynumber <number>  [destination]\n"

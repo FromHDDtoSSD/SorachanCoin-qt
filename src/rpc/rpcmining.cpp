@@ -580,7 +580,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "submitblock <hex data> [optional-params-obj]\n"
@@ -596,11 +596,11 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
     rpctable_vector blockData(hex::ParseHex(hex));
     CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
     CBlock block;
-    try {
+    //try {
         ssBlock >> block;
-    } catch (const std::exception &) {
-        return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
-    }
+    //} catch (const std::exception &) {
+    //    return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+    //}
 
     bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
     if (! fAccepted)

@@ -1536,19 +1536,27 @@ json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params,
     if (! entry::pwalletMain->IsLocked())
         return data.JSONRPCError(RPC_WALLET_ALREADY_UNLOCKED, "Error: Wallet is already unlocked, use walletlock first if need to change unlock settings.");
 
-    // Note that the walletpassphrase is stored in params[0] which is not mlock()'d
     SecureString strWalletPass;
     strWalletPass.reserve(100);
     json_spirit::json_flags status;
-    strWalletPass << const_cast<std::string &>(params[0].get_str(status)); // Note: should be operate << (SecureAllocator)
+    strWalletPass(const_cast<std::string &>(params[0].get_str(status))); // Note: should be operate () (SecureAllocator)
+    {   // SorachanCoin: SecureString operator () check OK.
+        std::string __str = params[0].get_str(status);
+        assert(status.fSuccess());
+        for(const char &c: __str) {
+            assert(c=='\0'); // OpenSSL_cleanse operate OK.
+        }
+        //debugcs::instance() << "[SecureString operator ()] str: " << __str.c_str() << " size: " << __str.size() << debugcs::endl();
+    }
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     if (strWalletPass.length() > 0) {
         if (! entry::pwalletMain->Unlock(strWalletPass))
             return data.JSONRPCError(RPC_WALLET_PASSPHRASE_INCORRECT, "Error: The wallet passphrase entered was incorrect.");
     } else
         return data.runtime_error(
-            "walletpassphrase <passphrase> <timeout>\n"
-            "Stores the wallet decryption key in memory for <timeout> seconds.");
+            "walletpassphrase <passphrase> <timeout> [mintonly]\n"
+            "Stores the wallet decryption key in memory for <timeout> seconds.\n"
+            "mintonly is optional true/false allowing only block minting.");
 
     bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr);
     int64_t *pnSleepTime = new(std::nothrow) int64_t(params[1].get_int64(status));
@@ -1579,16 +1587,16 @@ json_spirit::Value CRPCTable::walletpassphrasechange(const json_spirit::Array &p
     if (! entry::pwalletMain->IsCrypted())
         return data.JSONRPCError(RPC_WALLET_WRONG_ENC_STATE, "Error: running with an unencrypted wallet, but walletpassphrasechange was called.");
 
-    // Note: should be operator << (SecureAllocator)
+    // Note: should be operator () (SecureAllocator)
     json_spirit::json_flags status;
     SecureString strOldWalletPass;
     strOldWalletPass.reserve(100);
-    strOldWalletPass << const_cast<std::string &>(params[0].get_str(status));
+    strOldWalletPass(const_cast<std::string &>(params[0].get_str(status)));
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
 
     SecureString strNewWalletPass;
     strNewWalletPass.reserve(100);
-    strNewWalletPass << const_cast<std::string &>(params[1].get_str(status));
+    strNewWalletPass(const_cast<std::string &>(params[1].get_str(status)));
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
 
     if (strOldWalletPass.length() < 1 || strNewWalletPass.length() < 1) {
@@ -1638,7 +1646,7 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CB
     SecureString strWalletPass;
     strWalletPass.reserve(100);
     json_spirit::json_flags status;
-    strWalletPass << const_cast<std::string &>(params[0].get_str(status)); // Note: should be operator << (SecureAllocator)
+    strWalletPass(const_cast<std::string &>(params[0].get_str(status))); // Note: should be operator () (SecureAllocator)
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     if (strWalletPass.length() < 1) {
         return data.runtime_error(

@@ -254,7 +254,7 @@ json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, CBitrpcD
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     SecureString strPassKey;
     strPassKey.reserve(100);
-    strPassKey << const_cast<std::string &>(params[2].get_str(status)); // Note: should operate << (SecureAllocator)
+    strPassKey(const_cast<std::string &>(params[2].get_str(status))); // Note: should operate () (SecureAllocator)
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
 
     CBitcoinAddress address;

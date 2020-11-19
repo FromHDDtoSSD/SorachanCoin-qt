@@ -319,7 +319,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
     return data.JSONRPCSuccess(util::HexStr(ss.begin(), ss.end()));
 }
 
-json_spirit::Value CRPCTable::decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "decoderawtransaction <hex string>\n"
@@ -335,11 +335,11 @@ json_spirit::Value CRPCTable::decoderawtransaction(const json_spirit::Array &par
     rpctable_vector txData(hex::ParseHex(str));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
-    try {
+    //try {
         ssData >> tx;
-    } catch (const std::exception &) {
-        return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
-    }
+    //} catch (const std::exception &) {
+    //    return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    //}
 
     json_spirit::Object result;
     TxToJSON(tx, 0, result);
@@ -374,7 +374,7 @@ json_spirit::Value CRPCTable::decodescript(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(r);
 }
 
-json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() < 1 || params.size() > 4) {
         return data.JSONRPCSuccess(
             "signrawtransaction <hex string> '[{\"txid\":txid,\"vout\":n,\"scriptPubKey\":hex,\"redeemScript\":hex},...]' '[<privatekey1>,...]' [sighashtype=\"ALL\"]\n"
@@ -401,13 +401,13 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     std::vector<CTransaction> txVariants;
     while (! ssData.empty()) {
-        try {
+        //try {
             CTransaction tx;
             ssData >> tx;
             txVariants.push_back(tx);
-        } catch (const std::exception &) {
-            return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
-        }
+        //} catch (const std::exception &) {
+        //    return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+        //}
     }
     if (txVariants.empty())
         return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Missing transaction");
@@ -580,7 +580,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data) {
+json_spirit::Value CRPCTable::sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() < 1 || params.size() > 1) {
         return data.JSONRPCSuccess(
             "sendrawtransaction <hex string>\n"
@@ -599,11 +599,11 @@ json_spirit::Value CRPCTable::sendrawtransaction(const json_spirit::Array &param
     CTransaction tx;
 
     // deserialize binary data stream
-    try {
+    //try {
         ssData >> tx;
-    } catch (const std::exception &) {
-        return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
-    }
+    //} catch (const std::exception &) {
+    //    return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "TX decode failed");
+    //}
     uint256 hashTx = tx.GetHash();
 
     // See if the transaction is already in a block

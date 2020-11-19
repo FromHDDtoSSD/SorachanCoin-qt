@@ -129,9 +129,9 @@ namespace json_spirit
     private:
         void check_type(const Value_type vtype, json_flags &status) const noexcept;
 
-        typedef boost::variant< String_type,
-            boost::recursive_wrapper< Object >, boost::recursive_wrapper< Array >,
-            bool, int64_t, double > Variant;
+        using Variant = boost::variant<String_type,
+            boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
+            bool, int64_t, double>;
 
         Value_type type_;
         Variant v_;
@@ -212,17 +212,17 @@ namespace json_spirit
     };
 
     // typedefs for ASCII
-    typedef Config_map< std::string > mConfig;
-    typedef mConfig::Value_type  mValue;
-    typedef mConfig::Object_type mObject;
-    typedef mConfig::Array_type  mArray;
+    using mConfig = Config_map<std::string>;
+    using mValue = mConfig::Value_type;
+    using mObject = mConfig::Object_type;
+    using mArray = mConfig::Array_type;
 
     // typedefs for Unicode
 #ifndef BOOST_NO_STD_WSTRING
-    typedef Config_map< std::wstring > wmConfig;
-    typedef wmConfig::Value_type  wmValue;
-    typedef wmConfig::Object_type wmObject;
-    typedef wmConfig::Array_type  wmArray;
+    using wmConfig = Config_map<std::wstring>;
+    using wmValue = wmConfig::Value_type;
+    using wmObject = wmConfig::Object_type;
+    using wmArray = wmConfig::Array_type;
 #endif
 
     template<typename Config>
@@ -237,7 +237,7 @@ namespace json_spirit
     }
 
     template<typename Config>
-    bool Value_impl<Config>::operator==(const Value_impl& lhs) const noexcept {
+    bool Value_impl<Config>::operator==(const Value_impl &lhs) const noexcept {
         if (this == &lhs) return true;
         if (type() != lhs.type()) return false;
         return v_ == lhs.v_;

@@ -90,13 +90,15 @@ void AskPassphraseDialog::accept()
     newpass1.reserve(MAX_PASSPHRASE_SIZE);
     newpass2.reserve(MAX_PASSPHRASE_SIZE);
 
-    //
-    // TODO: get rid of this .c_str() by implementing SecureString::operator=(std::string)
-    // Alternately, find a way to make this input mlock()'d to begin with.
-    //
-    oldpass.assign(ui->passEdit1->text().toStdString().c_str());
-    newpass1.assign(ui->passEdit2->text().toStdString().c_str());
-    newpass2.assign(ui->passEdit3->text().toStdString().c_str());
+    // SorachanCoin: SecureString operator () (SecureAllocator and OpenSSL_cleanse)
+    oldpass(ui->passEdit1->text().toStdString(), const_cast<ushort *>(ui->passEdit1->text().utf16()));
+    newpass1(ui->passEdit2->text().toStdString(), const_cast<ushort *>(ui->passEdit2->text().utf16()));
+    newpass2(ui->passEdit3->text().toStdString(), const_cast<ushort *>(ui->passEdit3->text().utf16()));
+
+    {
+        // SorachanCoin SecureString check OK.
+        // debugcs::instance() << "[AskPass] edit1: " << ui->passEdit1->text().toStdString().c_str() << debugcs::endl();
+    }
 
     switch(mode)
     {

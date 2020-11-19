@@ -95,22 +95,30 @@ public:
     int code;
     json_spirit::Object err;
     std::string e;
+    std::string eg;
+    std::string sr;
     CBitrpcData() {
         param = BITRPC_PARAM_EXEC;
         ret = BITRPC_STATUS_ERROR;
         code = RPC_MISC_ERROR;
         e = "";
+        eg = "";
+        sr = "";
     }
     bool fHelp() const {return (param == BITRPC_PARAM_HELP);}
     bool fSuccess() const {return (ret == BITRPC_STATUS_OK);}
     template <typename T>
-    json_spirit::Value JSONRPCSuccess(T &in_type) noexcept {
+    json_spirit::Value JSONRPCSuccess(T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) noexcept {
         ret = BITRPC_STATUS_OK;
+        if(__sr) sr = __sr;
+        if(__eg) eg = __eg;
         return in_type;
     }
     template <typename T>
-    json_spirit::Value JSONRPCSuccess(const T &in_type) noexcept {
+    json_spirit::Value JSONRPCSuccess(const T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) noexcept {
         ret = BITRPC_STATUS_OK;
+        if(__sr) sr = __sr;
+        if(__eg) eg = __eg;
         return in_type;
     }
     std::string runtime_error(const std::string &in_err) noexcept {
@@ -441,7 +449,7 @@ private:
     static json_spirit::Value getwork(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getworkex(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getblocktemplate(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value submitblock(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value submitblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
 
     static json_spirit::Value getnewaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcwallet.cpp
     static json_spirit::Value getaccountaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
@@ -495,11 +503,11 @@ private:
     static json_spirit::Value getrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rcprawtransaction.cpp
     static json_spirit::Value listunspent(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value createrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value createmultisig(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value decodescript(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value signrawtransaction(const json_spirit::Array &params, CBitrpcData &data);
-    static json_spirit::Value sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value signrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
 
     static json_spirit::Value getbestblockhash(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcblockchain.cpp
     static json_spirit::Value getblockcount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
@@ -510,8 +518,8 @@ private:
     static json_spirit::Value getblockqhash(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumpblock(const json_spirit::Array &params, CBitrpcData &data);
-    static json_spirit::Value dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumpblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getcheckpoint(const json_spirit::Array &params, CBitrpcData &data) noexcept;
 };
 
