@@ -1,6 +1,13 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef RPCCONSOLE_H
 #define RPCCONSOLE_H
 
+#include <allocator/qtsecure.h>
 #include <QWidget>
 
 namespace Ui {
@@ -9,18 +16,18 @@ namespace Ui {
 class ClientModel;
 
 /** Local Bitcoin RPC console. */
-class RPCConsole: public QWidget
-{
+class RPCConsole: public QWidget {
     Q_OBJECT
 private:
-    RPCConsole(const RPCConsole &); //{}
-    RPCConsole &operator=(const RPCConsole &); // {}
+    RPCConsole()=delete;
+    RPCConsole(const RPCConsole &)=delete;
+    RPCConsole &operator=(const RPCConsole &)=delete;
+    RPCConsole &operator=(const RPCConsole &&)=delete;
 public:
     explicit RPCConsole(QWidget *parent = 0);
     ~RPCConsole();
 
     void setClientModel(ClientModel *model);
-
     enum MessageClass {
         MC_ERROR,
         MC_DEBUG,
@@ -28,7 +35,6 @@ public:
         CMD_REPLY,
         CMD_ERROR
     };
-
 protected:
     virtual bool eventFilter(QObject* obj, QEvent *event);
     void keyPressEvent(QKeyEvent *);
@@ -87,4 +93,3 @@ private:
 };
 
 #endif // RPCCONSOLE_H
-//@

@@ -3,7 +3,7 @@
 // Copyright (c) 2018-2020 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_ALLOCATORS_H
 #define BITCOIN_ALLOCATORS_H
 
@@ -296,26 +296,24 @@ struct zero_after_free_allocator : public std::allocator<T>
 
 // This is exactly like std::string, but with a custom allocator.
 using String_with_s_allocator = std::basic_string<char, std::char_traits<char>, secure_allocator<char> >;
-class SecureString {
+class SecureString { // SorachanCoin: SecureString
 private:
-    static constexpr int NO_RESERVE = -1;
-    mutable String_with_s_allocator str_;
-    int rev_;
+    String_with_s_allocator str_;
 public:
-    SecureString() noexcept : rev_(NO_RESERVE) {
+    SecureString() {
         str_ = "";
     }
-    SecureString(const SecureString &obj) noexcept : rev_(NO_RESERVE) {
+    SecureString(const SecureString &obj) {
         *this = obj;
     }
-    SecureString(const SecureString &&obj) noexcept : rev_(NO_RESERVE) {
+    SecureString(const SecureString &&obj) noexcept {
         this->str_ = std::move(obj.str_);
     }
 
     const char *c_str() const noexcept {
         return str_.c_str();
     }
-    SecureString &operator=(const SecureString &obj) noexcept {
+    SecureString &operator=(const SecureString &obj) {
         this->str_ = obj.str_;
         return *this;
     }
@@ -331,36 +329,30 @@ public:
     std::size_t length() const noexcept {
         return str_.length();
     }
-    void reserve(std::size_t size) noexcept {
-        rev_ = (int)size;
+    void reserve(std::size_t size) {
+        str_.reserve(size);
     }
-    void resize(std::size_t)=delete; // must be use reserve.
+    void resize(std::size_t)=delete; // must be used reserve(size_t).
     bool empty() const noexcept {
         return str_.empty();
     }
-    SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) noexcept {
+    SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
         str_.assign(str.str_, pos, n);
         return *this;
     }
-    SecureString &assign(const char *str) noexcept {
-        str_.assign(str);
-        return *this;
-    }
+    SecureString &assign(const char *)=delete;
 
     // insert [] or ()
     char &operator[](std::size_t pos) const noexcept { // insert string directly
-        if(rev_!=NO_RESERVE) str_.resize((std::size_t)rev_); // reserved: rev_, used: rev_
         assert(0 <= pos && pos < str_.size());
         return *(const_cast<char *>(str_.c_str()) + pos);
     }
-    SecureString &operator()(std::string &obj) noexcept {
-        if(rev_!=NO_RESERVE) str_.reserve((std::size_t)rev_); // reserved: rev_, used: 0
+    SecureString &operator()(std::string &obj) {
         str_ = obj.c_str();
         ::OPENSSL_cleanse(const_cast<char *>(obj.c_str()), sizeof(char) * obj.size());
         return *this;
     }
-    SecureString &operator()(const std::string &obj, unsigned short *p) noexcept { // to QString
-        if(rev_!=NO_RESERVE) str_.reserve((std::size_t)rev_); // reserved: rev_, used 0
+    SecureString &operator()(const std::string &obj, unsigned short *p) { // to QString
         std::size_t len = ::wcslen((const wchar_t *)p);
         str_ = obj.c_str();
         ::OPENSSL_cleanse(p, sizeof(unsigned short) * len);

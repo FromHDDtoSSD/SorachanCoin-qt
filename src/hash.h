@@ -3,7 +3,7 @@
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_HASH_H
 #define BITCOIN_HASH_H
 
@@ -19,19 +19,32 @@
 # include <quantum/quantum.h>
 # include <crypto/ripemd160.h>
 # include <crypto/sha256.h>
-# include <crypto/sha512.h>
 # include <crypto/qhash65536.h>
 #endif
+
+// BIP32
+# include <crypto/hmac_sha512.h>
+using ChainCode = uint256;
+namespace bip32 {
+    inline void BIP32Hash(const ChainCode &chainCode, unsigned int nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]) noexcept {
+        unsigned char num[4];
+        num[0] = (nChild >> 24) & 0xFF;
+        num[1] = (nChild >> 16) & 0xFF;
+        num[2] = (nChild >>  8) & 0xFF;
+        num[3] = (nChild >>  0) & 0xFF;
+        latest_crypto::CHMAC_SHA512(chainCode.begin(), chainCode.size()).Write(&header, 1).Write(data, 32).Write(num, 4).Finalize(output);
+    }
+} // bip32
 
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
 template<typename CTX, typename UINTOBJ>
 class CHashWriter_q
 {
 private:
-    CHashWriter_q(const CHashWriter_q &); // {}
-    CHashWriter_q(const CHashWriter_q &&); // {}
-    CHashWriter_q &operator=(const CHashWriter_q &); // {}
-    CHashWriter_q &operator=(const CHashWriter_q &&); // {}
+    CHashWriter_q(const CHashWriter_q &)=delete;
+    CHashWriter_q(const CHashWriter_q &&)=delete;
+    CHashWriter_q &operator=(const CHashWriter_q &)=delete;
+    CHashWriter_q &operator=(const CHashWriter_q &&)=delete;
     CTX ctx;
 public:
     CHashWriter_q() {}
@@ -62,10 +75,10 @@ public:
 class CHashWriter
 {
 private:
-    CHashWriter(const CHashWriter &); // {}
-    CHashWriter(const CHashWriter &&); // {}
-    CHashWriter &operator=(const CHashWriter &); // {}
-    CHashWriter &operator=(const CHashWriter &&); // {}
+    CHashWriter(const CHashWriter &)=delete;
+    CHashWriter(const CHashWriter &&)=delete;
+    CHashWriter &operator=(const CHashWriter &)=delete;
+    CHashWriter &operator=(const CHashWriter &&)=delete;
     SHA256_CTX ctx;
 public:
     void Init() {

@@ -941,8 +941,6 @@ bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcDa
         data.JSONRPCError(RPC_JSON_ERROR, status.e);
         return false;
     }
-    //if (strMethod != "getwork" && strMethod != "getblocktemplate")
-        // printf("ThreadRPCServer method=%s\n", strMethod.c_str());
 
     // Parse params
     json_spirit::Value valParams = find_value(request, "params");

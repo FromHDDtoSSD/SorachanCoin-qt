@@ -94,11 +94,18 @@ void AskPassphraseDialog::accept()
     oldpass(ui->passEdit1->text().toStdString(), const_cast<ushort *>(ui->passEdit1->text().utf16()));
     newpass1(ui->passEdit2->text().toStdString(), const_cast<ushort *>(ui->passEdit2->text().utf16()));
     newpass2(ui->passEdit3->text().toStdString(), const_cast<ushort *>(ui->passEdit3->text().utf16()));
-
     {
         // SorachanCoin SecureString check OK.
-        // debugcs::instance() << "[AskPass] edit1: " << ui->passEdit1->text().toStdString().c_str() << debugcs::endl();
+        //debugcs::instance() << "[AskPass] edit1: " << ui->passEdit1->text().toStdString().c_str() << debugcs::endl();
+        //debugcs::instance() << "[AskPass] edit2: " << ui->passEdit2->text().toStdString().c_str() << debugcs::endl();
+        //debugcs::instance() << "[AskPass] edit3: " << ui->passEdit3->text().toStdString().c_str() << debugcs::endl();
+        assert(*ui->passEdit1->text().toStdString().c_str()=='\0');
+        assert(*ui->passEdit2->text().toStdString().c_str()=='\0');
+        assert(*ui->passEdit3->text().toStdString().c_str()=='\0');
     }
+    ui->passEdit1->setText(QString(""));
+    ui->passEdit2->setText(QString(""));
+    ui->passEdit3->setText(QString(""));
 
     switch(mode)
     {

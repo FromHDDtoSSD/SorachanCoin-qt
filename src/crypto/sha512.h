@@ -5,8 +5,6 @@
 #ifndef BITCOIN_CRYPTO_SHA512_H
 #define BITCOIN_CRYPTO_SHA512_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <openssl/crypto.h> // for OPENSSL_cleanse()
@@ -37,7 +35,5 @@ public:
 };
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_SHA512_H

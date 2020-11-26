@@ -5,7 +5,7 @@
 #include <vector>
 #include <map>
 
-#include "allocators.h" /* for SecureString */
+#include <allocator/allocators.h> /* for SecureString */
 #include <uint256.h>
 
 class OptionsModel;

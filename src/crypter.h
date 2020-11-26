@@ -5,9 +5,9 @@
 #ifndef __CRYPTER_H__
 #define __CRYPTER_H__
 
-#include "allocators.h" /* for SecureString */
-#include "key.h"
-#include "serialize.h"
+#include <allocator/allocators.h> /* for SecureString */
+#include <key.h>
+#include <serialize.h>
 
 namespace crypter_param
 {

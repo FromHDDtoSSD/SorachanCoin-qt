@@ -5,10 +5,7 @@
 #ifndef BITCOIN_CRYPTO_HMAC_SHA512_H
 #define BITCOIN_CRYPTO_HMAC_SHA512_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/sha512.h>
-
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -33,8 +30,6 @@ public:
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
 };
 
-} // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
+} // latest_crypto
 
 #endif // BITCOIN_CRYPTO_HMAC_SHA512_H

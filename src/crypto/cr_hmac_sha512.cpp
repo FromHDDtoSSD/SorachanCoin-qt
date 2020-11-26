@@ -2,10 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/hmac_sha512.h>
-
 #include <string.h>
 
 namespace latest_crypto {
@@ -37,6 +34,4 @@ void CHMAC_SHA512::Finalize(unsigned char hash[OUTPUT_SIZE])
     outer.Write(temp, 64).Finalize(hash);
 }
 
-} // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
+} // latest_crypto

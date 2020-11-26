@@ -21,7 +21,7 @@
 template<unsigned int BITS>
 class base_uint {
 private:
-    enum {WIDTH = BITS / 32};
+    static constexpr int WIDTH = BITS / 32;
     uint32_t pn[WIDTH];
 protected:
     void set_pn(int index, uint32_t n) {pn[index] = n;}
@@ -251,6 +251,12 @@ public:
     }
     unsigned char *end() {
         return (unsigned char *)&pn[WIDTH];
+    }
+    const unsigned char *begin() const {
+        return (const unsigned char *)&pn[0];
+    }
+    const unsigned char *end() const {
+        return (const unsigned char *)&pn[WIDTH];
     }
     std::vector<unsigned char> getBytes() {
         return std::vector<unsigned char>(begin(), end());

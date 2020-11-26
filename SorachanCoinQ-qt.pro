@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 2.2.9
+VERSION = 2.3.9
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -492,7 +492,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/protocol.h \
     src/qt/notificator.h \
     src/qt/qtipcserver.h \
-    src/allocators.h \
+    src/allocator/allocators.h \
     src/ui_interface.h \
     src/qt/rpcconsole.h \
     src/version.h \
@@ -551,6 +551,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/boot/shutdown.h \
     src/miner/diff.h \
     src/rpc/bitcoinrpc.h \
+    src/allocator/qtsecure.h \
+    src/bip32/hdchain.h \
+    src/key/pubkey.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -695,6 +698,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpc/rpcwallet.cpp \
     src/rpc/rpcblockchain.cpp \
     src/rpc/rpcrawtransaction.cpp \
+    src/bip32/hdchain.cpp \
+    src/key/pubkey.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp

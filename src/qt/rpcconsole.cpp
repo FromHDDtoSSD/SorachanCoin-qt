@@ -19,7 +19,6 @@
 #include <QScrollBar>
 #include <openssl/crypto.h>
 #include <db_cxx.h>
-#include <debugcs/debugcs.h>
 
 const int CONSOLE_HISTORY = 50;
 const QSize ICON_SIZE(24, 24);
@@ -157,6 +156,8 @@ bool parseCommandLine(std::vector<std::string> &args, const std::string &strComm
 }
 
 void RPCExecutor::request(const QString &command) {
+    debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
+
     std::vector<std::string> args;
     if(! parseCommandLine(args, command.toStdString())) {
         emit reply(RPCConsole::CMD_ERROR, QString("Parse error: unbalanced ' or \""));
@@ -200,7 +201,8 @@ void RPCExecutor::request(const QString &command) {
     }
 }
 
-RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(new Ui::RPCConsole), historyPtr(0) {
+RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(nullptr), historyPtr(0) {
+    ui = new (std::nothrow) Ui::RPCConsole;
     if(! ui) throw std::runtime_error("RPCConsole Failed to allocate memory.");
     ui->setupUi(this);
 #ifndef Q_OS_MAC
