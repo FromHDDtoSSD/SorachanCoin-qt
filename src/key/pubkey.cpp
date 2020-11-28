@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2018 The Bitcoin developers
+// Copyright (c) 2017 The Zcash developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -8,7 +9,20 @@
 #include <ies.h>
 #include <crypter.h>
 
+#ifdef VERIFY
+# include <debugcs/debugcs.h>
+# define DEBUGCS_CHECK(str) do { debugcs::instance() << __func__ << ": " << (str) << debugcs::endl(); } while(0)
+#else
+# define DEBUGCS_CHECK(str) do { (void)(str); } while(0)
+#endif
+
+bool CPubKey::IsValid() const noexcept {
+    DEBUGCS_CHECK("by size check only");
+    return size() > 0;
+}
+
 bool CPubKey::IsFullyValid() const noexcept {
+    DEBUGCS_CHECK("by OpenSSL");
     const unsigned char *pbegin = &vch_[0];
     EC_KEY *pkey = ::EC_KEY_new_by_curve_name(NID_secp256k1);
     if (::o2i_ECPublicKey(&pkey, &pbegin, size())) {
@@ -18,7 +32,19 @@ bool CPubKey::IsFullyValid() const noexcept {
     return false;
 }
 
-bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const {
+bool CPubKey::IsFullyValid_BIP66() const noexcept {
+    DEBUGCS_CHECK("by secp256k1");
+    if (! IsValid())
+        return false;
+    secp256k1_pubkey pubkey;
+    return secp256k1_ec_pubkey_parse(&pubkey, vch_, size());
+}
+
+bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexcept {
+    if(Verify_BIP66(hash, vchSig))
+        return true;
+
+    DEBUGCS_CHECK("by OpenSSL");
     if (vchSig.empty() || !IsValid())
         return false;
 
@@ -56,6 +82,23 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const {
     ::ECDSA_SIG_free(norm_sig);
     ::EC_KEY_free(pkey);
     return ret;
+}
+
+bool CPubKey::Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const noexcept {
+    DEBUGCS_CHECK("by libsecp256k1");
+    if (! IsValid())
+        return false;
+    secp256k1_pubkey pubkey;
+    secp256k1_signature sig;
+    if (! secp256k1_ec_pubkey_parse(&pubkey, vch_, size()))
+        return false;
+    if (! ecdsa_signature_parse_der_lax(&sig, vchSig.data(), vchSig.size()))
+        return false;
+
+    /* libsecp256k1's ECDSA verification requires lower-S signatures, which have
+     * not historically been enforced in Bitcoin, so normalize them first. */
+    secp256k1_ecdsa_signature_normalize(&sig, &sig);
+    return secp256k1_ecdsa_verify(&sig, hash.begin(), &pubkey);
 }
 
 // Perform ECDSA key recovery (see SEC1 4.1.6) for curves over (mod p)-fields
@@ -135,10 +178,18 @@ int CPubKey::ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const un
     return ret;
 }
 
+std::string CPubKey::ToString() const noexcept {
+    char psz[sizeof(vch_) * 2 + 1]; psz[sizeof(vch_) * 2] = '\0';
+    for (unsigned int i=0; i<sizeof(vch_); ++i)
+        ::sprintf(psz + i * 2, "%02x", ((unsigned char *)vch_)[i]);
+    return psz;
+}
+
 // reconstruct public key from a compact signature
 // This is only slightly more CPU intensive than just verifying it.
 // If this function succeeds, the recovered public key is guaranteed to be valid
 // (the signature is a valid signature of the given data for that key)
+#define DEBUG_LIBSECP256K1
 bool CPubKey::SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig) noexcept {
     if (vchSig.size() != 65)
         return false;
@@ -184,6 +235,13 @@ bool CPubKey::SetCompactSignature(const uint256 &hash, const std::vector<unsigne
     if (! fSuccessful)
         Invalidate();
 
+#ifdef DEBUG_LIBSECP256K1
+    CPubKey __cmp;
+    __cmp.RecoverCompact(hash, vchSig);
+    assert(*this == __cmp);
+    debugcs::instance() << "[SetCompactSignature: OpenSSL]" << this->ToString().c_str() << debugcs::endl();
+    debugcs::instance() << "[RecoverCompact: LIBSECP256K1]" << __cmp.ToString().c_str() << debugcs::endl();
+#endif
     return fSuccessful;
 }
 
@@ -233,20 +291,30 @@ bool CPubKey::ReserealizeSignature(key_vector &vchSig) noexcept {
     (((uint32_t)d7) >> 10) \
 }
 
-#define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
-#define CHECK(cond) VERIFY_CHECK(cond)
+#ifdef VERIFY
+# define VERIFY_CHECK(cond) do { assert(cond); } while(0)
+# define CHECK(cond) VERIFY_CHECK(cond)
+#else
+# define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
+# define CHECK(cond) VERIFY_CHECK(cond)
+#endif
+
+#define ARG_CHECK(cond) ARG_CHECK_FUNC(cond, nullptr)
+#define ARG_CHECK_FUNC(cond, func) do { if(!(cond)) return CPubKey::PubKey_ERROR_callback((func)); } while(0)
 
 #ifdef VERIFY
-#define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)), 1, 1}
+# define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)), 1, 1}
 #else
-#define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0))}
+# define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0))}
 #endif
 
 #ifdef VERIFY
-#define VERIFY_BITS(x, n) VERIFY_CHECK(((x) >> (n)) == 0)
+# define VERIFY_BITS(x, n) VERIFY_CHECK(((x) >> (n)) == 0)
 #else
-#define VERIFY_BITS(x, n) do { } while(0)
+# define VERIFY_BITS(x, n) do { } while(0)
 #endif
+
+#define SECP256K1_SCALAR_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {{(d0), (d1), (d2), (d3), (d4), (d5), (d6), (d7)}}
 
 /** Add a*b to the number defined by (c0,c1). c1 must never overflow. */
 #define muladd_fast(a,b) { \
@@ -438,10 +506,6 @@ void CPubKey::secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_unit
     bin[28] = a->d[0] >> 24; bin[29] = a->d[0] >> 16; bin[30] = a->d[0] >> 8; bin[31] = a->d[0];
 }
 
-void CPubKey::SIG_clear(secp256k1_signature *sig) noexcept {
-    ::OPENSSL_cleanse(sig->data, sizeof(sig->data));
-}
-
 void CPubKey::secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s) noexcept {
     VERIFY_CHECK(sizeof(secp256k1_unit)==32);
     ::memcpy(&sig->data[0], r, 32);
@@ -466,8 +530,8 @@ int CPubKey::secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, u
     int overflow = 0;
 
     //VERIFY_CHECK(ctx != nullptr);
-    //ARG_CHECK(sig != nulltptr);
-    //ARG_CHECK(input64 != nullptr);
+    ARG_CHECK(sig != nullptr);
+    ARG_CHECK(input64 != nullptr);
 
     secp256k1_scalar_set_be32(&r, &input64[0], &overflow);
     ret &= !overflow;
@@ -481,139 +545,137 @@ int CPubKey::secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, u
     return ret;
 }
 
+/** This function is taken from the libsecp256k1 distribution and implements
+ *  DER parsing for ECDSA signatures, while supporting an arbitrary subset of
+ *  format violations.
+ *
+ *  Supported violations include negative integers, excessive padding, garbage
+ *  at the end, and overly long length descriptors. This is safe to use in
+ *  Bitcoin because since the activation of BIP66, signatures are verified to be
+ *  strict DER before being passed to this module, and we know it supports all
+ *  violations present in the blockchain before that point.
+ */
 // Bitcoin: ecdsa_signature_parse_der_lax
 int CPubKey::ecdsa_signature_parse_der_lax(secp256k1_signature *sig, const unsigned char *input, size_t inputlen) noexcept {
-    size_t rpos, rlen, spos, slen;
+    auto SIG_clear = [](secp256k1_signature *sig) {
+        ::OPENSSL_cleanse(sig->data, sizeof(sig->data));
+    };
+
     size_t pos = 0;
-    size_t lenbyte;
     unsigned char tmpsig[64] = {0};
     int overflow = 0;
 
     SIG_clear(sig);
 
     /* Sequence tag byte */
-    if (pos == inputlen || input[pos] != 0x30) {
+    if (pos == inputlen || input[pos] != 0x30)
         return 0;
-    }
-    pos++;
+    ++pos;
 
     /* Sequence length bytes */
-    if (pos == inputlen) {
+    if (pos == inputlen)
         return 0;
-    }
-    lenbyte = input[pos++];
+    size_t lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (lenbyte > inputlen - pos) {
+        if (lenbyte > inputlen - pos)
             return 0;
-        }
         pos += lenbyte;
     }
 
     /* Integer tag byte for R */
-    if (pos == inputlen || input[pos] != 0x02) {
+    if (pos == inputlen || input[pos] != 0x02)
         return 0;
-    }
-    pos++;
+    ++pos;
 
     /* Integer length for R */
-    if (pos == inputlen) {
+    size_t rlen = 0;
+    if (pos == inputlen)
         return 0;
-    }
     lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (lenbyte > inputlen - pos) {
+        if (lenbyte > inputlen - pos)
             return 0;
-        }
         while (lenbyte > 0 && input[pos] == 0) {
-            pos++;
-            lenbyte--;
+            ++pos;
+            --lenbyte;
         }
         static_assert(sizeof(size_t) >= 4, "size_t too small");
-        if (lenbyte >= 4) {
+        if (lenbyte >= 4)
             return 0;
-        }
         rlen = 0;
         while (lenbyte > 0) {
             rlen = (rlen << 8) + input[pos];
-            pos++;
-            lenbyte--;
+            ++pos;
+            --lenbyte;
         }
-    } else {
+    } else
         rlen = lenbyte;
-    }
-    if (rlen > inputlen - pos) {
+
+    if (rlen > inputlen - pos)
         return 0;
-    }
-    rpos = pos;
+    size_t rpos = pos;
     pos += rlen;
 
     /* Integer tag byte for S */
-    if (pos == inputlen || input[pos] != 0x02) {
+    if (pos == inputlen || input[pos] != 0x02)
         return 0;
-    }
-    pos++;
+    ++pos;
 
     /* Integer length for S */
-    if (pos == inputlen) {
+    size_t slen = 0;
+    if (pos == inputlen)
         return 0;
-    }
     lenbyte = input[pos++];
     if (lenbyte & 0x80) {
         lenbyte -= 0x80;
-        if (lenbyte > inputlen - pos) {
+        if (lenbyte > inputlen - pos)
             return 0;
-        }
         while (lenbyte > 0 && input[pos] == 0) {
-            pos++;
-            lenbyte--;
+            ++pos;
+            --lenbyte;
         }
         static_assert(sizeof(size_t) >= 4, "size_t too small");
-        if (lenbyte >= 4) {
+        if (lenbyte >= 4)
             return 0;
-        }
         slen = 0;
         while (lenbyte > 0) {
             slen = (slen << 8) + input[pos];
-            pos++;
-            lenbyte--;
+            ++pos;
+            --lenbyte;
         }
-    } else {
+    } else
         slen = lenbyte;
-    }
-    if (slen > inputlen - pos) {
+
+    if (slen > inputlen - pos)
         return 0;
-    }
-    spos = pos;
+    size_t spos = pos;
 
     /* Ignore leading zeroes in R */
     while (rlen > 0 && input[rpos] == 0) {
-        rlen--;
-        rpos++;
+        --rlen;
+        ++rpos;
     }
     /* Copy R value */
-    if (rlen > 32) {
+    if (rlen > 32)
         overflow = 1;
-    } else {
+    else
         ::memcpy(tmpsig + 32 - rlen, input + rpos, rlen);
-    }
 
     /* Ignore leading zeroes in S */
     while (slen > 0 && input[spos] == 0) {
-        slen--;
-        spos++;
+        --slen;
+        ++spos;
     }
     /* Copy S value */
-    if (slen > 32) {
+    if (slen > 32)
         overflow = 1;
-    } else {
+    else
         ::memcpy(tmpsig + 64 - slen, input + spos, slen);
-    }
 
-    if (!overflow) {
+    if (! overflow)
         overflow = !secp256k1_ecdsa_signature_parse_compact(sig, tmpsig);
-    }
     if (overflow) {
         /* Overwrite the result again with a correctly-parsed but invalid
            signature if parsing failed. */
@@ -657,9 +719,27 @@ int CPubKey::secp256k1_ecdsa_signature_normalize(const secp256k1_signature *sigi
 
     //VERIFY_CHECK(ctx != nullptr);
     //ARG_CHECK(sigin != nullptr);
+    VERIFY_CHECK(sigin != nullptr);
 
     secp256k1_ecdsa_signature_load(&r, &s, sigin);
     return secp256k1_scalar_is_high(&s);
+}
+
+int CPubKey::secp256k1_ecdsa_signature_normalize(secp256k1_signature *sigout, const secp256k1_signature *sigin) noexcept {
+    secp256k1_unit r, s;
+
+    //VERIFY_CHECK(ctx != nullptr);
+    //ARG_CHECK(sigin != nullptr);
+    VERIFY_CHECK(sigin != nullptr);
+
+    secp256k1_ecdsa_signature_load(&r, &s, sigin);
+    int ret = secp256k1_scalar_is_high(&s);
+    if (sigout != nullptr) {
+        if (ret)
+            secp256k1_scalar_negate(&s, &s);
+        secp256k1_ecdsa_signature_save(sigout, &r, &s);
+    }
+    return ret;
 }
 
 bool CPubKey::CheckLowS(const std::vector<unsigned char> &vchSig) noexcept { // SorachanCoin checkeed: no used "context_verify"
@@ -698,9 +778,9 @@ int CPubKey::secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_ecdsa
     secp256k1_unit r, s;
     int ret = 1;
     int overflow = 0;
-    //ARG_CHECK(sig != nullptr);
-    //ARG_CHECK(input64 != nullptr);
-    //ARG_CHECK(recid >= 0 && recid <= 3);
+    ARG_CHECK(sig != nullptr);
+    ARG_CHECK(input64 != nullptr);
+    ARG_CHECK(recid >= 0 && recid <= 3);
 
     secp256k1_scalar_set_be32(&r, &input64[0], &overflow);
     ret &= !overflow;
@@ -1467,7 +1547,7 @@ void CPubKey::ecmult::secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a
 #endif
 }
 
-int CPubKey::ecmult::secp256k1_fe_normalizes_to_zero(secp256k1_fe *r) noexcept {
+int CPubKey::ecmult::secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) noexcept {
     uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],
              t5 = r->n[5], t6 = r->n[6], t7 = r->n[7], t8 = r->n[8], t9 = r->n[9];
 
@@ -1493,6 +1573,7 @@ int CPubKey::ecmult::secp256k1_fe_normalizes_to_zero(secp256k1_fe *r) noexcept {
     /* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
     VERIFY_CHECK(t9 >> 23 == 0);
 
+    DEBUGCS_CHECK((std::string("step1 z0, z1: ") + std::to_string(z0) + "," + std::to_string(z1)).c_str());
     return (z0 == 0) | (z1 == 0x3FFFFFFUL);
 }
 
@@ -1609,6 +1690,7 @@ int CPubKey::ecmult::secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe 
     r->infinity = 0;
     secp256k1_fe_set_int(&c, CURVE_B);
     secp256k1_fe_add(&c, &x3);
+    DEBUGCS_CHECK("step1");
     return secp256k1_fe_sqrt(&r->y, &c);
 }
 
@@ -2518,38 +2600,6 @@ void CPubKey::ecmult::secp256k1_gej_set_infinity(secp256k1_gej *r) noexcept {
     secp256k1_fe_clear(&r->z);
 }
 
-#ifdef USE_ENDOMORPHISM
-static void secp256k1_ge_mul_lambda(ecmult::secp256k1_ge *r, const ecmult::secp256k1_ge *a) noexcept {
-    static constexpr secp256k1_fe beta = SECP256K1_FE_CONST(
-        0x7ae96a2bul, 0x657c0710ul, 0x6e64479eul, 0xac3434e9ul,
-        0x9cf04975ul, 0x12f58995ul, 0xc1396c28ul, 0x719501eeul
-    );
-    *r = *a;
-    ecmult::secp256k1_fe_mul(&r->x, &r->x, &beta);
-}
-#endif
-
-#ifdef USE_ENDOMORPHISM
-static void secp256k1_scalar_split_128(secp256k1_unit *r1, secp256k1_unit *r2, const secp256k1_unit *a) noexcept {
-    r1->d[0] = a->d[0];
-    r1->d[1] = a->d[1];
-    r1->d[2] = a->d[2];
-    r1->d[3] = a->d[3];
-    r1->d[4] = 0;
-    r1->d[5] = 0;
-    r1->d[6] = 0;
-    r1->d[7] = 0;
-    r2->d[0] = a->d[4];
-    r2->d[1] = a->d[5];
-    r2->d[2] = a->d[6];
-    r2->d[3] = a->d[7];
-    r2->d[4] = 0;
-    r2->d[5] = 0;
-    r2->d[6] = 0;
-    r2->d[7] = 0;
-}
-#endif
-
 void CPubKey::ecmult::secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) noexcept {
     r->n[0] = a->n[0] & 0x3FFFFFFUL;
     r->n[1] = a->n[0] >> 26 | ((a->n[1] << 6) & 0x3FFFFFFUL);
@@ -2635,7 +2685,77 @@ void CPubKey::ecmult::secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256
     secp256k1_fe_add(&r->y, &h3);
 }
 
-void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng) noexcept {
+#ifdef USE_ENDOMORPHISM
+void CPubKey::secp256k1_scalar_cadd_bit(secp256k1_unit *r, unsigned int bit, int flag) noexcept {
+    uint64_t t;
+    VERIFY_CHECK(bit < 256);
+    bit += ((uint32_t) flag - 1) & 0x100;  /* forcing (bit >> 5) > 7 makes this a noop */
+    t = (uint64_t)r->d[0] + (((uint32_t)((bit >> 5) == 0)) << (bit & 0x1F));
+    r->d[0] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[1] + (((uint32_t)((bit >> 5) == 1)) << (bit & 0x1F));
+    r->d[1] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[2] + (((uint32_t)((bit >> 5) == 2)) << (bit & 0x1F));
+    r->d[2] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[3] + (((uint32_t)((bit >> 5) == 3)) << (bit & 0x1F));
+    r->d[3] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[4] + (((uint32_t)((bit >> 5) == 4)) << (bit & 0x1F));
+    r->d[4] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[5] + (((uint32_t)((bit >> 5) == 5)) << (bit & 0x1F));
+    r->d[5] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[6] + (((uint32_t)((bit >> 5) == 6)) << (bit & 0x1F));
+    r->d[6] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)r->d[7] + (((uint32_t)((bit >> 5) == 7)) << (bit & 0x1F));
+    r->d[7] = t & 0xFFFFFFFFULL;
+# ifdef VERIFY
+    VERIFY_CHECK((t >> 32) == 0);
+    VERIFY_CHECK(secp256k1_scalar_check_overflow(r) == 0);
+# endif
+}
+
+void CPubKey::secp256k1_scalar_mul_shift_var(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b, unsigned int shift) noexcept {
+    uint32_t l[16];
+    VERIFY_CHECK(shift >= 256);
+    secp256k1_scalar_mul_512(l, a, b);
+    unsigned int shiftlimbs = shift >> 5;
+    unsigned int shiftlow = shift & 0x1F;
+    unsigned int shifthigh = 32 - shiftlow;
+    r->d[0] = shift < 512 ? (l[0 + shiftlimbs] >> shiftlow | (shift < 480 && shiftlow ? (l[1 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[1] = shift < 480 ? (l[1 + shiftlimbs] >> shiftlow | (shift < 448 && shiftlow ? (l[2 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[2] = shift < 448 ? (l[2 + shiftlimbs] >> shiftlow | (shift < 416 && shiftlow ? (l[3 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[3] = shift < 416 ? (l[3 + shiftlimbs] >> shiftlow | (shift < 384 && shiftlow ? (l[4 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[4] = shift < 384 ? (l[4 + shiftlimbs] >> shiftlow | (shift < 352 && shiftlow ? (l[5 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[5] = shift < 352 ? (l[5 + shiftlimbs] >> shiftlow | (shift < 320 && shiftlow ? (l[6 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[6] = shift < 320 ? (l[6 + shiftlimbs] >> shiftlow | (shift < 288 && shiftlow ? (l[7 + shiftlimbs] << shifthigh) : 0)) : 0;
+    r->d[7] = shift < 288 ? (l[7 + shiftlimbs] >> shiftlow)  : 0;
+    secp256k1_scalar_cadd_bit(r, 0, (l[(shift - 1) >> 5] >> ((shift - 1) & 0x1f)) & 1);
+}
+
+int CPubKey::secp256k1_scalar_add(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b) noexcept {
+    int overflow;
+    uint64_t t = (uint64_t)a->d[0] + b->d[0];
+    r->d[0] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[1] + b->d[1];
+    r->d[1] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[2] + b->d[2];
+    r->d[2] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[3] + b->d[3];
+    r->d[3] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[4] + b->d[4];
+    r->d[4] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[5] + b->d[5];
+    r->d[5] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[6] + b->d[6];
+    r->d[6] = t & 0xFFFFFFFFULL; t >>= 32;
+    t += (uint64_t)a->d[7] + b->d[7];
+    r->d[7] = t & 0xFFFFFFFFULL; t >>= 32;
+    overflow = t + secp256k1_scalar_check_overflow(r);
+    VERIFY_CHECK(overflow == 0 || overflow == 1);
+    secp256k1_scalar_reduce(r, overflow);
+    return overflow;
+}
+#endif
+
+int CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng) noexcept {
     auto secp256k1_ecmult_wnaf = [](int *wnaf, int len, const secp256k1_unit *a, int w) {
         secp256k1_unit s = *a;
         int last_set_bit = -1;
@@ -2695,14 +2815,78 @@ void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1
         ecmult::secp256k1_ge_globalz_set_table_gej(ECMULT_TABLE_SIZE(WINDOW_A), pre, globalz, prej, zr);
     };
 
+#ifdef USE_ENDOMORPHISM
+    auto secp256k1_scalar_split_128 = [](secp256k1_unit *r1, secp256k1_unit *r2, const secp256k1_unit *a) {
+        r1->d[0] = a->d[0];
+        r1->d[1] = a->d[1];
+        r1->d[2] = a->d[2];
+        r1->d[3] = a->d[3];
+        r1->d[4] = 0;
+        r1->d[5] = 0;
+        r1->d[6] = 0;
+        r1->d[7] = 0;
+        r2->d[0] = a->d[4];
+        r2->d[1] = a->d[5];
+        r2->d[2] = a->d[6];
+        r2->d[3] = a->d[7];
+        r2->d[4] = 0;
+        r2->d[5] = 0;
+        r2->d[6] = 0;
+        r2->d[7] = 0;
+    };
+
+    auto secp256k1_scalar_split_lambda = [](secp256k1_unit *r1, secp256k1_unit *r2, const secp256k1_unit *a) {
+        secp256k1_unit c1, c2;
+        constexpr secp256k1_unit minus_lambda = SECP256K1_SCALAR_CONST(
+            0xAC9C52B3UL, 0x3FA3CF1FUL, 0x5AD9E3FDUL, 0x77ED9BA4UL,
+            0xA880B9FCUL, 0x8EC739C2UL, 0xE0CFC810UL, 0xB51283CFUL
+        );
+        static constexpr secp256k1_unit minus_b1 = SECP256K1_SCALAR_CONST(
+            0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00000000UL,
+            0xE4437ED6UL, 0x010E8828UL, 0x6F547FA9UL, 0x0ABFE4C3UL
+        );
+        static constexpr secp256k1_unit minus_b2 = SECP256K1_SCALAR_CONST(
+            0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFEUL,
+            0x8A280AC5UL, 0x0774346DUL, 0xD765CDA8UL, 0x3DB1562CUL
+        );
+        static constexpr secp256k1_unit g1 = SECP256K1_SCALAR_CONST(
+            0x00000000UL, 0x00000000UL, 0x00000000UL, 0x00003086UL,
+            0xD221A7D4UL, 0x6BCDE86CUL, 0x90E49284UL, 0xEB153DABUL
+        );
+        static constexpr secp256k1_unit g2 = SECP256K1_SCALAR_CONST(
+            0x00000000UL, 0x00000000UL, 0x00000000UL, 0x0000E443UL,
+            0x7ED6010EUL, 0x88286F54UL, 0x7FA90ABFUL, 0xE4C42212UL
+        );
+        VERIFY_CHECK(r1 != a);
+        VERIFY_CHECK(r2 != a);
+        /* these _var calls are constant time since the shift amount is constant */
+        secp256k1_scalar_mul_shift_var(&c1, a, &g1, 272);
+        secp256k1_scalar_mul_shift_var(&c2, a, &g2, 272);
+        secp256k1_scalar_mul(&c1, &c1, &minus_b1);
+        secp256k1_scalar_mul(&c2, &c2, &minus_b2);
+        secp256k1_scalar_add(r2, &c1, &c2);
+        secp256k1_scalar_mul(r1, r2, &minus_lambda);
+        secp256k1_scalar_add(r1, r1, a);
+    };
+
+    auto secp256k1_ge_mul_lambda = [](ecmult::secp256k1_ge *r, const ecmult::secp256k1_ge *a) {
+        static constexpr ecmult::secp256k1_fe beta = SECP256K1_FE_CONST(
+            0x7ae96a2bul, 0x657c0710ul, 0x6e64479eul, 0xac3434e9ul,
+            0x9cf04975ul, 0x12f58995ul, 0xc1396c28ul, 0x719501eeul
+        );
+        *r = *a;
+        ecmult::secp256k1_fe_mul(&r->x, &r->x, &beta);
+    };
+#endif
+
     ecmult::secp256k1_context ctx;
-    VERIFY_CHECK(ctx.build() != false);
+    ARG_CHECK(ctx.build() != false);
 
     ecmult::secp256k1_ge pre_a[ECMULT_TABLE_SIZE(WINDOW_A)];
     ecmult::secp256k1_ge tmpa;
     ecmult::secp256k1_fe Z;
 #ifdef USE_ENDOMORPHISM
-    secp256k1_ge pre_a_lam[ECMULT_TABLE_SIZE(WINDOW_A)];
+    ecmult::secp256k1_ge pre_a_lam[ECMULT_TABLE_SIZE(WINDOW_A)];
     secp256k1_unit na_1, na_lam;
     /* Splitted G factors. */
     secp256k1_unit ng_1, ng_128;
@@ -2733,9 +2917,8 @@ void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1
     VERIFY_CHECK(bits_na_1 <= 130);
     VERIFY_CHECK(bits_na_lam <= 130);
     bits = bits_na_1;
-    if (bits_na_lam > bits) {
+    if (bits_na_lam > bits)
         bits = bits_na_lam;
-    }
 #else
     /* build wnaf representation for na. */
     bits_na     = secp256k1_ecmult_wnaf(wnaf_na,     256, na,      WINDOW_A);
@@ -2755,9 +2938,8 @@ void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1
     secp256k1_ecmult_odd_multiples_table_globalz_windowa(pre_a, &Z, a);
 
 #ifdef USE_ENDOMORPHISM
-    for (i = 0; i < ECMULT_TABLE_SIZE(WINDOW_A); i++) {
-        ecmult::secp256k1_ge_mul_lambda(&pre_a_lam[i], &pre_a[i]);
-    }
+    for (i = 0; i < ECMULT_TABLE_SIZE(WINDOW_A); ++i)
+        secp256k1_ge_mul_lambda(&pre_a_lam[i], &pre_a[i]);
 
     /* split ng into ng_1 and ng_128 (where gn = gn_1 + gn_128*2^128, and gn_1 and gn_128 are ~128 bit) */
     secp256k1_scalar_split_128(&ng_1, &ng_128, ng);
@@ -2765,12 +2947,10 @@ void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1
     /* Build wnaf representation for ng_1 and ng_128 */
     bits_ng_1   = secp256k1_ecmult_wnaf(wnaf_ng_1,   129, &ng_1,   WINDOW_G);
     bits_ng_128 = secp256k1_ecmult_wnaf(wnaf_ng_128, 129, &ng_128, WINDOW_G);
-    if (bits_ng_1 > bits) {
+    if (bits_ng_1 > bits)
         bits = bits_ng_1;
-    }
-    if (bits_ng_128 > bits) {
+    if (bits_ng_128 > bits)
         bits = bits_ng_128;
-    }
 #else
     bits_ng     = secp256k1_ecmult_wnaf(wnaf_ng,     256, ng,      WINDOW_G);
     if (bits_ng > bits) {
@@ -2814,6 +2994,8 @@ void CPubKey::secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1
 
     if (! r->infinity)
         ecmult::secp256k1_fe_mul(&r->z, &r->z, &Z);
+
+    return 1;
 }
 
 void CPubKey::ecmult::secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *a) noexcept {
@@ -2973,26 +3155,32 @@ int CPubKey::secp256k1_ecdsa_sig_recover(const secp256k1_unit *sigr, const secp2
 
     if (secp256k1_scalar_is_zero(sigr) || secp256k1_scalar_is_zero(sigs))
         return 0;
+    DEBUGCS_CHECK("step1");
 
     secp256k1_scalar_get_be32(brx, sigr);
     int r = ecmult::secp256k1_fe_set_be32(&fx, brx);
     (void)r;
     VERIFY_CHECK(r); /* brx comes from a scalar, so is less than the order; certainly less than p */
     if (recid & 2) {
+        DEBUGCS_CHECK("step2");
         if (ecmult::secp256k1_fe_cmp_var(&fx, &secp256k1_ecdsa_const_p_minus_order) >= 0)
             return 0;
 
+        DEBUGCS_CHECK("step3");
         ecmult::secp256k1_fe_add(&fx, &secp256k1_ecdsa_const_order_as_fe);
     }
+    DEBUGCS_CHECK("step4");
     if (! ecmult::secp256k1_ge_set_xo_var(&x, &fx, recid & 1))
         return 0;
 
+    DEBUGCS_CHECK("step5");
     ecmult::secp256k1_gej_set_ge(&xj, &x);
     secp256k1_scalar_inverse_var(&rn, sigr);
     secp256k1_scalar_mul(&u1, &rn, message);
     secp256k1_scalar_negate(&u1, &u1);
     secp256k1_scalar_mul(&u2, &rn, sigs);
-    secp256k1_ecmult(&qj, &xj, &u2, &u1);
+    if(! secp256k1_ecmult(&qj, &xj, &u2, &u1))
+        return 0;
     ecmult::secp256k1_ge_set_gej_var(pubkey, &qj);
     return !ecmult::secp256k1_gej_is_infinity(&qj);
 }
@@ -3079,17 +3267,17 @@ void CPubKey::ecmult::secp256k1_ge_to_storage(secp256k1_ge_storage *r, const sec
 
 void CPubKey::secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge) noexcept {
     VERIFY_CHECK(sizeof(ecmult::secp256k1_ge_storage)==64);
+
     ecmult::secp256k1_ge_storage s;
     ecmult::secp256k1_ge_to_storage(&s, ge);
+    ::memcpy(&pubkey->data[0], &s, 64);
 
     // otherwise (sizeof(ecmult::secp256k1_ge_storage)!=64)
-    //VERIFY_CHECK(!secp256k1_ge_is_infinity(ge));
+    //VERIFY_CHECK(!ecmult::secp256k1_ge_is_infinity(ge));
     //ecmult::secp256k1_fe_normalize_var(&ge->x);
     //ecmult::secp256k1_fe_normalize_var(&ge->y);
     //ecmult::secp256k1_fe_get_be32(pubkey->data, &ge->x);
     //ecmult::secp256k1_fe_get_be32(pubkey->data + 32, &ge->y);
-
-    ::memcpy(&pubkey->data[0], &s, 64);
 }
 
 int CPubKey::secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32) noexcept {
@@ -3097,18 +3285,20 @@ int CPubKey::secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_e
     secp256k1_unit r, s;
     secp256k1_unit m;
     int recid;
+
     // SorachanCoin: CPubKey doesn't use ctx. instead of callback function.
-    //
     //VERIFY_CHECK(ctx != nullptr);
     //ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
-    //ARG_CHECK(msg32 != nullptr);
-    //ARG_CHECK(signature != nullptr);
-    //ARG_CHECK(pubkey != nullptr);
+    ARG_CHECK(msg32 != nullptr);
+    ARG_CHECK(signature != nullptr);
+    ARG_CHECK(pubkey != nullptr);
 
     secp256k1_ecdsa_recoverable_signature_load(&r, &s, &recid, signature);
     VERIFY_CHECK(recid >= 0 && recid < 4);  /* should have been caught in parse_compact */
     secp256k1_scalar_set_be32(&m, msg32, nullptr);
+    DEBUGCS_CHECK("step1");
     if (secp256k1_ecdsa_sig_recover(&r, &s, &q, &m, recid)) {
+        DEBUGCS_CHECK("step2");
         secp256k1_pubkey_save(pubkey, &q);
         return 1;
     } else {
@@ -3117,8 +3307,18 @@ int CPubKey::secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_e
     }
 }
 
+int CPubKey::ecmult::secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept {
+    const uint32_t *t = a->n;
+#ifdef VERIFY
+    VERIFY_CHECK(a->normalized);
+    secp256k1_fe_verify(a);
+#endif
+    return (t[0] | t[1] | t[2] | t[3] | t[4] | t[5] | t[6] | t[7] | t[8] | t[9]) == 0;
+}
+
 int CPubKey::secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pubkey *pubkey) noexcept {
     VERIFY_CHECK(sizeof(ecmult::secp256k1_ge_storage)==64);
+
     ecmult::secp256k1_ge_storage s;
     ::memcpy(&s, &pubkey->data[0], 64);
     ecmult::secp256k1_ge_from_storage(ge, &s);
@@ -3129,7 +3329,7 @@ int CPubKey::secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pub
     //ecmult::secp256k1_fe_set_be32(&y, pubkey->data + 32);
     //ecmult::secp256k1_ge_set_xy(ge, &x, &y);
 
-    //ARG_CHECK(!secp256k1_fe_is_zero(&ge->x));
+    ARG_CHECK(!ecmult::secp256k1_fe_is_zero(&ge->x));
     return 1;
 }
 
@@ -3177,43 +3377,47 @@ void CPubKey::ecmult::secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe
     r[31] = a->n[0] & 0xff;
 }
 
-int CPubKey::secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char *pub, size_t *size, int compressed) noexcept {
-    if (ecmult::secp256k1_ge_is_infinity(elem)) {
+int CPubKey::secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed) noexcept {
+    if (ecmult::secp256k1_ge_is_infinity(elem))
         return 0;
-    }
+    DEBUGCS_CHECK("step1");
     ecmult::secp256k1_fe_normalize_var(&elem->x);
     ecmult::secp256k1_fe_normalize_var(&elem->y);
-    ecmult::secp256k1_fe_get_be32(&pub[1], &elem->x);
+    ecmult::secp256k1_fe_get_be32(&(*pub)[1], &elem->x);
     if (compressed) {
-        *size = 33;
-        pub[0] = ecmult::secp256k1_fe_is_odd(&elem->y) ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
+        *size = COMPRESSED_PUBLIC_KEY_SIZE;
+        DEBUGCS_CHECK("step2 33byte");
+        (*pub)[0] = ecmult::secp256k1_fe_is_odd(&elem->y) ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
     } else {
-        *size = 65;
-        pub[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
-        ecmult::secp256k1_fe_get_be32(&pub[33], &elem->y);
+        *size = PUBLIC_KEY_SIZE;
+        DEBUGCS_CHECK("step2 65byte");
+        (*pub)[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
+        ecmult::secp256k1_fe_get_be32(&(*pub)[COMPRESSED_PUBLIC_KEY_SIZE], &elem->y);
     }
     return 1;
 }
 
-int CPubKey::secp256k1_ec_pubkey_serialize(unsigned char *output, size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) noexcept {
+int CPubKey::secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) noexcept {
     ecmult::secp256k1_ge Q;
-    size_t len;
     int ret = 0;
 
     //VERIFY_CHECK(ctx != nullptr);
-    //ARG_CHECK(outputlen != NULL);
-    //ARG_CHECK(*outputlen >= ((flags & SECP256K1_FLAGS_BIT_COMPRESSION) ? 33 : 65));
-    len = *outputlen;
+    ARG_CHECK(outputlen != nullptr);
     *outputlen = 0;
-    //ARG_CHECK(output != NULL);
-    ::memset(output, 0, len);
-    //ARG_CHECK(pubkey != NULL);
-    //ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
+    size_t len = (flags & SECP256K1_FLAGS_BIT_COMPRESSION) ? COMPRESSED_PUBLIC_KEY_SIZE : PUBLIC_KEY_SIZE;
+
+    ARG_CHECK(*output != nullptr);
+    ::memset(*output, 0, len);
+
+    ARG_CHECK(pubkey != nullptr);
+    ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
+
+    DEBUGCS_CHECK("step1");
     if (secp256k1_pubkey_load(&Q, pubkey)) {
+        DEBUGCS_CHECK("step2");
         ret = secp256k1_eckey_pubkey_serialize(&Q, output, &len, flags & SECP256K1_FLAGS_BIT_COMPRESSION);
-        if (ret) {
-            *outputlen = len;
-        }
+        DEBUGCS_CHECK((std::string("step3 ret: ") + std::to_string(ret)).c_str());
+        if (ret) *outputlen = len;
     }
     return ret;
 }
@@ -3229,16 +3433,18 @@ bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned cha
     secp256k1_ecdsa_recoverable_signature sig;
     if (! secp256k1_ecdsa_recoverable_signature_parse_compact(&sig, &vchSig[1], recid))
         return false;
+    DEBUGCS_CHECK("step1");
     if (! secp256k1_ecdsa_recover(&pubkey, &sig, hash.begin()))
         return false;
 
+    DEBUGCS_CHECK("step2");
     unsigned char pub[PUBLIC_KEY_SIZE];
-    size_t publen = PUBLIC_KEY_SIZE;
-    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED)) {
-        ::memset(pub, 0x00, publen);
-        Set(pub, pub + publen);
+    size_t publen;
+    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED)) {
+        Invalidate();
         return false; // if ge is infinity.
     } else {
+        DEBUGCS_CHECK((std::string("step3 key_size: ") + std::to_string(publen)).c_str());
         Set(pub, pub + publen);
         return true;
     }
@@ -3300,9 +3506,9 @@ int CPubKey::secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned 
     ecmult::secp256k1_ge Q;
 
     //VERIFY_CHECK(ctx != nullptr);
-    //ARG_CHECK(pubkey != nullptr);
+    ARG_CHECK(pubkey != nullptr);
     ::memset(pubkey, 0, sizeof(*pubkey));
-    //ARG_CHECK(input != nullptr);
+    ARG_CHECK(input != nullptr);
     if (! secp256k1_eckey_pubkey_parse(&Q, input, inputlen))
         return 0;
 
@@ -3319,14 +3525,14 @@ bool CPubKey::Decompress() noexcept {
         return false;
 
     unsigned char pub[PUBLIC_KEY_SIZE];
-    size_t publen = PUBLIC_KEY_SIZE;
-    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED)) {
-        ::memset(pub, 0x00, publen);
-        Set(pub, pub + publen);
+    size_t publen;
+    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED)) {
+        Invalidate();
         return false; // if ge is infinity.
+    } else {
+        Set(pub, pub + publen);
+        return true;
     }
-    Set(pub, pub + publen);
-    return true;
 }
 
 void CPubKey::secp256k1_scalar_set_int(secp256k1_unit *r, unsigned int v) noexcept {
@@ -3351,6 +3557,100 @@ void CPubKey::ecmult::secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) no
     secp256k1_fe_set_int(&a->z, 1);
     r->x = a->x;
     r->y = a->y;
+}
+
+int CPubKey::ecmult::secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) noexcept {
+    secp256k1_fe r, r2;
+    VERIFY_CHECK(!a->infinity);
+    secp256k1_fe_sqr(&r, &a->z); secp256k1_fe_mul(&r, &r, x);
+    r2 = a->x; secp256k1_fe_normalize_weak(&r2);
+    return secp256k1_fe_equal_var(&r, &r2);
+}
+
+int CPubKey::secp256k1_ecdsa_sig_verify(const secp256k1_unit *sigr, const secp256k1_unit *sigs, const ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message) noexcept {
+    unsigned char c[32];
+    secp256k1_unit sn, u1, u2;
+#if !defined(EXHAUSTIVE_TEST_ORDER)
+    ecmult::secp256k1_fe xr;
+#endif
+    ecmult::secp256k1_gej pubkeyj;
+    ecmult::secp256k1_gej pr;
+
+    if (secp256k1_scalar_is_zero(sigr) || secp256k1_scalar_is_zero(sigs))
+        return 0;
+
+    secp256k1_scalar_inverse_var(&sn, sigs);
+    secp256k1_scalar_mul(&u1, &sn, message);
+    secp256k1_scalar_mul(&u2, &sn, sigr);
+    ecmult::secp256k1_gej_set_ge(&pubkeyj, pubkey);
+    if(! secp256k1_ecmult(&pr, &pubkeyj, &u2, &u1))
+        return 0;
+    if (ecmult::secp256k1_gej_is_infinity(&pr))
+        return 0;
+
+#if defined(EXHAUSTIVE_TEST_ORDER)
+{
+    secp256k1_uint computed_r;
+    ecmult::secp256k1_ge pr_ge;
+    ecmult::secp256k1_ge_set_gej(&pr_ge, &pr);
+    secp256k1_fe_normalize(&pr_ge.x);
+
+    ecmult::secp256k1_fe_get_be32(c, &pr_ge.x);
+    secp256k1_scalar_set_be32(&computed_r, c, NULL);
+    return secp256k1_scalar_eq(sigr, &computed_r);
+}
+#else
+    secp256k1_scalar_get_be32(c, sigr);
+    ecmult::secp256k1_fe_set_be32(&xr, c);
+
+    /** We now have the recomputed R point in pr, and its claimed x coordinate (modulo n)
+     *  in xr. Naively, we would extract the x coordinate from pr (requiring a inversion modulo p),
+     *  compute the remainder modulo n, and compare it to xr. However:
+     *
+     *        xr == X(pr) mod n
+     *    <=> exists h. (xr + h * n < p && xr + h * n == X(pr))
+     *    [Since 2 * n > p, h can only be 0 or 1]
+     *    <=> (xr == X(pr)) || (xr + n < p && xr + n == X(pr))
+     *    [In Jacobian coordinates, X(pr) is pr.x / pr.z^2 mod p]
+     *    <=> (xr == pr.x / pr.z^2 mod p) || (xr + n < p && xr + n == pr.x / pr.z^2 mod p)
+     *    [Multiplying both sides of the equations by pr.z^2 mod p]
+     *    <=> (xr * pr.z^2 mod p == pr.x) || (xr + n < p && (xr + n) * pr.z^2 mod p == pr.x)
+     *
+     *  Thus, we can avoid the inversion, but we have to check both cases separately.
+     *  secp256k1_gej_eq_x implements the (xr * pr.z^2 mod p == pr.x) test.
+     */
+    if (ecmult::secp256k1_gej_eq_x_var(&xr, &pr)) {
+        /* xr * pr.z^2 mod p == pr.x, so the signature is valid. */
+        return 1;
+    }
+    if (ecmult::secp256k1_fe_cmp_var(&xr, &secp256k1_ecdsa_const_p_minus_order) >= 0) {
+        /* xr + n >= p, so we can skip testing the second case. */
+        return 0;
+    }
+    ecmult::secp256k1_fe_add(&xr, &secp256k1_ecdsa_const_order_as_fe);
+    if (ecmult::secp256k1_gej_eq_x_var(&xr, &pr)) {
+        /* (xr + n) * pr.z^2 mod p == pr.x, so the signature is valid. */
+        return 1;
+    }
+    return 0;
+#endif
+}
+
+int CPubKey::secp256k1_ecdsa_verify(const secp256k1_signature *sig, const unsigned char *msg32, const secp256k1_pubkey *pubkey) noexcept {
+    ecmult::secp256k1_ge q;
+    secp256k1_unit r, s;
+    secp256k1_unit m;
+    //VERIFY_CHECK(ctx != nullptr);
+    //ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
+    ARG_CHECK(msg32 != nullptr);
+    ARG_CHECK(sig != nullptr);
+    ARG_CHECK(pubkey != nullptr);
+
+    secp256k1_scalar_set_be32(&m, msg32, nullptr);
+    secp256k1_ecdsa_signature_load(&r, &s, sig);
+    return (!secp256k1_scalar_is_high(&s) &&
+            secp256k1_pubkey_load(&q, pubkey) &&
+            secp256k1_ecdsa_sig_verify(&r, &s, &q, &m));
 }
 
 // context
@@ -3383,14 +3683,14 @@ bool CPubKey::ecmult::secp256k1_context::build() noexcept {
 
 #ifdef USE_ENDOMORPHISM
     {
-        pre_g_128_ = (secp256k1_ge_storage (*)[])::malloc(cb, sizeof((*pre_g_128_)[0]) * ECMULT_TABLE_SIZE(WINDOW_G));
+        pre_g_128_ = (secp256k1_ge_storage (*)[])::malloc(sizeof((*pre_g_128_)[0]) * ECMULT_TABLE_SIZE(WINDOW_G));
         if(! pre_g_128_) return false;
 
         /* calculate 2^128*generator */
         secp256k1_gej g_128j = gj;
         for (int i = 0; i < 128; ++i)
             secp256k1_gej_double_var(&g_128j, &g_128j, nullptr);
-        secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *pre_g_128_, &g_128j, cb);
+        secp256k1_ecmult_odd_multiples_table_storage_var(ECMULT_TABLE_SIZE(WINDOW_G), *pre_g_128_, &g_128j);
     }
 #endif
 
@@ -3461,7 +3761,8 @@ int CPubKey::secp256k1_eckey_pubkey_tweak_add(ecmult::secp256k1_ge *key, const s
     secp256k1_unit one;
     ecmult::secp256k1_gej_set_ge(&pt, key);
     secp256k1_scalar_set_int(&one, 1);
-    secp256k1_ecmult(&pt, &pt, &one, tweak);
+    if(! secp256k1_ecmult(&pt, &pt, &one, tweak))
+        return 0;
 
     if (ecmult::secp256k1_gej_is_infinity(&pt))
         return 0;
@@ -3477,8 +3778,8 @@ int CPubKey::secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsig
     int overflow = 0;
     //VERIFY_CHECK(ctx != nullptr);
     //ARG_CHECK(secp256k1_ecmult_context_is_built(&ctx->ecmult_ctx));
-    //ARG_CHECK(pubkey != nullptr);
-    //ARG_CHECK(tweak != nullptr);
+    ARG_CHECK(pubkey != nullptr);
+    ARG_CHECK(tweak != nullptr);
 
     secp256k1_scalar_set_be32(&term, tweak, &overflow);
     ret = !overflow && secp256k1_pubkey_load(&p, pubkey);
@@ -3493,9 +3794,9 @@ int CPubKey::secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsig
 }
 
 bool CPubKey::Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const noexcept {
-    //ARG_CHECK(IsValid());
-    //ARG_CHECK((nChild >> 31) == 0);
-    //ARG_CHECK(size() == COMPRESSED_PUBLIC_KEY_SIZE);
+    ARG_CHECK(IsValid());
+    ARG_CHECK((nChild >> 31) == 0);
+    ARG_CHECK(size() == COMPRESSED_PUBLIC_KEY_SIZE);
     unsigned char out[64];
     bip32::BIP32Hash(cc, nChild, *begin(), begin()+1, out);
     ::memcpy(ccChild.begin(), out+32, 32);
@@ -3505,13 +3806,13 @@ bool CPubKey::Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChi
     if (! secp256k1_ec_pubkey_tweak_add(&pubkey, out))
         return false;
 
-    unsigned char pub[COMPRESSED_PUBLIC_KEY_SIZE];
-    size_t publen = COMPRESSED_PUBLIC_KEY_SIZE;
-    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED)) {
-        ::memset(pub, 0x00, publen);
-        pubkeyChild.Set(pub, pub + publen);
+    unsigned char pub[PUBLIC_KEY_SIZE];
+    size_t publen;
+    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED)) {
+        pubkeyChild.Invalidate();
         return false; // if ge is infinity.
     } else {
+        assert(publen==COMPRESSED_PUBLIC_KEY_SIZE);
         pubkeyChild.Set(pub, pub + publen);
         return true;
     }
@@ -3557,4 +3858,30 @@ bool CPubKey::EncryptData(const key_vector &data, key_vector &encrypted) const n
     if(pkey) ::EC_KEY_free(pkey);
 
     return ret;
+}
+
+void CExtPubKey::Encode(unsigned char (*code)[BIP32_EXTKEY_SIZE]) const noexcept {
+    (*code)[0] = nDepth;
+    ::memcpy((*code)+1, vchFingerprint, 4);
+    (*code)[5] = (nChild >> 24) & 0xFF; (*code)[6] = (nChild >> 16) & 0xFF;
+    (*code)[7] = (nChild >>  8) & 0xFF; (*code)[8] = (nChild >>  0) & 0xFF;
+    ::memcpy((*code)+9, chaincode.begin(), 32);
+    assert(pubkey.size() == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+    ::memcpy((*code)+41, pubkey.begin(), CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+}
+
+void CExtPubKey::Decode(const unsigned char (*code)[BIP32_EXTKEY_SIZE]) noexcept {
+    nDepth = (*code)[0];
+    ::memcpy(vchFingerprint, (*code)+1, 4);
+    nChild = ((*code)[5] << 24) | ((*code)[6] << 16) | ((*code)[7] << 8) | (*code)[8];
+    ::memcpy(chaincode.begin(), (*code)+9, 32);
+    pubkey.Set((*code)+41, (*code)+BIP32_EXTKEY_SIZE);
+}
+
+bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChild) const noexcept {
+    out.nDepth = nDepth + 1;
+    CKeyID id = pubkey.GetID();
+    ::memcpy(&out.vchFingerprint[0], &id, 4);
+    out.nChild = _nChild;
+    return pubkey.Derive(out.pubkey, out.chaincode, _nChild, chaincode);
 }

@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2018 The Bitcoin developers
+// Copyright (c) 2017 The Zcash developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -59,25 +60,29 @@ public:
         PUBLIC_KEY_SIZE >= COMPRESSED_PUBLIC_KEY_SIZE,
         "COMPRESSED_PUBLIC_KEY_SIZE is larger than PUBLIC_KEY_SIZE");
 
-    // r or s, unsigned int array: 8x32
-    //size: sizeof(int32_t) * 8 = 32 byte
+    // secp256k1_scalar
+    // r and s, unsigned int array: 8x32
+    //size: sizeof(uint32_t) * 8 = 32 byte
     struct secp256k1_unit {
+        uint32_t d[8];
+    };
+    struct secp256k1_shad {
         int32_t d[8];
     };
 
     // signature unsigned char array
     struct secp256k1_signature {
-        unsigned char data[64];
+        unsigned char data[PUBLIC_KEY_SIZE - 1];
     };
 
     // pubkey context
     struct secp256k1_pubkey {
-        unsigned char data[64];
+        unsigned char data[PUBLIC_KEY_SIZE - 1];
     };
 
     // pubkey recoverable context
     struct secp256k1_ecdsa_recoverable_signature {
-        unsigned char data[65];
+        unsigned char data[PUBLIC_KEY_SIZE];
     };
 
     // SorachanCoin (src/secp256k1): adopt Basic config
@@ -90,7 +95,9 @@ public:
     static constexpr int CURVE_B = 7;
 
     // ecmult (src/secp256k1) field: 10x26
+    // secp256k1_scalar 8x32
 #define SECP256K1_RESTRICT
+#define USE_ENDOMORPHISM
 #define VERIFY
     class ecmult {
     public:
@@ -136,7 +143,7 @@ public:
         static int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
         static int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
         static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) noexcept;
-        static int secp256k1_fe_normalizes_to_zero(secp256k1_fe *r) noexcept;
+        static int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) noexcept;
         static void secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept;
         static int secp256k1_fe_is_odd(const secp256k1_fe *a) noexcept;
         static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) noexcept;
@@ -169,6 +176,8 @@ public:
         static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) noexcept;
         static bool secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge_storage *pre, const secp256k1_gej *a) noexcept;
         static void secp256k1_ge_set_table_gej_var(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zr, size_t len) noexcept;
+        static int secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept;
+        static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) noexcept;
 
         // context
         class secp256k1_context {
@@ -182,7 +191,8 @@ public:
             void clear() noexcept;
             secp256k1_context() noexcept;
             secp256k1_context(const secp256k1_context &)=delete;
-            secp256k1_context &operator=(const secp256k1_context &obj) noexcept;
+            secp256k1_context &operator=(const secp256k1_context &obj)=delete;
+            secp256k1_context &operator=(const secp256k1_context &&obj)=delete;
             ~secp256k1_context() noexcept;
         };
     };
@@ -225,7 +235,6 @@ public:
     static uint32_t secp256k1_scalar_reduce(secp256k1_unit *r, uint32_t overflow) noexcept;
     static void secp256k1_scalar_set_be32(secp256k1_unit *r, const unsigned char *b32, int *overflow) noexcept;
     static void secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_unit *a) noexcept;
-    static void SIG_clear(secp256k1_signature *sig) noexcept;
     static void secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s) noexcept;
     static void secp256k1_ecdsa_signature_load(secp256k1_unit *r, secp256k1_unit *s, const secp256k1_signature *sig) noexcept;
     static int secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, unsigned char *input64) noexcept;
@@ -233,6 +242,7 @@ public:
     static int secp256k1_scalar_is_high(const secp256k1_unit *a) noexcept;
     static int secp256k1_scalar_is_zero(const secp256k1_unit *a) noexcept;
     static int secp256k1_ecdsa_signature_normalize(const secp256k1_signature *sigin) noexcept;
+    static int secp256k1_ecdsa_signature_normalize(secp256k1_signature *sigout, const secp256k1_signature *sigin) noexcept;
     static void secp256k1_ecdsa_recoverable_signature_save(secp256k1_ecdsa_recoverable_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s, int recid) noexcept;
     static void secp256k1_ecdsa_recoverable_signature_load(secp256k1_unit *r, secp256k1_unit *s, int *recid, const secp256k1_ecdsa_recoverable_signature *sig) noexcept;
     static int secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_ecdsa_recoverable_signature *sig, const unsigned char *input64, int recid) noexcept;
@@ -240,7 +250,7 @@ public:
     static unsigned int secp256k1_scalar_get_bits(const secp256k1_unit *a, unsigned int offset, unsigned int count) noexcept;
     static unsigned int secp256k1_scalar_get_bits_var(const secp256k1_unit *a, unsigned int offset, unsigned int count) noexcept;
     static void secp256k1_ecmult_odd_multiples_table(int n, ecmult::secp256k1_gej *prej, ecmult::secp256k1_fe *zr, const ecmult::secp256k1_gej *a) noexcept;
-    static void secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng) noexcept;
+    static int secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng) noexcept;
     static int secp256k1_ecdsa_sig_recover(const secp256k1_unit *sigr, const secp256k1_unit *sigs, ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message, int recid) noexcept;
     static void secp256k1_scalar_sqr_512(uint32_t *l, const secp256k1_unit *a) noexcept;
     static void secp256k1_scalar_reduce_512(secp256k1_unit *r, const uint32_t *l) noexcept;
@@ -253,13 +263,20 @@ public:
     static void secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge) noexcept;
     static int secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32) noexcept;
     static int secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pubkey *pubkey) noexcept;
-    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char *pub, size_t *size, int compressed) noexcept;
-    static int secp256k1_ec_pubkey_serialize(unsigned char *output, size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) noexcept;
+    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed) noexcept;
+    static int secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) noexcept;
     static int secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) noexcept;
     static int secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsigned char *pub, size_t size) noexcept;
     static int secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsigned char *tweak) noexcept;
     static int secp256k1_eckey_pubkey_tweak_add(ecmult::secp256k1_ge *key, const secp256k1_unit *tweak) noexcept;
     static void secp256k1_scalar_set_int(secp256k1_unit *r, unsigned int v) noexcept;
+    static int secp256k1_ecdsa_verify(const secp256k1_signature *sig, const unsigned char *msg32, const secp256k1_pubkey *pubkey) noexcept;
+    static int secp256k1_ecdsa_sig_verify(const secp256k1_unit *sigr, const secp256k1_unit *sigs, const ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message) noexcept;
+#ifdef USE_ENDOMORPHISM
+    static void secp256k1_scalar_cadd_bit(secp256k1_unit *r, unsigned int bit, int flag) noexcept;
+    static void secp256k1_scalar_mul_shift_var(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b, unsigned int shift) noexcept;
+    static int secp256k1_scalar_add(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b) noexcept;
+#endif
 
     // Perform ECDSA key recovery (see SEC1 4.1.6) for curves over (mod p)-fields [OpenSSL from only sig to PubKey]
     static int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned char *msg, int msglen, int recid, int check) noexcept;
@@ -302,8 +319,8 @@ public:
         else
             Invalidate();
     }
-    void Set(const key_vector &vch) noexcept {
-        Set(vch.begin(), vch.end());
+    void Set(const key_vector &_vch) noexcept {
+        Set(_vch.begin(), _vch.end());
     }
 
     //! Construct a public key using begin/end iterators to byte data.
@@ -313,8 +330,14 @@ public:
     }
 
     //! Construct a public key from a byte vector.
-    CPubKey(const key_vector &_vch) noexcept {
+    explicit CPubKey(const key_vector &_vch) noexcept {
         Set(_vch.begin(), _vch.end());
+    }
+
+    //! key_vector operator (wallet.cpp)
+    bool operator!=(const key_vector &_vch) noexcept {
+        CPubKey _cmp(_vch);
+        return *this != _cmp;
     }
 
     //! Simple read-only vector-like interface to the pubkey data.
@@ -336,21 +359,6 @@ public:
         return a.vch_[0] < b.vch_[0] ||
                (a.vch_[0] == b.vch_[0] && ::memcmp(a.vch_, b.vch_, a.size()) < 0);
     }
-    /*
-    CPubKey &operator=(const CPubKey &key) noexcept {
-        ::memcpy(vch_, key.vch_, sizeof(vch_));
-        return *this;
-    }
-    bool operator==(const CPubKey &key) const noexcept {
-        return ((vch_[0] == key.vch_[0]) && (::memcmp(vch_, key.vch_, size()) == 0));
-    }
-    bool operator!=(const CPubKey &key) const noexcept {
-        return !(*this == key);
-    }
-    bool operator<(const CPubKey &key) const noexcept {
-        return ((vch_[0] < key.vch_[0]) || ((vch_[0] == key.vch_[0]) && (::memcmp(vch_, key.vch_, size()) < 0)));
-    }
-    */
 
     //! Implement serialization, as if this was a byte vector.
     unsigned int GetSerializeSize() const {
@@ -390,21 +398,21 @@ public:
 
     //! Check syntactic correctness.
     //  Note: this is consensus critical as CheckSig() calls it!
-    bool IsValid() const noexcept {
-        return size() > 0;
-    }
+    bool IsValid() const noexcept;
 
-    //! fully validate whether this is a valid public key (more expensive than IsValid()) [OpenSSL]
+    //! fully validate whether this is a valid public key (more expensive than IsValid()) [OpenSSL, libsecp256k1(BIP66)]
     bool IsFullyValid() const noexcept;
+    bool IsFullyValid_BIP66() const noexcept;
 
     //! Check whether this is a compressed public key.
     bool IsCompressed() const noexcept {
         return size() == COMPRESSED_PUBLIC_KEY_SIZE;
     }
 
-    //! Verify a DER signature (~72 bytes). [OpenSSL]
-    // If this public key is not fully valid, the return value will be false.
-    bool Verify(const uint256 &hash, const key_vector &vchSig) const;
+    //! Verify a DER signature (~72 bytes). [OpenSSL, libsecp256k1(BIP66)]
+    // [OpenSSL] If this public key is not fully valid, the return value will be false.
+    bool Verify(const uint256 &hash, const key_vector &vchSig) const noexcept;
+    bool Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const noexcept;
 
     // Check whether a signature is normalized (lower-S). [libsecp256k1]
     static bool CheckLowS(const std::vector<unsigned char> &vchSig) noexcept;
@@ -430,6 +438,76 @@ public:
     //! CPubKey Callback ERROR and Completion function [libsecp256k1]
     static int PubKey_ERROR_callback(void (*fn)()=nullptr) noexcept {if(fn) fn(); return 0;}
     static void PubKey_COMPLETION_callback(void (*fn)()) noexcept {fn();}
+
+    //! vch_ to string
+    std::string ToString() const noexcept;
+};
+
+// BIP32
+class CExtPubKey {
+    CExtPubKey(const CExtPubKey &)=delete;
+    CExtPubKey &operator=(const CExtPubKey &)=delete;
+    CExtPubKey &operator=(const CExtPubKey &&)=delete;
+public:
+    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
+    unsigned char nDepth;
+    unsigned char vchFingerprint[4];
+    unsigned int nChild;
+    ChainCode chaincode;
+    CPubKey pubkey;
+
+    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) noexcept {
+        return a.nDepth == b.nDepth &&
+               ::memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], sizeof(vchFingerprint)) == 0 &&
+               a.nChild == b.nChild &&
+               a.chaincode == b.chaincode &&
+               a.pubkey == b.pubkey;
+    }
+
+    void Invalidate(unsigned char (*code)[BIP32_EXTKEY_SIZE]) const noexcept {
+        (*code)[0] = 0xFF;
+    }
+    void Encode(unsigned char (*code)[BIP32_EXTKEY_SIZE]) const noexcept;
+    void Decode(const unsigned char (*code)[BIP32_EXTKEY_SIZE]) noexcept;
+    bool Derive(CExtPubKey &out, unsigned int nChild) const noexcept;
+
+    /*
+    void Serialize(CSizeComputer &s) const {
+        // Optimized implementation for ::GetSerializeSize that avoids copying.
+        s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
+    }
+    */
+    unsigned int GetSerializeSize() const {
+        return BIP32_EXTKEY_SIZE + 1;
+    }
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        unsigned int len = BIP32_EXTKEY_SIZE;
+        compact_size::manage::WriteCompactSize(s, len);
+        unsigned char code[BIP32_EXTKEY_SIZE];
+        Encode(&code);
+        s.write((const char *)&code[0], len);
+    }
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        unsigned int len = compact_size::manage::ReadCompactSize(s);
+        unsigned char code[BIP32_EXTKEY_SIZE];
+        if (len != BIP32_EXTKEY_SIZE) {
+            if(len <= 0) {
+                Invalidate(&code);
+                return;
+            }
+            char dummy;
+            while(len--) {
+                s.read((char *)&dummy, sizeof(char));
+                ::OPENSSL_cleanse(&dummy, sizeof(char));
+            }
+            Invalidate(&code);
+        } else {
+            s.read((char *)&code[0], len);
+            Decode(&code);
+        }
+    }
 };
 
 #endif
