@@ -4,6 +4,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/evp.h>
+#include <cleanse/cleanse.h>
 #include <vector>
 #include <string>
 
@@ -25,8 +26,8 @@ bool CCrypter::SetKeyFromPassphrase(const SecureString &strKeyData, const std::v
     }
 
     if (i != (int)crypter_param::WALLET_CRYPTO_KEY_SIZE) {
-        OPENSSL_cleanse(&chKey, sizeof(chKey));
-        OPENSSL_cleanse(&chIV, sizeof(chIV));
+        cleanse::OPENSSL_cleanse(&chKey, sizeof(chKey));
+        cleanse::OPENSSL_cleanse(&chIV, sizeof(chIV));
         return false;
     }
 

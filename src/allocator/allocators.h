@@ -11,7 +11,7 @@
 #include <string>
 #include <mutex>
 #include <map>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 
 #ifdef WIN32
 # ifdef _WIN32_WINNT
@@ -251,7 +251,7 @@ struct secure_allocator : public std::allocator<T>
 
     void deallocate(T *p, std::size_t n) {
         if (p != nullptr) {
-            ::OPENSSL_cleanse(p, sizeof(T) * n);
+            cleanse::OPENSSL_cleanse(p, sizeof(T) * n);
             LockedPageManager::instance.UnlockRange(p, sizeof(T) * n);
         }
         std::allocator<T>::deallocate(p, n);
@@ -288,7 +288,7 @@ struct zero_after_free_allocator : public std::allocator<T>
 
     void deallocate(T *p, std::size_t n) {
         if (p != nullptr) {
-            ::OPENSSL_cleanse(p, sizeof(T) * n);
+            cleanse::OPENSSL_cleanse(p, sizeof(T) * n);
         }
         std::allocator<T>::deallocate(p, n);
     }
@@ -349,13 +349,13 @@ public:
     }
     SecureString &operator()(std::string &obj) {
         str_ = obj.c_str();
-        ::OPENSSL_cleanse(const_cast<char *>(obj.c_str()), sizeof(char) * obj.size());
+        cleanse::memory_cleanse(const_cast<char *>(obj.c_str()), sizeof(char) * obj.size());
         return *this;
     }
     SecureString &operator()(const std::string &obj, unsigned short *p) { // to QString
         std::size_t len = ::wcslen((const wchar_t *)p);
         str_ = obj.c_str();
-        ::OPENSSL_cleanse(p, sizeof(unsigned short) * len);
+        cleanse::memory_cleanse(p, sizeof(unsigned short) * len);
         return *this;
     }
 };

@@ -15,7 +15,7 @@
 
 #include <string>
 #include <vector>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 #include "bignum.h"
 #include "key.h"
 #include "script.h"

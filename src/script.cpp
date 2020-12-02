@@ -5,13 +5,13 @@
 
 #include <boost/foreach.hpp>
 
-#include "script.h"
-#include "keystore.h"
-#include "bignum.h"
-#include "key.h"
-#include "main.h"
-#include "sync.h"
-#include "util.h"
+#include <script.h>
+#include <keystore.h>
+#include <bignum.h>
+#include <key.h>
+#include <main.h>
+#include <sync/sync.h>
+#include <util.h>
 
 const Script_util::valtype Script_util::vchFalse((uint32_t)0);
 const Script_util::valtype Script_util::vchZero((uint32_t)0);

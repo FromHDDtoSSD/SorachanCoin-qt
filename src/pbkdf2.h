@@ -4,7 +4,7 @@
 #ifndef PBKDF2_H
 #define PBKDF2_H
 
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 #include <stdint.h>
 
 # if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
@@ -68,7 +68,7 @@ protected:
         ctx->octx.Write(pad, hsize*2);
 
         /* Clean the stack. */
-        ::OPENSSL_cleanse(khash, sizeof(khash));
+        cleanse::OPENSSL_cleanse(khash, sizeof(khash));
     }
     /* Add bytes to the HMAC-HASH operation. */
     static void HMAC_HASH_Update(HMAC_CTX *ctx, const void *in, size_t len) {
@@ -90,7 +90,7 @@ protected:
         ctx->octx.Finalize(digest);
 
         /* Clean the stack. */
-        ::OPENSSL_cleanse(ihash, sizeof(ihash));
+        cleanse::OPENSSL_cleanse(ihash, sizeof(ihash));
     }
 public:
     /**

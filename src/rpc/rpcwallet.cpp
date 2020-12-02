@@ -16,6 +16,7 @@
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <block/block_alert.h>
+#include <util/time.h>
 
 std::string CRPCTable::HelpRequiringPassphrase() noexcept {
     return entry::pwalletMain->IsCrypted()

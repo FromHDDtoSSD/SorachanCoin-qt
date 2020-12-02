@@ -12,6 +12,7 @@
 #include <alert.h>
 #include <txdb.h>
 #include <wallet.h>
+#include <util/time.h>
 
 std::multimap<uint256, CBlock *> block_process::manage::mapOrphanBlocksByPrev;
 std::set<std::pair<COutPoint, unsigned int> > block_process::manage::setStakeSeenOrphan;

@@ -19,6 +19,8 @@
 #include <boost/variant/get.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include <util/time.h>
+
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
 //

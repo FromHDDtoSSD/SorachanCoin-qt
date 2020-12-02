@@ -15,7 +15,9 @@
 #include <bip32/hdchain.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ec.h>
-#include <openssl/crypto.h> // OPENSSL_cleanse
+#include <cleanse/cleanse.h>
+
+class CKey;
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 typedef prevector<PREVECTOR_N, uint8_t> key_vector;
@@ -40,6 +42,7 @@ public:
 // ref: src/secp256k1 secp256k1 library.
 class CPubKey
 {
+    friend class CKey;
 public:
     enum key_mode {
         SECP256K1,
@@ -380,7 +383,7 @@ public:
             char dummy;
             while(len--) {
                 s.read(&dummy, sizeof(char));
-                ::OPENSSL_cleanse(&dummy, sizeof(char)); // Even if -O3, Unserialize operate exactly.
+                cleanse::OPENSSL_cleanse(&dummy, sizeof(char)); // Even if -O3, Unserialize operate exactly.
             }
             Invalidate();
         }
@@ -500,7 +503,7 @@ public:
             char dummy;
             while(len--) {
                 s.read((char *)&dummy, sizeof(char));
-                ::OPENSSL_cleanse(&dummy, sizeof(char));
+                cleanse::OPENSSL_cleanse(&dummy, sizeof(char));
             }
             Invalidate(&code);
         } else {

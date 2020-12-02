@@ -15,7 +15,7 @@
 #include <compat/sanity.h>
 
 #include <openssl/rand.h>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 
 //
 // TEST: runtime.
@@ -121,7 +121,7 @@ void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) noexcept {
 }
 
 void quantum_lib::secure_memzero(void *ptr, size_t sizeIn) noexcept {
-    ::OPENSSL_cleanse(ptr, sizeIn);
+    cleanse::memory_cleanse(ptr, sizeIn);
 }
 
 void quantum_lib::secure_memrandom(void *ptr, size_t sizeIn) noexcept {

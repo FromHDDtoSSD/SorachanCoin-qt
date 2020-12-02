@@ -7,9 +7,9 @@
 #if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)  // SorachanCoin-qt.pro
 
 #include <quantum/quantum.h> // mlock(), mprotect(), SecureAllocator and malloc()
-#include <openssl/crypto.h> // OPENSSL_cleanse
+#include <cleanse/cleanse.h>
 #include <debugcs/debugcs.h>
-#include <sync.h>
+#include <sync/sync.h>
 #include <map>
 #include <QString>
 
@@ -95,7 +95,7 @@ public:
         else {
             unsigned char *mp = (unsigned char *)p - sizeof(size_t);
             assert(mapused_[mp]==SecureMalloc);
-            ::OPENSSL_cleanse(mp+sizeof(size_t), *(size_t *)mp);
+            cleanse::OPENSSL_cleanse(mp+sizeof(size_t), *(size_t *)mp);
             ::free(mp);
             mapused_.erase((void *)mp);
         }

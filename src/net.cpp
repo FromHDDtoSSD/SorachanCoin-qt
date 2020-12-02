@@ -15,6 +15,7 @@
 #include <boot/shutdown.h>
 #include <block/block_process.h>
 #include <block/block_check.h>
+#include <util/time.h>
 
 #ifdef WIN32
 # include <string.h>

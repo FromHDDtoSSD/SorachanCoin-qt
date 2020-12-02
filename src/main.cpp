@@ -13,6 +13,7 @@
 #include <const/block_param.h>
 #include <block/block_info.h>
 #include <block/block_check.h>
+#include <util/time.h>
 
 CCriticalSection wallet_process::manage::cs_setpwalletRegistered;
 

@@ -402,7 +402,7 @@ contains(LIMIT_NOMP_MODE, 0) {
 #
 # warning(-W -Wno) and error(-Werror=) flags setting
 #
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-type -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-type -Werror=comment -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 
 #
 # target source codes
@@ -432,7 +432,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/checkpoints.h \
     src/compat.h \
     src/coincontrol.h \
-    src/sync.h \
+    src/sync/sync.h \
+    src/sync/lsync.h \
     src/util.h \
     src/timestamps.h \
     src/hash.h \
@@ -548,12 +549,21 @@ HEADERS += src/qt/bitcoingui.h \
     src/const/no_instance.h \
     src/file_operate/file_open.h \
     src/file_operate/autofile.h \
+    src/file_operate/fs.h \
     src/boot/shutdown.h \
     src/miner/diff.h \
     src/rpc/bitcoinrpc.h \
     src/allocator/qtsecure.h \
     src/bip32/hdchain.h \
     src/key/pubkey.h \
+    src/key/privkey.h \
+    src/cleanse/cleanse.h \
+    src/random/random.h \
+    src/util/time.h \
+    src/util/tinyformat.h \
+    src/util/logging.h \
+    src/util/strencodings.h \
+    src/thread/threadsafety.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -585,7 +595,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/kernelrecord.cpp \
     src/alert.cpp \
     src/version.cpp \
-    src/sync.cpp \
+    src/sync/sync.cpp \
+    src/sync/lsync.cpp \
     src/util.cpp \
     src/netbase.cpp \
     src/ntp.cpp \
@@ -700,6 +711,13 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/rpc/rpcrawtransaction.cpp \
     src/bip32/hdchain.cpp \
     src/key/pubkey.cpp \
+    src/key/privkey.cpp \
+    src/cleanse/cleanse.cpp \
+    src/random/random.cpp \
+    src/util/time.cpp \
+    src/util/logging.cpp \
+    src/util/strencodings.cpp \
+    src/file_operate/fs.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp

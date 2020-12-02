@@ -1,21 +1,29 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_SYNC_H
 #define BITCOIN_SYNC_H
 
 #include <mutex>
 #include <condition_variable>
 
-/** Wrapped mutex: supports recursive locking, but no waiting */
-typedef std::recursive_mutex CCriticalSection;
+/**
+ * Wrapped mutex: supports recursive locking, but no waiting
+ * TODO: We should move away from using the recursive lock by default.
+ */
+//using RecursiveMutex = std::recursive_mutex;
+using CCriticalSection = std::recursive_mutex;
 
 /** Wrapped mutex: supports waiting but not recursive locking */
-typedef std::mutex CWaitableCriticalSection;
+//using Mutex = std::mutex;
+using CWaitableCriticalSection = std::mutex;
 
+/**
+ * implement: LOCK(), LOCK2() and DEBUG_LOCKORDER
+ */
 #ifdef DEBUG_LOCKORDER
 # include <boost/thread/locks.hpp>
 # include <boost/thread/tss.hpp>
@@ -90,45 +98,39 @@ inline void PrintLockContention(const char *pszName, const char *pszFile, int nL
 }
 #endif
 
-/** Wrapper around boost::unique_lock<Mutex> */
-template<typename Mutex>
-class CMutexLock
-{
+/** Wrapper around std::unique_lock<M> */
+template<typename M>
+class CMutexLock {
 private:
-    CMutexLock(const CMutexLock &); // {}
-    CMutexLock(const CMutexLock &&); // {}
-    CMutexLock &operator=(const CMutexLock &); // {}
-    CMutexLock &operator=(const CMutexLock &&); // {}
-
-    std::unique_lock<Mutex> lock;
+    CMutexLock(const CMutexLock &)=delete;
+    CMutexLock(CMutexLock &&)=delete;
+    CMutexLock &operator=(const CMutexLock &)=delete;
+    CMutexLock &operator=(CMutexLock &&)=delete;
+    std::unique_lock<M> lock;
 
 public:
-    void Enter(const char *pszName, const char *pszFile, int nLine) {
+    void Enter(const char *pszName, const char *pszFile, int nLine) noexcept {
         if (! lock.owns_lock()) {
             EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()));
-
 #ifdef DEBUG_LOCKCONTENTION
             if (! lock.try_lock()) {
                 PrintLockContention(pszName, pszFile, nLine);
 #endif
-
                 lock.lock();
-
 #ifdef DEBUG_LOCKCONTENTION
             }
 #endif
-
         }
     }
 
-    void Leave() {
+    void Leave() noexcept {
         if (lock.owns_lock()) {
             lock.unlock();
             LeaveCritical();
         }
     }
 
-    bool TryEnter(const char *pszName, const char *pszFile, int nLine) {
+    bool TryEnter(const char *pszName, const char *pszFile, int nLine) noexcept {
         if (! lock.owns_lock()) {
             EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), true);
             lock.try_lock();
@@ -139,12 +141,11 @@ public:
         return lock.owns_lock();
     }
 
-    CMutexLock(Mutex &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) : lock(mutexIn, std::defer_lock) {
-        if (fTry) {
+    CMutexLock(M &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) noexcept : lock(mutexIn, std::defer_lock) {
+        if (fTry)
             TryEnter(pszName, pszFile, nLine);
-        } else {
+        else
             Enter(pszName, pszFile, nLine);
-        }
     }
 
     ~CMutexLock() {
@@ -153,17 +154,16 @@ public:
         }
     }
 
-    operator bool() {
+    operator bool() const noexcept {
         return lock.owns_lock();
     }
 
-    std::unique_lock<Mutex> &GetLock() {
+    std::unique_lock<M> &GetLock() noexcept {
         return lock;
     }
 };
 
-typedef CMutexLock<CCriticalSection> CCriticalBlock;
-
+using CCriticalBlock = CMutexLock<CCriticalSection>;
 #define LOCK(cs) CCriticalBlock criticalblock(cs, #cs, __FILE__, __LINE__)
 #define LOCK2(cs1,cs2) CCriticalBlock criticalblock1(cs1, #cs1, __FILE__, __LINE__),criticalblock2(cs2, #cs2, __FILE__, __LINE__)
 #define TRY_LOCK(cs,name) CCriticalBlock name(cs, #cs, __FILE__, __LINE__, true)
@@ -305,3 +305,4 @@ public:
 # endif
 
 #endif
+

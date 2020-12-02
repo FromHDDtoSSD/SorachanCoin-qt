@@ -10,6 +10,7 @@
 #include <walletdb.h>
 #include <net.h>
 #include <ntp.h>
+#include <util/time.h>
 
 json_spirit::Value CRPCTable::getconnectioncount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 0) {

@@ -5,8 +5,6 @@
 // Based on the public domain implementation 'merged' by D. J. Bernstein
 // See https://cr.yp.to/chacha.html.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/common.h>
 #include <crypto/chacha20.h>
 
@@ -184,5 +182,3 @@ void ChaCha20::Output(unsigned char* c, size_t bytes)
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

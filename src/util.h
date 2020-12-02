@@ -317,6 +317,7 @@ namespace util
     }
 #endif
 
+    /*
     inline void MilliSleep(int64_t n) {
 #if BOOST_VERSION >= 105000
         boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
@@ -324,6 +325,7 @@ namespace util
         boost::this_thread::sleep(boost::posix_time::milliseconds(n));
 #endif
     }
+    */
 
     inline int roundint(double d) {
         return (int)(d > 0 ? d + 0.5 : d - 0.5);
@@ -378,6 +380,7 @@ namespace util
         printf(pszFormat, util::HexStr(vch, fSpaces).c_str());
     }
 
+    /*
     inline int64_t GetTimeMillis() {
         return (boost::posix_time::microsec_clock::universal_time() -
             boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_milliseconds();
@@ -387,6 +390,7 @@ namespace util
         return (boost::posix_time::microsec_clock::universal_time() -
             boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_microseconds();
     }
+    */
 
     inline std::string DateTimeStrFormat(const char *pszFormat, int64_t nTime) {
         // std::locale takes ownership of the pointer
@@ -738,14 +742,10 @@ protected:    // to class map_arg
     static void ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet);
 };
 
-class CInit;
 class seed : private no_instance
 {
-    friend class CInit;
-
-private:
-    static void RandAddSeed();
 public:
+    static void RandAddSeed();
     static void RandAddSeedPerfmon();
 };
 

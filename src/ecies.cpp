@@ -11,6 +11,7 @@
 #include "ies.h"
 #include <iostream>
 #include <vector>
+#include <cleanse/cleanse.h>
 
 #define SET_ERROR(string) \
     sprintf(error, "%s %s:%d", (string), __FILE__, __LINE__)
@@ -74,7 +75,7 @@ int cryptogram::ECDH_KDF_X9_62(unsigned char *out, size_t outlen, const unsigned
                 break;
             }
             ::memcpy(out, mtmp, outlen);
-            OPENSSL_cleanse(mtmp, mdlen);
+            cleanse::OPENSSL_cleanse(mtmp, mdlen);
             break;    // OK remain (no full)
         }
     }
@@ -170,7 +171,7 @@ unsigned char *cryptogram::prepare_envelope_key(const ies_ctx_t *ctx, cryptogram
     }
 
     EC_KEY_free(ephemeral);
-    OPENSSL_cleanse(ktmp, ecdh_key_len);
+    cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
     OPENSSL_free(ktmp);
 
     return envelope_key;
@@ -180,11 +181,11 @@ err:
         EC_KEY_free(ephemeral);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, key_buf_len);
+        cleanse::OPENSSL_cleanse(envelope_key, key_buf_len);
         OPENSSL_free(envelope_key);
     }
     if (ktmp) {
-        OPENSSL_cleanse(ktmp, ecdh_key_len);
+        cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
         OPENSSL_free(ktmp);
     }
     return NULL;
@@ -299,7 +300,7 @@ cryptogram_t *cryptogram::ecies_encrypt(const ies_ctx_t *ctx, const unsigned cha
         goto err;
     }
 
-    OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+    cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
     OPENSSL_free(envelope_key);
 
     return cryptogram;
@@ -309,7 +310,7 @@ err:
         cryptogram_free(cryptogram);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+        cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
         OPENSSL_free(envelope_key);
     }
     return NULL;
@@ -414,7 +415,7 @@ unsigned char *cryptogram::restore_envelope_key(const ies_ctx_t *ctx, const cryp
 
     EC_KEY_free(user_copy);
     EC_KEY_free(ephemeral);
-    OPENSSL_cleanse(ktmp, ecdh_key_len);
+    cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
     OPENSSL_free(ktmp);
 
     return envelope_key;
@@ -427,11 +428,11 @@ err:
         EC_KEY_free(user_copy);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, key_buf_len);
+        cleanse::OPENSSL_cleanse(envelope_key, key_buf_len);
         OPENSSL_free(envelope_key);
     }
     if (ktmp) {
-        OPENSSL_cleanse(ktmp, ecdh_key_len);
+        cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
         OPENSSL_free(ktmp);
     }
     return NULL;
@@ -541,7 +542,7 @@ unsigned char *cryptogram::ecies_decrypt(const ies_ctx_t *ctx, const cryptogram_
     }
 
 err:
-    OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+    cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
     OPENSSL_free(envelope_key);
     return output;
 }

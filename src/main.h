@@ -8,7 +8,7 @@
 #define BITCOIN_MAIN_H
 
 #include <stdio.h>
-#include <sync.h>
+#include <sync/sync.h>
 #include <serialize.h>
 #include <block/block.h>
 

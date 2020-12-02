@@ -11,7 +11,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 
 namespace latest_crypto {
 
@@ -33,8 +33,8 @@ public:
 
     static constexpr size_t Size() {return OUTPUT_SIZE;}
     void Clean() {
-        ::OPENSSL_cleanse(s, sizeof(s));
-        ::OPENSSL_cleanse(buf, sizeof(buf));
+        cleanse::OPENSSL_cleanse(s, sizeof(s));
+        cleanse::OPENSSL_cleanse(buf, sizeof(buf));
     }
 };
 

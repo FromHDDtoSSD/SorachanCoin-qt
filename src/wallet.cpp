@@ -21,6 +21,8 @@
 #include <util.h>
 #include <net.h>
 
+#include <util/time.h>
+
 bool CWallet::fWalletUnlockMintOnly = false;
 
 struct CompareValueOnly

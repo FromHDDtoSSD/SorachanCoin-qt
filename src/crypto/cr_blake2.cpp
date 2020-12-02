@@ -6,7 +6,7 @@
 
 # include <crypto/blake2.h>
 # include <blake2.h>
-# include <openssl/crypto.h> // for OPENSSL_cleanse()
+# include <cleanse/cleanse.h>
 
 namespace latest_crypto {
 
@@ -28,7 +28,7 @@ CBLAKE2& CBLAKE2::Reset() {
 }
 
 void CBLAKE2::Clean() {
-    ::OPENSSL_cleanse(&S, sizeof(S));
+    cleanse::OPENSSL_cleanse(&S, sizeof(S));
 }
 
 } // latest_crypto

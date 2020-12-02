@@ -558,7 +558,7 @@ int CPubKey::secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, u
 // Bitcoin: ecdsa_signature_parse_der_lax
 int CPubKey::ecdsa_signature_parse_der_lax(secp256k1_signature *sig, const unsigned char *input, size_t inputlen) noexcept {
     auto SIG_clear = [](secp256k1_signature *sig) {
-        ::OPENSSL_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
     };
 
     size_t pos = 0;

@@ -11,6 +11,7 @@
 #include "init.h"
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
+#include <util/time.h>
 
 #ifndef WIN32
 # include "sys/stat.h"

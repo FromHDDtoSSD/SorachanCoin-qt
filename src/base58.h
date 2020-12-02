@@ -17,7 +17,7 @@
 
 #include <string>
 #include <vector>
-#include <openssl/crypto.h> // for OPENSSL_cleanse()
+#include <cleanse/cleanse.h>
 #include "bignum.h"
 #include "key.h"
 #include "script.h"
@@ -78,7 +78,7 @@ protected:
     virtual ~CBase58Data() {
         // zero the memory, as it may contain sensitive data
         if (! vchData.empty()) {
-            OPENSSL_cleanse(&vchData[0], vchData.size());
+            cleanse::OPENSSL_cleanse(&vchData[0], vchData.size());
         }
     }
 
@@ -117,7 +117,7 @@ public:
             if (! vchData.empty()) {
                 ::memcpy(&vchData[0], &vchTemp[1], vchData.size());
             }
-            OPENSSL_cleanse(&vchTemp[0], vchData.size());
+            cleanse::OPENSSL_cleanse(&vchTemp[0], vchData.size());
             return true;
         }
     }

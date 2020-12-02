@@ -1,15 +1,17 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "util.h"
-#include "sync.h"
-#include "version.h"
-#include "ui_interface.h"
+#include <util.h>
+#include <sync/sync.h>
+#include <version.h>
+#include <ui_interface.h>
 #include <boost/algorithm/string/join.hpp>
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
+#include <thread/threadsafety.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
@@ -27,6 +29,7 @@ namespace boost {
 #include <boost/filesystem/fstream.hpp>
 
 #include <boost/thread.hpp>
+#include <cleanse/cleanse.h>
 #include <openssl/crypto.h>
 
 #ifdef WIN32
@@ -103,17 +106,15 @@ bool_arg args_bool::fReopenDebugLog(false);
 unsigned int args_uint::nNodeLifespan = 0;
 CMedianFilter<int64_t> bitsystem::vTimeOffsets(200,0);
 
-//
-// Init
-//
+/* instead of random/random.cpp class RNGState
 class CInit
 {
 private:
     static CInit instance_of_cinit;
-
 private:
-    CInit(const CInit &); // {}
-    CInit &operator=(const CInit &); // {}
+    CInit(const CInit &)=delete;
+    CInit &operator=(const CInit &)=delete;
+    CInit &operator=(const CInit &&)=delete;
 
     // Init OpenSSL library multithreading support
     static CCriticalSection *pmutexOpenSSL;
@@ -157,11 +158,12 @@ private:
         {
             (pmutexOpenSSL + i)->~CCriticalSection();
         }
-        ::OPENSSL_free(pmutexOpenSSL);
+        OPENSSL_free(pmutexOpenSSL);
     }
 };
 CCriticalSection *CInit::pmutexOpenSSL = nullptr;
 CInit CInit::instance_of_cinit;
+*/
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -170,7 +172,7 @@ void seed::RandAddSeed()
     // Seed with CPU performance counter
     int64_t nCounter = ::GetPerformanceCounter();
     ::RAND_add(&nCounter, sizeof(nCounter), 1.5);
-    ::OPENSSL_cleanse(&nCounter, sizeof(nCounter));
+    cleanse::OPENSSL_cleanse(&nCounter, sizeof(nCounter));
 }
 
 void seed::RandAddSeedPerfmon()
@@ -194,7 +196,7 @@ void seed::RandAddSeedPerfmon()
     ::RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS) {
         RAND_add(pdata, nSize, nSize / 100.0);
-        OPENSSL_cleanse(pdata, nSize);
+        cleanse::OPENSSL_cleanse(pdata, nSize);
         printf("seed::RandAddSeed() %lu bytes\n", nSize);
     }
 #endif

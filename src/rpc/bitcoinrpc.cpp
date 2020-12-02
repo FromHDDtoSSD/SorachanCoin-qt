@@ -6,7 +6,7 @@
 
 #include <init.h>
 #include <util.h>
-#include <sync.h>
+#include <sync/sync.h>
 #include <ui_interface.h>
 #include <rpc/bitcoinrpc.h>
 #include <db.h>

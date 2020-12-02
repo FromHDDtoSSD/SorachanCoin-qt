@@ -8,9 +8,9 @@
 #include <string>
 #include <vector>
 
-#include "serialize.h"
-#include "compat.h"
-#include "sync.h"
+#include <serialize.h>
+#include <compat.h>
+#include <sync/sync.h>
 
 #ifdef WIN32
 // In MSVC, this is defined as a macro, undefine it to prevent a compile and link error
