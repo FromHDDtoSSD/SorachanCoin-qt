@@ -2,8 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/sha256.h>
 #include <crypto/common.h>
 
@@ -734,5 +732,3 @@ void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks)
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

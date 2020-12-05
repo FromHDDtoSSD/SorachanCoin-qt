@@ -5,8 +5,6 @@
 #ifndef BITCOIN_CRYPTO_HMAC_SHA256_H
 #define BITCOIN_CRYPTO_HMAC_SHA256_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/sha256.h>
 
 #include <stdint.h>
@@ -22,19 +20,19 @@ private:
     CSHA256 inner;
 
 public:
-    static const size_t OUTPUT_SIZE = 32;
+    static constexpr size_t OUTPUT_SIZE = 32;
 
-    CHMAC_SHA256(const unsigned char* key, size_t keylen);
-    CHMAC_SHA256& Write(const unsigned char* data, size_t len)
+    CHMAC_SHA256() noexcept {}
+    CHMAC_SHA256(const unsigned char* key, size_t keylen) noexcept;
+    void Init(const unsigned char* key, size_t keylen) noexcept;
+    CHMAC_SHA256& Write(const unsigned char* data, size_t len) noexcept
     {
         inner.Write(data, len);
         return *this;
     }
-    void Finalize(unsigned char hash[OUTPUT_SIZE]);
+    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
 };
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_HMAC_SHA256_H

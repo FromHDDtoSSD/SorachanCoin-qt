@@ -102,6 +102,24 @@ public:
 #define SECP256K1_RESTRICT
 #define USE_ENDOMORPHISM
 #define VERIFY
+    /* Unpacks a constant into a overlapping multi-limbed FE element. */
+#define SECP256K1_FE_CONST_INNER(d7, d6, d5, d4, d3, d2, d1, d0) { \
+    (d0) & 0x3FFFFFFUL, \
+    (((uint32_t)d0) >> 26) | (((uint32_t)(d1) & 0xFFFFFUL) << 6), \
+    (((uint32_t)d1) >> 20) | (((uint32_t)(d2) & 0x3FFFUL) << 12), \
+    (((uint32_t)d2) >> 14) | (((uint32_t)(d3) & 0xFFUL) << 18), \
+    (((uint32_t)d3) >> 8) | (((uint32_t)(d4) & 0x3UL) << 24), \
+    (((uint32_t)d4) >> 2) & 0x3FFFFFFUL, \
+    (((uint32_t)d4) >> 28) | (((uint32_t)(d5) & 0x3FFFFFUL) << 4), \
+    (((uint32_t)d5) >> 22) | (((uint32_t)(d6) & 0xFFFFUL) << 10), \
+    (((uint32_t)d6) >> 16) | (((uint32_t)(d7) & 0x3FFUL) << 16), \
+    (((uint32_t)d7) >> 10) \
+    }
+#ifdef VERIFY
+# define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0)), 1, 1}
+#else
+# define SECP256K1_FE_CONST(d7, d6, d5, d4, d3, d2, d1, d0) {SECP256K1_FE_CONST_INNER((d7), (d6), (d5), (d4), (d3), (d2), (d1), (d0))}
+#endif
     class ecmult {
     public:
         typedef struct {
@@ -181,6 +199,7 @@ public:
         static void secp256k1_ge_set_table_gej_var(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zr, size_t len) noexcept;
         static int secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept;
         static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) noexcept;
+        static const secp256k1_ge *secp256k1_get_ge_const_g() noexcept;
 
         // context
         class secp256k1_context {

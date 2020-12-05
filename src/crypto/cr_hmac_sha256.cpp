@@ -2,15 +2,17 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/hmac_sha256.h>
 
 #include <string.h>
 
 namespace latest_crypto {
 
-CHMAC_SHA256::CHMAC_SHA256(const unsigned char* key, size_t keylen)
+CHMAC_SHA256::CHMAC_SHA256(const unsigned char* key, size_t keylen) noexcept {
+    Init(key, keylen);
+}
+
+void CHMAC_SHA256::Init(const unsigned char* key, size_t keylen) noexcept
 {
     unsigned char rkey[64];
     if (keylen <= 64) {
@@ -30,7 +32,7 @@ CHMAC_SHA256::CHMAC_SHA256(const unsigned char* key, size_t keylen)
     inner.Write(rkey, 64);
 }
 
-void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
+void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
 {
     unsigned char temp[32];
     inner.Finalize(temp);
@@ -39,4 +41,3 @@ void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
 
 } // namespace latest_crypto
 
-#endif // LATEST_CRYPTO_ENABLE

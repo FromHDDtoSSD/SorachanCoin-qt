@@ -6,8 +6,6 @@
 #ifndef BITCOIN_CRYPTO_SHA256_H
 #define BITCOIN_CRYPTO_SHA256_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdint.h>
 #include <stdlib.h>
 #include <string>
@@ -51,7 +49,5 @@ std::string SHA256AutoDetect();
 void SHA256D64(unsigned char* output, const unsigned char* input, size_t blocks);
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_SHA256_H

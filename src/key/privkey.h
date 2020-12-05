@@ -13,6 +13,10 @@
 #include <allocator/allocators.h>
 #include <key/pubkey.h>
 
+namespace latest_crypto {
+    class CHMAC_SHA256;
+}
+
 /**
  * secure_allocator is defined in allocators.h
  * CPrivKey is a serialized private key, with all parameters included
@@ -21,7 +25,7 @@
 using CPrivKey = std::vector<unsigned char, secure_allocator<unsigned char> >;
 
 /** An encapsulated private key. */
-class CKey
+class CFirmKey
 {
 public:
     //! secp256k1
@@ -49,31 +53,120 @@ private:
     //! Check whether the 32-byte(PRIVATE_BYTE_VECTOR_SIZE) array pointed to by vch is valid keydata.
     static bool Check(const unsigned char *vch) noexcept;
 
-    // libsecp256k1
+    // SorachanCoin (src/secp256k1): PrivateKey config
+#ifdef USE_ECMULT_STATIC_PRECOMPUTATION
+# undef USE_ECMULT_STATIC_PRECOMPUTATION
+#endif
+
+    class hash {
+    public:
+        typedef struct {
+            unsigned char v[32];
+            unsigned char k[32];
+            int retry;
+        } secp256k1_rfc6979_hmac_sha256_t;
+    private:
+        static void secp256k1_hmac_sha256_initialize(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *key, size_t size) noexcept;
+        static void secp256k1_hmac_sha256_write(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *data, size_t size) noexcept;
+        static void secp256k1_hmac_sha256_finalize(latest_crypto::CHMAC_SHA256 *hash, unsigned char *out32) noexcept;
+    public:
+        static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen) noexcept;
+        static void secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen) noexcept;
+        static void secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng) noexcept;
+    };
+
+    class nonce {
+    public:
+        static int nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) noexcept;
+    };
+    typedef int (* secp256k1_nonce_function)(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter);
+
+    class ecmult {
+    public:
+        //static void secp256k1_fe_inv_all_var(std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) noexcept;
+        static bool secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_ge *r, const CPubKey::ecmult::secp256k1_gej *a, size_t len) noexcept;
+        static void secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a) noexcept;
+        static bool secp256k1_gej_add_var(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_gej *b, CPubKey::ecmult::secp256k1_fe *rzr) noexcept;
+        static void secp256k1_fe_storage_cmov(CPubKey::ecmult::secp256k1_fe_storage *r, const CPubKey::ecmult::secp256k1_fe_storage *a, int flag) noexcept;
+        static void secp256k1_ge_storage_cmov(CPubKey::ecmult::secp256k1_ge_storage *r, const CPubKey::ecmult::secp256k1_ge_storage *a, int flag) noexcept;
+        static void secp256k1_fe_cmov(CPubKey::ecmult::secp256k1_fe *r, const CPubKey::ecmult::secp256k1_fe *a, int flag) noexcept;
+        static bool secp256k1_gej_add_ge(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_ge *b) noexcept;
+        static void secp256k1_gej_clear(CPubKey::ecmult::secp256k1_gej *r) noexcept;
+        static bool secp256k1_gej_rescale(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_fe *s) noexcept;
+        class secp256k1_gen_context {
+        private:
+            bool secp256k1_ecmult_gen_blind(const unsigned char *seed32) noexcept;
+        public:
+            static bool secp256k1_ecmult_gen_context_is_built(const CFirmKey::ecmult::secp256k1_gen_context &gen_ctx) noexcept;
+
+            /* For accelerating the computation of a*G:
+             * To harden against timing attacks, use the following mechanism:
+             * * Break up the multiplicand into groups of 4 bits, called n_0, n_1, n_2, ..., n_63.
+             * * Compute sum(n_i * 16^i * G + U_i, i=0..63), where:
+             *   * U_i = U * 2^i (for i=0..62)
+             *   * U_i = U * (1-2^63) (for i=63)
+             *   where U is a point with no known corresponding scalar. Note that sum(U_i, i=0..63) = 0.
+             * For each i, and each of the 16 possible values of n_i, (n_i * 16^i * G + U_i) is
+             * precomputed (call it prec(i, n_i)). The formula now becomes sum(prec(i, n_i), i=0..63).
+             * None of the resulting prec group elements have a known scalar, and neither do any of
+             * the intermediate sums while computing a*G.
+             */
+            CPubKey::ecmult::secp256k1_ge_storage (*prec_)[64][16]; /* prec[j][i] = 16^j * i * G + U_i */
+            CPubKey::secp256k1_unit blind_;
+            CPubKey::ecmult::secp256k1_gej initial_;
+
+            bool secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_unit *gn) const noexcept;
+
+            void init() noexcept;
+            bool build() noexcept;
+            void clear() noexcept;
+            secp256k1_gen_context() noexcept;
+            secp256k1_gen_context(const secp256k1_gen_context &)=delete;
+            secp256k1_gen_context(secp256k1_gen_context &&)=delete;
+            secp256k1_gen_context &operator=(const secp256k1_gen_context &)=delete;
+            secp256k1_gen_context &operator=(secp256k1_gen_context &&)=delete;
+            ~secp256k1_gen_context();
+        };
+    };
+
+    // PrivateKey: libsecp256k1
     static void secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) noexcept;
     static int secp256k1_ec_seckey_verify(const unsigned char *seckey) noexcept;
+    static int secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, CPubKey::secp256k1_pubkey *pubkey, const unsigned char *seckey) noexcept;
+    static int ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, unsigned char *privkey, size_t *privkeylen, const unsigned char *key32, bool compressed) noexcept;
+    static int secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_unit *ar, const CPubKey::secp256k1_unit *as) noexcept;
+    static int secp256k1_ecdsa_signature_serialize_der(unsigned char *output, size_t *outputlen, const CPubKey::secp256k1_signature *sig) noexcept;
+    static int secp256k1_ecdsa_signature_serialize_compact(unsigned char *output64, const CPubKey::secp256k1_signature *sig) noexcept;
+    static bool SigHasLowR(const CPubKey::secp256k1_signature *sig) noexcept;
+    static int secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_unit *sigr, CPubKey::secp256k1_unit *sigs, const CPubKey::secp256k1_unit *seckey, const CPubKey::secp256k1_unit *message, const CPubKey::secp256k1_unit *nonce, int *recid) noexcept;
+    static int secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_signature *signature, const unsigned char *msg32, const unsigned char *seckey, CFirmKey::secp256k1_nonce_function noncefp, const void *noncedata) noexcept;
+    static int secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned char *output64, int *recid, const CPubKey::secp256k1_ecdsa_recoverable_signature *sig) noexcept;
+    static int secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void *noncedata) noexcept;
+    static int secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_unit *key, const CPubKey::secp256k1_unit *tweak) noexcept;
+    static int secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsigned char *tweak) noexcept;
+    static int ec_privkey_import_der(unsigned char *out32, const unsigned char *privkey, size_t privkeylen) noexcept;
 
 public:
     //! Construct an invalid private key.
-    CKey() noexcept : fValid_(false), fCompressed_(false) {
+    CFirmKey() noexcept : fValid_(false), fCompressed_(false) {
         // Important: vch must be 32 bytes in length to not break serialization
         keydata_.resize(PRIVATE_BYTE_VECTOR_SIZE);
     }
 
-    friend bool operator==(const CKey &a, const CKey &b) noexcept {
+    friend bool operator==(const CFirmKey &a, const CFirmKey &b) noexcept {
         return a.fCompressed_ == b.fCompressed_ &&
                a.size() == b.size() &&
-               ::memcmp(a.keydata.data(), b.keydata.data(), a.size()) == 0;
+               ::memcmp(a.keydata_.data(), b.keydata_.data(), a.size()) == 0;
     }
 
     //! Initialize using begin and end iterators to byte data.
     template <typename T>
     void Set(const T pbegin, const T pend, bool fCompressedIn) noexcept {
-        if (size_t(pend - pbegin) != keydata.size())
+        if (size_t(pend - pbegin) != keydata_.size())
             fValid_ = false;
         else if (Check(&pbegin[0])) {
             assert(keydata_.size()==PRIVATE_BYTE_VECTOR_SIZE);
-            ::memcpy(keydata_.data(), (unsigned char *)&pbegin[0], keydata.size());
+            ::memcpy(keydata_.data(), (unsigned char *)&pbegin[0], keydata_.size());
             fValid_ = true;
             fCompressed_ = fCompressedIn;
         } else
@@ -81,7 +174,7 @@ public:
     }
 
     //! Simple read-only vector-like interface.
-    unsigned int size() const noexcept { return (fValid ? keydata_.size() : 0); }
+    unsigned int size() const noexcept { return (fValid_ ? keydata_.size() : 0); }
     const unsigned char *begin() const noexcept { return keydata_.data(); }
     const unsigned char *end() const noexcept { return keydata_.data() + size(); }
 
@@ -96,15 +189,15 @@ public:
 
     //! Convert the private key to a CPrivKey (serialized OpenSSL private key data).
     // This is expensive.
-    CPrivKey GetPrivKey() const;
+    CPrivKey GetPrivKey(bool *fret) const noexcept;
 
     //! Compute the public key from a private key.
     // This is expensive.
-    CPubKey GetPubKey() const;
+    CPubKey GetPubKey(bool *fret) const noexcept;
 
     //! Create a DER-serialized signature.
     // The test_case parameter tweaks the deterministic nonce.
-    bool Sign(const uint256& hash, std::vector<unsigned char>& vchSig, bool grind = true, uint32_t test_case = 0) const;
+    bool Sign(const uint256 &hash, key_vector &vchSig, bool grind = true, uint32_t test_case = 0) const noexcept;
 
     /**
      * Create a compact signature (65 bytes), which allows reconstructing the used public key.
@@ -113,19 +206,19 @@ public:
      *                  0x1D = second key with even y, 0x1E = second key with odd y,
      *                  add 0x04 for compressed keys.
      */
-    bool SignCompact(const uint256& hash, std::vector<unsigned char>& vchSig) const;
+    bool SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const noexcept;
 
     //! Derive BIP32 child key.
-    bool Derive(CKey& keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode& cc) const;
+    bool Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const noexcept;
 
     /**
      * Verify thoroughly whether a private key and a public key match.
      * This is done using a different mechanism than just regenerating it.
      */
-    bool VerifyPubKey(const CPubKey& vchPubKey) const;
+    bool VerifyPubKey(const CPubKey &vchPubKey) const noexcept;
 
     //! Load private key and check that public key matches.
-    bool Load(const CPrivKey& privkey, const CPubKey& vchPubKey, bool fSkipCheck);
+    bool Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSkipCheck) noexcept;
 
     //! PrivKey ERROR callback
     static int PrivKey_ERROR_callback(void (*fn)()=nullptr) noexcept {if(fn) fn(); return 0;}

@@ -5,8 +5,6 @@
 #ifndef BITCOIN_CRYPTO_COMMON_H
 #define BITCOIN_CRYPTO_COMMON_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #if defined(HAVE_CONFIG_H)
 #include <config/bitcoin-config.h>
 #endif
@@ -105,7 +103,5 @@ uint64_t static inline CountBits(uint64_t x)
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_COMMON_H
