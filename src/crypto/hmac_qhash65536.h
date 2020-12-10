@@ -5,7 +5,7 @@
 #ifndef HMAC_QHASH65536_H
 #define HMAC_QHASH65536_H
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 # include <const/no_instance.h>
 # include <crypto/sha256.h>

@@ -4,7 +4,7 @@
 
 #ifndef QT_SECURE_H
 #define QT_SECURE_H
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)  // SorachanCoin-qt.pro
+#if defined(USE_QUANTUM)  // SorachanCoin-qt.pro
 
 #include <quantum/quantum.h> // mlock(), mprotect(), SecureAllocator and malloc()
 #include <cleanse/cleanse.h>
@@ -127,6 +127,6 @@ public:
     }
 };
 
-#endif // defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#endif // defined(USE_QUANTUM)
 
 #endif

@@ -2,8 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/ripemd160.h>
 
 #include <crypto/common.h>
@@ -297,4 +295,3 @@ CRIPEMD160& CRIPEMD160::Reset()
 
 } // namespace latest_crypto
 
-#endif // LATEST_CRYPTO_ENABLE

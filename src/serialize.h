@@ -1,10 +1,10 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
@@ -60,6 +60,91 @@ inline char *CharCast(char *c) { return c; }
 inline char *CharCast(unsigned char *c) { return (char *)c; }
 inline const char *CharCast(const char *c) { return c; }
 inline const char *CharCast(const unsigned char *c) { return (const char *)c; }
+
+/*
+ * Lowest-level serialization and conversion.
+ * @note Sizes of these types are verified in the tests
+ */
+namespace ser {
+template<typename Stream> inline void ser_writedata8(Stream &s, uint8_t obj)
+{
+    s.write((char *)&obj, 1);
+}
+template<typename Stream> inline void ser_writedata16(Stream &s, uint16_t obj)
+{
+    obj = ::htole16(obj);
+    s.write((char *)&obj, 2);
+}
+template<typename Stream> inline void ser_writedata16be(Stream &s, uint16_t obj)
+{
+    obj = ::htobe16(obj);
+    s.write((char *)&obj, 2);
+}
+template<typename Stream> inline void ser_writedata32(Stream &s, uint32_t obj)
+{
+    obj = ::htole32(obj);
+    s.write((char *)&obj, 4);
+}
+template<typename Stream> inline void ser_writedata64(Stream &s, uint64_t obj)
+{
+    obj = ::htole64(obj);
+    s.write((char *)&obj, 8);
+}
+template<typename Stream> inline uint8_t ser_readdata8(Stream &s)
+{
+    uint8_t obj;
+    s.read((char *)&obj, 1);
+    return obj;
+}
+template<typename Stream> inline uint16_t ser_readdata16(Stream &s)
+{
+    uint16_t obj;
+    s.read((char *)&obj, 2);
+    return ::le16toh(obj);
+}
+template<typename Stream> inline uint16_t ser_readdata16be(Stream &s)
+{
+    uint16_t obj;
+    s.read((char *)&obj, 2);
+    return ::be16toh(obj);
+}
+template<typename Stream> inline uint32_t ser_readdata32(Stream &s)
+{
+    uint32_t obj;
+    s.read((char *)&obj, 4);
+    return ::le32toh(obj);
+}
+template<typename Stream> inline uint64_t ser_readdata64(Stream &s)
+{
+    uint64_t obj;
+    s.read((char *)&obj, 8);
+    return ::le64toh(obj);
+}
+inline uint64_t ser_double_to_uint64(double x)
+{
+    union { double x; uint64_t y; } tmp;
+    tmp.x = x;
+    return tmp.y;
+}
+inline uint32_t ser_float_to_uint32(float x)
+{
+    union { float x; uint32_t y; } tmp;
+    tmp.x = x;
+    return tmp.y;
+}
+inline double ser_uint64_to_double(uint64_t y)
+{
+    union { double x; uint64_t y; } tmp;
+    tmp.y = y;
+    return tmp.x;
+}
+inline float ser_uint32_to_float(uint32_t y)
+{
+    union { float x; uint32_t y; } tmp;
+    tmp.y = y;
+    return tmp.x;
+}
+} // namespace ser
 
 /*
 * Lowest-level serialization and conversion.
@@ -349,11 +434,11 @@ namespace compact_size
 class CFlatData
 {
 private:
-    CFlatData(); // {}
-    CFlatData(const CFlatData &); // {}
-    CFlatData(const CFlatData &&); // {}
-    CFlatData &operator=(const CFlatData &); // {}
-    CFlatData &operator=(const CFlatData &&); // {}
+    CFlatData()=delete;
+    CFlatData(const CFlatData &)=delete;
+    CFlatData(CFlatData &&)=delete;
+    CFlatData &operator=(const CFlatData &)=delete;
+    CFlatData &operator=(CFlatData &&)=delete;
 
     char *pbegin;
     const char *pend;
@@ -618,7 +703,6 @@ inline void Unserialize(Stream &is, prevector<N, T> &v)
     ::Unserialize_impl(is, v, std::is_fundamental<T>());
 }
 
-#ifdef LATEST_CRYPTO_ENABLE
 // prevector_s<N, T>
 template<unsigned int N, typename T>
 inline unsigned int GetSerializeSize_impl(const latest_crypto::prevector_s<N, T> &v, const std::true_type &)
@@ -713,7 +797,6 @@ inline void Unserialize(Stream &is, latest_crypto::prevector_s<N, T> &v)
 {
     ::Unserialize_impl(is, v, std::is_fundamental<T>());
 }
-#endif
 
 // tuple<3>
 template<typename T0, typename T1, typename T2>
@@ -851,38 +934,244 @@ inline void Unserialize(Stream &is, std::set<K, Pred, A> &m)
 class CTypeVersion
 {
 private:
-    CTypeVersion(); // {}
-    // CTypeVersion(const CTypeVersion &); // {}
-    CTypeVersion &operator=(const CTypeVersion &); // {}
-    CTypeVersion &operator=(const CTypeVersion &&); // {}
+    CTypeVersion()=delete;
+    // CTypeVersion(const CTypeVersion &)=delete;
+    // CTypeVersion(CTypeVersion &&)=delete;
+    CTypeVersion &operator=(const CTypeVersion &)=delete;
+    CTypeVersion &operator=(CTypeVersion &&)=delete;
 
 protected:
     int nType;
     int nVersion;
-    explicit CTypeVersion(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {}
+    explicit CTypeVersion(int nTypeIn, int nVersionIn) noexcept : nType(nTypeIn), nVersion(nVersionIn) {}
     ~CTypeVersion() {} // unused virtual
 
 public:
-    void SetType(int n) { nType = n; }
-    void AddType(int n) { nType |= n; }
-    int GetType() const { return nType; }
-    void SetVersion(int n) { nVersion = n; }
-    int GetVersion() const { return nVersion; }
+    void SetType(int n) noexcept { nType = n; }
+    void AddType(int n) noexcept { nType |= n; }
+    int GetType() const noexcept { return nType; }
+    void SetVersion(int n) noexcept { nVersion = n; }
+    int GetVersion() const noexcept { return nVersion; }
 };
 
 class CTypeVersionBehave
 {
 public:
-    CTypeVersionBehave() : nType(0), nVersion(0) {}
+    CTypeVersionBehave() noexcept : nType(0), nVersion(0) {}
     int nType;
     int nVersion;
-    void AddType(int) {}
-    void SetType(int) {}
-    void SetVersion(int) {}
+    void AddType(int) noexcept {}
+    void SetType(int) noexcept {}
+    void SetVersion(int) noexcept {}
 };
 
+/**
+ * Variable-length integers: bytes are a MSB base-128 encoding of the number.
+ * The high bit in each byte signifies whether another digit follows. To make
+ * sure the encoding is one-to-one, one is subtracted from all but the last digit.
+ * Thus, the byte sequence a[] with length len, where all but the last byte
+ * has bit 128 set, encodes the number:
+ *
+ *  (a[len-1] & 0x7F) + sum(i=1..len-1, 128^i*((a[len-i-1] & 0x7F)+1))
+ *
+ * Properties:
+ * * Very small (0-127: 1 byte, 128-16511: 2 bytes, 16512-2113663: 3 bytes)
+ * * Every integer has exactly one encoding
+ * * Encoding does not depend on size of original integer type
+ * * No redundancy: every (infinite) byte sequence corresponds to a list
+ *   of encoded integers.
+ *
+ * 0:         [0x00]  256:        [0x81 0x00]
+ * 1:         [0x01]  16383:      [0xFE 0x7F]
+ * 127:       [0x7F]  16384:      [0xFF 0x00]
+ * 128:  [0x80 0x00]  16511:      [0xFF 0x7F]
+ * 255:  [0x80 0x7F]  65535: [0x82 0xFE 0x7F]
+ * 2^32:           [0x8E 0xFE 0xFE 0xFF 0x00]
+ */
+
+/**
+ * Mode for encoding VarInts.
+ *
+ * Currently there is no support for signed encodings. The default mode will not
+ * compile with signed values, and the legacy "nonnegative signed" mode will
+ * accept signed values, but improperly encode and decode them if they are
+ * negative. In the future, the DEFAULT mode could be extended to support
+ * negative numbers in a backwards compatible way, and additional modes could be
+ * added to support different varint formats (e.g. zigzag encoding).
+ */
+namespace varint {
+enum class VarIntMode { DEFAULT, NONNEGATIVE_SIGNED };
+
+template <VarIntMode Mode, typename I>
+struct CheckVarIntMode {
+    constexpr CheckVarIntMode() {
+        static_assert(Mode != VarIntMode::DEFAULT || std::is_unsigned<I>::value, "Unsigned type required with mode DEFAULT.");
+        static_assert(Mode != VarIntMode::NONNEGATIVE_SIGNED || std::is_signed<I>::value, "Signed type required with mode NONNEGATIVE_SIGNED.");
+    }
+};
+
+template<VarIntMode Mode, typename I>
+inline unsigned int GetSizeOfVarInt(I n) {
+    CheckVarIntMode<Mode, I>();
+    int nRet = 0;
+    while(true) {
+        nRet++;
+        if (n <= 0x7F)
+            break;
+        n = (n >> 7) - 1;
+    }
+    return nRet;
+}
+
+//template<typename I>
+//inline void WriteVarInt(CSizeComputer &os, I n);
+
+template<typename Stream, VarIntMode Mode, typename I>
+void WriteVarInt(Stream &os, I n) {
+    CheckVarIntMode<Mode, I>();
+    unsigned char tmp[(sizeof(n)*8+6)/7];
+    int len=0;
+    while(true) {
+        tmp[len] = (n & 0x7F) | (len ? 0x80 : 0x00);
+        if (n <= 0x7F)
+            break;
+        n = (n >> 7) - 1;
+        len++;
+    }
+    do {
+        ser::ser_writedata8(os, tmp[len]);
+    } while(len--);
+}
+
+template<typename Stream, VarIntMode Mode, typename I>
+I ReadVarInt(Stream &is) {
+    CheckVarIntMode<Mode, I>();
+    I n = 0;
+    while(true) {
+        unsigned char chData = ser::ser_readdata8(is);
+        if (n > (std::numeric_limits<I>::max() >> 7)) {
+           throw std::ios_base::failure("ReadVarInt(): size too large");
+        }
+        n = (n << 7) | (chData & 0x7F);
+        if (chData & 0x80) {
+            if (n == std::numeric_limits<I>::max()) {
+                throw std::ios_base::failure("ReadVarInt(): size too large");
+            }
+            n++;
+        } else {
+            return n;
+        }
+    }
+}
+} // namespace verint
+
+/**
+ * Support for ADD_SERIALIZE_METHODS and LREADWRITE macro
+ */
+struct LCSerActionSerialize
+{
+    constexpr bool ForRead() const noexcept { return false; }
+};
+struct LCSerActionUnserialize
+{
+    constexpr bool ForRead() const noexcept { return true; }
+};
+
+/* for ADD_SERIALIZE_METHODS and LREADWRITE macro
+ * ::GetSerializeSize implementations
+ *
+ * Computing the serialized size of objects is done through a special stream
+ * object of type CSizeComputer, which only records the number of bytes written
+ * to it.
+ *
+ * If your Serialize or SerializationOp method has non-trivial overhead for
+ * serialization, it may be worthwhile to implement a specialized version for
+ * CSizeComputer, which uses the s.seek() method to record bytes that would
+ * be written instead.
+ */
+class CSizeComputer
+{
+protected:
+    size_t nSize;
+    const int nVersion;
+public:
+    explicit CSizeComputer(int nVersionIn) noexcept : nSize(0), nVersion(nVersionIn) {}
+
+    void write(const char *psz, size_t _nSize) noexcept {
+        this->nSize += _nSize;
+    }
+
+    /** Pretend _nSize bytes are written, without specifying them. */
+    void seek(size_t _nSize) noexcept {
+        this->nSize += _nSize;
+    }
+
+    template<typename T>
+    CSizeComputer &operator<<(const T &obj) {
+        ::Serialize(*this, obj);
+        return (*this);
+    }
+
+    size_t size() const noexcept {
+        return nSize;
+    }
+
+    int GetVersion() const noexcept { return nVersion; }
+};
+
+/*
+ * variable template many serialize
+ * for ADD_SERIALIZE_METHODS and LREADWRITE macro
+ */
+template<typename Stream>
+void SerializeMany(Stream &s) {(void)s;}
+template<typename Stream>
+inline void UnserializeMany(Stream &s) {(void)s;}
+
+template<typename Stream, typename Arg, typename... Args>
+void SerializeMany(Stream &s, const Arg &arg, const Args&... args) {
+    ::Serialize(s, arg);
+    ::SerializeMany(s, args...);
+}
+template<typename Stream, typename Arg, typename... Args>
+inline void UnserializeMany(Stream &s, Arg &&arg, Args&&... args) {
+    ::Unserialize(s, arg);
+    ::UnserializeMany(s, args...);
+}
+
+template<typename Stream, typename... Args>
+inline void SerReadWriteMany(Stream &s, LCSerActionSerialize ser_action, const Args&... args) {
+    ::SerializeMany(s, args...);
+}
+template<typename Stream, typename... Args>
+inline void SerReadWriteMany(Stream &s, LCSerActionUnserialize ser_action, Args&&... args) {
+    ::UnserializeMany(s, args...);
+}
+
+template<typename I>
+inline void WriteVarInt(CSizeComputer &s, I n) {
+    s.seek(varint::GetSizeOfVarInt<I>(n));
+}
+
+inline void WriteCompactSize(CSizeComputer &s, uint64_t nSize) {
+    s.seek(compact_size::manage::GetSizeOfCompactSize(nSize));
+}
+
+//template <typename T>
+//size_t GetSerializeSize(const T &t, int nVersion = 0) {
+//    return (CSizeComputer(nVersion) << t).size();
+//}
+
+template <typename... T>
+size_t GetSerializeSizeMany(int nVersion, const T&... t) {
+    CSizeComputer sc(nVersion);
+    ::SerializeMany(sc, t...);
+    return sc.size();
+}
+
 //
-// A, Support for IMPLEMENT_SERIALIZE and READWRITE macro
+// A, [for old core]
+// Support for IMPLEMENT_SERIALIZE and READWRITE macro
 //
 class CSerActionGetSerializeSize {};
 class CSerActionSerialize {};

@@ -4,7 +4,7 @@
 
 #ifndef SORACHANCOIN_QUANTUM_H
 #define SORACHANCOIN_QUANTUM_H
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)  // SorachanCoin-qt.pro
+#if defined(USE_QUANTUM) // SorachanCoin-qt.pro
 
 #include <memory>
 #include <assert.h>

@@ -12,8 +12,6 @@
  * integers representing 8 AES states.
  */
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/ctaes/ctaes.h>
 
 /* Slice variable slice_i contains the i'th bit of the 16 state variables in this order:
@@ -22,8 +20,6 @@
  *  8  9 10 11
  * 12 13 14 15
  */
-
-namespace latest_crypto {
 
 /** Convert a byte to sliced form, storing it corresponding to given row and column in s */
 static void LoadByte(AES_state* s, unsigned char byte, int r, int c) {
@@ -562,6 +558,3 @@ void AES256_decrypt(const AES256_ctx* ctx, size_t blocks, unsigned char* plain16
     }
 }
 
-} // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

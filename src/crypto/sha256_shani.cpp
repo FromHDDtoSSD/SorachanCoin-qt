@@ -6,8 +6,6 @@
 // Written and placed in public domain by Jeffrey Walton.
 // Based on code from Intel, and by Sean Gulley for the miTLS project.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #ifdef ENABLE_SHANI
 
 #include <stdint.h>
@@ -362,5 +360,3 @@ void Transform_2way(unsigned char* out, const unsigned char* in)
 } // namespace latest_crypto
 
 #endif
-
-#endif // LATEST_CRYPTO_ENABLE

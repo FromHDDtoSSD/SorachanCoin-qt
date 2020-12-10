@@ -4,7 +4,7 @@
 #include <string.h>
 #include <pbkdf2.h>
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
     // all pbkdf2.h
 #else
 uint32_t pbkdf2::be32dec(const void *pp)

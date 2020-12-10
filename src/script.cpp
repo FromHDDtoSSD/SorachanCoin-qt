@@ -1544,8 +1544,7 @@ bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype 
 
     // Scan templates
     const CScript &script1 = scriptPubKey;
-    BOOST_FOREACH(const PAIRTYPE(TxnOutputType::txnouttype, CScript)&tplate, mTemplates)
-    {
+    for(const std::pair<TxnOutputType::txnouttype, CScript> &tplate: mTemplates) {
         const CScript &script2 = tplate.second;
         vSolutionsRet.clear();
 

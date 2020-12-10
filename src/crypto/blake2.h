@@ -5,7 +5,7 @@
 #ifndef CRYPTO_BLAKE2_H
 #define CRYPTO_BLAKE2_H
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 # include <blake2.h>
 

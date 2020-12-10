@@ -42,7 +42,7 @@
     extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
 #else
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
     using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
     using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
     using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
@@ -156,7 +156,7 @@ uint256 bitscrypt::scrypt_nosalt(const void *input, size_t inputlen, void *scrat
     return result;
 }
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 uint65536 bitscrypt::scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad)
 {
     unsigned int *V;
@@ -216,7 +216,7 @@ uint256 bitscrypt::scrypt_blockhash(const void *input)
     return scrypt_nosalt(input, 80, scratchpad);
 }
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 uint65536 bitscrypt::scrypt_blockhash_65536(const void *input)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];

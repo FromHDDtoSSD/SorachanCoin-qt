@@ -7,11 +7,9 @@
 #ifndef BITCOIN_CRYPTO_AES_H
 #define BITCOIN_CRYPTO_AES_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
-//extern "C" {
+extern "C" {
 #include <crypto/ctaes/ctaes.h>
-//}
+}
 
 namespace latest_crypto {
 
@@ -120,7 +118,5 @@ private:
 };
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_AES_H

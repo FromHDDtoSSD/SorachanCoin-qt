@@ -46,7 +46,7 @@ void CRPCTable::WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry)
     entry.push_back(json_spirit::Pair("txid", wtx.GetHash().GetHex()));
     entry.push_back(json_spirit::Pair("time", (int64_t)wtx.GetTxTime()));
     entry.push_back(json_spirit::Pair("timereceived", (int64_t)wtx.nTimeReceived));
-    for(const PAIRTYPE(std::string, std::string) &item: wtx.mapValue)
+    for(const std::pair<std::string, std::string> &item: wtx.mapValue)
         entry.push_back(json_spirit::Pair(item.first, item.second));
 }
 
@@ -268,7 +268,7 @@ json_spirit::Value CRPCTable::getaddressesbyaccount(const json_spirit::Array &pa
 
     // Find all addresses that have the given account
     json_spirit::Array ret;
-    for(const PAIRTYPE(CBitcoinAddress, std::string)&item: entry::pwalletMain->mapAddressBook) {
+    for(const std::pair<CBitcoinAddress, std::string> &item: entry::pwalletMain->mapAddressBook) {
         const CBitcoinAddress &address = item.first;
         const std::string &strName = item.second;
         if (strName == strAccount)
@@ -522,7 +522,7 @@ json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &par
 }
 
 void CRPCTable::GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress) noexcept {
-    for(const PAIRTYPE(CBitcoinAddress, std::string)&item: entry::pwalletMain->mapAddressBook) {
+    for(const std::pair<CBitcoinAddress, std::string> &item: entry::pwalletMain->mapAddressBook) {
         const CBitcoinAddress &address = item.first;
         const std::string &strName = item.second;
         if (strName == strAccount)
@@ -644,10 +644,10 @@ json_spirit::Value CRPCTable::getbalance(const json_spirit::Array &params, CBitr
             std::list<std::pair<CBitcoinAddress, int64_t> > listSent;
             wtx.GetAmounts(allGeneratedImmature, allGeneratedMature, listReceived, listSent, allFee, strSentAccount, filter);
             if (wtx.GetDepthInMainChain() >= nMinDepth) {
-                for(const PAIRTYPE(CBitcoinAddress, int64_t) &r: listReceived)
+                for(const std::pair<CBitcoinAddress, int64_t> &r: listReceived)
                     nBalance += r.second;
             }
-            for(const PAIRTYPE(CBitcoinAddress, int64_t) &r: listSent)
+            for(const std::pair<CBitcoinAddress, int64_t> &r: listSent)
                 nBalance -= r.second;
 
             nBalance -= allFee;
@@ -985,7 +985,7 @@ json_spirit::Value CRPCTable::ListReceived(const json_spirit::Array &params, boo
     // Reply
     json_spirit::Array ret;
     std::map<std::string, tallyitem> mapAccountTally;
-    for(const PAIRTYPE(CBitcoinAddress, std::string) &item: entry::pwalletMain->mapAddressBook) {
+    for(const std::pair<CBitcoinAddress, std::string> &item: entry::pwalletMain->mapAddressBook) {
         const CBitcoinAddress &address = item.first;
         const std::string &strAccount = item.second;
         std::map<CBitcoinAddress, tallyitem>::iterator it = mapTally.find(address);
@@ -1093,7 +1093,7 @@ void CRPCTable::ListTransactions(const CWalletTx &wtx, const std::string &strAcc
 
     // Sent
     if ((!listSent.empty() || nFee != 0) && (fAllAccounts || strAccount == strSentAccount)) {
-        for(const PAIRTYPE(CBitcoinAddress, int64_t) &s: listSent) {
+        for(const std::pair<CBitcoinAddress, int64_t> &s: listSent) {
             json_spirit::Object entry;
             entry.push_back(json_spirit::Pair("account", strSentAccount));
             if(involvesWatchonly || (Script_util::IsMine(*entry::pwalletMain, s.first) & MINE_WATCH_ONLY))
@@ -1116,7 +1116,7 @@ void CRPCTable::ListTransactions(const CWalletTx &wtx, const std::string &strAcc
 
     // Received
     if (listReceived.size() > 0 && wtx.GetDepthInMainChain() >= nMinDepth) {
-        for(const PAIRTYPE(CBitcoinAddress, int64_t) &r: listReceived) {
+        for(const std::pair<CBitcoinAddress, int64_t> &r: listReceived) {
             std::string account;
             if (entry::pwalletMain->mapAddressBook.count(r.first))
                 account = entry::pwalletMain->mapAddressBook[r.first];
@@ -1258,7 +1258,7 @@ json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBi
     }
 
     std::map<std::string, int64_t> mapAccountBalances;
-    for(const PAIRTYPE(CBitcoinAddress, std::string)&entry: entry::pwalletMain->mapAddressBook) {
+    for(const std::pair<CBitcoinAddress, std::string> &entry: entry::pwalletMain->mapAddressBook) {
         if (Script_util::IsMine(*entry::pwalletMain, entry.first))    // This address belongs to me
             mapAccountBalances[entry.second] = 0;
     }
@@ -1270,12 +1270,12 @@ json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBi
         std::list<std::pair<CBitcoinAddress, int64_t> > listSent;
         wtx.GetAmounts(nGeneratedImmature, nGeneratedMature, listReceived, listSent, nFee, strSentAccount, includeWatchonly);
         mapAccountBalances[strSentAccount] -= nFee;
-        for(const PAIRTYPE(CBitcoinAddress, int64_t) &s: listSent)
+        for(const std::pair<CBitcoinAddress, int64_t> &s: listSent)
             mapAccountBalances[strSentAccount] -= s.second;
 
         if (wtx.GetDepthInMainChain() >= nMinDepth) {
             mapAccountBalances[""] += nGeneratedMature;
-            for(const PAIRTYPE(CBitcoinAddress, int64_t) &r: listReceived) {
+            for(const std::pair<CBitcoinAddress, int64_t> &r: listReceived) {
                 if (entry::pwalletMain->mapAddressBook.count(r.first))
                     mapAccountBalances[entry::pwalletMain->mapAddressBook[r.first]] += r.second;
                 else
@@ -1290,7 +1290,7 @@ json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBi
         mapAccountBalances[entry.strAccount] += entry.nCreditDebit;
 
     json_spirit::Object ret;
-    for(const PAIRTYPE(std::string, int64_t)&accountBalance: mapAccountBalances)
+    for(const std::pair<std::string, int64_t> &accountBalance: mapAccountBalances)
         ret.push_back(json_spirit::Pair(accountBalance.first, ValueFromAmount(accountBalance.second)));
 
     return data.JSONRPCSuccess(ret);

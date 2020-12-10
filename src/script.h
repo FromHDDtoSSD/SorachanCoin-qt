@@ -1,20 +1,25 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
+// SorachanCoin:
+// script.h: for old core, random wallet
+
+// note: script require throw.
+
 #ifndef H_BITCOIN_SCRIPT
 #define H_BITCOIN_SCRIPT
 
 #include <string>
 #include <vector>
 #include <prevector/prevector.h>
+#include <script/scriptnum.h>
 
-#include <boost/foreach.hpp>
-
-#include "keystore.h"
-#include "bignum.h"
-#include "base58.h"
+#include <keystore.h>
+#include <bignum.h>
+#include <base58.h>
 
 template <typename T> class CTransaction_impl;
 using CTransaction = CTransaction_impl<uint256>;
@@ -22,7 +27,7 @@ class CBitcoinAddress;
 
 namespace Script_param
 {
-    const unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
+    constexpr unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 
     //
     // Strict verification:
@@ -44,7 +49,7 @@ namespace Script_param
     // * force DER encoding;
     // * force low S;
     // * ensure that CHECKMULTISIG dummy argument is null.
-    const unsigned int STRICT_FORMAT_FLAGS = SCRIPT_VERIFY_STRICTENC | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_NULLDUMMY;
+    constexpr unsigned int STRICT_FORMAT_FLAGS = SCRIPT_VERIFY_STRICTENC | SCRIPT_VERIFY_LOW_S | SCRIPT_VERIFY_NULLDUMMY;
 
     // Mandatory script verification flags that all new blocks must comply with for
     // them to be valid. (but old blocks may not comply with) Currently just P2SH,
@@ -52,11 +57,11 @@ namespace Script_param
     // strict DER encoding.
     //
     // Failing one of these tests may trigger a DoS ban - see ConnectInputs() for details.
-    const unsigned int MANDATORY_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH;
+    constexpr unsigned int MANDATORY_SCRIPT_VERIFY_FLAGS = SCRIPT_VERIFY_P2SH;
 
     // Standard script verification flags that standard transactions will comply
     // with. However scripts violating these flags may still be present in valid blocks and we must accept those blocks.
-    const unsigned int STRICT_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS | STRICT_FORMAT_FLAGS;
+    constexpr unsigned int STRICT_FLAGS = MANDATORY_SCRIPT_VERIFY_FLAGS | STRICT_FORMAT_FLAGS;
 
     //
     // Signature hash types/flags
@@ -80,7 +85,7 @@ enum isminetype
     MINE_SPENDABLE = 2,
     MINE_ALL = MINE_WATCH_ONLY | MINE_SPENDABLE
 };
-typedef uint8_t isminefilter;
+using isminefilter = uint8_t;
 
 //
 // TxnOutputType
@@ -258,52 +263,66 @@ namespace ScriptOpcodes
 // Serialized script, used inside transaction inputs and outputs
 //
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> script_vector;
-typedef prevector<PREVECTOR_N, prevector<PREVECTOR_N, uint8_t> > stack_vector;
+using script_vector = prevector<PREVECTOR_N, uint8_t>;
+using stack_vector = prevector<PREVECTOR_N, prevector<PREVECTOR_N, uint8_t> >;
 #else
-typedef std::vector<uint8_t> script_vector;
-typedef std::vector<std::vector<uint8_t> > stack_vector;
+using script_vector = std::vector<uint8_t>;
+using stack_vector = std::vector<std::vector<uint8_t> >;
 #endif
-class CScript : public script_vector
+class CScript final : public script_vector
 {
 private:
     static std::string ValueString(const script_vector &vch) {
-        if (vch.size() <= 4) {
+        if (vch.size() <= 4)
             return strprintf("%d", CBigNum(vch).getint32());
-        } else {
+        else
             return util::HexStr(vch);
-        }
     }
 
     static std::string StackString(const stack_vector &vStack) {
         std::string str;
-        BOOST_FOREACH(const script_vector &vch, vStack)
-        {
-            if (! str.empty()) {
+        for(const script_vector &vch: vStack) {
+            if (! str.empty())
                 str += " ";
-            }
             str += ValueString(vch);
         }
         return str;
     }
 
 protected:
-    CScript &push_int64(int64_t n) {
+    CScript &push_int64(int64_t n) { // OP_1NEGATE, OP_1 - OP_16 or OP_PUSHDATA1 - OP_PUSHDATA4
         if (n == -1 || (n >= 1 && n <= 16)) {
             push_back((uint8_t)n + (ScriptOpcodes::OP_1 - 1));
+        } else if (n == 0) {
+            push_back(ScriptOpcodes::OP_0);
         } else {
+            /* SorachanCoin: checked.
+            debugcs::instance() << "CScript: CBigNum == CScriptNum: checking ..." << debugcs::endl();
             CBigNum bn(n);
-            *this << bn.getvch();
+            bignum_vector vch = bn.getvch();
+            script_vector sv = CScriptNum::serialize(n);
+            for(int i=0; i<vch.size(); ++i) {
+                char buf[128];
+                ::sprintf(buf, "%d", vch[i]);
+                debugcs::instance() << "CScript::push_int64(CBigNum): " << buf << debugcs::endl();
+                ::sprintf(buf, "%d", sv[i]);
+                debugcs::instance() << "CScript::push_int64(CScriptNum): " << buf << debugcs::endl();
+                assert(vch[i] == sv[i]);
+            }
+            */
+
+            *this << CScriptNum::serialize(n);
         }
         return *this;
     }
 
-    CScript &push_uint64(uint64_t n) {
+    CScript &push_uint64(uint64_t n) { // [used: miner.cpp] OP_1 - OP_16 or OP_PUSHDATA1 - OP_PUSHDATA4
         if (n >= 1 && n <= 16) {
             push_back((uint8_t)n + (ScriptOpcodes::OP_1 - 1));
+        } else if (n == 0) {
+            push_back(ScriptOpcodes::OP_0);
         } else {
-            CBigNum bn(n);
-            *this << bn.getvch();
+            *this << CScriptNum::serialize(n);
         }
         return *this;
     }
@@ -320,7 +339,18 @@ public:
         insert(end(), b.begin(), b.end());
         return *this;
     }
-    operator std::vector<unsigned char>() const {
+
+    friend CScript operator+(const CScript &a, const CScript &b) {
+        CScript ret = a;
+        ret += b;
+        return ret;
+    }
+
+    IMPLEMENT_SERIALIZE(
+        READWRITE(*this);
+    )
+
+    operator std::vector<unsigned char>() const { // convert from prevector to std::vector<unsigned char>
         std::vector<unsigned char> obj(this->begin(), this->end());
         return obj;
     }
@@ -360,72 +390,64 @@ public:
 
     CScript &operator<<(const uint160 &b) {
         insert(end(), sizeof(b));
-        insert(end(), (uint8_t*)&b, (uint8_t*)&b + sizeof(b));
+        insert(end(), (uint8_t *)&b, (uint8_t *)&b + sizeof(b));
         return *this;
     }
 
     CScript &operator<<(const uint256 &b) {
         insert(end(), sizeof(b));
-        insert(end(), (uint8_t*)&b, (uint8_t*)&b + sizeof(b));
+        insert(end(), (uint8_t *)&b, (uint8_t *)&b + sizeof(b));
         return *this;
     }
 
-    //
-    // It has to operate "CScript &operator<<(const script_vector &)".
-    // No directly insert with data. (NG: insert( ... ))
-    //
+    CScript &operator<<(const uint65536 &b) {
+        script_vector vch(BEGIN(b), END(b));
+        return (*this) << vch;
+    }
+
     CScript &operator<<(const CPubKey &key) {
         script_vector vchKey(key.begin(), key.end());
         return (*this) << vchKey;
     }
 
     CScript &operator<<(const CBigNum &b) {
-        (*this) << b.getvch();
-        return *this;
+        return (*this) << b.getvch();
+    }
+
+    CScript &operator<<(const CScriptNum &b) {
+        return (*this) << b.getvch();
     }
 
     CScript &operator<<(const script_vector &b) {
-        if (b.size() < ScriptOpcodes::OP_PUSHDATA1) {
+        if (b.size() < ScriptOpcodes::OP_PUSHDATA1) { // escp256k1 pubkey size: below 75 byte.
             insert(end(), (uint8_t)b.size());
         } else if (b.size() <= 0xff) {
             insert(end(), ScriptOpcodes::OP_PUSHDATA1);
             insert(end(), (uint8_t)b.size());
         } else if (b.size() <= 0xffff) {
             insert(end(), ScriptOpcodes::OP_PUSHDATA2);
-            uint16_t nSize = (uint16_t) b.size();
+            uint16_t nSize = (uint16_t)b.size();
             insert(end(), (uint8_t *)&nSize, (uint8_t *)&nSize + sizeof(nSize));
         } else {
             insert(end(), ScriptOpcodes::OP_PUSHDATA4);
-            uint32_t nSize = (uint32_t) b.size();
+            uint32_t nSize = (uint32_t)b.size();
             insert(end(), (uint8_t *)&nSize, (uint8_t *)&nSize + sizeof(nSize));
         }
         insert(end(), b.begin(), b.end());
         return *this;
     }
 
-    friend CScript operator+(const CScript &a, const CScript &b) {
-        CScript ret = a;
-        ret += b;
-        return ret;
-    }
+    // I'm not sure if this should push the script or concatenate scripts.
+    // If there's ever a use for pushing a script onto a script, delete this member fn
+    // CScript a, b;
+    // NG: a << b
+    // OK: a += b
+    CScript &operator<<(const CScript &b)=delete;
 
-    CScript &operator<<(const CScript &b) {
-        //
-        // I'm not sure if this should push the script or concatenate scripts.
-        // If there's ever a use for pushing a script onto a script, delete this member fn
-        // 
-        // CScript a, b;
-        // NG: a << b
-        // OK: a += b
-        //
-        assert(!"Warning: Pushing a CScript onto a CScript with << is probably not intended, use + to concatenate!");
-        return *this;
-    }
-
+    //
+    // Wrapper so it can be called with either iterator or const_iterator
+    //
     bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) {
-         //
-         // Wrapper so it can be called with either iterator or const_iterator
-         //
          const_iterator pc2 = pc;
          bool fRet = GetOp2(pc2, opcodeRet, &vchRet);
          pc = begin() + (pc2 - begin());
@@ -434,7 +456,7 @@ public:
 
     bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet) {
          const_iterator pc2 = pc;
-         bool fRet = GetOp2(pc2, opcodeRet, NULL);
+         bool fRet = GetOp2(pc2, opcodeRet, nullptr);
          pc = begin() + (pc2 - begin());
          return fRet;
     }
@@ -444,7 +466,7 @@ public:
     }
 
     bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet) const {
-        return GetOp2(pc, opcodeRet, NULL);
+        return GetOp2(pc, opcodeRet, nullptr);
     }
 
     bool GetOp2(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector *pvchRet) const {
@@ -459,7 +481,7 @@ public:
 
         // Read instruction
         if (end() - pc < 1) {
-            debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure A." << debugcs::endl();
+            //debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure A." << debugcs::endl();
             return false;
         }
         uint32_t opcode = *pc++;
@@ -471,27 +493,27 @@ public:
                 nSize = opcode;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA1) {
                 if (end() - pc < 1) {
-                    debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure B." << debugcs::endl();
+                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure B." << debugcs::endl();
                     return false;
                 }
                 nSize = *pc++;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA2) {
                 if (end() - pc < 2) {
-                    debugcs::instance() << "CScript_GetOp2 end() - pc < 2 Failure." << debugcs::endl();
+                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 2 Failure." << debugcs::endl();
                     return false;
                 }
                 ::memcpy(&nSize, &pc[0], 2);
                 pc += 2;
             } else if (opcode == ScriptOpcodes::OP_PUSHDATA4) {
                 if (end() - pc < 4) {
-                    debugcs::instance() << "CScript_GetOp2 end() - pc < 4 Failure." << debugcs::endl();
+                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 4 Failure." << debugcs::endl();
                     return false;
                 }
                 ::memcpy(&nSize, &pc[0], 4);
                 pc += 4;
             }
             if (end() - pc < 0 || (uint32_t)(end() - pc) < nSize) {
-                debugcs::instance() << "CScript_GetOp2 check Failure. end() - pc: " << end() - pc << " / nSize: " << nSize << debugcs::endl();
+                //debugcs::instance() << "CScript_GetOp2 check Failure. end() - pc: " << end() - pc << " / nSize: " << nSize << debugcs::endl();
                 return false;
             }
             if (pvchRet) {
@@ -719,4 +741,4 @@ public:
 // isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest);    // unused: CTxDestination -> CBitcoinAddress (A CTxDestination is the internal data type encoded in a CBitcoinAddress)
 
 #endif
-//@
+

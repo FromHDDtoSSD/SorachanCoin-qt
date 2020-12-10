@@ -459,15 +459,13 @@ bool CTxDB::LoadBlockIndex()
     // Calculate nChainTrust
     std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(block_info::mapBlockIndex.size());
-    BOOST_FOREACH(const PAIRTYPE(uint256, CBlockIndex *)&item, block_info::mapBlockIndex)
-    {
+    for(const std::pair<uint256, CBlockIndex *>&item: block_info::mapBlockIndex) {
         CBlockIndex *pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
 
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
-    BOOST_FOREACH(const PAIRTYPE(int, CBlockIndex *)&item, vSortedByHeight)
-    {
+    for(const std::pair<int, CBlockIndex *>&item: vSortedByHeight) {
         CBlockIndex *pindex = item.second;
         pindex->set_nChainTrust((pindex->get_pprev() ? pindex->get_pprev()->get_nChainTrust() : 0) + pindex->GetBlockTrust());
 

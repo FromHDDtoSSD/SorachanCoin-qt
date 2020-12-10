@@ -7,12 +7,8 @@
 #ifndef _CTAES_H_
 #define _CTAES_H_ 1
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdint.h>
 #include <stdlib.h>
-
-namespace latest_crypto {
 
 typedef struct {
     uint16_t slice[8];
@@ -41,9 +37,5 @@ void AES192_decrypt(const AES192_ctx* ctx, size_t blocks, unsigned char* plain16
 void AES256_init(AES256_ctx* ctx, const unsigned char* key32);
 void AES256_encrypt(const AES256_ctx* ctx, size_t blocks, unsigned char* cipher16, const unsigned char* plain16);
 void AES256_decrypt(const AES256_ctx* ctx, size_t blocks, unsigned char* plain16, const unsigned char* cipher16);
-
-} // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif

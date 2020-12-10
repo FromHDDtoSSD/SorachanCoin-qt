@@ -100,11 +100,9 @@ USE_PREVECTOR_S=1
 # OPTION USE
 #
 # QUANTUM: LamportSignature, CQHASH65536 (later Ver2, must be using!)
-# LATEST_CRYPTO: later Ver2, must be using!
 # KNOWLEDGE_DB: Blockchain Database (with the "blockchain mini filesystem" library, optional)
 #
 USE_QUANTUM=1
-USE_LATEST_CRYPTO=1
 USE_KNOWLEDGE_DB=-
 
 #
@@ -353,17 +351,6 @@ contains(USE_QUANTUM, -) {
 }
 
 #
-# use: qmake "USE_LATEST_CRYPTO=1" (using new core)
-#  or: qmake "USE_LATEST_CRYPTO=0" (using old core)
-#
-contains(USE_LATEST_CRYPTO, -) {
-    message(Building without LatestCrypto support)
-} else {
-    message(Building with LatestCrypto support)
-    DEFINES += LATEST_CRYPTO_ENABLE
-}
-
-#
 # use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)
 #  or: qmake "USE_KNOWLEDGE_DB=0" (disabled by default; default)
 #  or: qmake "USE_KNOWLEDGE_DB=-" (not supported)
@@ -522,7 +509,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/crypto/hmac_sha256.h \
     src/crypto/hmac_sha512.h \
     src/crypto/ripemd160.h \
-    src/crypto/scrypt.h \
+    #src/crypto/_scrypt.h \
     src/crypto/sha1.h \
     src/crypto/sha256.h \
     src/crypto/sha512.h \
@@ -555,6 +542,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/rpc/bitcoinrpc.h \
     src/allocator/qtsecure.h \
     src/bip32/hdchain.h \
+    src/bip32/hdwalletutil.h \
     src/key/pubkey.h \
     src/key/privkey.h \
     src/cleanse/cleanse.h \
@@ -563,7 +551,17 @@ HEADERS += src/qt/bitcoingui.h \
     src/util/tinyformat.h \
     src/util/logging.h \
     src/util/strencodings.h \
+    src/util/memory.h \
+    src/util/system.h \
+    src/util/args.h \
     src/thread/threadsafety.h \
+    src/address/bech32.h \
+    src/const/chainparamsbase.h \
+    src/const/chainparams.h \
+    src/const/attributes.h \
+    src/const/assumptions.h \
+    src/script/lscript.h \
+    src/script/scriptnum.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -664,26 +662,26 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/compat/glibc_compat.cpp \
     src/compat/glibc_sanity.cpp \
     src/compat/glibcxx_sanity.cpp \
-    src/crypto/ctaes/cr_bench.cpp \
-    src/crypto/ctaes/cr_ctaes.cpp \
-    src/crypto/ctaes/cr_test.cpp \
-    src/crypto/cr_aes.cpp \
-    src/crypto/cr_chacha20.cpp \
-    src/crypto/cr_hmac_sha256.cpp \
-    src/crypto/cr_hmac_sha512.cpp \
-    src/crypto/cr_ripemd160.cpp \
-    src/crypto/cr_scrypt.cpp \
-    src/crypto/cr_scrypt-sse2.cpp \
-    src/crypto/cr_sha1.cpp \
-    src/crypto/cr_sha256.cpp \
-    src/crypto/cr_sha256_avx2.cpp \
-    src/crypto/cr_sha256_shani.cpp \
-    src/crypto/cr_sha256_sse4.cpp \
-    src/crypto/cr_sha256_sse41.cpp \
-    src/crypto/cr_sha512.cpp \
-    src/crypto/cr_qhash65536.cpp \
-    src/crypto/cr_blake2.cpp \
-    src/crypto/cr_hmac_qhash65536.cpp \
+    src/crypto/ctaes/ctaes.c \
+    src/crypto/ctaes/ctaestest.cpp \
+    #src/crypto/ctaes/_bench.cpp \
+    src/crypto/aes.cpp \
+    src/crypto/chacha20.cpp \
+    src/crypto/hmac_sha256.cpp \
+    src/crypto/hmac_sha512.cpp \
+    src/crypto/ripemd160.cpp \
+    #src/crypto/_scrypt.cpp \
+    #src/crypto/_scrypt-sse2.cpp \
+    src/crypto/sha1.cpp \
+    src/crypto/sha256.cpp \
+    src/crypto/sha256_avx2.cpp \
+    src/crypto/sha256_shani.cpp \
+    src/crypto/sha256_sse4.cpp \
+    src/crypto/sha256_sse41.cpp \
+    src/crypto/sha512.cpp \
+    src/crypto/qhash65536.cpp \
+    src/crypto/blake2.cpp \
+    src/crypto/hmac_qhash65536.cpp \
     src/univalue/univalue.cpp \
     src/univalue/univalue_get.cpp \
     src/univalue/univalue_read.cpp \
@@ -717,7 +715,14 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/util/time.cpp \
     src/util/logging.cpp \
     src/util/strencodings.cpp \
+    src/util/system.cpp \
+    src/util/args.cpp \
     src/file_operate/fs.cpp \
+    src/address/bech32.cpp \
+    src/const/chainparamsbase.cpp \
+    src/const/chainparams.cpp \
+    src/bip32/hdwalletutil.cpp \
+    src/script/lscript.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp

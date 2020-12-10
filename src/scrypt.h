@@ -20,13 +20,13 @@ private:
     static uint256 scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad);
     static uint256 scrypt_hash(const void *input, size_t inputlen);
     static uint256 scrypt_salted_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen);
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
     static uint65536 scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad);
 #endif
     static uint256 scrypt_salted_multiround_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen, const unsigned int nRounds);
 public:
     static uint256 scrypt_blockhash(const void *input);
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
     static uint65536 scrypt_blockhash_65536(const void *input);
 #endif
 };

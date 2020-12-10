@@ -2,7 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 #include <bitset>
 #include <thread>
@@ -495,7 +495,6 @@ private:
         _bench_func("[vector] std_check() Deseria Tri", &check_prevector::StdvectorDeserializeTrivial, 3, 3);
         _bench_func("[vector] std_check() Deseria Nontri", &check_prevector::StdvectorDeserializeNontrivial, 3, 3);
 
-#ifdef LATEST_CRYPTO_ENABLE
         _bench_func("[vector] prevector_s_check() Des Tri", &check_prevector::Prevector_s_DestructorTrivial, 1, 1);
         _bench_func("[vector] prevector_s_check() Des Nontri", &check_prevector::Prevector_s_DestructorNontrivial, 1, 1);
         _bench_func("[vector] prevector_s_check() Cle Tri", &check_prevector::Prevector_s_ClearTrivial, 1, 1);
@@ -504,14 +503,11 @@ private:
         _bench_func("[vector] prevector_s_check() Res Nontri", &check_prevector::Prevector_s_ResizeNontrivial, 1, 1);
         _bench_func("[vector] prevector_s_check() Deseria Tri", &check_prevector::Prevector_s_DeserializeTrivial, 1, 1);
         _bench_func("[vector] prevector_s_check() Deseria Nontri", &check_prevector::Prevector_s_DeserializeNontrivial, 1, 1);
-#endif
 
         _bench_func("[vector] prevector_check() Assertcheck Tri", &check_prevector::PrevectorAssertcheckTrivial, 1, 1);
         _bench_func("[vector] prevector_check() Assertcheck Nontri", &check_prevector::PrevectorAssertcheckNontrivial, 1, 1);
-#ifdef LATEST_CRYPTO_ENABLE
         _bench_func("[vector] prevector_s_check() Assertcheck Tri", &check_prevector::Prevector_s_AssertcheckTrivial, 1, 1);
         _bench_func("[vector] prevector_s_check() Assertcheck Nontri", &check_prevector::Prevector_s_AssertcheckNontrivial, 1, 1);
-#endif
 
         _bench_func("[secure vector] secure_vector_check() Assertcheck Tri", &check_prevector::SecurevectorAssertcheckTrivial);
         _bench_func("[secure vector] secure_vector_check() Assertcheck Nontri", &check_prevector::SecurevectorAssertcheckNontrivial);
@@ -519,7 +515,6 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked vector" << debugcs::endl();
     }
 
-#ifdef LATEST_CRYPTO_ENABLE
     static void aes_check() noexcept {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the crypto testing ..." << debugcs::endl();
 
@@ -530,7 +525,6 @@ private:
 
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked crypto" << debugcs::endl();
     }
-#endif
 
     static void memory_check() noexcept {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the memory testing ..." << debugcs::endl();
@@ -540,7 +534,6 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked memory" << debugcs::endl();
     }
 
-#ifdef LATEST_CRYPTO_ENABLE
     static void hash_check() noexcept {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the hash testing ..." << debugcs::endl();
 
@@ -552,7 +545,6 @@ private:
 
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked blake2 and lamport" << debugcs::endl();
     }
-#endif
 
     static void json_check() noexcept {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the JSON testing ..." << debugcs::endl();
@@ -571,13 +563,13 @@ private:
 #ifdef PREVECTOR_CHECK
             prevector_check<PREVECTOR_N, uint8_t>(10, 300);
 #endif
-#if defined(AES_CHECK) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(AES_CHECK)
             aes_check();
 #endif
 #ifdef MEMORY_CHECK
             memory_check();
 #endif
-#if defined(HASH_CHECK) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(HASH_CHECK)
             hash_check();
 #endif
 #ifdef JSON_CHECK

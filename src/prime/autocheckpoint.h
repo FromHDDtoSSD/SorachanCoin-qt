@@ -5,7 +5,7 @@
 #ifndef SORACHANCOIN_AUTO_CHECKPOINT_H
 #define SORACHANCOIN_AUTO_CHECKPOINT_H
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 #include <stdint.h>
 #include <map>
@@ -111,6 +111,6 @@ public:
 };
 using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
 
-#endif // defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#endif // defined(USE_QUANTUM)
 
 #endif // SORACHANCOIN_AUTO_CHECKPOINT_H

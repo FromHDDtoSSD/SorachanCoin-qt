@@ -148,7 +148,7 @@ bool block_notify::IsInitialBlockDownload()
 
 template <typename T>
 uint256 CBlockHeader_impl<T>::GetHash() const { // todo: from uint256 to T (please replace bitscrypt to T)
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
     // debug
     //uint65536 tt = bitscrypt::scrypt_blockhash_65536((const uint8_t *)this);
     //assert(0 < tt);

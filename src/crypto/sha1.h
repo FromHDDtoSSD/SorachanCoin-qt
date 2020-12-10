@@ -5,8 +5,6 @@
 #ifndef BITCOIN_CRYPTO_SHA1_H
 #define BITCOIN_CRYPTO_SHA1_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -30,7 +28,5 @@ public:
 };
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_SHA1_H

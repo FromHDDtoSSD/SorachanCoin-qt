@@ -7,7 +7,7 @@
 #include <cleanse/cleanse.h>
 #include <stdint.h>
 
-# if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+# if defined(USE_QUANTUM)
 template <typename T>
 class pbkdf2_impl
 {

@@ -5,7 +5,7 @@
 #ifndef SORACHANCOIN_QHASH65536_H
 #define SORACHANCOIN_QHASH65536_H
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 # include <quantum/quantum.h>
 

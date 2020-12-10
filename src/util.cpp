@@ -12,6 +12,7 @@
 #include <boost/algorithm/string/case_conv.hpp> // for to_lower()
 #include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <thread/threadsafety.h>
+//#include <util/logging.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
@@ -105,67 +106,6 @@ bool_arg args_bool::fLogTimestamps(false);
 bool_arg args_bool::fReopenDebugLog(false);
 unsigned int args_uint::nNodeLifespan = 0;
 CMedianFilter<int64_t> bitsystem::vTimeOffsets(200,0);
-
-/* instead of random/random.cpp class RNGState
-class CInit
-{
-private:
-    static CInit instance_of_cinit;
-private:
-    CInit(const CInit &)=delete;
-    CInit &operator=(const CInit &)=delete;
-    CInit &operator=(const CInit &&)=delete;
-
-    // Init OpenSSL library multithreading support
-    static CCriticalSection *pmutexOpenSSL;
-
-    static void locking_callback(int mode, int i, const char *file, int line) {
-        if (mode & CRYPTO_LOCK) {
-            ENTER_CRITICAL_SECTION(pmutexOpenSSL[i]);
-        } else {
-            LEAVE_CRITICAL_SECTION(pmutexOpenSSL[i]);
-        }
-    }
-
-private:
-    CInit() {
-        // Init OpenSSL library multithreading support
-        pmutexOpenSSL = (CCriticalSection *)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(CCriticalSection));
-        if(! pmutexOpenSSL) {
-            throw std::runtime_error("CInit OPENSSL_malloc allocate failure.");
-        }
-
-        for (int i = 0; i < ::CRYPTO_num_locks(); ++i)
-        {
-            new(pmutexOpenSSL + i) CCriticalSection;
-        }
-        ::CRYPTO_set_locking_callback(locking_callback);
-
-#ifdef WIN32
-        // Seed random number generator with screen scrape and other hardware sources
-        //::RAND_screen(); // case OpenSSL
-        ::RAND_poll();
-#endif
-
-        // Seed random number generator with performance counter
-        seed::RandAddSeed();
-    }
-
-    ~CInit() {
-        // Shutdown OpenSSL library multithreading support
-        ::CRYPTO_set_locking_callback(nullptr);
-        for (int i = 0; i < ::CRYPTO_num_locks(); ++i)
-        {
-            (pmutexOpenSSL + i)->~CCriticalSection();
-        }
-        OPENSSL_free(pmutexOpenSSL);
-    }
-};
-CCriticalSection *CInit::pmutexOpenSSL = nullptr;
-CInit CInit::instance_of_cinit;
-*/
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void seed::RandAddSeed()
 {
@@ -393,6 +333,65 @@ void init::InterpretNegativeSetting(std::string name, std::map<std::string, std:
     }
 }
 
+//
+// old core: map_arg
+//
+std::string map_arg::GetArg(const std::string &strArg, const std::string &strDefault) {
+    if (mapArgs.count(strArg)) {
+        return mapArgs[strArg];
+    }
+    return strDefault;
+}
+
+int64_t map_arg::GetArg(const std::string &strArg, int64_t nDefault) {
+    if (mapArgs.count(strArg)) {
+        return ::atoi64(mapArgs[strArg]);
+    }
+    return nDefault;
+}
+
+int32_t map_arg::GetArgInt(const std::string &strArg, int32_t nDefault) {
+    if (mapArgs.count(strArg)) {
+        return ::strtol(mapArgs[strArg]);
+    }
+    return nDefault;
+}
+
+uint32_t map_arg::GetArgUInt(const std::string &strArg, uint32_t nDefault) {
+    if (mapArgs.count(strArg)) {
+        return ::strtoul(mapArgs[strArg]);
+    }
+    return nDefault;
+}
+
+bool map_arg::GetBoolArg(const std::string &strArg, bool fDefault /*= false*/) {
+    if (mapArgs.count(strArg)) {
+        if (mapArgs[strArg].empty()) {
+            return true;
+        }
+        return (::atoi(mapArgs[strArg]) != 0);
+    }
+    return fDefault;
+}
+
+bool map_arg::SoftSetArg(const std::string &strArg, const std::string &strValue) {
+    if (mapArgs.count(strArg) || mapMultiArgs.count(strArg)) {
+        return false;
+    }
+    mapArgs[strArg] = strValue;
+    mapMultiArgs[strArg].push_back(strValue);
+    return true;
+}
+
+bool map_arg::SoftSetBoolArg(const std::string &strArg, bool fValue) {
+    if (fValue) {
+        return map_arg::SoftSetArg(strArg, std::string("1"));
+    }
+    else {
+        return map_arg::SoftSetArg(strArg, std::string("0"));
+    }
+}
+
 void map_arg::ParseParameters(int argc, const char *const argv[])
 {
     mapArgs.clear();
@@ -421,8 +420,7 @@ void map_arg::ParseParameters(int argc, const char *const argv[])
     }
 
     // New 0.6 features:
-    BOOST_FOREACH(const PAIRTYPE(std::string,std::string) &entry, mapArgs)
-    {
+    for(const std::pair<std::string,std::string> &entry: mapArgs) {
         std::string name = entry.first;
 
         //  interpret --foo as -foo (as long as both are not set)
@@ -798,8 +796,7 @@ std::string dump::EncodeDumpTime(int64_t nTime) {
 std::string dump::EncodeDumpString(const std::string &str) {
     std::stringstream ret;
 
-    BOOST_FOREACH(unsigned char c, str)
-    {
+    for(unsigned char c: str) {
         if (c <= 32 || c >= 128 || c == '%') {
             ret << '%' << util::HexStr(&c, &c + 1);
         } else {
@@ -1145,8 +1142,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
                 bool fMatch = false;
 
                 // If nobody has a time different than ours but within 5 minutes of ours, give a warning
-                BOOST_FOREACH(int64_t nOffset, vSorted)
-                {
+                for(int64_t nOffset: vSorted) {
                     if (nOffset != 0 && util::abs64(nOffset) < 5 * 60) {
                         fMatch = true;
                     }
@@ -1162,8 +1158,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
             }
         }
         if (args_bool::fDebug) {
-            BOOST_FOREACH(int64_t n, vSorted)
-            {
+            for(int64_t n: vSorted) {
                 printf("%+" PRId64 "  ", n);
             }
             printf("|  ");

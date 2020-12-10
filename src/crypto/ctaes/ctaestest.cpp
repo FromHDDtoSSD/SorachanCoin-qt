@@ -4,18 +4,18 @@
 * file COPYING or http://www.opensource.org/licenses/mit-license.php.*
 **********************************************************************/
 
-//
+// SorachanCoin:
 // test for quantum/quantum.cpp
-//
-
-#ifdef LATEST_CRYPTO_ENABLE
-
-#include "ctaes.h"
+// adding C++ namespace
 
 #include <stdio.h>
 #include <string.h>
 #include <assert.h>
 #include <debugcs/debugcs.h>
+
+extern "C" {
+#include <crypto/ctaes/ctaes.h>
+}
 
 namespace latest_crypto {
 
@@ -119,5 +119,3 @@ int check_all_aes() {
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

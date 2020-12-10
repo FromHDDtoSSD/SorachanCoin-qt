@@ -27,8 +27,6 @@
  * online backup system.
  */
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #if defined(USE_SSE2)
 
 #include <crypto/scrypt.h>
@@ -145,5 +143,3 @@ void scrypt_1024_1_1_256_sp_sse2(const char *input, char *output, char *scratchp
 } // namespace latest_crypto
 
 #endif // USE_SSE2
-
-#endif // LATEST_CRYPTO_ENABLE

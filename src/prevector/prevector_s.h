@@ -6,7 +6,7 @@
 
 #ifndef _BITCOIN_PREVECTOR_S_H_
 #define _BITCOIN_PREVECTOR_S_H_
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 #include <cassert>
 #include <cstdint>

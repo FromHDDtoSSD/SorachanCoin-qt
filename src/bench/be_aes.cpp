@@ -6,13 +6,14 @@
 
 // Copyright (c) 2018-2020 The SorachanCoin developers
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdio.h>
 #include <math.h>
-#include <crypto/ctaes/ctaes.h>
 #include <bench/bench.h>
 #include <compat/sanity.h>
+
+extern "C" {
+#include <crypto/ctaes/ctaes.h>
+}
 
 namespace latest_crypto {
 
@@ -180,4 +181,3 @@ AES_TEST(AES256, 50000)
 
 } // namespace latest_crypto
 
-#endif // LATEST_CRYPTO_ENABLE

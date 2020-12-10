@@ -58,8 +58,7 @@ public:
         
         {
             LOCK(wallet->cs_wallet);
-            BOOST_FOREACH(const PAIRTYPE(CBitcoinAddress, std::string) &item, wallet->mapAddressBook)
-            {
+            for(const std::pair<CBitcoinAddress, std::string> &item: wallet->mapAddressBook) {
                 const CBitcoinAddress &address = item.first;
                 const std::string &strName = item.second;
                 bool fMine = Script_util::IsMine(*wallet, address);

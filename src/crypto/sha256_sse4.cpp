@@ -5,8 +5,6 @@
 // This is a translation to GCC extended asm syntax from YASM code by Intel
 // (available at the bottom of this file).
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdint.h>
 #include <stdlib.h>
 
@@ -1510,5 +1508,3 @@ _SHUF_DC00:              ddq 0x0b0a090803020100FFFFFFFFFFFFFFFF
 } // namespace latest_crypto
 
 #endif
-
-#endif // LATEST_CRYPTO_ENABLE

@@ -1,12 +1,14 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_UTIL_H
 #define BITCOIN_UTIL_H
 
-#include "uint256.h"
+#include <uint256.h>
 
 #ifndef WIN32
 # include <sys/types.h>
@@ -18,7 +20,6 @@
 #include <vector>
 #include <string>
 #include <boost/date_time/posix_time/posix_time.hpp>
-#include <boost/foreach.hpp>
 
 #ifndef Q_MOC_RUN
 # include <boost/thread.hpp>
@@ -29,19 +30,15 @@
 #endif
 
 #include <stdarg.h>
-
 #include <openssl/rand.h>
 
 #if defined(__USE_MINGW_ANSI_STDIO)
 # undef __USE_MINGW_ANSI_STDIO // This constant forces MinGW to conduct stupid behavior
 #endif
 #include <inttypes.h>
+#include <netbase.h> // for AddTimeData
 
-#include "netbase.h" // for AddTimeData
-
-//
 // Args
-//
 class bool_arg
 {
 private:
@@ -89,6 +86,132 @@ namespace args_uint
 {
     extern unsigned int nNodeLifespan; // = 0;
 }
+
+class init : private no_instance
+{
+protected: // to class config
+    static void InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet);
+};
+
+class config : public init
+{
+private:
+    static void createConf();
+    static std::string randomStrGen(int length);
+protected:    // to class map_arg
+    static void ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet);
+};
+
+// Return : string argument or default(arg) value
+class map_arg : public config
+{
+private:
+    static std::map<std::string, std::string> mapArgs;
+    static std::map<std::string, std::vector<std::string> > mapMultiArgs;
+
+public:
+    static void ParseParameters(int argc, const char *const argv[]);
+    static void ReadConfigFile() {
+        config::ReadConfigFile(mapArgs, mapMultiArgs);
+    }
+
+    static size_t GetMapArgsCount(const std::string &target) {
+        return mapArgs.count(target);
+    }
+    static std::string GetMapArgsString(const std::string &key) {
+        return mapArgs[key];
+    }
+    static void SetMapArgsString(const std::string &key, const std::string &value) {
+        mapArgs[key] = value;
+    }
+
+    static std::vector<std::string> GetMapMultiArgsString(const std::string &key) {
+        return mapMultiArgs[key];
+    }
+
+    /**
+    * Return string argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. "1")
+    * @return command-line argument or default value
+    */
+    static std::string GetArg(const std::string &strArg, const std::string &strDefault);
+
+    /**
+    * Return 64-bit integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
+    static int64_t GetArg(const std::string &strArg, int64_t nDefault);
+
+    /**
+    * Return 32-bit integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
+    static int32_t GetArgInt(const std::string &strArg, int32_t nDefault);
+
+    /**
+    * Return 32-bit unsigned integer argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (e.g. 1)
+    * @return command-line argument (0 if invalid number) or default value
+    */
+    static uint32_t GetArgUInt(const std::string &strArg, uint32_t nDefault);
+
+    /**
+    * Return boolean argument or default value
+    *
+    * @param strArg Argument to get (e.g. "-foo")
+    * @param default (true or false)
+    * @return command-line argument or default value
+    */
+    static bool GetBoolArg(const std::string &strArg, bool fDefault = false);
+
+    /**
+    * Set an argument if it doesn't already have a value
+    *
+    * @param strArg Argument to set (e.g. "-foo")
+    * @param strValue Value (e.g. "1")
+    * @return true if argument gets set, false if it already had a value
+    */
+    static bool SoftSetArg(const std::string &strArg, const std::string &strValue);
+
+    /**
+    * Set a boolean argument if it doesn't already have a value
+    *
+    * @param strArg Argument to set (e.g. "-foo")
+    * @param fValue Value (e.g. false)
+    * @return true if argument gets set, false if it already had a value
+    */
+    static bool SoftSetBoolArg(const std::string &strArg, bool fValue);
+
+    /**
+    * Timing-attack-resistant comparison.
+    * Takes time proportional to length
+    * of first argument.
+    */
+    template <typename T>
+    static bool TimingResistantEqual(const T &a, const T &b) {
+        if (b.size() == 0) {
+            return a.size() == 0;
+        }
+
+        size_t accumulator = a.size() ^ b.size();
+        for (size_t i = 0; i < a.size(); ++i)
+        {
+            accumulator |= a[i] ^ b[i % b.size()];
+        }
+
+        return accumulator == 0;
+    }
+};
 
 //
 // This GNU C extension enables the compiler to check the format string against the parameters provided.
@@ -705,12 +828,6 @@ namespace match
     bool WildcardMatch(const std::string &str, const std::string &mask);
 }
 
-class init : private no_instance
-{
-protected: // to class config
-    static void InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet);
-};
-
 class iofs : private no_instance
 {
 public:
@@ -731,15 +848,6 @@ public:
 #endif
 
     static void ShrinkDebugFile();
-};
-
-class config : public init
-{
-private:
-    static void createConf();
-    static std::string randomStrGen(int length);
-protected:    // to class map_arg
-    static void ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet);
 };
 
 class seed : private no_instance
@@ -812,178 +920,6 @@ http://msdn.microsoft.com/en-us/library/tcxf1dw6%28v=vs.100%29.aspx
 # define PRIpdu    "tu"
 # define PRIpdd    "td"
 #endif
-
-// This is needed because the foreach macro can't get over the comma in pair<t1, t2>
-#define PAIRTYPE(t1, t2)    std::pair<t1, t2>
-
-//
-// Return : string argument or default(arg) value
-//
-class map_arg : public config
-{
-private:
-    static std::map<std::string, std::string> mapArgs;
-    static std::map<std::string, std::vector<std::string> > mapMultiArgs;
-
-public:
-
-    /**
-    * Read argv[]
-    */
-    static void ParseParameters(int argc, const char *const argv[]);
-
-    /**
-    * ReadConfigFile (bitcoin.cpp)
-    */
-    static void ReadConfigFile() {
-        config::ReadConfigFile(mapArgs, mapMultiArgs);
-    }
-
-    /**
-    * mapArgs interface
-    */
-    static size_t GetMapArgsCount(const std::string &target) {
-        return mapArgs.count(target);
-    }
-    static std::string GetMapArgsString(const std::string &key) {
-        return mapArgs[key];
-    }
-    static void SetMapArgsString(const std::string &key, const std::string &value) {
-        mapArgs[key] = value;
-    }
-
-    /**
-    * mapMultiArgs interface
-    */
-    static std::vector<std::string> GetMapMultiArgsString(const std::string &key) {
-        return mapMultiArgs[key];
-    }
-
-    /**
-    * Return string argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. "1")
-    * @return command-line argument or default value
-    */
-    static std::string GetArg(const std::string &strArg, const std::string &strDefault) {
-        if (mapArgs.count(strArg)) {
-            return mapArgs[strArg];
-        }
-        return strDefault;
-    }
-
-    /**
-    * Return 64-bit integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static int64_t GetArg(const std::string &strArg, int64_t nDefault) {
-        if (mapArgs.count(strArg)) {
-            return ::atoi64(mapArgs[strArg]);
-        }
-        return nDefault;
-    }
-
-    /**
-    * Return 32-bit integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static int32_t GetArgInt(const std::string &strArg, int32_t nDefault) {
-        if (mapArgs.count(strArg)) {
-            return ::strtol(mapArgs[strArg]);
-        }
-        return nDefault;
-    }
-
-    /**
-    * Return 32-bit unsigned integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static uint32_t GetArgUInt(const std::string &strArg, uint32_t nDefault) {
-        if (mapArgs.count(strArg)) {
-            return ::strtoul(mapArgs[strArg]);
-        }
-        return nDefault;
-    }
-
-    /**
-    * Return boolean argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (true or false)
-    * @return command-line argument or default value
-    */
-    static bool GetBoolArg(const std::string &strArg, bool fDefault = false) {
-        if (mapArgs.count(strArg)) {
-            if (mapArgs[strArg].empty()) {
-                return true;
-            }
-            return (::atoi(mapArgs[strArg]) != 0);
-        }
-        return fDefault;
-    }
-
-    /**
-    * Set an argument if it doesn't already have a value
-    *
-    * @param strArg Argument to set (e.g. "-foo")
-    * @param strValue Value (e.g. "1")
-    * @return true if argument gets set, false if it already had a value
-    */
-    static bool SoftSetArg(const std::string &strArg, const std::string &strValue) {
-        if (mapArgs.count(strArg) || mapMultiArgs.count(strArg)) {
-            return false;
-        }
-        mapArgs[strArg] = strValue;
-        mapMultiArgs[strArg].push_back(strValue);
-        return true;
-    }
-
-    /**
-    * Set a boolean argument if it doesn't already have a value
-    *
-    * @param strArg Argument to set (e.g. "-foo")
-    * @param fValue Value (e.g. false)
-    * @return true if argument gets set, false if it already had a value
-    */
-    static bool SoftSetBoolArg(const std::string &strArg, bool fValue) {
-        if (fValue) {
-            return map_arg::SoftSetArg(strArg, std::string("1"));
-        }
-        else {
-            return map_arg::SoftSetArg(strArg, std::string("0"));
-        }
-    }
-
-    /**
-    * Timing-attack-resistant comparison.
-    * Takes time proportional to length
-    * of first argument.
-    */
-    template <typename T>
-    static bool TimingResistantEqual(const T &a, const T &b) {
-        if (b.size() == 0) {
-            return a.size() == 0;
-        }
-
-        size_t accumulator = a.size() ^ b.size();
-        for (size_t i = 0; i < a.size(); ++i)
-        {
-            accumulator |= a[i] ^ b[i % b.size()];
-        }
-
-        return accumulator == 0;
-    }
-};
 
 namespace bitthread
 {

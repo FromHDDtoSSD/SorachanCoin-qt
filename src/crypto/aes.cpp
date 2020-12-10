@@ -2,17 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/aes.h>
 #include <crypto/common.h>
 
 #include <assert.h>
 #include <string.h>
 
-// extern "C" {
-// #include <crypto/ctaes/ctaes.c>
-// }
+extern "C" {
+#include <crypto/ctaes/ctaes.c>
+}
 
 namespace latest_crypto {
 
@@ -220,5 +218,3 @@ int AES128CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

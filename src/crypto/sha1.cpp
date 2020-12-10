@@ -2,8 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/sha1.h>
 
 #include <crypto/common.h>
@@ -203,5 +201,3 @@ CSHA1& CSHA1::Reset()
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

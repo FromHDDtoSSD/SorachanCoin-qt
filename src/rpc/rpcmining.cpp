@@ -192,7 +192,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             CDataStream::const_iterator itK = ssKernel.begin();
             std::vector<std::pair<uint256, uint32_t> > result;
             if (bitkernel::ScanKernelForward((unsigned char *)&itK[0], nBits, tx.nTime, tx.vout[nOut].nValue, interval, result)) {
-                for(const PAIRTYPE(uint256, uint32_t) solution: result) {
+                for(const std::pair<uint256, uint32_t> solution: result) {
                     json_spirit::Object item;
                     item.push_back(json_spirit::Pair("nout", nOut));
                     item.push_back(json_spirit::Pair("hash", solution.first.GetHex()));

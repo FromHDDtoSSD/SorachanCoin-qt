@@ -108,7 +108,6 @@ PREVECTOR_TEST(Destructor, 28800, 88900)
 PREVECTOR_TEST(Resize, 28900, 90300)
 PREVECTOR_TEST(Deserialize, 6800, 52000)
 
-#ifdef LATEST_CRYPTO_ENABLE
 #define PREVECTOR_S_TEST(name, nontrivops, trivops)                                                                        \
     void Prevector_s_ ## name ## Nontrivial(benchmark::State& state) {                                                     \
         Prevector ## name<nontrivial_t, latest_crypto::prevector_s<latest_crypto::PREVECTOR_S_N, nontrivial_t> >(state);   \
@@ -123,7 +122,6 @@ PREVECTOR_S_TEST(Clear, 28300, 88600)
 PREVECTOR_S_TEST(Destructor, 28800, 88900)
 PREVECTOR_S_TEST(Resize, 28900, 90300)
 PREVECTOR_S_TEST(Deserialize, 6800, 52000)
-#endif
 
 #define STDVECTOR_TEST(name, nontrivops, trivops)                           \
     void Stdvector ## name ## Nontrivial(benchmark::State& state) {         \
@@ -180,7 +178,6 @@ static void PrevectorAssertcheck(benchmark::State& state)
     }
 }
 
-#ifdef LATEST_CRYPTO_ENABLE
 template <int rsv, typename T>
 static void Prevector_s_Assertcheck(benchmark::State& state)
 {
@@ -228,7 +225,6 @@ static void Prevector_s_Assertcheck(benchmark::State& state)
         }
     }
 }
-#endif
 
 #define VECTOR_ASSERTCHECK(name, rsv, nontrivops, trivops)           \
     void name ## AssertcheckNontrivial(benchmark::State& state) {    \
@@ -241,11 +237,8 @@ static void Prevector_s_Assertcheck(benchmark::State& state)
     BENCHMARK(name ## AssertcheckTrivial, trivops);
 
 VECTOR_ASSERTCHECK(Prevector, PREVECTOR_N, 28300, 88600)
-#ifdef LATEST_CRYPTO_ENABLE
 VECTOR_ASSERTCHECK(Prevector_s_, latest_crypto::PREVECTOR_S_N, 28300, 88600)
-#endif
 
-#ifdef LATEST_CRYPTO_ENABLE
 template <typename T>
 static void SecurevectorAssertcheck(benchmark::State& state)
 {
@@ -267,7 +260,6 @@ static void SecurevectorAssertcheck(benchmark::State& state)
         }
     }
 }
-#endif
 
 #define SECVECTOR_ASSERTCHECK(nontrivops, trivops)                    \
     void SecurevectorAssertcheckNontrivial(benchmark::State& state) { \
@@ -278,8 +270,6 @@ static void SecurevectorAssertcheck(benchmark::State& state)
         SecurevectorAssertcheck<trivial_t>(state);                    \
     }                                                                 \
     BENCHMARK(SecurevectorAssertcheckTrivial, trivops);
-#ifdef LATEST_CRYPTO_ENABLE
 SECVECTOR_ASSERTCHECK(28300, 88600)
-#endif
 
 } // namespace check_prevector

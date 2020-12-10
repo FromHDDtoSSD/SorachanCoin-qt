@@ -6,7 +6,7 @@
 #include <util/logging.h>
 #include <util/time.h>
 
-const char *const DEFAULT_DEBUGLOGFILE = "debug.log";
+const char *const DEFAULT_DEBUGLOGFILE = "debug_new.log";
 
 BCLog::Logger &LogInstance()
 {

@@ -2,7 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 #include <openssl/bn.h>
 #include <prime/autocheckpoint.h>
@@ -151,4 +151,4 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoint() {
 
 template class CAutocheckPoint_impl<uint256>;
 
-#endif // defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#endif // defined(USE_QUANTUM)

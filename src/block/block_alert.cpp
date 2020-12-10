@@ -39,7 +39,7 @@ std::string block_alert::GetWarnings(std::string strFor)
     // Alerts
     {
         LOCK(CUnsignedAlert::cs_mapAlerts);
-        for(PAIRTYPE(const uint256, CAlert)&item: CAlert::mapAlerts) {
+        for(std::pair<const uint256, CAlert> &item: CAlert::mapAlerts) {
             const CAlert &alert = item.second;
             if (alert.AppliesToMe() && alert.nPriority > nPriority) {
                 nPriority = alert.nPriority;

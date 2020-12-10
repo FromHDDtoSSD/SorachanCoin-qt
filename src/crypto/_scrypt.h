@@ -1,8 +1,6 @@
 #ifndef BITCOIN_CRYPTO_SCRYPT_H
 #define BITCOIN_CRYPTO_SCRYPT_H
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <stdlib.h>
 #include <stdint.h>
 
@@ -52,7 +50,5 @@ static inline void le32enc(void *pp, uint32_t x)
 #endif
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE
 
 #endif // BITCOIN_CRYPTO_SCRYPT_H

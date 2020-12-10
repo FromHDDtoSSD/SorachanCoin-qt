@@ -27,8 +27,6 @@
  * online backup system.
  */
 
-#ifdef LATEST_CRYPTO_ENABLE
-
 #include <crypto/scrypt.h>
 
 #include <stdlib.h>
@@ -336,5 +334,3 @@ void scrypt_1024_1_1_256(const char *input, char *output)
 }
 
 } // namespace latest_crypto
-
-#endif // LATEST_CRYPTO_ENABLE

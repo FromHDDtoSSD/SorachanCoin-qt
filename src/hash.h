@@ -15,7 +15,7 @@
 #include <openssl/sha.h>
 #include <debugcs/debugcs.h>
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 # include <quantum/quantum.h>
 # include <crypto/ripemd160.h>
 # include <crypto/sha256.h>
@@ -36,7 +36,7 @@ namespace bip32 {
     }
 } // bip32
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 template<typename CTX, typename UINTOBJ>
 class CHashWriter_q
 {
@@ -119,7 +119,7 @@ typedef prevector<PREVECTOR_N, uint8_t> hashbasis_vector;
 typedef std::vector<uint8_t> hashbasis_vector;
 #endif
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 
 typedef CHashWriter_q<latest_crypto::CSHA256, uint256> CHashWriter;
 typedef CHashWriter_q<latest_crypto::CSHA256, uint256> CHashWriter_q256;

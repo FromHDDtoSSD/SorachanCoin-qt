@@ -602,8 +602,7 @@ void CoinControlDialog::updateView()
     std::map<QString, std::vector<COutput> > mapCoins;
     model->listCoins(mapCoins);
 
-    BOOST_FOREACH(PAIRTYPE(QString, std::vector<COutput>) coins, mapCoins)
-    {
+    for(std::pair<QString, std::vector<COutput> > coins: mapCoins) {
         QTreeWidgetItem *itemWalletAddress = new (std::nothrow) QTreeWidgetItem();
         if(! itemWalletAddress) {
             throw std::runtime_error("CoinControlDialog Failed to allocate memory.");
@@ -642,8 +641,7 @@ void CoinControlDialog::updateView()
         int nChildren = 0;
         int nInputSum = 0;
         uint64_t nTxWeight = 0, nTxWeightSum = 0;
-        BOOST_FOREACH(const COutput &out, coins.second)
-        {
+        for(const COutput &out: coins.second) {
             int nInputSize = 148; // 180 if uncompressed public key
             nSum += out.tx->vout[out.i].nValue;
             model->getStakeWeightFromValue(out.tx->GetTxTime(), out.tx->vout[out.i].nValue, nTxWeight);

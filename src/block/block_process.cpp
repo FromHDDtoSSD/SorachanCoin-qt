@@ -132,7 +132,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         // Relay alerts
         {
             LOCK(CUnsignedAlert::cs_mapAlerts);
-            for(PAIRTYPE(const uint256, CAlert)& item: CAlert::mapAlerts)
+            for(std::pair<const uint256, CAlert> &item: CAlert::mapAlerts)
                 item.second.RelayTo(pfrom);
         }
 

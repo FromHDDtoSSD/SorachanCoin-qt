@@ -1,5 +1,3 @@
-#ifdef LATEST_CRYPTO_ENABLE
-
 #ifdef ENABLE_SSE41
 
 #include <stdint.h>
@@ -321,5 +319,3 @@ void Transform_4way(unsigned char* out, const unsigned char* in)
 } // namespace latest_crypto
 
 #endif
-
-#endif // LATEST_CRYPTO_ENABLE

@@ -46,19 +46,6 @@ void entry::ExitTimeout(void *parg)
 #endif
 }
 
-/*
-void entry::StartShutdown()
-{
-#ifdef QT_GUI
-    // ensure we leave the Qt main loop for a clean GUI exit (Shutdown() is called in bitcoin.cpp afterwards)
-    CClientUIInterface::uiInterface.QueueShutdown();
-#else
-    // Without UI, Shutdown() can simply be started in a new thread
-    bitthread::manage::NewThread(net_node::Shutdown, NULL);
-#endif
-}
-*/
-
 void net_node::Shutdown(void *parg)
 {
     static CCriticalSection cs_Shutdown;

@@ -42,7 +42,6 @@ namespace check_prevector
     void PrevectorDeserializeTrivial(benchmark::State& state);
     void PrevectorDeserializeNontrivial(benchmark::State& state);
 
-#ifdef LATEST_CRYPTO_ENABLE
     void Prevector_s_DestructorTrivial(benchmark::State& state);
     void Prevector_s_DestructorNontrivial(benchmark::State& state);
     void Prevector_s_ClearTrivial(benchmark::State& state);
@@ -51,7 +50,6 @@ namespace check_prevector
     void Prevector_s_ResizeNontrivial(benchmark::State& state);
     void Prevector_s_DeserializeTrivial(benchmark::State& state);
     void Prevector_s_DeserializeNontrivial(benchmark::State& state);
-#endif
 
     void StdvectorDestructorTrivial(benchmark::State& state);
     void StdvectorDestructorNontrivial(benchmark::State& state);
@@ -65,16 +63,13 @@ namespace check_prevector
     void PrevectorAssertcheckNontrivial(benchmark::State& state);
     void PrevectorAssertcheckTrivial(benchmark::State& state);
 
-#ifdef LATEST_CRYPTO_ENABLE
     void Prevector_s_AssertcheckNontrivial(benchmark::State& state);
     void Prevector_s_AssertcheckTrivial(benchmark::State& state);
-#endif
 
     void SecurevectorAssertcheckNontrivial(benchmark::State& state);
     void SecurevectorAssertcheckTrivial(benchmark::State& state);
 }
 
-#ifdef LATEST_CRYPTO_ENABLE
 namespace latest_crypto
 {
     void bench_AES128(benchmark::State& state);
@@ -82,9 +77,8 @@ namespace latest_crypto
     void bench_AES256(benchmark::State& state);
     int check_all_aes();
 }
-#endif
 
-#if defined(USE_QUANTUM) && defined(LATEST_CRYPTO_ENABLE)
+#if defined(USE_QUANTUM)
 namespace latest_crypto
 {
     void Ripemd160Assertcheck(benchmark::State& state);

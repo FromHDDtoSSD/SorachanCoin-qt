@@ -54,7 +54,7 @@ void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, c
 }
 
 void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const std::map<std::string, json_spirit::Value_type> &typesExpected, bool fAllowNull/* =false */) noexcept {
-    for(const PAIRTYPE(std::string, json_spirit::Value_type) &t: typesExpected) {
+    for(const std::pair<std::string, json_spirit::Value_type> &t: typesExpected) {
         const json_spirit::Value& v = find_value(o, t.first);
         if (!fAllowNull && v.type() == json_spirit::null_type) {
             data.JSONRPCError(RPC_TYPE_ERROR, strprintf("Missing %s", t.first.c_str()));
@@ -287,7 +287,7 @@ std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string
         << "Connection: close\r\n"
         << "Accept: application/json\r\n";
 
-    for(const PAIRTYPE(std::string, std::string) &item: mapRequestHeaders)
+    for(const std::pair<std::string, std::string> &item: mapRequestHeaders)
         s << item.first << ": " << item.second << "\r\n";
 
     s << "\r\n" << strMsg;
