@@ -100,29 +100,6 @@ void CFirmKey::ecmult::secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, cons
     CPubKey::ecmult::secp256k1_fe_negate(&r->y, &r->y, 1);
 }
 
-/*
-void CFirmKey::ecmult::secp256k1_fe_inv_all_var(std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, const std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) noexcept {
-    if (len < 1) return;
-    VERIFY_CHECK((r + len <= a) || (a + len <= r));
-    r[0] = a[0];
-
-    size_t i = 0;
-    while (++i < len) {
-        CPubKey::ecmult::secp256k1_fe_mul(&r[i], &r[i - 1], &a[i]);
-    }
-
-    CPubKey::ecmult::secp256k1_fe u;
-    CPubKey::ecmult::secp256k1_fe_inv_var(&u, &r[--i]);
-    while (i > 0) {
-        size_t j = i--;
-        CPubKey::ecmult::secp256k1_fe_mul(&r[j], &r[i], &u);
-        CPubKey::ecmult::secp256k1_fe_mul(&u, &u, &a[j]);
-    }
-
-    r[0] = u;
-}
-*/
-
 bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_ge *r, const CPubKey::ecmult::secp256k1_gej *a, size_t len) noexcept {
     auto secp256k1_fe_inv_all_var = [](std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, const std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) noexcept {
         if (len < 1) return true;
@@ -1090,7 +1067,7 @@ int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned c
     return 1;
 }
 
-bool CFirmKey::SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const noexcept {
+bool CFirmKey::SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const {
     ARG_BOOL_CHECK(fValid_);
     vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
     int rec = -1;
@@ -1133,7 +1110,7 @@ int CFirmKey::secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsign
     return ret;
 }
 
-bool CFirmKey::Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const noexcept {
+bool CFirmKey::Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const {
     ARG_BOOL_CHECK(IsValid());
     ARG_BOOL_CHECK(IsCompressed());
     std::vector<unsigned char, secure_allocator<unsigned char> > vout(64);
@@ -1165,7 +1142,7 @@ bool CFirmKey::VerifyPubKey(const CPubKey &pubkey) const noexcept {
     latest_crypto::CHash256().Write((unsigned char *)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
     key_vector vchSig;
     Sign(hash, vchSig);
-    bool ret = pubkey.Verify(hash, vchSig);
+    bool ret = pubkey.Verify_BIP66(hash, vchSig);
     cleanse::OPENSSL_cleanse(rnd, sizeof(rnd));
     cleanse::OPENSSL_cleanse(&hash, sizeof(uint256));
     cleanse::OPENSSL_cleanse(vchSig.data(), vchSig.size() * sizeof(unsigned char));

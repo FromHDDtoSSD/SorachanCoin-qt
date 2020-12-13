@@ -3,14 +3,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(USE_QUANTUM)
-
-# include <crypto/hmac_qhash65536.h>
-# include <debugcs/debugcs.h>
+#include <crypto/hmac_qhash65536.h>
+//#include <debugcs/debugcs.h>
 
 namespace latest_crypto {
 
 template <typename BASE>
-uint131072 HMAC_LAMPORT_PRIVATE_HASH_impl<BASE>::CalculateDigest(const byte *input, size_t length) {
+uint131072 HMAC_LAMPORT_PRIVATE_HASH_impl<BASE>::CalculateDigest(const byte *input, size_t length) noexcept {
     unsigned char X[BASE::Size()];
     uint131072 result=0;
     BASE CTX;

@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -40,13 +40,14 @@ class allocators_basis
 {
     friend class LockedPageManager;
 
-    allocators_basis(); // {}
-    allocators_basis(const allocators_basis &); // {}
-    allocators_basis(const allocators_basis &&); // {}
-
+    allocators_basis()=delete;
+    allocators_basis(const allocators_basis &)=delete;
+    allocators_basis(allocators_basis &&)=delete;
+    allocators_basis &operator=(const allocators_basis &)=delete;
+    allocators_basis &operator=(allocators_basis &&)=delete;
 private:
     /** Determine system page size in bytes */
-    static size_t GetSystemPageSize() {
+    static size_t GetSystemPageSize() noexcept {
         size_t page_size;
 
 #if defined(WIN32)
@@ -74,14 +75,14 @@ public:
     class MemoryPageLocker
     {
     private:
-        MemoryPageLocker(const MemoryPageLocker &); // {}
-        MemoryPageLocker(const MemoryPageLocker &&); // {}
-        MemoryPageLocker &operator=(const MemoryPageLocker &); // {}
-        MemoryPageLocker &operator=(const MemoryPageLocker &&); // {}
+        MemoryPageLocker(const MemoryPageLocker &)=delete;
+        MemoryPageLocker(MemoryPageLocker &&)=delete;
+        MemoryPageLocker &operator=(const MemoryPageLocker &)=delete;
+        MemoryPageLocker &operator=(MemoryPageLocker &&)=delete;
 
     public:
         MemoryPageLocker() noexcept {}
-        ~MemoryPageLocker() noexcept {}
+        ~MemoryPageLocker() {}
 
         //
         // Lock memory pages.
@@ -123,14 +124,14 @@ public:
     class LockedPageManagerBase
     {
     private:
-        LockedPageManagerBase(); // {}
-        LockedPageManagerBase(const LockedPageManagerBase &); // {}
-        LockedPageManagerBase(const LockedPageManagerBase &&); // {}
-        LockedPageManagerBase &operator=(const LockedPageManagerBase &); // {}
-        LockedPageManagerBase &operator=(const LockedPageManagerBase &&); // {}
+        LockedPageManagerBase()=delete;
+        LockedPageManagerBase(const LockedPageManagerBase &)=delete;
+        LockedPageManagerBase(LockedPageManagerBase &&)=delete;
+        LockedPageManagerBase &operator=(const LockedPageManagerBase &)=delete;
+        LockedPageManagerBase &operator=(LockedPageManagerBase &&)=delete;
 
         // map of page base address to lock count; std::make_pair(page, counter)
-        typedef std::map<size_t, int> Histogram;
+        using Histogram = std::map<size_t, int>;
         Histogram histogram;
 
         Locker locker; // OS-dependent memory page locking/unlocking
@@ -143,21 +144,18 @@ public:
             assert(! (page_size & (page_size - 1))); // size must be power of two
             page_mask = ~(page_size - 1);
         }
-        ~LockedPageManagerBase() noexcept {}
+        ~LockedPageManagerBase() {}
 
         // For all pages in affected range, increase lock count
         void LockRange(void *p, size_t size) noexcept {
             std::lock_guard<std::mutex> lock(mtx);
-            if (! size) {
-                return;
-            }
+            if (! size) return;
 
             const size_t base_addr = reinterpret_cast<size_t>(p);
             const size_t start_page = base_addr & page_mask;
             const size_t end_page = (base_addr + size - 1) & page_mask;
 
-            for (size_t page = start_page; page <= end_page; page += page_size)
-            {
+            for (size_t page = start_page; page <= end_page; page += page_size) {
                 Histogram::iterator it = histogram.find(page);
                 if (it == histogram.end()) { // Newly locked page
                     locker.Lock(reinterpret_cast<void *>(page), page_size);
@@ -171,16 +169,13 @@ public:
         // For all pages in affected range, decrease lock count
         void UnlockRange(void *p, size_t size) noexcept {
             std::lock_guard<std::mutex> lock(mtx);
-            if (! size) {
-                return;
-            }
+            if (! size) return;
 
             const size_t base_addr = reinterpret_cast<size_t>(p);
             const size_t start_page = base_addr & page_mask;
             const size_t end_page = (base_addr + size - 1) & page_mask;
 
-            for (size_t page = start_page; page <= end_page; page += page_size)
-            {
+            for (size_t page = start_page; page <= end_page; page += page_size) {
                 Histogram::iterator it = histogram.find(page);
                 assert(it != histogram.end()); // Cannot unlock an area that was not locked
                                                // Decrease counter for page, when it is zero, the page will be unlocked
@@ -201,10 +196,8 @@ public:
     };
 };
 
-//
 // A, Singleton class to keep track of locked (ie, non-swappable) memory pages, for use in
 // std::allocator templates.
-//
 class LockedPageManager : public allocators_basis::LockedPageManagerBase<allocators_basis::MemoryPageLocker>
 {
 public:
@@ -213,10 +206,8 @@ private:
     LockedPageManager() : allocators_basis::LockedPageManagerBase<allocators_basis::MemoryPageLocker>(allocators_basis::GetSystemPageSize()) {}
 };
 
-//
 // B, Allocator that locks its contents from being paged
 // out of memory and clears its contents before deletion.
-//
 template<typename T>
 struct secure_allocator : public std::allocator<T>
 {
@@ -258,10 +249,7 @@ struct secure_allocator : public std::allocator<T>
     }
 };
 
-
-//
 // C, Allocator that clears its contents before deletion.
-//
 template<typename T>
 struct zero_after_free_allocator : public std::allocator<T>
 {

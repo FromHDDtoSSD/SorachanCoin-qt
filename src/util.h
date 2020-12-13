@@ -1,5 +1,4 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
-// Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2009-2018 The Bitcoin Core developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
@@ -37,181 +36,10 @@
 #endif
 #include <inttypes.h>
 #include <netbase.h> // for AddTimeData
-
-// Args
-class bool_arg
-{
-private:
-    bool flag;
-public:
-    bool_arg() : flag(false) {}
-    bool_arg(bool b) : flag(b) {}
-    bool_arg(const bool_arg &obj) : flag(obj.flag) {}
-
-    bool_arg &operator=(const bool &obj) {
-        flag = obj;
-        return *this;
-    }
-    bool_arg &operator=(const bool_arg &obj) {
-        flag = obj.flag;
-        return *this;
-    }
-
-    operator bool() const {
-        return flag;
-    }
-};
-
-namespace args_bool
-{
-    extern bool_arg fUseMemoryLog; //(false);
-    extern bool_arg fConfChange; //(false);
-    extern bool_arg fUseFastIndex; //(false);
-    extern bool_arg fNoListen; //(false);
-    extern bool_arg fDebug; //(false);
-    extern bool_arg fDebugNet; //(false);
-    extern bool_arg fPrintToConsole; //(false);
-    extern bool_arg fPrintToDebugger; //(false);
-    extern bool_arg fRequestShutdown; //(false);
-    extern bool_arg fShutdown; //(false)
-    extern bool_arg fDaemon; //(false)
-    extern bool_arg fServer; //(false)
-    extern bool_arg fCommandLine; //(false)
-    extern bool_arg fTestNet; //(false)
-    extern bool_arg fLogTimestamps; //(false)
-    extern bool_arg fReopenDebugLog; //(false)
-}
-
-namespace args_uint
-{
-    extern unsigned int nNodeLifespan; // = 0;
-}
-
-class init : private no_instance
-{
-protected: // to class config
-    static void InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet);
-};
-
-class config : public init
-{
-private:
-    static void createConf();
-    static std::string randomStrGen(int length);
-protected:    // to class map_arg
-    static void ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet);
-};
-
-// Return : string argument or default(arg) value
-class map_arg : public config
-{
-private:
-    static std::map<std::string, std::string> mapArgs;
-    static std::map<std::string, std::vector<std::string> > mapMultiArgs;
-
-public:
-    static void ParseParameters(int argc, const char *const argv[]);
-    static void ReadConfigFile() {
-        config::ReadConfigFile(mapArgs, mapMultiArgs);
-    }
-
-    static size_t GetMapArgsCount(const std::string &target) {
-        return mapArgs.count(target);
-    }
-    static std::string GetMapArgsString(const std::string &key) {
-        return mapArgs[key];
-    }
-    static void SetMapArgsString(const std::string &key, const std::string &value) {
-        mapArgs[key] = value;
-    }
-
-    static std::vector<std::string> GetMapMultiArgsString(const std::string &key) {
-        return mapMultiArgs[key];
-    }
-
-    /**
-    * Return string argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. "1")
-    * @return command-line argument or default value
-    */
-    static std::string GetArg(const std::string &strArg, const std::string &strDefault);
-
-    /**
-    * Return 64-bit integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static int64_t GetArg(const std::string &strArg, int64_t nDefault);
-
-    /**
-    * Return 32-bit integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static int32_t GetArgInt(const std::string &strArg, int32_t nDefault);
-
-    /**
-    * Return 32-bit unsigned integer argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (e.g. 1)
-    * @return command-line argument (0 if invalid number) or default value
-    */
-    static uint32_t GetArgUInt(const std::string &strArg, uint32_t nDefault);
-
-    /**
-    * Return boolean argument or default value
-    *
-    * @param strArg Argument to get (e.g. "-foo")
-    * @param default (true or false)
-    * @return command-line argument or default value
-    */
-    static bool GetBoolArg(const std::string &strArg, bool fDefault = false);
-
-    /**
-    * Set an argument if it doesn't already have a value
-    *
-    * @param strArg Argument to set (e.g. "-foo")
-    * @param strValue Value (e.g. "1")
-    * @return true if argument gets set, false if it already had a value
-    */
-    static bool SoftSetArg(const std::string &strArg, const std::string &strValue);
-
-    /**
-    * Set a boolean argument if it doesn't already have a value
-    *
-    * @param strArg Argument to set (e.g. "-foo")
-    * @param fValue Value (e.g. false)
-    * @return true if argument gets set, false if it already had a value
-    */
-    static bool SoftSetBoolArg(const std::string &strArg, bool fValue);
-
-    /**
-    * Timing-attack-resistant comparison.
-    * Takes time proportional to length
-    * of first argument.
-    */
-    template <typename T>
-    static bool TimingResistantEqual(const T &a, const T &b) {
-        if (b.size() == 0) {
-            return a.size() == 0;
-        }
-
-        size_t accumulator = a.size() ^ b.size();
-        for (size_t i = 0; i < a.size(); ++i)
-        {
-            accumulator |= a[i] ^ b[i % b.size()];
-        }
-
-        return accumulator == 0;
-    }
-};
+#include <util/args.h>
+#include <file_operate/iofs.h>
+#include <util/logging.h>
+#include <const/macro.h>
 
 //
 // This GNU C extension enables the compiler to check the format string against the parameters provided.
@@ -220,6 +48,8 @@ public:
 //
 #ifdef __GNUC__
 # define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
+#else
+# define ATTR_WARN_PRINTF(X,Y)
 #endif
 
 //
@@ -247,47 +77,33 @@ public:
     static void LogStackTrace();
 };
 
+// Rationale for the real_strprintf / strprintf construction:
+// It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3).
+// Use a dummy argument to work around this, and use a macro to keep similar semantics.
 class print : public trace
 {
+private:
+    //static std::string vstrprintf(const char *format, va_list ap);
 public:
-    static int OutputDebugStringF(const std::string &err);
-#ifdef __GNUC__
-    static int ATTR_WARN_PRINTF(1, 2) OutputDebugStringF(const char *pszFormat, ...);
-#else
-    static int OutputDebugStringF(const char *pszFormat, ...);
-#endif
-
-    static std::string vstrprintf(const char *format, va_list ap);
-
-    // Rationale for the real_strprintf / strprintf construction:
-    // It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3).
-    // Use a dummy argument to work around this, and use a macro to keep similar semantics.
+    //static int ATTR_WARN_PRINTF(1, 2) OutputDebugStringF(const char *pszFormat, ...);
 
     /** Overload strprintf for char*, so that GCC format type warnings can be given */
-#ifdef __GNUC__
-    static std::string ATTR_WARN_PRINTF(1, 3) real_strprintf(const char *format, int dummy, ...);
-#else
-    static std::string real_strprintf(const char *format, int dummy, ...);
-#endif
+    //static std::string ATTR_WARN_PRINTF(1, 3) real_strprintf(const char *format, int dummy, ...);
 
     /** Overload strprintf for std::string, to be able to use it with _ (translation). This will not support GCC format type warnings (-Wformat) so be careful. */
-    static std::string real_strprintf(const std::string &format, int dummy, ...);
-
-#ifdef __GNUC__
-    static bool ATTR_WARN_PRINTF(1, 2) error(const char *format, ...);
-    static bool error(const std::string &str);
-#else
-    static bool error(const char *format, ...);
-#endif
+    //static bool ATTR_WARN_PRINTF(1, 2) error(const char *format, ...);
+    template <typename... Args>
+    static bool error(const char *fmt, const Args&... args) {
+        std::ostringstream oss;
+        tfm::format(oss, fmt, args...);
+        LogPrintf("ERROR: %s\n", oss.str().c_str());
+        return false;
+    }
 };
 
-#define printsf(str) print::OutputDebugStringF(str)
-#define printf(format, ...) print::OutputDebugStringF(format, ##__VA_ARGS__)
-#define strprintf(format, ...) print::real_strprintf(format, 0, __VA_ARGS__)
+#define printf(format, ...) LogPrintf(format, ##__VA_ARGS__)
+#define printfc(format, ...) LogPrintf((format).c_str(), ##__VA_ARGS__)
 #define sts_c(imp) std::string(imp).c_str()
-#define return_error(imp) \
-    std::string err = imp; \
-    return print::error(err);
 
 //
 // C-Runtime overload
@@ -325,19 +141,9 @@ inline int32_t strtol(const char *psz)
     return ::strtol(psz, nullptr, 10);
 }
 
-inline int32_t strtol(const std::string &str)
-{
-    return ::strtol(str.c_str(), nullptr, 10);
-}
-
 inline uint32_t strtoul(const char *psz)
 {
     return ::strtoul(psz, nullptr, 10);
-}
-
-inline uint32_t strtoul(const std::string &str)
-{
-    return ::strtoul(str.c_str(), nullptr, 10);
 }
 
 inline int atoi(const std::string &str)
@@ -828,28 +634,6 @@ namespace match
     bool WildcardMatch(const std::string &str, const std::string &mask);
 }
 
-class iofs : private no_instance
-{
-public:
-#ifdef WIN32
-    static boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
-#endif
-
-    static void FileCommit(FILE *fileout);
-    static int GetFilesize(FILE *file);
-    static bool RenameOver(boost::filesystem::path src, boost::filesystem::path dest);
-    static boost::filesystem::path GetDefaultDataDir();
-    static const boost::filesystem::path &GetDataDir(bool fNetSpecific = true);
-    static boost::filesystem::path GetConfigFile();
-    static boost::filesystem::path GetPidFile();
-
-#ifndef WIN32
-    static void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
-#endif
-
-    static void ShrinkDebugFile();
-};
-
 class seed : private no_instance
 {
 public:
@@ -857,30 +641,10 @@ public:
     static void RandAddSeedPerfmon();
 };
 
-class format_version : private no_instance
-{
-private:
-    static std::string FormatVersion(int nVersion);
-public:
-    static std::string FormatFullVersion();
-    static std::string FormatSubVersion(const std::string &name, int nClientVersion, const std::vector<std::string> &comments);
-};
-
 namespace cmd
 {
     void runCommand(std::string strCommand);
 }
-
-#define BEGIN(a)            ((char *)&(a))
-#define END(a)              ((char *)&((&(a))[1]))
-#define UBEGIN(a)           ((unsigned char *)&(a))
-#define UEND(a)             ((unsigned char *)&((&(a))[1]))
-#define ARRAYLEN(array)     (sizeof(array)/sizeof((array)[0]))
-
-#define UVOIDBEGIN(a)       ((void *)&(a))
-#define CVOIDBEGIN(a)       ((const void *)&(a))
-#define UINTBEGIN(a)        ((uint32_t *)&(a))
-#define CUINTBEGIN(a)       ((const uint32_t *)&(a))
 
 #ifndef THROW_WITH_STACKTRACE
 # define THROW_WITH_STACKTRACE(exception)  \

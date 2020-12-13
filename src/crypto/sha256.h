@@ -20,17 +20,16 @@ private:
     uint32_t s[8];
     unsigned char buf[64];
     uint64_t bytes;
-
 public:
-    static const size_t OUTPUT_SIZE = 32;
+    static constexpr size_t OUTPUT_SIZE = 32;
 
-    CSHA256();
-    CSHA256& Write(const unsigned char* data, size_t len);
-    void Finalize(unsigned char hash[OUTPUT_SIZE]);
-    CSHA256& Reset();
+    CSHA256() noexcept;
+    CSHA256& Write(const unsigned char* data, size_t len) noexcept;
+    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
+    CSHA256& Reset() noexcept;
 
-    static constexpr size_t Size() {return OUTPUT_SIZE;}
-    void Clean() {
+    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
+    void Clean() noexcept {
         cleanse::OPENSSL_cleanse(s, sizeof(s));
         cleanse::OPENSSL_cleanse(buf, sizeof(buf));
     }
@@ -46,7 +45,7 @@ std::string SHA256AutoDetect();
  *  input:   pointer to a blocks*64 byte input buffer
  *  blocks:  the number of hashes to compute.
  */
-void SHA256D64(unsigned char* output, const unsigned char* input, size_t blocks);
+void SHA256D64(unsigned char* output, const unsigned char* input, size_t blocks) noexcept;
 
 } // namespace latest_crypto
 

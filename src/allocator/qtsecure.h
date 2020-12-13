@@ -31,12 +31,14 @@ private:
     CCriticalSection cs_;
     std::map<void *, SecureStatus> mapused_;
 
-    QtSecureAllocator() noexcept {
+    QtSecureAllocator() {
         p_ = quantum_lib::secure_malloc(s_size);
-        if(p_)
-            quantum_lib::secure_mprotect_readwrite(p_); // Qt is always R/W.
+        if(p_) {
+            if(! quantum_lib::secure_mprotect_readwrite(p_)) // Qt is always R/W.
+                throw std::runtime_error("QtSecureAllocator: failed to readwrite memory");
+        }
     }
-    ~QtSecureAllocator() noexcept {
+    ~QtSecureAllocator() {
         for(const std::pair<void *, SecureStatus> &obj: mapused_) {
             if(obj.second==SecureMalloc)
                 ::free(obj.first);
@@ -45,9 +47,9 @@ private:
             quantum_lib::secure_free(p_);
     }
     QtSecureAllocator(const QtSecureAllocator &)=delete;
-    QtSecureAllocator(const QtSecureAllocator &&)=delete;
+    QtSecureAllocator(QtSecureAllocator &&)=delete;
     QtSecureAllocator &operator=(const QtSecureAllocator &)=delete;
-    QtSecureAllocator &operator=(const QtSecureAllocator &&)=delete;
+    QtSecureAllocator &operator=(QtSecureAllocator &&)=delete;
 
 public:
     void *alloc(size_t size) noexcept { // NG: nullptr

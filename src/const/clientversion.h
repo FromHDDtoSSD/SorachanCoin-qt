@@ -1,10 +1,9 @@
+// Copyright (c) 2009-2018 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef CLIENTVERSION_H
 #define CLIENTVERSION_H
-
-//
-// client versioning
-//
-//
 
 // These need to be macros, as version.cpp's and bitcoin-qt.rc's voodoo requires it
 #define CLIENT_VERSION_MAJOR       1
@@ -18,4 +17,3 @@
 #define DO_STRINGIZE(X) #X
 
 #endif // CLIENTVERSION_H
-//@

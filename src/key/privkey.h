@@ -148,7 +148,7 @@ private:
 
 public:
     //! Construct an invalid private key.
-    CFirmKey() noexcept : fValid_(false), fCompressed_(false) {
+    CFirmKey() : fValid_(false), fCompressed_(false) {
         // Important: vch must be 32 bytes in length to not break serialization
         keydata_.resize(PRIVATE_BYTE_VECTOR_SIZE);
     }
@@ -206,10 +206,10 @@ public:
      *                  0x1D = second key with even y, 0x1E = second key with odd y,
      *                  add 0x04 for compressed keys.
      */
-    bool SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const noexcept;
+    bool SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const;
 
     //! Derive BIP32 child key.
-    bool Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const noexcept;
+    bool Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const;
 
     /**
      * Verify thoroughly whether a private key and a public key match.

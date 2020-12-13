@@ -10,13 +10,10 @@
 #define BITCOIN_UTIL_STRENCODINGS_H
 
 #include <const/attributes.h>
-
+#include <const/macro.h>
 #include <cstdint>
 #include <string>
 #include <vector>
-
-#define ARRAYLEN(array)     (sizeof(array)/sizeof((array)[0]))
-//#define BEGIN(a)          ((char*)&(a)) // util.h
 
 /** Used by SanitizeString() */
 enum SafeChars

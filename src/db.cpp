@@ -129,9 +129,9 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
         printf("Final lk_max_locks is %u, sufficient for (worst case) %d block%s in a single transaction (up to a %d-deep reorganization)\n", nMaxLocks, nBlocks, (nBlocks == 1) ? "" : "s", nDeepReorg);
         if (nDeepReorg < 3) {
             if (nBlocks < 1) {
-                strMessage = strprintf(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, coin_param::strCoinName.c_str());
+                strMessage = strprintfc(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, coin_param::strCoinName.c_str());
             } else {
-                strMessage = strprintf(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a common blockchain reorganization. If this limit is reached, %s may stop working."), nMaxLocks, coin_param::strCoinName.c_str());
+                strMessage = strprintfc(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a common blockchain reorganization. If this limit is reached, %s may stop working."), nMaxLocks, coin_param::strCoinName.c_str());
             }
 
             excep::set_strMiscWarning(strMessage);

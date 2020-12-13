@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -25,6 +26,7 @@
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
 #include <util/time.h>
+#include <util/logging.h>
 
 #ifndef WIN32
 #include <signal.h>
@@ -121,12 +123,18 @@ bool entry::AppInit(int argc, char *argv[])
         //
         // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
         //
-        map_arg::ParseParameters(argc, argv);
+        if(! map_arg::ParseParameters(argc, argv)) {
+            fprintf(stderr, "Error: map_arg::ParseParameters");
+            net_node::Shutdown(nullptr);
+        }
         if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            net_node::Shutdown(NULL);
+            net_node::Shutdown(nullptr);
         }
-        map_arg::ReadConfigFile();
+        if(! map_arg::ReadConfigFile()) {
+            fprintf(stderr, "Error: map_arg::ReadConfigFile()");
+            net_node::Shutdown(nullptr);
+        }
 
         if (map_arg::GetMapArgsCount("-?") || map_arg::GetMapArgsCount("--help")) {
             //
@@ -330,6 +338,10 @@ std::string entry::HelpMessage()
 //
 bool entry::AppInit2()
 {
+    // ********************************************************* log open
+    InitLogging();
+    OpenDebugFile();
+
     // ********************************************************* Step 1: setup
 
 #ifdef _MSC_VER
@@ -521,7 +533,7 @@ bool entry::AppInit2()
 
     if (map_arg::GetMapArgsCount("-paytxfee")) {
         if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-paytxfee").c_str(), block_info::nTransactionFee)) {
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
+            return InitError(strprintfc(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
         }
         if (block_info::nTransactionFee > 0.25 * util::COIN) {
             InitWarning(_("Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
@@ -532,7 +544,7 @@ bool entry::AppInit2()
 
     if (map_arg::GetMapArgsCount("-mininput")) {
         if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-mininput").c_str(), block_info::nMinimumInputValue)) {
-            return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
+            return InitError(strprintfc(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
         }
     }
 
@@ -543,21 +555,21 @@ bool entry::AppInit2()
 
     // strWalletFileName must be a plain filename without a directory
     if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName)) {
-        return InitError(strprintf(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
+        return InitError(strprintfc(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
     }
 
     //
     // Lock File
     // Make sure only a single Bitcoin process is using the data directory
     //
-    boost::filesystem::path pathLockFile = iofs::GetDataDir() / ".lock";
+    fs::path pathLockFile = iofs::GetDataDir() / ".lock";
     FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) {
         fclose(file);
     }
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (! lock.try_lock()) {
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), coin_param::strCoinName.c_str()));
+        return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), coin_param::strCoinName.c_str()));
     }
 
 #if !defined(WIN32) && !defined(QT_GUI)
@@ -613,7 +625,7 @@ bool entry::AppInit2()
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
 
     if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
-        std::string msg = strprintf(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        std::string msg = strprintfc(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
 
@@ -627,7 +639,7 @@ bool entry::AppInit2()
     if (boost::filesystem::exists(iofs::GetDataDir() / strWalletFileName)) {
         CDBEnv::VerifyResult r = CDBEnv::bitdb.Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK) {
-            std::string msg = strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
+            std::string msg = strprintfc(_("Warning: wallet.dat corrupt, data salvaged!"
                                           " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                           " your balance or transactions are incorrect you should"
                                           " restore from a backup."), strDataDir.c_str());
@@ -643,7 +655,7 @@ bool entry::AppInit2()
     int nSocksVersion = map_arg::GetArgInt("-socks", 5);
 
     if (nSocksVersion != 4 && nSocksVersion != 5) {
-        return InitError(strprintf(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
+        return InitError(strprintfc(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
     }
 
     if (map_arg::GetMapArgsCount("-onlynet")) {
@@ -652,7 +664,7 @@ bool entry::AppInit2()
         {
             enum netbase::Network net = netbase::manage::ParseNetwork(snet);
             if (net == netbase::NET_UNROUTABLE) {
-                return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
+                return InitError(strprintfc(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
             }
             nets.insert(net);
         }
@@ -677,7 +689,7 @@ bool entry::AppInit2()
     if (map_arg::GetMapArgsCount("-proxy")) {
         addrProxy = CService(map_arg::GetMapArgsString("-proxy"), nSocksDefault);
         if (! addrProxy.IsValid()) {
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), map_arg::GetMapArgsString("-proxy").c_str()));
+            return InitError(strprintfc(_("Invalid -proxy address: '%s'"), map_arg::GetMapArgsString("-proxy").c_str()));
         }
 
         if (! ext_ip::IsLimited(netbase::NET_IPV4)) {
@@ -706,7 +718,7 @@ bool entry::AppInit2()
         }
 
         if (! addrOnion.IsValid()) {
-            return InitError(strprintf(_("Invalid -tor address: '%s'"), map_arg::GetMapArgsString("-tor").c_str()));
+            return InitError(strprintfc(_("Invalid -tor address: '%s'"), map_arg::GetMapArgsString("-tor").c_str()));
         }
 
         netbase::manage::SetProxy(netbase::NET_TOR, addrOnion, 5);
@@ -742,7 +754,7 @@ bool entry::AppInit2()
             {
                 CService addrBind;
                 if (! netbase::manage::Lookup(strBind.c_str(), addrBind, net_basis::GetListenPort(), false)) {
-                    return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
+                    return InitError(strprintfc(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
                 }
                 fBound |= Bind(addrBind);
             }
@@ -785,7 +797,7 @@ bool entry::AppInit2()
         {
             CService addrLocal(strAddr, net_basis::GetListenPort(), netbase::fNameLookup);
             if (! addrLocal.IsValid()) {
-                return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
+                return InitError(strprintfc(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
             }
             ext_ip::AddLocal(CService(strAddr, net_basis::GetListenPort(), netbase::fNameLookup), LOCAL_MANUAL);
         }
@@ -812,7 +824,7 @@ bool entry::AppInit2()
     // ********************************************************* Step 7: load blockchain
 
     if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
-        std::string msg = strprintf(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        std::string msg = strprintfc(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
 

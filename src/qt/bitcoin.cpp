@@ -196,7 +196,11 @@ int main(int argc, char *argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
     // Command-line options take precedence:
-    map_arg::ParseParameters(argc, argv);
+    if(! map_arg::ParseParameters(argc, argv)) {
+        QMessageBox::critical(0, "SorachanCoin",
+            QObject::tr("Error: map_arg::ParseParameters").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
+        return 1;
+    }
 
     // User language is set up: pick a data directory
     Intro::pickDataDirectory();
@@ -210,7 +214,11 @@ int main(int argc, char *argv[])
             QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
-    map_arg::ReadConfigFile();
+    if(! map_arg::ReadConfigFile()) {
+        QMessageBox::critical(0, "SorachanCoin",
+            QObject::tr("Error: map_arg::ReadConfigFile()").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
+        return 1;
+    }
 
     // ... then GUI settings:
     OptionsModel optionsModel;

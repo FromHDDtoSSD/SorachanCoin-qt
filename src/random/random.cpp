@@ -495,7 +495,7 @@ public:
     }
     void operator delete[](void *p)=delete;
 
-    static RNGState &GetRNGState() noexcept {
+    static RNGState &GetRNGState() {
         class manage {
         private:
             RNGState *m_ptr;
@@ -762,7 +762,7 @@ random::FastRandomContext::FastRandomContext(bool fDeterministic) noexcept : req
     rng.SetKey(seed.begin(), 32);
 }
 
-random::FastRandomContext &random::FastRandomContext::operator=(random::FastRandomContext &&from) noexcept {
+random::FastRandomContext &random::FastRandomContext::operator=(random::FastRandomContext &&from) {
     requires_seed = from.requires_seed;
     rng = from.rng;
     std::copy(std::begin(from.bytebuf), std::end(from.bytebuf), std::begin(bytebuf));

@@ -70,7 +70,7 @@ public:
      */
     void refreshWallet()
     {
-        print::OutputDebugStringF("refreshWallet\n");
+        printf("refreshWallet\n");
         cachedWallet.clear();
         {
             LOCK(wallet->cs_wallet);
@@ -90,7 +90,7 @@ public:
      */
     void updateWallet(const uint256 &hash, int status)
     {
-        print::OutputDebugStringF("updateWallet %s %i\n", hash.ToString().c_str(), status);
+        printf("updateWallet %s %i\n", hash.ToString().c_str(), status);
         {
             LOCK(wallet->cs_wallet);
 
@@ -119,18 +119,18 @@ public:
                 }
             }
 
-            print::OutputDebugStringF("   inWallet=%i inModel=%i Index=%i-%i showTransaction=%i derivedStatus=%i\n",
+            printf("   inWallet=%i inModel=%i Index=%i-%i showTransaction=%i derivedStatus=%i\n",
                      inWallet, inModel, lowerIndex, upperIndex, showTransaction, status);
 
             switch(status)
             {
             case CT_NEW:
                 if(inModel) {
-                    print::OutputDebugStringF("Warning: updateWallet: Got CT_NEW, but transaction is already in model\n");
+                    printf("Warning: updateWallet: Got CT_NEW, but transaction is already in model\n");
                     break;
                 }
                 if(! inWallet) {
-                    print::OutputDebugStringF("Warning: updateWallet: Got CT_NEW, but transaction is not in wallet\n");
+                    printf("Warning: updateWallet: Got CT_NEW, but transaction is not in wallet\n");
                     break;
                 }
                 if(showTransaction) {
@@ -151,7 +151,7 @@ public:
                 break;
             case CT_DELETED:
                 if(! inModel) {
-                    print::OutputDebugStringF("Warning: updateWallet: Got CT_DELETED, but transaction is not in model\n");
+                    printf("Warning: updateWallet: Got CT_DELETED, but transaction is not in model\n");
                     break;
                 }
                 // Removed -- remove entire transaction from table

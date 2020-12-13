@@ -213,9 +213,10 @@ public:
             void clear() noexcept;
             secp256k1_context() noexcept;
             secp256k1_context(const secp256k1_context &)=delete;
-            secp256k1_context &operator=(const secp256k1_context &obj)=delete;
-            secp256k1_context &operator=(const secp256k1_context &&obj)=delete;
-            ~secp256k1_context() noexcept;
+            secp256k1_context(secp256k1_context &&)=delete;
+            secp256k1_context &operator=(const secp256k1_context &)=delete;
+            secp256k1_context &operator=(secp256k1_context &&)=delete;
+            ~secp256k1_context();
         };
     };
 
@@ -462,14 +463,15 @@ public:
     static void PubKey_COMPLETION_callback(void (*fn)()) noexcept {fn();}
 
     //! vch_ to string
-    std::string ToString() const noexcept;
+    std::string ToString() const;
 };
 
 // BIP32
 class CExtPubKey {
     CExtPubKey(const CExtPubKey &)=delete;
+    CExtPubKey(CExtPubKey &&)=delete;
     CExtPubKey &operator=(const CExtPubKey &)=delete;
-    CExtPubKey &operator=(const CExtPubKey &&)=delete;
+    CExtPubKey &operator=(CExtPubKey &&)=delete;
 public:
     static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
     unsigned char nDepth;

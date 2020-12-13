@@ -173,7 +173,7 @@ public:
         FastRandomContext &operator=(const FastRandomContext &&) = delete;
 
         /** Move a FastRandomContext. If the original one is used again, it will be reseeded. */
-        FastRandomContext &operator=(FastRandomContext &&from) noexcept;
+        FastRandomContext &operator=(FastRandomContext &&from);
 
         /** Generate a random 64-bit integer. */
         uint64_t rand64() noexcept {
@@ -222,8 +222,8 @@ public:
 
         // Compatibility with the C++11 UniformRandomBitGenerator concept
         using result_type = uint64_t;
-        static constexpr uint64_t min() { return 0; }
-        static constexpr uint64_t max() { return std::numeric_limits<uint64_t>::max(); }
+        static constexpr uint64_t min() noexcept { return 0; }
+        static constexpr uint64_t max() noexcept { return std::numeric_limits<uint64_t>::max(); }
         inline uint64_t operator()() noexcept { return rand64(); }
     };
 

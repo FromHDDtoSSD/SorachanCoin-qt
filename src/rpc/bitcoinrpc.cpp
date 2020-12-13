@@ -611,7 +611,7 @@ void bitrpc::ThreadRPCServer(void *parg) noexcept {
     ThreadRPCServer2(&darg);
     if(! darg.fok) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        printsf(std::string(darg.e.c_str()) + " ThreadRPCServer()");
+        printfc(std::string(darg.e.c_str()) + " ThreadRPCServer()");
     } else
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 
@@ -775,11 +775,11 @@ void bitrpc::ThreadRPCServer2(void *parg) noexcept {
         std::string strWhatAmI = "To use ";
         strWhatAmI += (coin_param::strCoinName + "d").c_str();
         if (map_arg::GetMapArgsCount("-server"))
-            strWhatAmI = strprintf(_("To use the %s option"), "\"-server\"");
+            strWhatAmI = strprintfc(_("To use the %s option"), "\"-server\"");
         else if (map_arg::GetMapArgsCount("-daemon"))
-            strWhatAmI = strprintf(_("To use the %s option"), "\"-daemon\"");
+            strWhatAmI = strprintfc(_("To use the %s option"), "\"-daemon\"");
 
-        CClientUIInterface::uiInterface.ThreadSafeMessageBox(strprintf(
+        CClientUIInterface::uiInterface.ThreadSafeMessageBox(strprintfc(
             _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
             "It is recommended you use the following random password:\n"
             "rpcuser=%srpc\n"
@@ -865,7 +865,7 @@ void bitrpc::ThreadRPCServer2(void *parg) noexcept {
         fListening = true;
     } while (false);
     if(err)
-        strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4"), endpoint.port());
+        strerr = strprintfc(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4"), endpoint.port());
 
     do {
         // If dual IPv6/IPv4 failed (or we're opening loopback interfaces only), open IPv4 separately
@@ -889,7 +889,7 @@ void bitrpc::ThreadRPCServer2(void *parg) noexcept {
         }
     } while (false);
     if(err)
-        strerr = strprintf(_("An error occurred while setting up the RPC port %u for listening on IPv4"), endpoint.port());
+        strerr = strprintfc(_("An error occurred while setting up the RPC port %u for listening on IPv4"), endpoint.port());
 
     if (! fListening) {
         CClientUIInterface::uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
@@ -1148,7 +1148,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params) noexcept {
     if (map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
         json_spirit::json_flags status;
-        return data.runtime_error(strprintf(
+        return data.runtime_error(strprintfc(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
             iofs::GetConfigFile().string().c_str()), 0).get_obj(status);

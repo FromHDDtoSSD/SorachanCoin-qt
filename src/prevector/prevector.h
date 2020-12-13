@@ -11,11 +11,9 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
-
 #include <iterator>
 #include <vector>
 #include <debugcs/debugcs.h>
-
 #include <compat/compat.h> // IS_TRIVIALLY_CONSTRUCTIBLE
 
 #pragma pack(push, 1)
@@ -607,7 +605,7 @@ public:
         std::swap(_size, other._size);
     }
 
-    ~prevector() noexcept {
+    ~prevector() {
         DEBUGCS_OUTPUT("prevector: ~prevector() noexcept");
         if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             clear();
@@ -702,7 +700,6 @@ public:
         return operator[](pos);
     }
 
-    //
     // Note:
     // The following operator isn't used because their interpretation is ambiguous.
     //

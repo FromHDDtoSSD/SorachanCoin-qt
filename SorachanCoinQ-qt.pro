@@ -389,7 +389,7 @@ contains(LIMIT_NOMP_MODE, 0) {
 #
 # warning(-W -Wno) and error(-Werror=) flags setting
 #
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-type -Werror=comment -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-type -Werror=unused-result -Werror=comment -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 
 #
 # target source codes
@@ -486,7 +486,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/version.h \
     src/ntp.h \
     src/netbase.h \
-    src/clientversion.h \
+    src/const/clientversion.h \
     src/qt/multisigaddressentry.h \
     src/qt/multisiginputentry.h \
     src/qt/multisigdialog.h \
@@ -537,6 +537,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/file_operate/file_open.h \
     src/file_operate/autofile.h \
     src/file_operate/fs.h \
+    src/file_operate/iofs.h \
     src/boot/shutdown.h \
     src/miner/diff.h \
     src/rpc/bitcoinrpc.h \
@@ -554,14 +555,18 @@ HEADERS += src/qt/bitcoingui.h \
     src/util/memory.h \
     src/util/system.h \
     src/util/args.h \
+    src/util/c_overload.h \
     src/thread/threadsafety.h \
     src/address/bech32.h \
     src/const/chainparamsbase.h \
     src/const/chainparams.h \
     src/const/attributes.h \
     src/const/assumptions.h \
+    src/const/macro.h \
     src/script/lscript.h \
     src/script/scriptnum.h \
+    src/consensus/consensus.h \
+    src/consensus/params.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -718,9 +723,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/util/system.cpp \
     src/util/args.cpp \
     src/file_operate/fs.cpp \
+    src/file_operate/iofs.cpp \
     src/address/bech32.cpp \
     src/const/chainparamsbase.cpp \
     src/const/chainparams.cpp \
+    src/const/clientversion.cpp \
     src/bip32/hdwalletutil.cpp \
     src/script/lscript.cpp \
     src/noexcept/noexcept_detail/eh.cpp \

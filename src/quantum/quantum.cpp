@@ -13,8 +13,8 @@
 #include <blake2.h>
 #include <pbkdf2.h>
 #include <compat/sanity.h>
-
-#include <openssl/rand.h>
+#include <const/macro.h>
+#include <random/random.h>
 #include <cleanse/cleanse.h>
 
 //
@@ -59,7 +59,7 @@ void quantum_lib::manage::readwrite() const {
 #endif
 }
 
-quantum_lib::manage::~manage() noexcept {
+quantum_lib::manage::~manage() {
 #if defined(WIN32)
     DWORD old;
     (void)::VirtualProtect(ptr, size, PAGE_NOACCESS, &old);
@@ -127,17 +127,14 @@ void quantum_lib::secure_memzero(void *ptr, size_t sizeIn) noexcept {
 void quantum_lib::secure_memrandom(void *ptr, size_t sizeIn) noexcept {
     unsigned char *volatile pnt_ = (unsigned char *volatile)ptr;
     unsigned char buf[1024];
-    (void)::RAND_bytes(buf, sizeof(buf) / sizeof(buf[0]));
+    latest_crypto::random::GetStrongRandBytes(buf, ARRAYLEN(buf));
     size_t i = (size_t)0U;
     while (i < sizeIn) {
         pnt_[i] = buf[i & (sizeof(buf) / sizeof(buf[0]) - 1)];
         ++i;
     }
 }
-#ifdef _MSC_VER
-void quantum_lib::secure_stackzero(const size_t) noexcept {}
-void quantum_lib::secure_stackrandom(const size_t) noexcept {}
-#else
+
 void quantum_lib::secure_stackzero(const size_t sizeIn) noexcept {
     unsigned char dummy[sizeIn];
     secure_memzero(dummy, sizeIn);
@@ -147,12 +144,9 @@ void quantum_lib::secure_stackrandom(const size_t sizeIn) noexcept {
     unsigned char dummy[sizeIn];
     secure_memrandom(dummy, sizeIn);
 }
-#endif
 
-void quantum_lib::secure_mprotect_noaccess(const void *ptr) {
-    //
+bool quantum_lib::secure_mprotect_noaccess(const void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
-    //
     size_t size;
     void *__ptr = const_cast<void *>(ptr);
     {
@@ -168,14 +162,12 @@ void quantum_lib::secure_mprotect_noaccess(const void *ptr) {
 #else
     int ret = ::mprotect(__ptr, size, PROT_NONE);
 #endif
-    if (ret != 0)
-        throw std::runtime_error("secure_mprotect_noaccess failure.");
+
+    return ret != 0;
 }
 
-void quantum_lib::secure_mprotect_readonly(const void *ptr) {
-    //
+bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
-    //
     size_t size;
     void *__ptr = const_cast<void *>(ptr);
     {
@@ -191,14 +183,12 @@ void quantum_lib::secure_mprotect_readonly(const void *ptr) {
 #else
     int ret = ::mprotect(__ptr, size, PROT_READ);
 #endif
-    if (ret != 0)
-        throw std::runtime_error("secure_mprotect_readonly failure.");
+
+    return ret != 0;
 }
 
-void quantum_lib::secure_mprotect_readwrite(void *ptr) {
-    //
+bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
-    //
     size_t size;
     {
         void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
@@ -214,18 +204,17 @@ void quantum_lib::secure_mprotect_readwrite(void *ptr) {
 #else
     int ret = ::mprotect(ptr, size, PROT_READ | PORT_WRITE);
 #endif
-    if (ret != 0)
-        throw std::runtime_error("secure_mprotect_readwrite failure.");
+
+    return ret != 0;
 }
 
 void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
-    if (::RAND_bytes(data, sizeIn) != 1)
-        throw std::runtime_error("Quantum_lib RAND_byte failure.");
+    latest_crypto::random::GetStrongRandBytes(data, sizeIn);
 }
 
 namespace quantum_hash {
-void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) {
-    static const size_t buffer_length = 32768;
+void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept {
+    static constexpr size_t buffer_length = 32768;
     blake2s_state S;
     ::blake2s_init(&S, size_hash);
     size_t remain = size_data;
@@ -245,7 +234,7 @@ void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t
     ::blake2s_final(&S, hash, size_hash);
 }
 
-void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data) {
+void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data) noexcept {
     assert(latest_crypto::Lamport::BLAKE2KeyHash::Size()==CBLAKE2::Size());
     CBLAKE2 ctx;
     ctx.Write(data, size_data);
@@ -590,7 +579,7 @@ private:
         th2.join();
 #endif
     }
-    ~Quantum_startup() noexcept {}
+    ~Quantum_startup() {}
 };
 Quantum_startup Quantum_startup::q_startup;
 

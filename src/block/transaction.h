@@ -412,7 +412,7 @@ public:
         GMF_SEND
     };
 public:
-    static const int CURRENT_VERSION = 1;
+    static constexpr int CURRENT_VERSION = 1;
     int nVersion;
     uint32_t nTime;
     std::vector<CTxIn> vin;

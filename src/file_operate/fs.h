@@ -20,22 +20,22 @@ namespace fs = boost::filesystem;
 
 /** Bridge operations to C stdio */
 namespace fsbridge {
-    FILE *fopen(const fs::path &p, const char *mode) noexcept;
+    FILE *fopen(const fs::path &p, const char *mode);
 
     class FileLock
     {
     private:
-        static std::string GetErrorReason() noexcept;
+        static std::string GetErrorReason();
 
     public:
         FileLock() = delete;
         FileLock(const FileLock &) = delete;
         FileLock(FileLock &&) = delete;
 
-        explicit FileLock(const fs::path &file) noexcept;
+        explicit FileLock(const fs::path &file);
         ~FileLock();
-        bool TryLock() noexcept;
-        std::string GetReason() const noexcept { return reason; }
+        bool TryLock();
+        std::string GetReason() const { return reason; }
 
     private:
         std::string reason;

@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_READ_STREAM
 #define JSON_SPIRIT_READ_STREAM
@@ -20,12 +16,12 @@ namespace json_spirit
     template<typename Istream_type, typename Value_type>
     class Stream_reader {
     public:
-        Stream_reader(Istream_type &is) noexcept
+        Stream_reader(Istream_type &is)
             : iters_(is)
         {
         }
 
-        bool read_next(Value_type &value, json_flags &status) noexcept {
+        bool read_next(Value_type &value, json_flags &status) {
             return read_range(iters_.begin_, iters_.end_, value, status);
         }
 
@@ -38,14 +34,14 @@ namespace json_spirit
     template<typename Istream_type, typename Value_type>
     class Stream_reader_thrower {
     public:
-        Stream_reader_thrower(Istream_type &is) noexcept
+        Stream_reader_thrower(Istream_type &is)
             : iters_(is)
             , posn_begin_(iters_.begin_, iters_.end_)
             , posn_end_(iters_.end_, iters_.end_)
         {
         }
 
-        void read_next(Value_type &value, json_flags &status) noexcept {
+        void read_next(Value_type &value, json_flags &status) {
             posn_begin_ = read_range_or_throw(posn_begin_, posn_end_, value, status);
         }
 

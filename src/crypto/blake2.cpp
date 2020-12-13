@@ -10,24 +10,24 @@
 
 namespace latest_crypto {
 
-CBLAKE2::CBLAKE2() {
+CBLAKE2::CBLAKE2() noexcept {
     Reset();
 }
 
-CBLAKE2& CBLAKE2::Write(const unsigned char* data, size_t len) {
+CBLAKE2& CBLAKE2::Write(const unsigned char* data, size_t len) noexcept {
     ::blake2s_update(&S, data, len);
     return *this;
 }
 
-void CBLAKE2::Finalize(unsigned char hash[OUTPUT_SIZE]) {
+void CBLAKE2::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept {
     ::blake2s_final(&S, hash, OUTPUT_SIZE);
 }
 
-CBLAKE2& CBLAKE2::Reset() {
+CBLAKE2& CBLAKE2::Reset() noexcept {
     ::blake2s_init(&S, OUTPUT_SIZE); return *this;
 }
 
-void CBLAKE2::Clean() {
+void CBLAKE2::Clean() noexcept {
     cleanse::OPENSSL_cleanse(&S, sizeof(S));
 }
 

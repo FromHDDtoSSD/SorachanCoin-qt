@@ -18,17 +18,16 @@ private:
     uint64_t s[8];
     unsigned char buf[128];
     uint64_t bytes;
-
 public:
-    static const size_t OUTPUT_SIZE = 64;
+    static constexpr size_t OUTPUT_SIZE = 64;
 
-    CSHA512();
-    CSHA512& Write(const unsigned char* data, size_t len);
-    void Finalize(unsigned char hash[OUTPUT_SIZE]);
-    CSHA512& Reset();
+    CSHA512() noexcept;
+    CSHA512& Write(const unsigned char* data, size_t len) noexcept;
+    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
+    CSHA512& Reset() noexcept;
 
-    static constexpr size_t Size() {return OUTPUT_SIZE;}
-    void Clean() {
+    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
+    void Clean() noexcept {
         cleanse::OPENSSL_cleanse(s, sizeof(s));
         cleanse::OPENSSL_cleanse(buf, sizeof(buf));
     }

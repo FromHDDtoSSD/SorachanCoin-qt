@@ -15,7 +15,7 @@
 
 namespace fsbridge {
 
-FILE *fopen(const fs::path &p, const char *mode) noexcept {
+FILE *fopen(const fs::path &p, const char *mode) {
 #ifndef WIN32
     return ::fopen(p.string().c_str(), mode);
 #else
@@ -25,11 +25,11 @@ FILE *fopen(const fs::path &p, const char *mode) noexcept {
 }
 
 #ifndef WIN32
-std::string GetErrorReason() noexcept {
+std::string GetErrorReason() {
     return std::strerror(errno);
 }
 
-FileLock::FileLock(const fs::path &file) noexcept {
+FileLock::FileLock(const fs::path &file) {
     fd = ::open(file.string().c_str(), O_RDWR);
     if (fd == -1)
         reason = GetErrorReason();
@@ -40,7 +40,7 @@ FileLock::~FileLock() {
         ::close(fd);
 }
 
-bool FileLock::TryLock() noexcept {
+bool FileLock::TryLock() {
     if (fd == -1)
         return false;
     struct flock lock;
@@ -55,7 +55,7 @@ bool FileLock::TryLock() noexcept {
     return true;
 }
 #else
-std::string FileLock::GetErrorReason() noexcept {
+std::string FileLock::GetErrorReason() {
     wchar_t *err;
     if(! ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                           nullptr, ::GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<WCHAR *>(&err), 0, nullptr)) {
@@ -67,7 +67,7 @@ std::string FileLock::GetErrorReason() noexcept {
     return std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>>().to_bytes(err_str);
 }
 
-FileLock::FileLock(const fs::path &file) noexcept {
+FileLock::FileLock(const fs::path &file) {
     hFile = ::CreateFileW(file.wstring().c_str(),  GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
         nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (hFile == INVALID_HANDLE_VALUE)
@@ -79,11 +79,11 @@ FileLock::~FileLock() {
         CloseHandle(hFile);
 }
 
-bool FileLock::TryLock() noexcept {
+bool FileLock::TryLock() {
     if (hFile == INVALID_HANDLE_VALUE)
         return false;
     _OVERLAPPED overlapped = {0};
-    if (! LockFileEx(hFile, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, std::numeric_limits<DWORD>::max(), std::numeric_limits<DWORD>::max(), &overlapped)) {
+    if (! ::LockFileEx(hFile, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, std::numeric_limits<DWORD>::max(), std::numeric_limits<DWORD>::max(), &overlapped)) {
         reason = GetErrorReason();
         return false;
     }

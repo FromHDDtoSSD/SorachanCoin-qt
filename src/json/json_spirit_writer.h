@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_WRITER
 #define JSON_SPIRIT_WRITER

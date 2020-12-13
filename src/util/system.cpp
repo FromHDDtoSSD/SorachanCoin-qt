@@ -467,7 +467,7 @@ int lutil::GetNumCores() noexcept {
 
 /*
 std::string lutil::CopyrightHolders(const std::string &strPrefix) noexcept {
-    const auto copyright_devs = strprintf(_(COPYRIGHT_HOLDERS), COPYRIGHT_HOLDERS_SUBSTITUTION);
+    const auto copyright_devs = strprintfc(_(COPYRIGHT_HOLDERS), COPYRIGHT_HOLDERS_SUBSTITUTION);
     std::string strCopyrightHolders = strPrefix + copyright_devs;
 
     // Make sure Bitcoin Core copyright is not removed by accident
@@ -479,6 +479,10 @@ std::string lutil::CopyrightHolders(const std::string &strPrefix) noexcept {
     return strCopyrightHolders;
 }
 */
+
+fs::path lutil::AbsPathForConfigVal(const fs::path &path, bool net_specific/*= true*/) {
+    return fs::absolute(path, lutil::GetDataDir(net_specific));
+}
 
 int lutil::ScheduleBatchPriority() {
 #ifdef SCHED_BATCH

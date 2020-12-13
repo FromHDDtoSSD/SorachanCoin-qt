@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_WRITER_TEMPLATE
 #define JSON_SPIRIT_WRITER_TEMPLATE
@@ -61,7 +57,7 @@ namespace json_spirit
     }
 
     template< class String_type >
-    String_type add_esc_chars(const String_type& s) noexcept
+    String_type add_esc_chars(const String_type& s)
     {
         typedef typename String_type::const_iterator Iter_type;
         typedef typename String_type::value_type     Char_type;
@@ -104,7 +100,7 @@ namespace json_spirit
         using Obj_member_type = typename Object_type::value_type;
 
     public:
-        Generator(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status) noexcept
+        Generator(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status)
             : os_(os)
             , indentation_level_(0)
             , pretty_(pretty)
@@ -114,7 +110,7 @@ namespace json_spirit
         }
 
     private:
-        void output(const Value_type &value, json_flags &status) noexcept {
+        void output(const Value_type &value, json_flags &status) {
             if(! status.fSuccess()) return;
             switch (value.type())
             {
@@ -132,24 +128,24 @@ namespace json_spirit
             }
         }
 
-        void output(const Object_type &obj, json_flags &status) noexcept {
+        void output(const Object_type &obj, json_flags &status) {
             if(! status.fSuccess()) return;
             output_array_or_obj(obj, '{', '}', status);
         }
 
-        void output(const Array_type &arr, json_flags &status) noexcept {
+        void output(const Array_type &arr, json_flags &status) {
             if(! status.fSuccess()) return;
             output_array_or_obj(arr, '[', ']', status);
         }
 
-        void output(const Obj_member_type &member, json_flags &status) noexcept {
+        void output(const Obj_member_type &member, json_flags &status) {
             if(! status.fSuccess()) return;
             output(Config_type::get_name(member), status); space();
             os_ << ':'; space();
             output(Config_type::get_value(member), status);
         }
 
-        void output_int(const Value_type &value, json_flags &status) noexcept {
+        void output_int(const Value_type &value, json_flags &status) {
             if(! status.fSuccess()) return;
             if (value.is_uint64())
                 os_ << value.get_uint64(status);
@@ -157,18 +153,18 @@ namespace json_spirit
                 os_ << value.get_int64(status);
         }
 
-        void output(const String_type &s, json_flags &status) noexcept {
+        void output(const String_type &s, json_flags &status) {
             if(! status.fSuccess()) return;
             os_ << '"' << add_esc_chars(s) << '"';
         }
 
-        void output(bool b, json_flags &status) noexcept {
+        void output(bool b, json_flags &status) {
             if(! status.fSuccess()) return;
             os_ << to_str< String_type >(b ? "true" : "false");
         }
 
         template<typename T>
-        void output_array_or_obj(const T &t, Char_type start_char, Char_type end_char, json_flags &status) noexcept {
+        void output_array_or_obj(const T &t, Char_type start_char, Char_type end_char, json_flags &status) {
             if(! status.fSuccess()) return;
             os_ << start_char; new_line();
             ++indentation_level_;
@@ -186,22 +182,22 @@ namespace json_spirit
             indent(); os_ << end_char;
         }
 
-        void indent() noexcept {
+        void indent() {
             if (!pretty_) return;
             for (int i = 0; i < indentation_level_; ++i)
                 os_ << "    ";
         }
 
-        void space() noexcept {
+        void space() {
             if (pretty_) os_ << ' ';
         }
 
-        void new_line() noexcept {
+        void new_line() {
             if (pretty_) os_ << '\n';
         }
 
         Generator &operator=(const Generator &)=delete; // to prevent "assignment operator could not be generated" warning
-        Generator &operator=(const Generator &&)=delete;
+        Generator &operator=(Generator &&)=delete;
 
         Ostream_type& os_;
         int indentation_level_;
@@ -209,12 +205,12 @@ namespace json_spirit
     };
 
     template<typename Value_type, typename Ostream_type>
-    void write_stream(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status) noexcept {
+    void write_stream(const Value_type &value, Ostream_type &os, bool pretty, json_flags &status) {
         Generator< Value_type, Ostream_type >(value, os, pretty, status);
     }
 
     template<typename Value_type>
-    typename Value_type::String_type write_string(const Value_type &value, bool pretty, json_flags &status) noexcept {
+    typename Value_type::String_type write_string(const Value_type &value, bool pretty, json_flags &status) {
         using Char_type = typename Value_type::String_type::value_type;
 
         std::basic_ostringstream<Char_type> os;

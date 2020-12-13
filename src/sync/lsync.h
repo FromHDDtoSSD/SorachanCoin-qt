@@ -11,8 +11,8 @@
 // current apply: random.h[random.cpp]
 #ifdef DEBUG
 # define HAVE_THREAD_LOCAL
-# define DEBUG_LOCKCONTENTION
-# define DEBUG_LOCKORDER
+# define LDEBUG_LOCKCONTENTION
+# define LDEBUG_LOCKORDER
 # define DEBUG_LSYNC_CS(str) do {debugcs::instance() << (str) << debugcs::endl();} while(0)
 #else
 # define DEBUG_LSYNC_CS(str)
@@ -61,7 +61,7 @@ LLEAVE_CRITICAL_SECTION(mutex); // no RAII
 //                           //
 ///////////////////////////////
 
-#ifdef DEBUG_LOCKORDER
+#ifdef LDEBUG_LOCKORDER
 void LEnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);
 void LLeaveCritical();
 std::string LLocksHeld();
@@ -72,7 +72,7 @@ void LDeleteLock(void* cs);
 /**
  * Call abort() if a potential lock order deadlock bug is detected, instead of
  * just logging information and throwing a logic_error. Defaults to true, and
- * set to false in DEBUG_LOCKORDER unit tests.
+ * set to false in LDEBUG_LOCKORDER unit tests.
  */
 extern bool g_debug_lockorder_abort;
 #else
@@ -125,7 +125,7 @@ typedef AnnotatedMixin<std::recursive_mutex> LCCriticalSection;
 /** Wrapped mutex: supports waiting but not recursive locking */
 typedef AnnotatedMixin<std::mutex> Mutex;
 
-#ifdef DEBUG_LOCKCONTENTION
+#ifdef LDEBUG_LOCKCONTENTION
 void LPrintLockContention(const char* pszName, const char* pszFile, int nLine);
 #endif
 
@@ -137,12 +137,12 @@ private:
     void Enter(const char* pszName, const char* pszFile, int nLine)
     {
         LEnterCritical(pszName, pszFile, nLine, (void*)(Base::mutex()));
-#ifdef DEBUG_LOCKCONTENTION
+#ifdef LDEBUG_LOCKCONTENTION
         if (!Base::try_lock()) {
             LPrintLockContention(pszName, pszFile, nLine);
 #endif
             Base::lock();
-#ifdef DEBUG_LOCKCONTENTION
+#ifdef LDEBUG_LOCKCONTENTION
         }
 #endif
     }

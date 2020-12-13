@@ -42,27 +42,23 @@ public:
     }
 
 private:
-    debugcs(const debugcs &); // {}
-    debugcs &operator=(const debugcs &); // {}
+    debugcs(const debugcs &)=delete;
+    debugcs(debugcs &&)=delete;
+    debugcs &operator=(const debugcs &)=delete;
+    debugcs &operator=(debugcs &&)=delete;
 
     debugcs() noexcept {
 #if defined(WIN32) && defined(DEBUG)
         ::InitializeCriticalSection(&cs);
 
-        //
-        // Open Debug Console
-        //
         FILE *fp = nullptr;
         ::AllocConsole();
         ::freopen_s(&fp, "CONOUT$", "w", stdout);
         ::freopen_s(&fp, "CONOUT$", "w", stderr);
 #endif
     }
-    ~debugcs() noexcept {
+    ~debugcs() {
 #if defined(WIN32) && defined(DEBUG)
-        //
-        // Close Debug Console
-        //
         ::FreeConsole();
         ::DeleteCriticalSection(&cs);
 #endif

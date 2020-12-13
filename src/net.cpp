@@ -1996,9 +1996,9 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
     if(::bind(hListenSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR) {
         int nErr = ::WSAGetLastError();
         if(nErr == WSAEADDRINUSE) {
-            strError = strprintf(_(sts_c("Unable to bind to %s on this computer. " + coin_param::strCoinName + " is probably already running.")), addrBind.ToString().c_str());
+            strError = strprintfc(_(sts_c("Unable to bind to %s on this computer. " + coin_param::strCoinName + " is probably already running.")), addrBind.ToString().c_str());
         } else {
-            strError = strprintf(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString().c_str(), nErr, strerror(nErr));
+            strError = strprintfc(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString().c_str(), nErr, strerror(nErr));
         }
 
         printf("%s\n", strError.c_str());

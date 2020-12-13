@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_VALUE
 #define JSON_SPIRIT_VALUE
@@ -31,7 +27,7 @@ namespace json_spirit
     class ArrayError : public Config::Array_type {
     public:
         template <typename Value_type>
-        void push_back(Value_type) noexcept {}
+        void push_back(Value_type) {}
         template <typename R>
         R *back() noexcept {return nullptr;}
     };
@@ -52,21 +48,21 @@ namespace json_spirit
         }
         bool fSuccess() const noexcept {return (type_==Status_success);}
         template <typename T>
-        T &JSONError(const char *__e, T *__err) const noexcept {
+        T &JSONError(const char *__e, T *__err) const {
             type_=Status_error;
             if(__e) e = __e;
             return *__err;
         }
         template <typename T=std::string>
-        T JSONError() const noexcept {
+        T JSONError() const {
             return e;
         }
         template <typename T=std::string&>
-        T JSONError(const T obj) const noexcept {
+        T JSONError(const T obj) const {
             return obj;
         }
         template <typename B, typename E, typename T=B&>
-        T JSONRet(B *__v, E *__err, bool fexcept=true) const noexcept {
+        T JSONRet(B *__v, E *__err, bool fexcept=true) const {
             if(__v && type_==Status_success) {
                 //type_=Status_success;
                 return *__v;
@@ -91,10 +87,10 @@ namespace json_spirit
         using Array = typename Config::Array_type;
         using Const_str_ptr = typename String_type::const_pointer;  // eg const char *
         Value_impl() noexcept : type_(null_type), is_uint64_(false) {} // creates null value
-        Value_impl(Const_str_ptr      value) noexcept : type_(str_type), v_(String_type(value)), is_uint64_(false) {}
-        Value_impl(const String_type &value) noexcept : type_(str_type), v_(value), is_uint64_(false) {}
-        Value_impl(const Object      &value) noexcept : type_(obj_type), v_(value), is_uint64_(false) {}
-        Value_impl(const Array       &value) noexcept : type_(array_type), v_(value), is_uint64_(false) {}
+        Value_impl(Const_str_ptr      value) : type_(str_type), v_(String_type(value)), is_uint64_(false) {}
+        Value_impl(const String_type &value) : type_(str_type), v_(value), is_uint64_(false) {}
+        Value_impl(const Object      &value) : type_(obj_type), v_(value), is_uint64_(false) {}
+        Value_impl(const Array       &value) : type_(array_type), v_(value), is_uint64_(false) {}
         Value_impl(bool               value) noexcept : type_(bool_type), v_(value), is_uint64_(false) {}
         Value_impl(int                value) noexcept : type_(int_type), v_(static_cast<int64_t>(value)), is_uint64_(false) {}
         Value_impl(int64_t            value) noexcept : type_(int_type), v_(value), is_uint64_(false) {}
@@ -105,7 +101,7 @@ namespace json_spirit
         Value_impl(const Value_impl &&other) noexcept : type_(other.type_), v_(other.v_), is_uint64_(other.is_uint64_) {}
 
         bool operator==(const Value_impl &lhs) const noexcept;
-        Value_impl &operator=(const Value_impl &lhs) noexcept;
+        Value_impl &operator=(const Value_impl &lhs);
         Value_type type() const noexcept;
         bool is_uint64() const noexcept;
         bool is_null() const noexcept;
@@ -121,14 +117,13 @@ namespace json_spirit
 
         Object            &get_obj(json_flags &status)    noexcept;
         Array             &get_array(json_flags &status)  noexcept;
-        template<typename T> T get_value(json_flags &status) const noexcept;  // example usage: int    i = value.get_value<int>(status);
-                                                                              // or             double d = value.get_value<double>(status);
+        template<typename T> T get_value(json_flags &status) const;  // example usage: int    i = value.get_value<int>(status);
+                                                                     // or             double d = value.get_value<double>(status);
 
         static const Value_impl null;
 
     private:
         void check_type(const Value_type vtype, json_flags &status) const noexcept;
-
         using Variant = boost::variant<String_type,
             boost::recursive_wrapper<Object>, boost::recursive_wrapper<Array>,
             bool, int64_t, double>;
@@ -144,7 +139,7 @@ namespace json_spirit
         using String_type = typename Config::String_type;
         using Value_type = typename Config::Value_type;
 
-        Pair_impl(const String_type &name, const Value_type &value) noexcept;
+        Pair_impl(const String_type &name, const Value_type &value);
 
         bool operator==(const Pair_impl& lhs) const noexcept;
 
@@ -159,16 +154,16 @@ namespace json_spirit
         using Array_type = std::vector<Value_type>;
         using Object_type = std::vector<Pair_type>;
 
-        static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) noexcept {
+        static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) {
             obj.push_back(Pair_type(name, value));
             return obj.back().value_;
         }
 
-        static String_type get_name(const Pair_type &pair) noexcept {
+        static String_type get_name(const Pair_type &pair) {
             return pair.name_;
         }
 
-        static Value_type get_value(const Pair_type &pair) noexcept {
+        static Value_type get_value(const Pair_type &pair) {
             return pair.value_;
         }
     };
@@ -198,15 +193,15 @@ namespace json_spirit
         using Object_type = std::map<String_type, Value_type>;
         using Pair_type = typename Object_type::value_type;
 
-        static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) noexcept {
+        static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) {
             return obj[name] = value;
         }
 
-        static String_type get_name(const Pair_type &pair) noexcept {
+        static String_type get_name(const Pair_type &pair) {
             return pair.first;
         }
 
-        static Value_type get_value(const Pair_type &pair) noexcept {
+        static Value_type get_value(const Pair_type &pair) {
             return pair.second;
         }
     };
@@ -228,7 +223,7 @@ namespace json_spirit
     template<typename Config>
     const Value_impl<Config> Value_impl<Config>::null;
     template<typename Config>
-    Value_impl<Config> &Value_impl<Config>::operator=(const Value_impl &lhs) noexcept {
+    Value_impl<Config> &Value_impl<Config>::operator=(const Value_impl &lhs) {
         Value_impl tmp(lhs);
         std::swap(type_, tmp.type_);
         std::swap(v_, tmp.v_);
@@ -261,10 +256,14 @@ namespace json_spirit
     template< class Config >
     void Value_impl<Config>::check_type(const Value_type vtype, json_flags &status) const noexcept {
         if (type() != vtype) {
-            std::ostringstream os;
-            ///// Bitcoin: Tell the types by name instead of by number
-            os << "value is type " << Value_type_name[type()] << ", expected " << Value_type_name[vtype];
-            status.JSONError(os.str().c_str());
+            try {
+                std::ostringstream os;
+                ///// Bitcoin: Tell the types by name instead of by number
+                os << "value is type " << Value_type_name[type()] << ", expected " << Value_type_name[vtype];
+                status.JSONError(os.str().c_str());
+            } catch (const std::bad_alloc &) {
+                status.JSONError("ERROR: check_type failed to allocate memory");
+            }
         } else
             status.JSONSuccess();
     }
@@ -358,7 +357,7 @@ namespace json_spirit
     }
 
     template<typename Config>
-    Pair_impl<Config>::Pair_impl(const String_type &name, const Value_type &value) noexcept
+    Pair_impl<Config>::Pair_impl(const String_type &name, const Value_type &value)
         : name_(name)
         , value_(value)
     {
@@ -373,7 +372,7 @@ namespace json_spirit
     // converts a C string, ie. 8 bit char array, to a string object
     //
     template <class String_type>
-    String_type to_str(const char *c_str) noexcept {
+    String_type to_str(const char *c_str) {
         String_type result;
         for (const char *p = c_str; *p != 0; ++p)
             result += *p;
@@ -413,19 +412,19 @@ namespace json_spirit
         }
 
         template<typename Value>
-        typename Value::String_type get_value(const Value &value, Type_to_type<typename Value::String_type>, json_flags &status) noexcept
+        typename Value::String_type get_value(const Value &value, Type_to_type<typename Value::String_type>, json_flags &status)
         {
             return value.get_str(status);
         }
 
         template<typename Value>
-        typename Value::Array get_value(const Value &value, Type_to_type<typename Value::Array>, json_flags &status) noexcept
+        typename Value::Array get_value(const Value &value, Type_to_type<typename Value::Array>, json_flags &status)
         {
             return value.get_array(status);
         }
 
         template<typename Value>
-        typename Value::Object get_value(const Value &value, Type_to_type<typename Value::Object>, json_flags &status) noexcept
+        typename Value::Object get_value(const Value &value, Type_to_type<typename Value::Object>, json_flags &status)
         {
             return value.get_obj(status);
         }
@@ -439,7 +438,7 @@ namespace json_spirit
 
     template<typename Config>
     template<typename T>
-    T Value_impl<Config>::get_value(json_flags &status) const noexcept {
+    T Value_impl<Config>::get_value(json_flags &status) const {
         return internal_::get_value(*this, internal_::Type_to_type<T>(), status);
     }
 }

@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_READER_TEMPLATE
 #define JSON_SPIRIT_READER_TEMPLATE
@@ -133,16 +129,16 @@ namespace json_spirit
         return substitute_esc_chars<String_type>(str_without_quotes, end_without_quotes);
     }
 
-    inline std::string get_str(std::string::const_iterator begin, std::string::const_iterator end) noexcept {
+    inline std::string get_str(std::string::const_iterator begin, std::string::const_iterator end) {
         return get_str_<std::string>(begin, end);
     }
 
-    inline std::wstring get_str(std::wstring::const_iterator begin, std::wstring::const_iterator end) noexcept {
+    inline std::wstring get_str(std::wstring::const_iterator begin, std::wstring::const_iterator end) {
         return get_str_<std::wstring>(begin, end);
     }
 
     template<typename String_type, typename Iter_type>
-    String_type get_str(Iter_type begin, Iter_type end) noexcept {
+    String_type get_str(Iter_type begin, Iter_type end) {
         const String_type tmp(begin, end); // convert multipass iterators to string iterators
         return get_str(tmp.begin(), tmp.end());
     }
@@ -161,75 +157,75 @@ namespace json_spirit
         using Array_type = typename Config_type::Array_type;
         using Char_type = typename String_type::value_type;
 
-        Semantic_actions(Value_type &value) noexcept
+        Semantic_actions(Value_type &value)
             : value_(value)
             , current_p_(0)
         {
         }
 
-        void begin_obj(Char_type c) noexcept {
+        void begin_obj(Char_type c) {
             assert(c == '{');
             begin_compound<Object_type>();
         }
 
-        void end_obj(Char_type c) noexcept {
+        void end_obj(Char_type c) {
             assert(c == '}');
             end_compound();
         }
 
-        void begin_array(Char_type c) noexcept {
+        void begin_array(Char_type c) {
             assert(c == '[');
             begin_compound<Array_type>();
         }
 
-        void end_array(Char_type c) noexcept {
+        void end_array(Char_type c) {
             assert(c == ']');
             end_compound();
         }
 
-        void new_name(Iter_type begin, Iter_type end) noexcept {
+        void new_name(Iter_type begin, Iter_type end) {
             assert(current_p_->type() == obj_type);
             name_ = get_str< String_type >(begin, end);
         }
 
-        void new_str(Iter_type begin, Iter_type end) noexcept {
+        void new_str(Iter_type begin, Iter_type end) {
             add_to_current(get_str< String_type >(begin, end));
         }
 
-        void new_true(Iter_type begin, Iter_type end) noexcept {
+        void new_true(Iter_type begin, Iter_type end) {
             assert(is_eq(begin, end, "true"));
             add_to_current(true);
         }
 
-        void new_false(Iter_type begin, Iter_type end) noexcept {
+        void new_false(Iter_type begin, Iter_type end) {
             assert(is_eq(begin, end, "false"));
             add_to_current(false);
         }
 
-        void new_null(Iter_type begin, Iter_type end) noexcept {
+        void new_null(Iter_type begin, Iter_type end) {
             assert(is_eq(begin, end, "null"));
             add_to_current(Value_type());
         }
 
-        void new_int(int64_t i) noexcept {
+        void new_int(int64_t i) {
             add_to_current(i);
         }
 
-        void new_uint64(uint64_t ui) noexcept {
+        void new_uint64(uint64_t ui) {
             add_to_current(ui);
         }
 
-        void new_real(double d) noexcept {
+        void new_real(double d) {
             add_to_current(d);
         }
 
     private:
 
         Semantic_actions &operator=(const Semantic_actions &)=delete;
-        Semantic_actions &operator=(const Semantic_actions &&)=delete;
+        Semantic_actions &operator=(Semantic_actions &&)=delete;
         // to prevent "assignment operator could not be generated" warning
 
-        Value_type* add_first(const Value_type &value) noexcept {
+        Value_type* add_first(const Value_type &value) {
             assert(current_p_ == 0);
             value_ = value;
             current_p_ = &value_;
@@ -237,7 +233,7 @@ namespace json_spirit
         }
 
         template<typename Array_or_obj>
-        void begin_compound() noexcept {
+        void begin_compound() {
             if (current_p_ == 0)
                 add_first(Array_or_obj());
             else {
@@ -248,14 +244,14 @@ namespace json_spirit
             }
         }
 
-        void end_compound() noexcept {
+        void end_compound() {
             if (current_p_ != &value_) {
                 current_p_ = stack_.back();
                 stack_.pop_back();
             }
         }
 
-        Value_type *add_to_current(const Value_type &value) noexcept {
+        Value_type *add_to_current(const Value_type &value) {
             if (current_p_ == 0)
                 return add_first(value);
             else if (current_p_->type() == array_type) {
@@ -280,13 +276,13 @@ namespace json_spirit
     };
 
     template<typename Iter_type>
-    void throw_error(spirit_namespace::position_iterator<Iter_type>, const std::string &reason, json_flags &status) noexcept {
+    void throw_error(spirit_namespace::position_iterator<Iter_type>, const std::string &reason, json_flags &status) {
         //throw Error_position(i.get_position().line, i.get_position().column, reason);
         status.e = reason;
     }
 
     template<typename Iter_type>
-    void throw_error(Iter_type, const std::string &reason, json_flags &status) noexcept {
+    void throw_error(Iter_type, const std::string &reason, json_flags &status) {
         //throw reason;
         status.e = reason;
     }
@@ -304,37 +300,37 @@ namespace json_spirit
     public:
         using Semantic_actions_t = Semantic_actions<Value_type, Iter_type>;
 
-        Json_grammer(Semantic_actions_t &semantic_actions) noexcept
+        Json_grammer(Semantic_actions_t &semantic_actions)
             : actions_(semantic_actions)
         {
         }
 
-        static void throw_not_value(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_value(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "not a value", status_);
         }
 
-        static void throw_not_array(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_array(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "not an array", status_);
         }
 
-        static void throw_not_object(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_object(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "not an object", status_);
         }
 
-        static void throw_not_pair(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_pair(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "not a pair", status_);
         }
 
-        static void throw_not_colon(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_colon(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "no colon in pair", status_);
         }
 
-        static void throw_not_string(Iter_type begin, Iter_type) noexcept {
+        static void throw_not_string(Iter_type begin, Iter_type) {
             std::lock_guard<std::mutex> lock(mutex_);
             throw_error(begin, "not a string", status_);
         }
@@ -345,7 +341,7 @@ namespace json_spirit
         private:
             bool success_;
         public:
-            definition(const Json_grammer &self) noexcept : success_(false) {
+            definition(const Json_grammer &self) : success_(false) {
                 using namespace spirit_namespace;
                 namespace sp = std::placeholders; // std::bind, after operate sp::_1, sp::_2 ... sp::_N
 
@@ -458,13 +454,13 @@ namespace json_spirit
 
     private:
         Json_grammer &operator=(const Json_grammer &)=delete; // to prevent "assignment operator could not be generated" warning
-        Json_grammer &operator=(const Json_grammer &&)=delete;
+        Json_grammer &operator=(Json_grammer &&)=delete;
 
         Semantic_actions_t &actions_;
     };
 
     template<typename Iter_type, typename Value_type>
-    Iter_type read_range_or_throw(Iter_type begin, Iter_type end, Value_type &value, json_flags &status) noexcept {
+    Iter_type read_range_or_throw(Iter_type begin, Iter_type end, Value_type &value, json_flags &status) {
         Semantic_actions<Value_type, Iter_type> semantic_actions(value);
 
         const spirit_namespace::parse_info<Iter_type> info =
@@ -482,7 +478,7 @@ namespace json_spirit
     }
 
     template<typename Iter_type, typename Value_type>
-    void add_posn_iter_and_read_range_or_throw(Iter_type begin, Iter_type end, Value_type &value, json_flags &status) noexcept {
+    void add_posn_iter_and_read_range_or_throw(Iter_type begin, Iter_type end, Value_type &value, json_flags &status) {
         typedef spirit_namespace::position_iterator<Iter_type> Posn_iter_t;
 
         const Posn_iter_t posn_begin(begin, end);
@@ -492,18 +488,18 @@ namespace json_spirit
     }
 
     template<typename Iter_type, typename Value_type>
-    bool read_range(Iter_type &begin, Iter_type end, Value_type &value, json_flags &status) noexcept {
+    bool read_range(Iter_type &begin, Iter_type end, Value_type &value, json_flags &status) {
         begin = read_range_or_throw(begin, end, value, status);
         return status.fSuccess();
     }
 
     template<typename String_type, typename Value_type>
-    void read_string_or_throw(const String_type &s, Value_type &value, json_flags &status) noexcept {
+    void read_string_or_throw(const String_type &s, Value_type &value, json_flags &status) {
         add_posn_iter_and_read_range_or_throw(s.begin(), s.end(), value, status);
     }
 
     template<typename String_type, typename Value_type>
-    bool read_string(const String_type &s, Value_type &value, json_flags &status) noexcept {
+    bool read_string(const String_type &s, Value_type &value, json_flags &status) {
         typename String_type::const_iterator begin = s.begin();
         return read_range(begin, s.end(), value, status);
     }
@@ -514,7 +510,7 @@ namespace json_spirit
         using istream_iter = std::istream_iterator<Char_type, Char_type>;
         using Mp_iter = spirit_namespace::multi_pass<istream_iter>;
 
-        Multi_pass_iters(Istream_type &is) noexcept {
+        Multi_pass_iters(Istream_type &is) {
             is.unsetf(std::ios::skipws);
             begin_ = spirit_namespace::make_multi_pass(istream_iter(is));
             end_ = spirit_namespace::make_multi_pass(istream_iter());
@@ -525,13 +521,13 @@ namespace json_spirit
     };
 
     template<typename Istream_type, typename Value_type>
-    bool read_stream(Istream_type &is, Value_type &value, json_flags &status) noexcept {
+    bool read_stream(Istream_type &is, Value_type &value, json_flags &status) {
         Multi_pass_iters<Istream_type> mp_iters(is);
         return read_range(mp_iters.begin_, mp_iters.end_, value, status);
     }
 
     template<typename Istream_type, typename Value_type>
-    void read_stream_or_throw(Istream_type &is, Value_type &value, json_flags &status) noexcept {
+    void read_stream_or_throw(Istream_type &is, Value_type &value, json_flags &status) {
         const Multi_pass_iters<Istream_type> mp_iters(is);
         add_posn_iter_and_read_range_or_throw(mp_iters.begin_, mp_iters.end_, value, status);
     }

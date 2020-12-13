@@ -418,12 +418,12 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
         int nUpgraded = 0;
         const CBlockIndex *pindex = block_info::pindexBest;
         for (int i=0; i<100 && pindex!=nullptr; ++i) {
-            if (pindex->get_nVersion() > CBlock::CURRENT_VERSION)
+            if (pindex->get_nVersion() > this->get_nVersion())
                 ++nUpgraded;
             pindex = pindex->get_pprev();
         }
         if (nUpgraded > 0)
-            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, CBlock::CURRENT_VERSION);
+            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, this->get_nVersion());
         if (nUpgraded > 100 / 2) {
             // excep::strMiscWarning is read by block_alert::manage::GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
             excep::set_strMiscWarning( _("Warning: This version is obsolete, upgrade required!") );
@@ -650,9 +650,9 @@ bool CBlock_impl<T>::AcceptBlock()
 
     // Don't accept blocks with future timestamps
     if (pindexPrev->get_nHeight() > 1 && nMedianTimePast + nMaxOffset < CBlockHeader_impl<T>::GetBlockTime()) {
-        return_error("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast："
+        print::error((std::string("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：")
                      + std::to_string(nMedianTimePast) + " nMaxOffset：" + std::to_string(nMaxOffset) + " GetBlockTime()："
-                     + std::to_string(CBlockHeader_impl<T>::GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->get_nHeight()));
+                     + std::to_string(CBlockHeader_impl<T>::GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->get_nHeight())).c_str());
     }
 
     // Check that all transactions are finalized

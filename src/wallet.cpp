@@ -2765,7 +2765,7 @@ std::string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &
     if (! CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired)) {
         std::string strError;
         if (nValue + nFeeRequired > GetBalance()) {
-            strError = strprintf(_("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  "), bitstr::FormatMoney(nFeeRequired).c_str());
+            strError = strprintfc(_("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  "), bitstr::FormatMoney(nFeeRequired).c_str());
         } else {
             strError = _("Error: Transaction creation failed  ");
         }

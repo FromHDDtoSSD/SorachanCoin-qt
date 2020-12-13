@@ -11,6 +11,7 @@
 #include <cstdint>
 #include <vector>
 #include <crypto/blake2.h>
+#include <const/attributes.h>
 
 #ifdef WIN32
 # include <compat/compat.h>
@@ -67,32 +68,27 @@ private:
     {
     private:
         manage(const manage &)=delete;
-        manage(const manage &&)=delete;
+        manage(manage &&)=delete;
         manage &operator=(const manage &)=delete;
-        manage &operator=(const manage &&)=delete;
+        manage &operator=(manage &&)=delete;
         void *ptr;
         size_t size;
     public:
         explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn) {}
         void readonly() const;
         void readwrite() const;
-        ~manage() noexcept;
+        ~manage();
     };
 public:
     static void *secure_malloc(size_t sizeIn);
     static void secure_free(void *ptr, bool fRandom = false) noexcept;
     static void secure_memzero(void *ptr, size_t sizeIn) noexcept;
     static void secure_memrandom(void *ptr, size_t sizeIn) noexcept;
-#ifdef _MSC_VER
-    static void secure_stackzero(const size_t) noexcept;
-    static void secure_stackrandom(const size_t) noexcept;
-#else
     static void secure_stackzero(const size_t sizeIn) noexcept;
     static void secure_stackrandom(const size_t sizeIn) noexcept;
-#endif
-    static void secure_mprotect_noaccess(const void *ptr);
-    static void secure_mprotect_readonly(const void *ptr);
-    static void secure_mprotect_readwrite(void *ptr);
+    NODISCARD static bool secure_mprotect_noaccess(const void *ptr) noexcept;
+    NODISCARD static bool secure_mprotect_readonly(const void *ptr) noexcept;
+    NODISCARD static bool secure_mprotect_readwrite(void *ptr) noexcept;
     static void secure_randombytes_buf(unsigned char *data, size_t sizeIn);
 };
 
@@ -101,8 +97,8 @@ public:
 //
 namespace quantum_hash
 {
-    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data);
-    void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data);
+    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept;
+    void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data) noexcept;
 }
 
 //
@@ -117,7 +113,7 @@ class CSecureSegmentRW
 private:
     CSecureSegmentRW()=delete;
     //CSecureSegmentRW &operator=(const CSecureSegmentRW &)=delete;
-    //CSecureSegmentRW &operator=(const CSecureSegmentRW &&)=delete;
+    //CSecureSegmentRW &operator=(CSecureSegmentRW &&)=delete;
     CSecureSegment<T> *segment;
 public:
     //explicit CSecureSegmentRW(CSecureSegment<T> &obj, bool readonly) noexcept : segment(&obj) {
@@ -130,18 +126,21 @@ public:
     CSecureSegmentRW(const CSecureSegmentRW<T> &obj) noexcept : segment(nullptr) {
         *this = obj;
     }
-    ~CSecureSegmentRW() noexcept {
+    ~CSecureSegmentRW() {
         lock();
     }
 
-    void unlock() const noexcept {
-        quantum_lib::secure_mprotect_readwrite(segment->get_addr());
+    void unlock() const {
+        if(! quantum_lib::secure_mprotect_readwrite(segment->get_addr()))
+            throw std::runtime_error("CSecureSegmentRW: failed to unlock memory");
     }
-    void unlock_readonly() const noexcept {
-        quantum_lib::secure_mprotect_readonly(segment->get_addr());
+    void unlock_readonly() const {
+        if(! quantum_lib::secure_mprotect_readonly(segment->get_addr()))
+            throw std::runtime_error("CSecureSegmentRW: failed to readonly memory");
     }
-    void lock() const noexcept {
-        quantum_lib::secure_mprotect_noaccess(segment->get_addr());
+    void lock() const {
+        if(! quantum_lib::secure_mprotect_noaccess(segment->get_addr()))
+            throw std::runtime_error("CSecureSegmentRW: failed to lock memory");
     }
 
     size_t get_size() const noexcept {
@@ -178,12 +177,13 @@ private:
         return data;
     }
 public:
-    explicit CSecureSegment(size_t sizeIn) noexcept : size(0), data(nullptr) {
+    explicit CSecureSegment(size_t sizeIn) : size(0), data(nullptr) {
         data = static_cast<T *>(quantum_lib::secure_malloc(sizeIn));
-        quantum_lib::secure_mprotect_noaccess(data);
+        if(! quantum_lib::secure_mprotect_noaccess(data))
+            throw std::runtime_error("CSecureSegment: failed to CSecureSegment(size_t)");
         size = sizeIn;
     }
-    ~CSecureSegment() noexcept {
+    ~CSecureSegment() {
         release();
     }
 
@@ -246,38 +246,41 @@ namespace secure_segment
         typedef typename std::vector<T, secure_protect_allocator<T> > vector_t;
         mutable std::vector<T, secure_protect_allocator<T> > vec; // Note: Can not inherits std. (No virtual)
 
-        void readonly() const noexcept {
+        void readonly() const {
             T *ptr = vec.data();
-            quantum_lib::secure_mprotect_readonly(ptr);
+            if(! quantum_lib::secure_mprotect_readonly(ptr))
+                throw std::runtime_error("secure vector: failed to readonly");
         }
-        void readwrite() const noexcept {
+        void readwrite() const {
             T *ptr = vec.data();
-            quantum_lib::secure_mprotect_readwrite(ptr);
+            if(! quantum_lib::secure_mprotect_readwrite(ptr))
+                throw std::runtime_error("secure vector: failed to readwrite");
         }
-        void noaccess() const noexcept {
+        void noaccess() const {
             T *ptr = vec.data();
-            quantum_lib::secure_mprotect_noaccess(ptr);
+            if(! quantum_lib::secure_mprotect_noaccess(ptr))
+                throw std::runtime_error("secure vector: failed to noaccess");
         }
     public:
         vector() noexcept : vec() {
             noaccess();
         }
-        explicit vector(const T *begin, const T *end) noexcept : vec(begin, end) {
+        explicit vector(const T *begin, const T *end) : vec(begin, end) {
             noaccess();
         }
-        explicit vector(const typename vector_t::const_iterator &begin, const typename vector_t::const_iterator &end) noexcept : vec(begin, end) {
+        explicit vector(const typename vector_t::const_iterator &begin, const typename vector_t::const_iterator &end) : vec(begin, end) {
             noaccess();
         }
 #ifndef _MSC_VER
-        explicit vector(const typename std::vector<T>::const_iterator &begin, const typename std::vector<T>::const_iterator &end) noexcept : vec(begin, end) {
+        explicit vector(const typename std::vector<T>::const_iterator &begin, const typename std::vector<T>::const_iterator &end) : vec(begin, end) {
             noaccess();
         }
 #endif
 
-        vector(const vector &obj) noexcept {
+        vector(const vector &obj) {
             operator =(obj);
         }
-        vector &operator=(const vector &obj) noexcept {
+        vector &operator=(const vector &obj) {
             readwrite();
             obj.readonly();
             this->vec = obj.vec;
@@ -285,19 +288,19 @@ namespace secure_segment
             obj.noaccess();
         }
 
-        typename vector_t::const_iterator begin() const noexcept {
+        typename vector_t::const_iterator begin() const {
             readonly();
             return vec.begin();
         }
-        typename vector_t::const_iterator end() const noexcept {
+        typename vector_t::const_iterator end() const {
             return vec.end();
         }
 
-        T &at(std::size_t n) noexcept {
+        T &at(std::size_t n) {
             readwrite();
             return vec.at(n);
         }
-        const T &at(std::size_t n) const noexcept {
+        const T &at(std::size_t n) const {
             readonly();
             return vec.at(n);
         }
@@ -319,9 +322,9 @@ namespace Lamport {
     //private:
         //util()=delete;
         //util(const util &)=delete;
-        //util(const util &&)=delete;
+        //util(util &&)=delete;
         //util &operator =(const util &)=delete;
-        //util &operator =(const util &&)=delete;
+        //util &operator =(util &&)=delete;
     protected:
         static void alloc(byte *&dest, const byte *dataIn, size_t size);
         static void alloc_secure_random(CSecureSegment<byte> *&secure, size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn);
@@ -334,9 +337,9 @@ namespace Lamport {
     {
     private:
         CKeyBase(const CKeyBase &)=delete;
-        CKeyBase(const CKeyBase &&)=delete;
+        CKeyBase(CKeyBase &&)=delete;
         // CKeyBase &operator=(const CKeyBase &)=delete;
-        // CKeyBase &operator=(const CKeyBase &&)=delete;
+        // CKeyBase &operator=(CKeyBase &&)=delete;
     protected:
         //
         // Secure(count * size) + Random
@@ -363,7 +366,7 @@ namespace Lamport {
             else alloc(data, dataIn, get_size());
         }
 
-        virtual ~CKeyBase() noexcept {
+        virtual ~CKeyBase() {
             release(data);
             release(secure);
         }
@@ -421,13 +424,13 @@ namespace Lamport {
     private:
         CPublicKey()=delete;
         CPublicKey(const CPublicKey &)=delete;
-        CPublicKey(const CPublicKey &&)=delete;
+        CPublicKey(CPublicKey &&)=delete;
         CPublicKey &operator=(const CPublicKey &)=delete;
-        CPublicKey &operator=(const CPublicKey &&)=delete;
+        CPublicKey &operator=(CPublicKey &&)=delete;
     public:
         explicit CPublicKey(size_t _size_check_) noexcept : CKeyBase(_size_check_) {}
         explicit CPublicKey(const byte *dataIn, size_t _size_check_) : CKeyBase(dataIn, _size_check_, false) {} // Note: disable secure_alloc (dataIn, _size_check_, false).
-        ~CPublicKey() noexcept {}
+        ~CPublicKey() {}
     };
 
     class CPrivateKey : public CKeyBase
@@ -435,9 +438,9 @@ namespace Lamport {
         friend class CSignature;
     private:
         CPrivateKey(const CPrivateKey &)=delete;
-        CPrivateKey(const CPrivateKey &&)=delete;
+        CPrivateKey(CPrivateKey &&)=delete;
         //CPrivateKey &operator=(const CPrivateKey &)=delete;
-        //CPrivateKey &operator=(const CPrivateKey &&)=delete;
+        //CPrivateKey &operator=(CPrivateKey &&)=delete;
         bool isCropped;
     public:
         //
@@ -518,7 +521,7 @@ namespace Lamport {
             assert(_size_check_ == get_size());
             ::memcpy(data, dataIn, get_size());
         }
-        virtual ~CSignature() noexcept {}
+        virtual ~CSignature() {}
 
         size_t get_size() const noexcept {
             // signature has 8KB
@@ -539,9 +542,9 @@ namespace Lamport {
     private:
         CPrivateKey privKey;
         //CLamport(const CLamport &)=delete;
-        //CLamport(const CLamport &&)=delete;
+        //CLamport(CLamport &&)=delete;
         //CLamport &operator=(const CLamport &)=delete;
-        //CLamport &operator=(const CLamport &&)=delete;
+        //CLamport &operator=(CLamport &&)=delete;
     public:
         CLamport(const CLamport &obj);
         CLamport &operator=(const CLamport &obj) noexcept;

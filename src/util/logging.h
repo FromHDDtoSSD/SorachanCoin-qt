@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -16,15 +17,9 @@
 #include <string>
 #include <vector>
 
-static const bool DEFAULT_LOGTIMEMICROS = false;
-static const bool DEFAULT_LOGIPS        = false;
-static const bool DEFAULT_LOGTIMESTAMPS = true;
+#define DEFAULT_DEBUGLOGFILE ("debug.log")
 
-extern const char *const DEFAULT_DEBUGLOGFILE;
-extern bool fLogIPs;
-
-struct CLogCategoryActive
-{
+struct CLogCategoryActive {
     std::string category;
     bool active;
 };
@@ -62,6 +57,7 @@ namespace BCLog {
         FILE *m_fileout = nullptr;
         std::mutex m_file_mutex;
         std::list<std::string> m_msgs_before_open;
+        static int FileWriteStr(const std::string &str, FILE *fp) noexcept;
 
         /**
          * m_started_new_line is a state variable that will suppress printing of
@@ -76,6 +72,11 @@ namespace BCLog {
         std::string LogTimestampStr(const std::string &str);
 
     public:
+        static constexpr bool DEFAULT_LOGTIMEMICROS = false;
+        static constexpr bool DEFAULT_LOGIPS        = false;
+        static constexpr bool DEFAULT_LOGTIMESTAMPS = true;
+
+        bool m_fLogIPs = DEFAULT_LOGIPS;
         bool m_print_to_console = false;
         bool m_print_to_file = false;
 
@@ -89,30 +90,28 @@ namespace BCLog {
         void LogPrintStr(const std::string &str);
 
         /** Returns whether logs will be written to any output */
-        bool Enabled() const { return m_print_to_console || m_print_to_file; }
+        bool Enabled() const noexcept { return m_print_to_console || m_print_to_file; }
 
-        bool OpenDebugLog();
-        void ShrinkDebugFile();
+        bool OpenDebugLog() noexcept;
+        bool ShrinkDebugFile() noexcept;
 
         uint32_t GetCategoryMask() const { return m_categories.load(); }
 
-        void EnableCategory(LogFlags flag);
-        bool EnableCategory(const std::string& str);
-        void DisableCategory(LogFlags flag);
-        bool DisableCategory(const std::string& str);
+        void EnableCategory(LogFlags flag) noexcept;
+        bool EnableCategory(const std::string &str) noexcept;
+        void DisableCategory(LogFlags flag) noexcept;
+        bool DisableCategory(const std::string &str) noexcept;
 
         bool WillLogCategory(LogFlags category) const;
-
-        bool DefaultShrinkDebugFile() const;
+        bool DefaultShrinkDebugFile() const noexcept;
     };
 
 } // namespace BCLog
 
-BCLog::Logger& LogInstance();
+BCLog::Logger &LogInstance() noexcept;
 
 /** Return true if log accepts specified category */
-static inline bool LogAcceptCategory(BCLog::LogFlags category)
-{
+static inline bool LogAcceptCategory(BCLog::LogFlags category) {
     return LogInstance().WillLogCategory(category);
 }
 
@@ -123,20 +122,18 @@ std::string ListLogCategories();
 std::vector<CLogCategoryActive> ListActiveLogCategories();
 
 /** Return true if str parses as a log category and set the flag */
-bool GetLogCategory(BCLog::LogFlags& flag, const std::string& str);
+bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str) noexcept;
 
 // Be conservative when using LogPrintf/error or other things which
 // unconditionally log to debug.log! It should not be the case that an inbound
 // peer can fill up a user's disk with debug.log entries.
-
 template <typename... Args>
-static inline void LogPrintf(const char* fmt, const Args&... args)
-{
+static inline void LogPrintf(const char *fmt, const Args&... args) noexcept {
     if (LogInstance().Enabled()) {
         std::string log_msg;
         try {
             log_msg = tfm::format(fmt, args...);
-        } catch (tinyformat::format_error& fmterr) {
+        } catch (tinyformat::format_error &fmterr) {
             /* Original format string will have newline so don't add one here */
             log_msg = "Error \"" + std::string(fmterr.what()) + "\" while formatting log message: " + fmt;
         }
@@ -145,11 +142,12 @@ static inline void LogPrintf(const char* fmt, const Args&... args)
 }
 
 template <typename... Args>
-static inline void LogPrint(const BCLog::LogFlags& category, const Args&... args)
-{
-    if (LogAcceptCategory((category))) {
+static inline void LogPrint(const BCLog::LogFlags &category, const Args&... args) noexcept {
+    if (LogAcceptCategory((category)))
         LogPrintf(args...);
-    }
 }
+
+void InitLogging();
+bool OpenDebugFile();
 
 #endif // BITCOIN_LOGGING_H

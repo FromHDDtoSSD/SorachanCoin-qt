@@ -9,23 +9,20 @@
 #include <version.h>
 #include <ui_interface.h>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
 #include <thread/threadsafety.h>
-//#include <util/logging.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
 // See also: http://stackoverflow.com/questions/10020179/compilation-fail-in-boost-librairies-program-options
 //           http://clang.debian.net/status.php?version=3.0&key=CANNOT_FIND_FUNCTION
+/*
 namespace boost {
     namespace program_options {
         std::string to_internal(const std::string &);
     }
 }
+*/
 
-#include <boost/program_options/detail/config_file.hpp>
-#include <boost/program_options/parsers.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
@@ -33,33 +30,12 @@ namespace boost {
 #include <cleanse/cleanse.h>
 #include <openssl/crypto.h>
 
-#ifdef WIN32
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#endif
-#define _WIN32_WINNT 0x0501
-#ifdef _WIN32_IE
-#undef _WIN32_IE
-#endif
-#define _WIN32_IE 0x0501
-#define WIN32_LEAN_AND_MEAN 1
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <io.h> /* for _commit */
-#include "shlobj.h"
-#elif defined(__linux__)
-# include <sys/prctl.h>
-#endif
-
 #if !defined(WIN32) && !defined(ANDROID) && !defined(__OpenBSD__)
 # include <execinfo.h>
 #endif
 
-FILE *trace::_fileout = NULL;
+FILE *trace::_fileout = nullptr;
 std::string excep::strMiscWarning;
-std::map<std::string, std::string> map_arg::mapArgs;
-std::map<std::string, std::vector<std::string> > map_arg::mapMultiArgs;
 int64_t bitsystem::nNodesOffset = INT64_MAX;
 const signed char hex::phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -88,23 +64,6 @@ const std::locale dump::formats[5] = {
     std::locale(std::locale::classic(),new boost::posix_time::time_input_facet("%Y-%m-%d"))
 };
 LockedPageManager LockedPageManager::instance;    // allocators.h (Singleton class)
-bool_arg args_bool::fUseMemoryLog(false);
-bool_arg args_bool::fConfChange(false);
-bool_arg args_bool::fUseFastIndex(false);
-bool_arg args_bool::fNoListen(false);
-bool_arg args_bool::fDebug(false);
-bool_arg args_bool::fDebugNet(false);
-bool_arg args_bool::fPrintToConsole(false);
-bool_arg args_bool::fPrintToDebugger(false);
-bool_arg args_bool::fRequestShutdown(false);
-bool_arg args_bool::fShutdown(false);
-bool_arg args_bool::fDaemon(false);
-bool_arg args_bool::fServer(false);
-bool_arg args_bool::fCommandLine(false);
-bool_arg args_bool::fTestNet(false);
-bool_arg args_bool::fLogTimestamps(false);
-bool_arg args_bool::fReopenDebugLog(false);
-unsigned int args_uint::nNodeLifespan = 0;
 CMedianFilter<int64_t> bitsystem::vTimeOffsets(200,0);
 
 void seed::RandAddSeed()
@@ -132,10 +91,10 @@ void seed::RandAddSeedPerfmon()
     // Seed with the entire set of perfmon data
     unsigned char pdata[250000] = { 0 };
     unsigned long nSize = sizeof(pdata);
-    long ret = ::RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, pdata, &nSize);
+    long ret = ::RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", nullptr, nullptr, pdata, &nSize);
     ::RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS) {
-        RAND_add(pdata, nSize, nSize / 100.0);
+        ::RAND_add(pdata, nSize, nSize / 100.0);
         cleanse::OPENSSL_cleanse(pdata, nSize);
         printf("seed::RandAddSeed() %lu bytes\n", nSize);
     }
@@ -155,11 +114,7 @@ void trace::LogStackTrace()
     }
 }
 
-int print::OutputDebugStringF(const std::string &err) {
-    const char *c_err = err.c_str();
-    return print::OutputDebugStringF(c_err);
-}
-
+/*
 int print::OutputDebugStringF(const char *pszFormat, ...) {
     int ret = 0;
     if (args_bool::fPrintToConsole) {
@@ -172,32 +127,30 @@ int print::OutputDebugStringF(const char *pszFormat, ...) {
         // print to debug.log
 
         if (! trace::get_fileout()) {
-            boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
+            fs::path pathDebug = iofs::GetDataDir() / "debug.log";
             trace::set_fileout(fopen(pathDebug.string().c_str(), "a"));
-            if (trace::get_fileout()) { ::setbuf(trace::get_fileout(), NULL); } // unbuffered
+            if (trace::get_fileout()) { ::setbuf(trace::get_fileout(), nullptr); } // unbuffered
         }
 
         if (trace::get_fileout()) {
             static bool fStartedNewLine = true;
-            
-            //
+
             // This routine may be called by global destructors during shutdown.
             // Since the order of destruction of static/global objects is undefined,
             // allocate mutexDebugLog on the heap the first time this routine
             // is called to avoid crashes during shutdown.
-            //
-            static boost::mutex *mutexDebugLog = NULL;
-            if (mutexDebugLog == NULL) {
-                mutexDebugLog = new boost::mutex();
-            }
-            boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+            static void *mutexDebugLog = nullptr;
+            static unsigned char mutexmem[sizeof(std::mutex)];
+            if (mutexDebugLog == nullptr)
+                mutexDebugLog = (void *)new(mutexmem) std::mutex();
+            std::lock_guard<std::mutex> _lock(*(std::mutex *)mutexDebugLog);
 
             // reopen the log file, if requested
             if (args_bool::fReopenDebugLog) {
                 args_bool::fReopenDebugLog = false;
-                boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
-                if (::freopen(pathDebug.string().c_str(),"a",trace::get_fileout()) != NULL) {
-                    ::setbuf(trace::get_fileout(), NULL); // unbuffered
+                fs::path pathDebug = iofs::GetDataDir() / "debug.log";
+                if (::freopen(pathDebug.string().c_str(),"a",trace::get_fileout()) != nullptr) {
+                    ::setbuf(trace::get_fileout(), nullptr); // unbuffered
                 }
             }
 
@@ -244,7 +197,9 @@ int print::OutputDebugStringF(const char *pszFormat, ...) {
 #endif
     return ret;
 }
+*/
 
+/*
 std::string print::vstrprintf(const char *format, va_list ap)
 {
     char buffer[50000];
@@ -285,7 +240,9 @@ std::string print::vstrprintf(const char *format, va_list ap)
     }
     return str;
 }
+*/
 
+/*
 std::string print::real_strprintf(const char *format, int dummy, ...)
 {
     va_list arg_ptr;
@@ -294,148 +251,20 @@ std::string print::real_strprintf(const char *format, int dummy, ...)
     va_end(arg_ptr);
     return str;
 }
+*/
 
-std::string print::real_strprintf(const std::string &format, int dummy, ...)
-{
-    va_list arg_ptr;
-    va_start(arg_ptr, dummy);
-    std::string str = print::vstrprintf(format.c_str(), arg_ptr);
-    va_end(arg_ptr);
-    return str;
-}
-
+/*
 bool print::error(const char *format, ...)
 {
     va_list arg_ptr;
     va_start(arg_ptr, format);
-    std::string str = print::vstrprintf(format, arg_ptr);
+    //std::string str = print::vstrprintf(format, arg_ptr);
+    std::string str = tfm::format(format, arg_ptr);
     va_end(arg_ptr);
     printf("ERROR: %s\n", str.c_str());
     return false;
 }
-
-bool print::error(const std::string &str)
-{
-    printf("ERROR: %s\n", str.c_str());
-    return false;
-}
-
-void init::InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet)
-{
-    // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
-    if (name.find("-no") == 0) {
-        std::string positive("-");
-        positive.append(name.begin() + 3, name.end());
-        if (mapSettingsRet.count(positive) == 0) {
-            bool value = !map_arg::GetBoolArg(name);
-            mapSettingsRet[positive] = (value ? "1" : "0");
-        }
-    }
-}
-
-//
-// old core: map_arg
-//
-std::string map_arg::GetArg(const std::string &strArg, const std::string &strDefault) {
-    if (mapArgs.count(strArg)) {
-        return mapArgs[strArg];
-    }
-    return strDefault;
-}
-
-int64_t map_arg::GetArg(const std::string &strArg, int64_t nDefault) {
-    if (mapArgs.count(strArg)) {
-        return ::atoi64(mapArgs[strArg]);
-    }
-    return nDefault;
-}
-
-int32_t map_arg::GetArgInt(const std::string &strArg, int32_t nDefault) {
-    if (mapArgs.count(strArg)) {
-        return ::strtol(mapArgs[strArg]);
-    }
-    return nDefault;
-}
-
-uint32_t map_arg::GetArgUInt(const std::string &strArg, uint32_t nDefault) {
-    if (mapArgs.count(strArg)) {
-        return ::strtoul(mapArgs[strArg]);
-    }
-    return nDefault;
-}
-
-bool map_arg::GetBoolArg(const std::string &strArg, bool fDefault /*= false*/) {
-    if (mapArgs.count(strArg)) {
-        if (mapArgs[strArg].empty()) {
-            return true;
-        }
-        return (::atoi(mapArgs[strArg]) != 0);
-    }
-    return fDefault;
-}
-
-bool map_arg::SoftSetArg(const std::string &strArg, const std::string &strValue) {
-    if (mapArgs.count(strArg) || mapMultiArgs.count(strArg)) {
-        return false;
-    }
-    mapArgs[strArg] = strValue;
-    mapMultiArgs[strArg].push_back(strValue);
-    return true;
-}
-
-bool map_arg::SoftSetBoolArg(const std::string &strArg, bool fValue) {
-    if (fValue) {
-        return map_arg::SoftSetArg(strArg, std::string("1"));
-    }
-    else {
-        return map_arg::SoftSetArg(strArg, std::string("0"));
-    }
-}
-
-void map_arg::ParseParameters(int argc, const char *const argv[])
-{
-    mapArgs.clear();
-    mapMultiArgs.clear();
-    for (int i = 1; i < argc; i++)
-    {
-        std::string str(argv[i]);
-        std::string strValue;
-        size_t is_index = str.find('=');
-        if (is_index != std::string::npos) {
-            strValue = str.substr(is_index + 1);
-            str = str.substr(0, is_index);
-        }
-#ifdef WIN32
-        boost::to_lower(str);
-        if (boost::algorithm::starts_with(str, "/")) {
-            str = "-" + str.substr(1);
-        }
-#endif
-        if (str[0] != '-') {
-            break;
-        }
-
-        mapArgs[str] = strValue;
-        mapMultiArgs[str].push_back(strValue);
-    }
-
-    // New 0.6 features:
-    for(const std::pair<std::string,std::string> &entry: mapArgs) {
-        std::string name = entry.first;
-
-        //  interpret --foo as -foo (as long as both are not set)
-        if (name.find("--") == 0) {
-            std::string singleDash(name.begin()+1, name.end());
-            if (mapArgs.count(singleDash) == 0) {
-                mapArgs[singleDash] = entry.second;
-            }
-            name = singleDash;
-        }
-
-        // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
-        init::InterpretNegativeSetting(name, mapArgs);
-    }
-}
+*/
 
 std::string base64::EncodeBase64(const unsigned char *pch, size_t len)
 {
@@ -853,229 +682,6 @@ bool match::WildcardMatch(const std::string &str, const std::string &mask)
     return match::WildcardMatch(str.c_str(), mask.c_str());
 }
 
-boost::filesystem::path iofs::GetDefaultDataDir()
-{
-    //
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\SorachanCoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\SorachanCoin
-    // Mac: ~/Library/Application Support/SorachanCoin
-    // Unix / Linux: ~/.SorachanCoin
-    //
-#ifdef WIN32
-    //
-    // Windows
-    //
-    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / coin_param::strCoinName.c_str();
-#else
-    boost::filesystem::path pathRet;
-    char *pszHome = ::getenv("HOME");
-    if (pszHome == NULL || ::strlen(pszHome) == 0) {
-        pathRet = boost::filesystem::path("/");
-    } else {
-        pathRet = boost::filesystem::path(pszHome);
-    }
- #ifdef MAC_OSX
-    // Mac
-    pathRet /= "Library/Application Support";
-    boost::filesystem::create_directory(pathRet);
-    return pathRet / coin_param::strCoinName.c_str();
- #else
-    // Unix / Linux
-    std::string dsora = ".";
-    dsora += coin_param::strCoinName;
-    return pathRet / dsora.c_str();
- #endif
-#endif
-}
-
-const boost::filesystem::path &iofs::GetDataDir(bool fNetSpecific)
-{
-    static boost::filesystem::path pathCached[2];
-    static CCriticalSection csPathCached;
-    static bool cachedPath[2] = {false, false};
-
-    boost::filesystem::path &path = pathCached[fNetSpecific];
-
-    //
-    // This can be called during exceptions by printf, so we cache the
-    // value so we don't have to do memory allocations after that.
-    //
-    if (cachedPath[fNetSpecific]) {
-        return path;
-    }
-
-    LOCK(csPathCached);
-
-    if (map_arg::GetMapArgsCount("-datadir")) {
-        path = boost::filesystem::system_complete(map_arg::GetMapArgsString("-datadir"));
-        if (! boost::filesystem::is_directory(path)) {
-            path = "";
-            return path;
-        }
-    } else {
-        path = iofs::GetDefaultDataDir();
-    }
-
-    if (fNetSpecific && map_arg::GetBoolArg("-testnet", false)) {
-        path /= "testnet2";
-    }
-
-    boost::filesystem::create_directory(path);
-    cachedPath[fNetSpecific]=true;
-
-    return path;
-}
-
-std::string config::randomStrGen(int length)
-{
-    static std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-
-    std::string result;
-    result.resize(length);
-    for (int32_t i = 0; i < length; ++i)
-    {
-        result[i] = charset[::rand() % charset.length()];
-    }
-
-    return result;
-}
-
-void config::createConf()
-{
-    ::srand(static_cast<unsigned int>(::time(NULL)));
-
-    std::ofstream pConf;
-#if BOOST_FILESYSTEM_VERSION >= 3
-    pConf.open(iofs::GetConfigFile().generic_string().c_str());
-#else
-    pConf.open(iofs::GetConfigFile().string().c_str());
-#endif
-    pConf << "rpcuser=sora\nrpcpassword="
-            + config::randomStrGen(35)
-            + "\n\ndaemon=0"
-            + "\nserver=0"
-            + "\ntestnet=0"
-            + "\n\nlisten=1"
-            + "\nirc=0"
-            + "\n\nrpcallowip=127.0.0.1"
-            + "\n";
-    pConf.close();
-}
-
-boost::filesystem::path iofs::GetConfigFile()
-{
-    boost::filesystem::path pathConfigFile(map_arg::GetArg("-conf", sts_c(coin_param::strCoinName + ".conf")));
-    if (! pathConfigFile.is_complete()) {
-        pathConfigFile = iofs::GetDataDir(false) / pathConfigFile;
-    }
-    return pathConfigFile;
-}
-
-void config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet)
-{
-    boost::filesystem::ifstream streamConfig(iofs::GetConfigFile());
-    if (! streamConfig.good()) {
-        config::createConf();
-        new(&streamConfig) boost::filesystem::ifstream(iofs::GetConfigFile());
-        if(! streamConfig.good()) {
-            return;
-        }
-    }
-
-    std::set<std::string> setOptions;
-    setOptions.insert("*");
-
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override bitcoin.conf
-        std::string strKey = std::string("-") + it->string_key;
-        if (mapSettingsRet.count(strKey) == 0) {
-            mapSettingsRet[strKey] = it->value[0];
-            // interpret nofoo=1 as foo=0 (and nofoo=0 as foo=1) as long as foo not set)
-            init::InterpretNegativeSetting(strKey, mapSettingsRet);
-        }
-        mapMultiSettingsRet[strKey].push_back(it->value[0]);
-    }
-}
-
-boost::filesystem::path iofs::GetPidFile()
-{
-    boost::filesystem::path pathPidFile(map_arg::GetArg("-pid", sts_c(coin_param::strCoinName + ".pid")));
-    if (! pathPidFile.is_complete()) { pathPidFile = iofs::GetDataDir() / pathPidFile; }
-    return pathPidFile;
-}
-
-#ifndef WIN32
-void iofs::CreatePidFile(const boost::filesystem::path &path, pid_t pid)
-{
-    FILE *file = ::fopen(path.string().c_str(), "w");
-    if (file) {
-        ::fprintf(file, "%d\n", pid);
-        ::fclose(file);
-    }
-}
-#endif
-
-bool iofs::RenameOver(boost::filesystem::path src, boost::filesystem::path dest)
-{
-#ifdef WIN32
-    return ::MoveFileExA(src.string().c_str(), dest.string().c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
-#else
-    int rc = std::rename(src.string().c_str(), dest.string().c_str());
-    return (rc == 0);
-#endif
-}
-
-void iofs::FileCommit(FILE *fileout)
-{
-    ::fflush(fileout);        // harmless if redundantly called
-#ifdef WIN32
-    ::_commit(_fileno(fileout));
-#else
-    ::fsync(fileno(fileout));
-#endif
-}
-
-int iofs::GetFilesize(FILE *file)
-{
-    int nSavePos = ftell(file);
-    int nFilesize = -1;
-    if (::fseek(file, 0, SEEK_END) == 0) {
-        nFilesize = ftell(file);
-    }
-
-    ::fseek(file, nSavePos, SEEK_SET);
-    return nFilesize;
-}
-
-void iofs::ShrinkDebugFile()
-{
-    // Scroll debug.log if it's getting too big
-    boost::filesystem::path pathLog = iofs::GetDataDir() / "debug.log";
-
-    FILE *file = ::fopen(pathLog.string().c_str(), "r");
-    if (file && iofs::GetFilesize(file) > 10 * 1000000) {
-        // Restart the file with some of the end
-        try {
-            std::vector<char>* vBuf = new std::vector <char>(200000, 0);
-            ::fseek(file, -((long)(vBuf->size())), SEEK_END);
-            size_t nBytes = ::fread(&vBuf->operator[](0), 1, vBuf->size(), file);
-            ::fclose(file);
-
-            file = ::fopen(pathLog.string().c_str(), "w");
-            if (file) {
-                ::fwrite(&vBuf->operator[](0), 1, nBytes, file);
-                ::fclose(file);
-            }
-            delete vBuf;
-        } catch (const std::bad_alloc &e) {
-            // Bad things happen - no free memory in heap at program startup
-            ::fclose(file);
-            printf("Warning: %s in %s:%d\n iofs::ShrinkDebugFile failed - debug.log expands further", e.what(), __FILE__, __LINE__);
-        }
-    }
-}
-
 bool bitstr::ParseMoney(const char *pszIn, int64_t &nRet) {
     std::string strWhole;
     int64_t nUnits = 0;
@@ -1168,47 +774,6 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
         }
     }
 }
-
-std::string format_version::FormatVersion(int nVersion)
-{
-    if (nVersion % 100 == 0) {
-        return strprintf("%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100);
-    } else {
-        return strprintf("%d.%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100, nVersion%100);
-    }
-}
-
-std::string format_version::FormatFullVersion()
-{
-    return version::CLIENT_BUILD;
-}
-
-// Format the subversion field according to BIP 14 spec (https://en.bitcoin.it/wiki/BIP_0014)
-std::string format_version::FormatSubVersion(const std::string &name, int nClientVersion, const std::vector<std::string> &comments)
-{
-    std::ostringstream ss;
-    ss << "/";
-    ss << name << ":" << format_version::FormatVersion(nClientVersion);
-    if (! comments.empty()) {
-        ss << "(" << boost::algorithm::join(comments, "; ") << ")";
-    }
-
-    ss << "/";
-    return ss.str();
-}
-
-#ifdef WIN32
-boost::filesystem::path iofs::GetSpecialFolderPath(int nFolder, bool fCreate)
-{
-    char pszPath[MAX_PATH] = "";
-    if(SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate)) {
-        return boost::filesystem::path(pszPath);
-    }
-
-    printf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
-    return boost::filesystem::path("");
-}
-#endif
 
 void cmd::runCommand(std::string strCommand)
 {

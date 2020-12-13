@@ -13,7 +13,7 @@
 #include <memory>
 #include <set>
 
-#ifdef DEBUG_LOCKCONTENTION
+#ifdef LDEBUG_LOCKCONTENTION
 #if !defined(HAVE_THREAD_LOCAL)
 static_assert(false, "thread_local is not supported");
 #endif
@@ -22,9 +22,9 @@ void LPrintLockContention(const char* pszName, const char* pszFile, int nLine)
     LogPrintf("LOCKCONTENTION: %s\n", pszName);
     LogPrintf("Locker: %s:%d\n", pszFile, nLine);
 }
-#endif /* DEBUG_LOCKCONTENTION */
+#endif /* LDEBUG_LOCKCONTENTION */
 
-#ifdef DEBUG_LOCKORDER
+#ifdef LDEBUG_LOCKORDER
 //
 // Early deadlock detection.
 // Problem being solved:
@@ -201,4 +201,4 @@ void LDeleteLock(void* cs)
 
 bool g_debug_lockorder_abort = true; // extern
 
-#endif /* DEBUG_LOCKORDER */
+#endif /* LDEBUG_LOCKORDER */

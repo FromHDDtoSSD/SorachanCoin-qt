@@ -178,7 +178,7 @@ int CPubKey::ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const un
     return ret;
 }
 
-std::string CPubKey::ToString() const noexcept {
+std::string CPubKey::ToString() const {
     char psz[sizeof(vch_) * 2 + 1]; psz[sizeof(vch_) * 2] = '\0';
     for (unsigned int i=0; i<sizeof(vch_); ++i)
         ::sprintf(psz + i * 2, "%02x", ((unsigned char *)vch_)[i]);
@@ -2225,9 +2225,6 @@ void CPubKey::secp256k1_scalar_inverse(secp256k1_unit *r, const secp256k1_unit *
     secp256k1_scalar_mul(r, t, &x6); /* 111111 */
 }
 
-//int CPubKey::secp256k1_scalar_is_even(const secp256k1_unit *a) noexcept {
-//    return !(a->d[0] & 1);
-//}
 #endif
 
 void CPubKey::secp256k1_scalar_inverse_var(secp256k1_unit *r, const secp256k1_unit *x) noexcept {
@@ -3727,7 +3724,7 @@ CPubKey::ecmult::secp256k1_context::secp256k1_context() noexcept {
     init();
 }
 
-CPubKey::ecmult::secp256k1_context::~secp256k1_context() noexcept {
+CPubKey::ecmult::secp256k1_context::~secp256k1_context() {
     clear();
 }
 

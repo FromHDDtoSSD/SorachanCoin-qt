@@ -26,7 +26,7 @@ class CBlockHeader {
 protected:
 #pragma pack(push, 1)
     // header
-    static const int CURRENT_VERSION = 6;
+    static constexpr int CURRENT_VERSION = 6;
     int32_t nVersion;
     T hashPrevBlock;
     T hashMerkleRoot;

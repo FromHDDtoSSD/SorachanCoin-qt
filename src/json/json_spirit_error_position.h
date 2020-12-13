@@ -2,10 +2,6 @@
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 //
 // Copyright (c) 2018-2021 The SorachanCoin developers
-//
-// C++11 json_spirit for noexcept
-// src/noexcept
-// https://github.com/zajo/boost-noexcept
 
 #ifndef JSON_SPIRIT_ERROR_POSITION
 #define JSON_SPIRIT_ERROR_POSITION
@@ -26,7 +22,7 @@ namespace json_spirit
         std::string reason_;
     public:
         Error_position() noexcept : line_(0), column_(0) {}
-        Error_position(unsigned int line, unsigned int column, const std::string &reason) noexcept : line_(line), column_(column), reason_(reason) {}
+        Error_position(unsigned int line, unsigned int column, const std::string &reason) : line_(line), column_(column), reason_(reason) {}
         bool operator==(const Error_position &lhs) const noexcept {
             if(this == &lhs) {return true;}
             return ((reason_ == lhs.reason_) &&

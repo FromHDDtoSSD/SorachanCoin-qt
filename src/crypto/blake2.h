@@ -6,8 +6,7 @@
 #define CRYPTO_BLAKE2_H
 
 #if defined(USE_QUANTUM)
-
-# include <blake2.h>
+#include <blake2.h>
 
 namespace latest_crypto {
 
@@ -15,17 +14,16 @@ class CBLAKE2
 {
 private:
     blake2s_state S;
-
 public:
-    static const size_t OUTPUT_SIZE = 32;
+    static constexpr size_t OUTPUT_SIZE = 32;
 
-    CBLAKE2();
-    CBLAKE2& Write(const unsigned char* data, size_t len);
-    void Finalize(unsigned char hash[OUTPUT_SIZE]);
-    CBLAKE2& Reset();
+    CBLAKE2() noexcept;
+    CBLAKE2& Write(const unsigned char* data, size_t len) noexcept;
+    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
+    CBLAKE2& Reset() noexcept;
 
-    static constexpr size_t Size() {return OUTPUT_SIZE;}
-    void Clean();
+    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
+    void Clean() noexcept;
 };
 
 } // latest_crypto

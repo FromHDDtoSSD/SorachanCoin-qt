@@ -7,7 +7,7 @@
 
 namespace latest_crypto {
 
-CHMAC_SHA512::CHMAC_SHA512(const unsigned char* key, size_t keylen)
+CHMAC_SHA512::CHMAC_SHA512(const unsigned char* key, size_t keylen) noexcept
 {
     unsigned char rkey[128];
     if (keylen <= 128) {
@@ -27,7 +27,7 @@ CHMAC_SHA512::CHMAC_SHA512(const unsigned char* key, size_t keylen)
     inner.Write(rkey, 128);
 }
 
-void CHMAC_SHA512::Finalize(unsigned char hash[OUTPUT_SIZE])
+void CHMAC_SHA512::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
 {
     unsigned char temp[64];
     inner.Finalize(temp);
