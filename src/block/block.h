@@ -126,13 +126,13 @@ public:
         return !IsProofOfStake();
     }
     std::pair<COutPoint, unsigned int> GetProofOfStake() const {
-        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].vin[0].prevout, Merkle_t::vtx[1].nTime) : std::make_pair(COutPoint(), (unsigned int)0);
+        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint(), (unsigned int)0);
     }
     // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const {
         int64_t maxTransactionTime = 0;
         for(const CTransaction &tx: Merkle_t::vtx)
-            maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.nTime);
+            maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.get_nTime());
         return maxTransactionTime;
     }
     bool WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet);
@@ -279,8 +279,8 @@ public:
         hashProofOfStake = 0;
         if (block.IsProofOfStake()) {
             SetProofOfStake();
-            prevoutStake = block.get_vtx(1).vin[0].prevout;
-            nStakeTime = block.get_vtx(1).nTime;
+            prevoutStake = block.get_vtx(1).get_vin(0).get_prevout();
+            nStakeTime = block.get_vtx(1).get_nTime();
         } else {
             prevoutStake.SetNull();
             nStakeTime = 0;

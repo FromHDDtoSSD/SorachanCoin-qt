@@ -236,16 +236,16 @@ void MintingTableModel::update()
     {
         TRY_LOCK(wallet->cs_wallet, lockWallet);
         if (lockWallet && !wallet->vMintingWalletUpdated.empty()) {
-            BOOST_FOREACH(uint256 hash, wallet->vMintingWalletUpdated)
+            for(uint256 hash: wallet->vMintingWalletUpdated)
             {
                 updated.append(hash);
 
                 // Also check the inputs to remove spent outputs from the table if necessary
                 CWalletTx wtx;
                 if(wallet->GetTransaction(hash, wtx)) {
-                    BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+                    for(const CTxIn &txin: wtx.get_vin())
                     {
-                        updated.append(txin.prevout.hash);
+                        updated.append(txin.get_prevout().get_hash());
                     }
                 }
             }

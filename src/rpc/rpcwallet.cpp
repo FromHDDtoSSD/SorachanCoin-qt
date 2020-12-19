@@ -162,8 +162,8 @@ CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strA
         scriptPubKey.SetDestination(account.vchPubKey.GetID());
         for (std::map<uint256, CWalletTx>::iterator it = entry::pwalletMain->mapWallet.begin(); it != entry::pwalletMain->mapWallet.end() && account.vchPubKey.IsValid(); ++it) {
             const CWalletTx &wtx = (*it).second;
-            for(const CTxOut &txout: wtx.vout) {
-                if (txout.scriptPubKey == scriptPubKey)
+            for(const CTxOut &txout: wtx.get_vout()) {
+                if (txout.get_scriptPubKey() == scriptPubKey)
                     bKeyUsed = true;
             }
         }
@@ -508,13 +508,13 @@ json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &par
         if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
             continue;
 
-        for(const CTxOut &txout: wtx.vout) {
+        for(const CTxOut &txout: wtx.get_vout()) {
             CBitcoinAddress addressRet;
-            if (! Script_util::ExtractAddress(*entry::pwalletMain, txout.scriptPubKey, addressRet))
+            if (! Script_util::ExtractAddress(*entry::pwalletMain, txout.get_scriptPubKey(), addressRet))
                 continue;
             if (addressRet == address) {
                 if (wtx.GetDepthInMainChain() >= nMinDepth)
-                    nAmount += txout.nValue;
+                    nAmount += txout.get_nValue();
             }
         }
     }
@@ -558,11 +558,11 @@ json_spirit::Value CRPCTable::getreceivedbyaccount(const json_spirit::Array &par
         if (wtx.IsCoinBase() || wtx.IsCoinStake() || !wtx.IsFinal())
             continue;
 
-        for(const CTxOut &txout: wtx.vout) {
+        for(const CTxOut &txout: wtx.get_vout()) {
             CBitcoinAddress address;
-            if (Script_util::ExtractAddress(*entry::pwalletMain, txout.scriptPubKey, address) && Script_util::IsMine(*entry::pwalletMain, address) && setAddress.count(address)) {
+            if (Script_util::ExtractAddress(*entry::pwalletMain, txout.get_scriptPubKey(), address) && Script_util::IsMine(*entry::pwalletMain, address) && setAddress.count(address)) {
                 if (wtx.GetDepthInMainChain() >= nMinDepth)
-                    nAmount += txout.nValue;
+                    nAmount += txout.get_nValue();
             }
         }
     }
@@ -972,12 +972,12 @@ json_spirit::Value CRPCTable::ListReceived(const json_spirit::Array &params, boo
         int nDepth = wtx.GetDepthInMainChain();
         if (nDepth < nMinDepth)
             continue;
-        for(const CTxOut &txout: wtx.vout) {
+        for(const CTxOut &txout: wtx.get_vout()) {
             CTxDestination address;
-            if (!Script_util::ExtractDestination(txout.scriptPubKey, address) || !Script_util::IsMine(*entry::pwalletMain, address))
+            if (!Script_util::ExtractDestination(txout.get_scriptPubKey(), address) || !Script_util::IsMine(*entry::pwalletMain, address))
                 continue;
             tallyitem &item = mapTally[address];
-            item.nAmount += txout.nValue;
+            item.nAmount += txout.get_nValue();
             item.nConf = std::min(item.nConf, nDepth);
         }
     }

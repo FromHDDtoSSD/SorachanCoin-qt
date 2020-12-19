@@ -352,7 +352,7 @@ bool bitkernel::GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t &nStakeMo
 //
 bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, uint256 &hashProofOfStake, uint256 &targetProofOfStake, bool fPrintProofOfStake)
 {
-    if (nTimeTx < txPrev.nTime) { // Transaction timestamp violation
+    if (nTimeTx < txPrev.get_nTime()) { // Transaction timestamp violation
         return print::error("bitkernel::CheckStakeKernelHash() : nTime violation");
     }
 
@@ -363,11 +363,11 @@ bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, ui
 
     CBigNum bnTargetPerCoinDay;
     bnTargetPerCoinDay.SetCompact(nBits);
-    int64_t nValueIn = txPrev.vout[prevout.n].nValue;
+    int64_t nValueIn = txPrev.get_vout(prevout.get_n()).get_nValue();
 
     uint256 hashBlockFrom = blockFrom.GetHash();
 
-    CBigNum bnCoinDayWeight = CBigNum(nValueIn) * GetWeight((int64_t)txPrev.nTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
+    CBigNum bnCoinDayWeight = CBigNum(nValueIn) * GetWeight((int64_t)txPrev.get_nTime(), (int64_t)nTimeTx) / util::COIN / util::nOneDay;
     targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint256();
 
     // Calculate hash
@@ -381,7 +381,7 @@ bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, ui
     }
     ss << nStakeModifier;
 
-    ss << nTimeBlockFrom << nTxPrevOffset << txPrev.nTime << prevout.n << nTimeTx;
+    ss << nTimeBlockFrom << nTxPrevOffset << txPrev.get_nTime() << prevout.get_n() << nTimeTx;
     hashProofOfStake = hash_basis::Hash(ss.begin(), ss.end());
     if (fPrintProofOfStake) {
         printf("bitkernel::CheckStakeKernelHash() : using modifier 0x%016" PRIx64 " at height=%d timestamp=%s for block from height=%d timestamp=%s\n",
@@ -391,7 +391,7 @@ bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, ui
             util::DateTimeStrFormat(blockFrom.GetBlockTime()).c_str());
         printf("bitkernel::CheckStakeKernelHash() : check modifier=0x%016" PRIx64 " nTimeBlockFrom=%u nTxPrevOffset=%u nTimeTxPrev=%u nPrevout=%u nTimeTx=%u hashTarget=%s hashProof=%s\n",
             nStakeModifier,
-            nTimeBlockFrom, nTxPrevOffset, txPrev.nTime, prevout.n, nTimeTx,
+            nTimeBlockFrom, nTxPrevOffset, txPrev.get_nTime(), prevout.get_n(), nTimeTx,
             targetProofOfStake.ToString().c_str(), hashProofOfStake.ToString().c_str());
     }
 
@@ -407,7 +407,7 @@ bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, ui
             util::DateTimeStrFormat(blockFrom.GetBlockTime()).c_str());
         printf("bitkernel::CheckStakeKernelHash() : pass modifier=0x%016" PRIx64 " nTimeBlockFrom=%u nTxPrevOffset=%u nTimeTxPrev=%u nPrevout=%u nTimeTx=%u hashTarget=%s hashProof=%s\n",
             nStakeModifier,
-            nTimeBlockFrom, nTxPrevOffset, txPrev.nTime, prevout.n, nTimeTx,
+            nTimeBlockFrom, nTxPrevOffset, txPrev.get_nTime(), prevout.get_n(), nTimeTx,
             targetProofOfStake.ToString().c_str(), hashProofOfStake.ToString().c_str());
     }
 
@@ -473,13 +473,13 @@ bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, ui
     }
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
-    const CTxIn& txin = tx.vin[0];
+    const CTxIn& txin = tx.get_vin(0);
 
     // First try finding the previous transaction in database
     CTxDB txdb("r");
     CTransaction txPrev;
     CTxIndex txindex;
-    if (! txPrev.ReadFromDisk(txdb, txin.prevout, txindex)) {
+    if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex)) {
         return tx.DoS(1, print::error("bitkernel::CheckProofOfStake() : INFO: read txPrev failed"));  // previous transaction not in main chain, may occur during initial download
     }
 
@@ -494,10 +494,10 @@ bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, ui
 
     // Read block header
     CBlock block;
-    if (! block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false)) {
+    if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false)) {
         return args_bool::fDebug? print::error("bitkernel::CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
     }
-    if (! bitkernel::CheckStakeKernelHash(nBits, block, txindex.pos.nTxPos - txindex.pos.nBlockPos, txPrev, txin.prevout, tx.nTime, hashProofOfStake, targetProofOfStake, args_bool::fDebug)) {
+    if (! bitkernel::CheckStakeKernelHash(nBits, block, txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos(), txPrev, txin.get_prevout(), tx.get_nTime(), hashProofOfStake, targetProofOfStake, args_bool::fDebug)) {
         return tx.DoS(1, print::error("bitkernel::CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
     }
 

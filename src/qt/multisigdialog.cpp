@@ -308,7 +308,7 @@ void MultisigDialog::on_createTransactionButton_clicked()
         if(entry) {
             if(entry->validate()) {
                 CTxIn input = entry->getInput();
-                transaction.vin.push_back(input);
+                transaction.set_vin().push_back(input);
             } else {
                 return;
             }
@@ -328,7 +328,7 @@ void MultisigDialog::on_createTransactionButton_clicked()
                 scriptPubKey.SetAddress(address);
                 int64_t amount = recipient.amount;
                 CTxOut output(amount, scriptPubKey);
-                transaction.vout.push_back(output);
+                transaction.set_vout().push_back(output);
             } else {
                 return;
             }
@@ -369,29 +369,29 @@ void MultisigDialog::on_transaction_textChanged()
 
     // Fill input list
     int index = -1;
-    BOOST_FOREACH(const CTxIn& txin, tx.vin)
+    for(const CTxIn &txin: tx.get_vin())
     {
-        uint256 prevoutHash = txin.prevout.hash;
+        uint256 prevoutHash = txin.get_prevout().get_hash();
         addInput();
         index++;
         MultisigInputEntry *entry = qobject_cast<MultisigInputEntry *>(ui->inputs->itemAt(index)->widget());
         if(entry) {
             entry->setTransactionId(QString(prevoutHash.GetHex().c_str()));
-            entry->setTransactionOutputIndex(txin.prevout.n);
+            entry->setTransactionOutputIndex(txin.get_prevout().get_n());
         }
     }
 
     // Fill output list
     index = -1;
-    BOOST_FOREACH(const CTxOut& txout, tx.vout)
+    for(const CTxOut& txout: tx.get_vout())
     {
-        CScript scriptPubKey = txout.scriptPubKey;
+        CScript scriptPubKey = txout.get_scriptPubKey();
         CTxDestination addr;
         Script_util::ExtractDestination(scriptPubKey, addr);
         CBitcoinAddress address(addr);
         SendCoinsRecipient recipient;
         recipient.address = QString(address.ToString().c_str());
-        recipient.amount = txout.nValue;
+        recipient.amount = txout.get_nValue();
         addOutput();
         index++;
         SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->outputs->itemAt(index)->widget());
@@ -436,7 +436,7 @@ void MultisigDialog::on_signTransactionButton_clicked()
 
     // Fetch previous transactions (inputs)
     std::map<COutPoint, CScript> mapPrevOut;
-    for(unsigned int i = 0; i < mergedTx.vin.size(); i++)
+    for(unsigned int i = 0; i < mergedTx.get_vin().size(); i++)
     {
         CTransaction tempTx;
         MapPrevTx mapPrevTx;
@@ -444,14 +444,14 @@ void MultisigDialog::on_signTransactionButton_clicked()
         std::map<uint256, CTxIndex> unused;
         bool fInvalid;
 
-        tempTx.vin.push_back(mergedTx.vin[i]);
+        tempTx.set_vin().push_back(mergedTx.get_vin(i));
         tempTx.FetchInputs(txdb, unused, false, false, mapPrevTx, fInvalid);
 
-        BOOST_FOREACH(const CTxIn &txin, tempTx.vin)
+        for(const CTxIn &txin: tempTx.get_vin())
         {
-            const uint256& prevHash = txin.prevout.hash;
-            if(mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.vout.size() > txin.prevout.n) {
-                mapPrevOut[txin.prevout] = mapPrevTx[prevHash].second.vout[txin.prevout.n].scriptPubKey;
+            const uint256& prevHash = txin.get_prevout().get_hash();
+            if(mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.get_vout().size() > txin.get_prevout().get_n()) {
+                mapPrevOut[txin.get_prevout()] = mapPrevTx[prevHash].second.get_vout(txin.get_prevout().get_n()).get_scriptPubKey();
             }
         }
     }
@@ -477,19 +477,19 @@ void MultisigDialog::on_signTransactionButton_clicked()
 
     // Sign what we can
     bool fComplete = true;
-    for(unsigned int i = 0; i < mergedTx.vin.size(); i++)
+    for(unsigned int i = 0; i < mergedTx.get_vin().size(); ++i)
     {
-        CTxIn &txin = mergedTx.vin[i];
-        if(mapPrevOut.count(txin.prevout) == 0) {
+        CTxIn &txin = mergedTx.set_vin(i);
+        if(mapPrevOut.count(txin.get_prevout()) == 0) {
             fComplete = false;
             continue;
         }
-        const CScript &prevPubKey = mapPrevOut[txin.prevout];
+        const CScript &prevPubKey = mapPrevOut[txin.get_prevout()];
 
-        txin.scriptSig.clear();
+        txin.set_scriptSig().clear();
         Script_util::SignSignature(*wallet, prevPubKey, mergedTx, i, Script_param::SIGHASH_ALL);
-        txin.scriptSig = Script_util::CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, tx.vin[i].scriptSig);
-        if(! Script_util::VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, true, 0)) {
+        txin.set_scriptSig(Script_util::CombineSignatures(prevPubKey, mergedTx, i, txin.get_scriptSig(), tx.get_vin(i).get_scriptSig()));
+        if(! Script_util::VerifyScript(txin.get_scriptSig(), prevPubKey, mergedTx, i, true, 0)) {
             fComplete = false;
         }
     }

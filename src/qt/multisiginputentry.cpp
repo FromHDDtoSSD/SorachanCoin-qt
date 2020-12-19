@@ -57,9 +57,9 @@ int64_t MultisigInputEntry::getAmount()
     uint256 blockHash = 0;
 
     if(block_transaction::manage::GetTransaction(txHash, tx, blockHash)) {
-        if(nOutput < tx.vout.size()) {
-            const CTxOut& txOut = tx.vout[nOutput];
-            amount = txOut.nValue;
+        if(nOutput < tx.get_vout().size()) {
+            const CTxOut& txOut = tx.get_vout(nOutput);
+            amount = txOut.get_nValue();
         }
     }
 
@@ -115,15 +115,15 @@ void MultisigInputEntry::on_transactionId_textChanged(const QString &transaction
     if(! block_transaction::manage::GetTransaction(txHash, tx, blockHash)) {
         return;
     }
-    for(unsigned int i = 0; i < tx.vout.size(); i++)
+    for(unsigned int i = 0; i < tx.get_vout().size(); i++)
     {
         QString idStr;
         idStr.setNum(i);
-        const CTxOut& txOut = tx.vout[i];
-        int64_t amount = txOut.nValue;
+        const CTxOut& txOut = tx.get_vout(i);
+        int64_t amount = txOut.get_nValue();
         QString amountStr;
         amountStr.sprintf("%.6f", (double) amount / util::COIN);
-        CScript script = txOut.scriptPubKey;
+        CScript script = txOut.get_scriptPubKey();
         CTxDestination addr;
         if(Script_util::ExtractDestination(script, addr)) {
             CBitcoinAddress address(addr);
@@ -147,8 +147,8 @@ void MultisigInputEntry::on_transactionOutput_currentIndexChanged(int index)
         return;
     }
 
-    const CTxOut& txOut = tx.vout[index];
-    CScript script = txOut.scriptPubKey;
+    const CTxOut& txOut = tx.get_vout(index);
+    CScript script = txOut.get_scriptPubKey();
 
     if(script.IsPayToScriptHash()) {
         ui->redeemScript->setEnabled(true);

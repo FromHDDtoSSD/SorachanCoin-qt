@@ -129,7 +129,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             for(const json_spirit::Value &v_out: inputs) {
                 int nOut = v_out.get_int(status);
                 if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-                if (nOut < 0 || nOut > (int)tx.vout.size() - 1) {
+                if (nOut < 0 || nOut > (int)tx.get_vout().size() - 1) {
                     std::stringstream strErrorMsg;
                     strErrorMsg << boost::format("Invalid parameter, input number %d is out of range") % nOut;
                     return data.JSONRPCError(RPC_INVALID_PARAMETER, strErrorMsg.str());
@@ -139,14 +139,14 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
         } else if(inputs_v.type() == json_spirit::int_type) {
             int nOut = inputs_v.get_int(status);
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-            if (nOut < 0 || nOut > (int)tx.vout.size() - 1) {
+            if (nOut < 0 || nOut > (int)tx.get_vout().size() - 1) {
                 std::stringstream strErrorMsg;
                 strErrorMsg << boost::format("Invalid parameter, input number %d is out of range") % nOut;
                 return data.JSONRPCError(RPC_INVALID_PARAMETER, strErrorMsg.str());
             }
             vInputs.push_back(nOut);
         } else {
-            for (size_t i = 0; i != tx.vout.size(); ++i)
+            for (size_t i = 0; i != tx.get_vout().size(); ++i)
                 vInputs.push_back(i);
         }
 
@@ -159,7 +159,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Unable to read block index item");
 
         // Read block header
-        if (! block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false))
+        if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false))
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "CBlock::ReadFromDisk() failed");
 
         uint64_t nStakeModifier = 0;
@@ -178,20 +178,20 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
         for(const int &nOut: vInputs) {
             // Check for spent flag
             // It doesn't make sense to scan spent inputs.
-            if (! txindex.vSpent[nOut].IsNull())
+            if (! txindex.get_vSpent(nOut).IsNull())
                 continue;
 
             // Skip zero value outputs
-            if (tx.vout[nOut].nValue == 0)
+            if (tx.get_vout(nOut).get_nValue() == 0)
                 continue;
 
             // Build static part of kernel
             CDataStream ssKernel;
             ssKernel << nStakeModifier;
-            ssKernel << block.get_nTime() << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << tx.nTime << nOut;
+            ssKernel << block.get_nTime() << (txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos()) << tx.get_nTime() << nOut;
             CDataStream::const_iterator itK = ssKernel.begin();
             std::vector<std::pair<uint256, uint32_t> > result;
-            if (bitkernel::ScanKernelForward((unsigned char *)&itK[0], nBits, tx.nTime, tx.vout[nOut].nValue, interval, result)) {
+            if (bitkernel::ScanKernelForward((unsigned char *)&itK[0], nBits, tx.get_nTime(), tx.get_vout(nOut).get_nValue(), interval, result)) {
                 for(const std::pair<uint256, uint32_t> solution: result) {
                     json_spirit::Object item;
                     item.push_back(json_spirit::Pair("nout", nOut));
@@ -262,7 +262,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).vin[0].scriptSig);
+        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).get_vin(0).get_scriptSig());
 
         // Prebuild hash buffers
         char pmidstate[32];
@@ -315,7 +315,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         pblock->set_nTime(pdata->get_nTime());
         pblock->set_nNonce(pdata->get_nNonce());
         if(coinbase.size() == 0)
-            pblock->set_vtx(0).vin[0].scriptSig = mapNewBlock[pdata->get_hashMerkleRoot()].second;
+            pblock->set_vtx(0).set_vin(0).set_scriptSig(mapNewBlock[pdata->get_hashMerkleRoot()].second);
         else {
             // check vtx size
             CTransaction ctx;
@@ -394,7 +394,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
         // Save
-        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).vin[0].scriptSig);
+        mapNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).get_vin(0).get_scriptSig());
 
         // Pre-build hash buffers
         char pmidstate[32];
@@ -431,7 +431,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         CBlock *pblock = mapNewBlock[pdata->get_hashMerkleRoot()].first;
         pblock->set_nTime(pdata->get_nTime());
         pblock->set_nNonce(pdata->get_nNonce());
-        pblock->set_vtx(0).vin[0].scriptSig = mapNewBlock[pdata->get_hashMerkleRoot()].second;
+        pblock->set_vtx(0).set_vin(0).set_scriptSig(mapNewBlock[pdata->get_hashMerkleRoot()].second);
         pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
         return data.JSONRPCSuccess(miner::CheckWork(pblock, *entry::pwalletMain, reservekey));
     }
@@ -566,7 +566,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     result.push_back(json_spirit::Pair("previousblockhash", pblock->get_hashPrevBlock().GetHex()));
     result.push_back(json_spirit::Pair("transactions", transactions));
     result.push_back(json_spirit::Pair("coinbaseaux", aux));
-    result.push_back(json_spirit::Pair("coinbasevalue", (int64_t)pblock->get_vtx(0).vout[0].nValue));
+    result.push_back(json_spirit::Pair("coinbasevalue", (int64_t)pblock->get_vtx(0).get_vout(0).get_nValue()));
     result.push_back(json_spirit::Pair("target", hashTarget.GetHex()));
     result.push_back(json_spirit::Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(json_spirit::Pair("mutable", aMutable));

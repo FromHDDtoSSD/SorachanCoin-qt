@@ -51,40 +51,40 @@ void CRPCTable::ScriptPubKeyToJSON(const CScript &scriptPubKey, json_spirit::Obj
 
 void CRPCTable::TxToJSON(const CTransaction &tx, const uint256 &hashBlock, json_spirit::Object &entry) noexcept {
     entry.push_back(json_spirit::Pair("txid", tx.GetHash().GetHex()));
-    entry.push_back(json_spirit::Pair("version", tx.nVersion));
-    entry.push_back(json_spirit::Pair("time", (int64_t)tx.nTime));
-    entry.push_back(json_spirit::Pair("locktime", (int64_t)tx.nLockTime));
+    entry.push_back(json_spirit::Pair("version", tx.get_nVersion()));
+    entry.push_back(json_spirit::Pair("time", (int64_t)tx.get_nTime()));
+    entry.push_back(json_spirit::Pair("locktime", (int64_t)tx.get_nLockTime()));
 
     json_spirit::Array vin;
-    for(const CTxIn &txin: tx.vin) {
+    for(const CTxIn &txin: tx.get_vin()) {
         json_spirit::Object in;
         if (tx.IsCoinBase())
-            in.push_back(json_spirit::Pair("coinbase", util::HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
+            in.push_back(json_spirit::Pair("coinbase", util::HexStr(txin.get_scriptSig().begin(), txin.get_scriptSig().end())));
         else {
-            in.push_back(json_spirit::Pair("txid", txin.prevout.hash.GetHex()));
-            in.push_back(json_spirit::Pair("vout", (int64_t)txin.prevout.n));
+            in.push_back(json_spirit::Pair("txid", txin.get_prevout().get_hash().GetHex()));
+            in.push_back(json_spirit::Pair("vout", (int64_t)txin.get_prevout().get_n()));
 
             json_spirit::Object o;
-            o.push_back(json_spirit::Pair("asm", txin.scriptSig.ToString()));
-            o.push_back(json_spirit::Pair("hex", util::HexStr(txin.scriptSig.begin(), txin.scriptSig.end())));
+            o.push_back(json_spirit::Pair("asm", txin.get_scriptSig().ToString()));
+            o.push_back(json_spirit::Pair("hex", util::HexStr(txin.get_scriptSig().begin(), txin.get_scriptSig().end())));
             in.push_back(json_spirit::Pair("scriptSig", o));
         }
-        in.push_back(json_spirit::Pair("sequence", (int64_t)txin.nSequence));
+        in.push_back(json_spirit::Pair("sequence", (int64_t)txin.get_nSequence()));
         vin.push_back(in);
     }
 
     entry.push_back(json_spirit::Pair("vin", vin));
     
     json_spirit::Array vout;
-    for (unsigned int i = 0; i < tx.vout.size(); ++i) {
-        const CTxOut& txout = tx.vout[i];
+    for (unsigned int i = 0; i < tx.get_vout().size(); ++i) {
+        const CTxOut& txout = tx.get_vout(i);
         
         json_spirit::Object out;
-        out.push_back(json_spirit::Pair("value", ValueFromAmount(txout.nValue)));
+        out.push_back(json_spirit::Pair("value", ValueFromAmount(txout.get_nValue())));
         out.push_back(json_spirit::Pair("n", (int64_t)i));
 
         json_spirit::Object o;
-        ScriptPubKeyToJSON(txout.scriptPubKey, o, true);
+        ScriptPubKeyToJSON(txout.get_scriptPubKey(), o, true);
         out.push_back(json_spirit::Pair("scriptPubKey", o));
         vout.push_back(out);
     }
@@ -194,20 +194,20 @@ json_spirit::Value CRPCTable::listunspent(const json_spirit::Array &params, CBit
             continue;
         if(setAddress.size()) {
             CTxDestination address;
-            if(! Script_util::ExtractDestination(out.tx->vout[out.i].scriptPubKey, address))
+            if(! Script_util::ExtractDestination(out.tx->get_vout(out.i).get_scriptPubKey(), address))
                 continue;
             if (! setAddress.count(address))
                 continue;
         }
 
-        int64_t nValue = out.tx->vout[out.i].nValue;
-        const CScript &pk = out.tx->vout[out.i].scriptPubKey;
+        int64_t nValue = out.tx->get_vout(out.i).get_nValue();
+        const CScript &pk = out.tx->get_vout(out.i).get_scriptPubKey();
 
         json_spirit::Object entry;
         entry.push_back(json_spirit::Pair("txid", out.tx->GetHash().GetHex()));
         entry.push_back(json_spirit::Pair("vout", out.i));
         CTxDestination address;
-        if (Script_util::ExtractDestination(out.tx->vout[out.i].scriptPubKey, address)) {
+        if (Script_util::ExtractDestination(out.tx->get_vout(out.i).get_scriptPubKey(), address)) {
             entry.push_back(json_spirit::Pair("address", CBitcoinAddress(address).ToString()));
             if (entry::pwalletMain->mapAddressBook.count(address))
                 entry.push_back(json_spirit::Pair("account", entry::pwalletMain->mapAddressBook[address]));
@@ -277,7 +277,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, vout must be positive");
 
         CTxIn in(COutPoint(uint256(txid), nOutput));
-        rawTx.vin.push_back(in);
+        rawTx.set_vin().push_back(in);
     }
 
     std::set<CBitcoinAddress> setAddress;
@@ -300,7 +300,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
         int64_t nAmount = AmountFromValue(s.value_, data);
         if(! data.fSuccess()) return data.JSONRPCError();
         CTxOut out(nAmount, scriptPubKey);
-        rawTx.vout.push_back(out);
+        rawTx.set_vout().push_back(out);
     }
 
     if (params.size() == 3) {
@@ -311,7 +311,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
         scriptPubKey << ScriptOpcodes::OP_RETURN << hex::ParseHex(str);
         CTxOut out(0, scriptPubKey);
-        rawTx.vout.push_back(out);
+        rawTx.set_vout().push_back(out);
     }
 
     CDataStream ss(SER_NETWORK, version::PROTOCOL_VERSION);
@@ -419,7 +419,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
 
     // Fetch previous transactions (inputs)
     std::map<COutPoint, CScript> mapPrevOut;
-    for (unsigned int i = 0; i < mergedTx.vin.size(); ++i) {
+    for (unsigned int i = 0; i < mergedTx.get_vin().size(); ++i) {
         CTransaction tempTx;
         MapPrevTx mapPrevTx;
         CTxDB txdb("r");
@@ -427,14 +427,14 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
         bool fInvalid;
 
         // FetchInputs aborts on failure, so we go one at a time
-        tempTx.vin.push_back(mergedTx.vin[i]);
+        tempTx.set_vin().push_back(mergedTx.get_vin(i));
         tempTx.FetchInputs(txdb, unused, false, false, mapPrevTx, fInvalid);
 
         // Copy results into mapPrevOut
-        for(const CTxIn &txin: tempTx.vin) {
-            const uint256 &prevHash = txin.prevout.hash;
-            if (mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.vout.size()>txin.prevout.n)
-                mapPrevOut[txin.prevout] = mapPrevTx[prevHash].second.vout[txin.prevout.n].scriptPubKey;
+        for(const CTxIn &txin: tempTx.get_vin()) {
+            const uint256 &prevHash = txin.get_prevout().get_hash();
+            if (mapPrevTx.count(prevHash) && mapPrevTx[prevHash].second.get_vout().size()>txin.get_prevout().get_n())
+                mapPrevOut[txin.get_prevout()] = mapPrevTx[prevHash].second.get_vout(txin.get_prevout().get_n()).get_scriptPubKey();
         }
     }
 
@@ -551,24 +551,24 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
     bool fHashSingle = ((nHashType & ~Script_param::SIGHASH_ANYONECANPAY) == Script_param::SIGHASH_SINGLE);
 
     // Sign what we can:
-    for (unsigned int i = 0; i < mergedTx.vin.size(); ++i) {
-        CTxIn &txin = mergedTx.vin[i];
-        if (mapPrevOut.count(txin.prevout) == 0) {
+    for (unsigned int i = 0; i < mergedTx.get_vin().size(); ++i) {
+        CTxIn &txin = mergedTx.set_vin(i);
+        if (mapPrevOut.count(txin.get_prevout()) == 0) {
             fComplete = false;
             continue;
         }
-        const CScript &prevPubKey = mapPrevOut[txin.prevout];
+        const CScript &prevPubKey = mapPrevOut[txin.get_prevout()];
 
-        txin.scriptSig.clear();
+        txin.set_scriptSig().clear();
         // Only sign Script_param::SIGHASH_SINGLE if there's a corresponding output:
-        if (!fHashSingle || (i < mergedTx.vout.size()))
+        if (!fHashSingle || (i < mergedTx.get_vout().size()))
             Script_util::SignSignature(keystore, prevPubKey, mergedTx, i, nHashType);
 
         // ... and merge in other signatures:
         for(const CTransaction &txv: txVariants)
-            txin.scriptSig = Script_util::CombineSignatures(prevPubKey, mergedTx, i, txin.scriptSig, txv.vin[i].scriptSig);
+            txin.set_scriptSig(Script_util::CombineSignatures(prevPubKey, mergedTx, i, txin.get_scriptSig(), txv.get_vin(i).get_scriptSig()));
 
-        if (! Script_util::VerifyScript(txin.scriptSig, prevPubKey, mergedTx, i, Script_param::STRICT_FLAGS, 0))
+        if (! Script_util::VerifyScript(txin.get_scriptSig(), prevPubKey, mergedTx, i, Script_param::STRICT_FLAGS, 0))
             fComplete = false;
     }
 

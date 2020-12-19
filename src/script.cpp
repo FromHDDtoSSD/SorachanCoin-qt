@@ -373,17 +373,17 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // unless the type of nLockTime being tested is the same as
         // the nLockTime in the transaction.
         if (!(
-            (txTo.nLockTime <  block_param::LOCKTIME_THRESHOLD && nLockTime < block_param::LOCKTIME_THRESHOLD) ||
-            (txTo.nLockTime >= block_param::LOCKTIME_THRESHOLD && nLockTime >= block_param::LOCKTIME_THRESHOLD)
+            (txTo.get_nLockTime() <  block_param::LOCKTIME_THRESHOLD && nLockTime < block_param::LOCKTIME_THRESHOLD) ||
+            (txTo.get_nLockTime() >= block_param::LOCKTIME_THRESHOLD && nLockTime >= block_param::LOCKTIME_THRESHOLD)
             )) {
-            debugcs::instance() << "EvalScript_CheckLockTime Failure A." << debugcs::endl();
+            printf("EvalScript_CheckLockTime Failure A.\n");
             return false;
         }
 
         // Now that we know we're comparing apples-to-apples, the
         // comparison is a simple numeric one.
-        if (nLockTime > (int64_t)txTo.nLockTime) {
-            debugcs::instance() << "EvalScript_CheckLockTime Failure B." << debugcs::endl();
+        if (nLockTime > (int64_t)txTo.get_nLockTime()) {
+            printf("EvalScript_CheckLockTime Failure B.\n");
             return false;
         }
 
@@ -397,8 +397,8 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // prevent this condition. Alternatively we could test all
         // inputs, but testing just this input minimizes the data
         // required to prove correct CHECKLOCKTIMEVERIFY execution.
-        if (SEQUENCE_FINAL == txTo.vin[nIn].nSequence) {
-            debugcs::instance() << "EvalScript_CheckLockTime Failure C." << debugcs::endl();
+        if (SEQUENCE_FINAL == txTo.get_vin(nIn).get_nSequence()) {
+            printf("EvalScript_CheckLockTime Failure C.\n");
             return false;
         }
 
@@ -408,14 +408,14 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
     auto CheckSequence = [](const int64_t &nSequence, const CTransaction &txTo, unsigned int nIn) {
         // Relative lock times are supported by comparing the passed
         // in operand to the sequence number of the input.
-        const int64_t txToSequence = (int64_t)txTo.vin[nIn].nSequence;
+        const int64_t txToSequence = (int64_t)txTo.get_vin(nIn).get_nSequence();
 
         // Sequence numbers with their most significant bit set are not
         // consensus constrained. Testing that the transaction's sequence
         // number do not have this bit set prevents using this property
         // to get around a CHECKSEQUENCEVERIFY check.
         if (txToSequence & SEQUENCE_LOCKTIME_DISABLE_FLAG) {
-            debugcs::instance() << "EvalScript_Sequence Failure A." << debugcs::endl();
+            printf("EvalScript_Sequence Failure A.\n");
             return false;
         }
 
@@ -1319,7 +1319,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
 uint256 Script_util::SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType)
 {
-    if (nIn >= txTo.vin.size()) {
+    if (nIn >= txTo.get_vin().size()) {
         printf("ERROR: SignatureHash() : nIn=%d out of range\n", nIn);
         return 1;
     }
@@ -1330,22 +1330,22 @@ uint256 Script_util::SignatureHash(CScript scriptCode, const CTransaction &txTo,
     scriptCode.FindAndDelete(CScript(ScriptOpcodes::OP_CODESEPARATOR));
 
     // Blank out other inputs' signatures
-    for (unsigned int i = 0; i < txTmp.vin.size(); ++i)
+    for (unsigned int i = 0; i < txTmp.get_vin().size(); ++i)
     {
-        txTmp.vin[i].scriptSig = CScript();
+        txTmp.set_vin(i).set_scriptSig(CScript());
     }
-    txTmp.vin[nIn].scriptSig = scriptCode;
+    txTmp.set_vin(nIn).set_scriptSig(scriptCode);
 
     // Blank out some of the outputs
     if ((nHashType & 0x1f) == Script_param::SIGHASH_NONE) {
         // Wildcard payee
-        txTmp.vout.clear();
+        txTmp.set_vout().clear();
 
         // Let the others update at will
-        for (unsigned int i = 0; i < txTmp.vin.size(); ++i)
+        for (unsigned int i = 0; i < txTmp.get_vin().size(); ++i)
         {
             if (i != nIn) {
-                txTmp.vin[i].nSequence = 0;
+                txTmp.set_vin(i).set_nSequence(0);
             }
         }
     } else if ((nHashType & 0x1f) == Script_param::SIGHASH_SINGLE) {
@@ -1353,30 +1353,30 @@ uint256 Script_util::SignatureHash(CScript scriptCode, const CTransaction &txTo,
         // Only lock-in the txout payee at same index as txin
         //
         unsigned int nOut = nIn;
-        if (nOut >= txTmp.vout.size()) {
+        if (nOut >= txTmp.get_vout().size()) {
             printf("ERROR: SignatureHash() : nOut=%d out of range\n", nOut);
             return 1;
         }
 
-        txTmp.vout.resize(nOut+1);
+        txTmp.set_vout().resize(nOut+1);
         for (unsigned int i = 0; i < nOut; ++i)
         {
-            txTmp.vout[i].SetNull();
+            txTmp.set_vout(i).SetNull();
         }
 
         // Let the others update at will
-        for (unsigned int i = 0; i < txTmp.vin.size(); ++i)
+        for (unsigned int i = 0; i < txTmp.get_vin().size(); ++i)
         {
             if (i != nIn) {
-                txTmp.vin[i].nSequence = 0;
+                txTmp.set_vin(i).set_nSequence(0);
             }
         }
     }
 
     // Blank out other inputs completely, not recommended for open transactions
     if (nHashType & Script_param::SIGHASH_ANYONECANPAY) {
-        txTmp.vin[0] = txTmp.vin[nIn];
-        txTmp.vin.resize(1);
+        txTmp.set_vin(0) = txTmp.get_vin(nIn);
+        txTmp.set_vin().resize(1);
     }
 
     // Serialize and hash
@@ -2106,8 +2106,8 @@ bool Script_util::VerifyScript(const CScript &scriptSig, const CScript &scriptPu
 
 bool Script_util::SignSignature(const CKeyStore &keystore, const CScript &fromPubKey, CTransaction &txTo, unsigned int nIn, int nHashType/* =Script_param::SIGHASH_ALL */)
 {
-    assert(nIn < txTo.vin.size());
-    CTxIn &txin = txTo.vin[nIn];
+    assert(nIn < txTo.get_vin().size());
+    CTxIn &txin = txTo.set_vin(nIn);
 
     //
     // Leave out the signature from the hash, since a signature can't sign itself.
@@ -2116,7 +2116,7 @@ bool Script_util::SignSignature(const CKeyStore &keystore, const CScript &fromPu
     uint256 hash = SignatureHash(fromPubKey, txTo, nIn, nHashType);
 
     TxnOutputType::txnouttype whichType;
-    if (! Script_util::Solver(keystore, fromPubKey, hash, nHashType, txin.scriptSig, whichType)) {
+    if (! Script_util::Solver(keystore, fromPubKey, hash, nHashType, txin.set_scriptSig(), whichType)) {
         return false;
     }
 
@@ -2126,37 +2126,38 @@ bool Script_util::SignSignature(const CKeyStore &keystore, const CScript &fromPu
         // the final scriptSig is the signatures from that
         // and then the serialized subscript:
         //
-        CScript subscript = txin.scriptSig;
+        CScript subscript = txin.get_scriptSig();
 
         // Recompute txn hash using subscript in place of scriptPubKey:
         uint256 hash2 = SignatureHash(subscript, txTo, nIn, nHashType);
 
         TxnOutputType::txnouttype subType;
-        bool fSolved = Script_util::Solver(keystore, subscript, hash2, nHashType, txin.scriptSig, subType) && subType != TxnOutputType::TX_SCRIPTHASH;
+        bool fSolved = Script_util::Solver(keystore, subscript, hash2, nHashType, txin.set_scriptSig(), subType) && subType != TxnOutputType::TX_SCRIPTHASH;
 
         //
         // Append serialized subscript whether or not it is completely signed:
         //
-        txin.scriptSig << static_cast<valtype>(subscript);
+        //txin.scriptSig << static_cast<valtype>(subscript);
+        txin << static_cast<valtype>(subscript);
         if (! fSolved) {
             return false;
         }
     }
 
     // Test solution
-    return VerifyScript(txin.scriptSig, fromPubKey, txTo, nIn, Script_param::STRICT_FLAGS, 0);
+    return VerifyScript(txin.get_scriptSig(), fromPubKey, txTo, nIn, Script_param::STRICT_FLAGS, 0);
 }
 
 bool Script_util::SignSignature(const CKeyStore &keystore, const CTransaction &txFrom, CTransaction &txTo, unsigned int nIn, int nHashType)
 {
-    assert(nIn < txTo.vin.size());
+    assert(nIn < txTo.get_vin().size());
 
-    CTxIn &txin = txTo.vin[nIn];
-    assert(txin.prevout.n < txFrom.vout.size());
-    assert(txin.prevout.hash == txFrom.GetHash());
-    const CTxOut &txout = txFrom.vout[txin.prevout.n];
+    CTxIn &txin = txTo.set_vin(nIn);
+    assert(txin.get_prevout().get_n() < txFrom.get_vout().size());
+    assert(txin.get_prevout().get_hash() == txFrom.GetHash());
+    const CTxOut &txout = txFrom.get_vout(txin.get_prevout().get_n());
 
-    return SignSignature(keystore, txout.scriptPubKey, txTo, nIn, nHashType);
+    return SignSignature(keystore, txout.get_scriptPubKey(), txTo, nIn, nHashType);
 }
 
 CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2)

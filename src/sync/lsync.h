@@ -9,7 +9,7 @@
 
 // SorachanCoin: checking ...
 // current apply: random.h[random.cpp]
-#ifdef DEBUG
+#ifdef LSYNC_DEBUG
 # define HAVE_THREAD_LOCAL
 # define LDEBUG_LOCKCONTENTION
 # define LDEBUG_LOCKORDER

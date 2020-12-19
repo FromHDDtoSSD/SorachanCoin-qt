@@ -43,7 +43,7 @@ public:
     IMPLEMENT_SERIALIZE
     (
         nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, ser_action);
-        nVersion = this->nVersion;
+        nVersion = this->get_nVersion();
         READWRITE(this->hashBlock);
         READWRITE(this->vMerkleBranch);
         READWRITE(this->nIndex);

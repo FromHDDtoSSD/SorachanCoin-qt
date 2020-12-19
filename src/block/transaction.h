@@ -3,6 +3,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// serialize
+//
+
 #ifndef BITCOIN_TRANSACTION_H
 #define BITCOIN_TRANSACTION_H
 
@@ -66,12 +69,17 @@ template <typename T>
 class CInPoint_impl
 {
 private:
-    CInPoint_impl(const CInPoint_impl &)=delete;
-    // CInPoint_impl &operator=(const CInPoint_impl &)=delete;
-    // CInPoint_impl &operator=(const CInPoint_impl &&)=delete;
-public:
+    //CInPoint_impl(const CInPoint_impl &)=delete;
+    //CInPoint_impl(CInPoint_impl &&)=delete;
+    //CInPoint_impl &operator=(const CInPoint_impl &)=delete;
+    //CInPoint_impl &operator=(CInPoint_impl &&)=delete;
+
     CTransaction_impl<T> *ptx;
     uint32_t n;
+public:
+    const CTransaction_impl<T> *get_ptx() const noexcept {return ptx;}
+    CTransaction_impl<T> *get_ptx() noexcept {return ptx;}
+    uint32_t get_n() const noexcept {return n;}
 
     CInPoint_impl() {
         SetNull();
@@ -95,40 +103,44 @@ using CInPoint = CInPoint_impl<uint256>;
 template <typename T>
 class COutPoint_impl
 {
-//private:
-    // COutPoint_impl(const COutPoint_impl &)=delete;
-    // COutPoint_impl &operator=(const COutPoint_impl &)=delete;
-    // COutPoint_impl &operator=(const COutPoint_impl &&)=delete;
-public:
+private:
+    //COutPoint_impl(const COutPoint_impl &)=delete;
+    //COutPoint_impl(COutPoint_impl &)=delete;
+    //COutPoint_impl &operator=(const COutPoint_impl &)=delete;
+    //COutPoint_impl &operator=(COutPoint_impl &&)=delete;
+
     T hash;
     uint32_t n;
+public:
+    uint32_t get_n() const noexcept {return n;}
+    const T &get_hash() const noexcept {return hash;}
 
-    COutPoint_impl() {
+    COutPoint_impl() noexcept {
         SetNull();
     }
-    COutPoint_impl(T hashIn, unsigned int nIn) {
+    COutPoint_impl(T hashIn, unsigned int nIn) noexcept {
         hash = hashIn;
         n = nIn;
     }
-    void SetNull() {
+    void SetNull() noexcept {
         hash = 0;
         n = std::numeric_limits<uint32_t>::max();
     }
-    bool IsNull() const {
+    bool IsNull() const noexcept {
         return (hash == 0 && n == std::numeric_limits<uint32_t>::max());
     }
 
-    friend bool operator<(const COutPoint_impl &a, const COutPoint_impl &b) {
+    friend bool operator<(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
         return (a.hash < b.hash || (a.hash == b.hash && a.n < b.n));
     }
-    friend bool operator==(const COutPoint_impl &a, const COutPoint_impl &b) {
+    friend bool operator==(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
         return (a.hash == b.hash && a.n == b.n);
     }
-    friend bool operator!=(const COutPoint_impl &a, const COutPoint_impl &b) {
+    friend bool operator!=(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
         return !(a == b);
     }
 
-    std::string ToString() const;
+    std::string ToString() const noexcept;
     void print() const {
         printf("%s\n", ToString().c_str());
     }
@@ -142,43 +154,49 @@ using COutPoint = COutPoint_impl<uint256>;
 // Position on disk for a particular transaction
 class CDiskTxPos
 {
-//private:
-    // CDiskTxPos(const CDiskTxPos &)=delete;
-    // CDiskTxPos &operator=(const CDiskTxPos &)=delete;
-    // CDiskTxPos &operator=(const CDiskTxPos &&)=delete;
-public:
+private:
+    //CDiskTxPos(const CDiskTxPos &)=delete;
+    //CDiskTxPos(CDiskTxPos &)=delete;
+    //CDiskTxPos &operator=(const CDiskTxPos &)=delete;
+    //CDiskTxPos &operator=(CDiskTxPos &&)=delete;
+
     uint32_t nFile;
     uint32_t nBlockPos;
     uint32_t nTxPos;
+public:
+    uint32_t get_nFile() const noexcept {return nFile;}
+    uint32_t get_nBlockPos() const noexcept {return nBlockPos;}
+    uint32_t get_nTxPos() const noexcept {return nTxPos;}
 
-    CDiskTxPos() {
+    CDiskTxPos() noexcept {
         SetNull();
     }
-    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn) {
+    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn) noexcept {
         nFile = nFileIn;
         nBlockPos = nBlockPosIn;
         nTxPos = nTxPosIn;
     }
-    void SetNull() {
+
+    void SetNull() noexcept {
         nFile = std::numeric_limits<uint32_t>::max();
         nBlockPos = 0;
         nTxPos = 0;
     }
-    bool IsNull() const {
+    bool IsNull() const noexcept {
         return (nFile == std::numeric_limits<uint32_t>::max());
     }
 
-    friend bool operator==(const CDiskTxPos &a, const CDiskTxPos &b) {
+    friend bool operator==(const CDiskTxPos &a, const CDiskTxPos &b) noexcept {
         return (a.nFile     == b.nFile &&
                 a.nBlockPos == b.nBlockPos &&
                 a.nTxPos    == b.nTxPos);
     }
-    friend bool operator!=(const CDiskTxPos &a, const CDiskTxPos &b) {
+    friend bool operator!=(const CDiskTxPos &a, const CDiskTxPos &b) noexcept {
         return !(a == b);
     }
 
-    std::string ToString() const;
-    void print() const {
+    std::string ToString() const noexcept;
+    void print() const noexcept {
         printf("%s", ToString().c_str());
     }
 
@@ -191,13 +209,21 @@ public:
 // vSpent is really only used as a flag, but having the location is very helpful for debugging.
 class CTxIndex
 {
-//private:
-    // CTxIndex(const CTxIndex &)=delete;
-    // CTxIndex &operator=(const CTxIndex &)=delete;
-    // CTxIndex &operator=(const CTxIndex &)=delete;
-public:
+private:
+    //CTxIndex(const CTxIndex &)=delete;
+    //CTxIndex(CTxIndex &)=delete;
+    //CTxIndex &operator=(const CTxIndex &)=delete;
+    //CTxIndex &operator=(CTxIndex &)=delete;
+
     CDiskTxPos pos;
     std::vector<CDiskTxPos> vSpent;
+public:
+    const CDiskTxPos &get_pos() const noexcept {return pos;}
+    const std::vector<CDiskTxPos> &get_vSpent() const noexcept {return vSpent;}
+    const CDiskTxPos &get_vSpent(int index) const noexcept {return vSpent[index];}
+
+    std::vector<CDiskTxPos> &set_vSpent() noexcept {return vSpent;}
+    CDiskTxPos &set_vSpent(int index) noexcept {return vSpent[index];}
 
     CTxIndex() {
         SetNull();
@@ -213,19 +239,19 @@ public:
         vSpent.clear();
     }
 
-    bool IsNull() {
+    bool IsNull() const noexcept {
         return pos.IsNull();
     }
 
-    friend bool operator==(const CTxIndex &a, const CTxIndex &b) {
+    friend bool operator==(const CTxIndex &a, const CTxIndex &b) noexcept {
         return (a.pos    == b.pos &&
                 a.vSpent == b.vSpent);
     }
-    friend bool operator!=(const CTxIndex &a, const CTxIndex &b) {
+    friend bool operator!=(const CTxIndex &a, const CTxIndex &b) noexcept {
         return !(a == b);
     }
 
-    int GetDepthInMainChain() const;
+    int GetDepthInMainChain() const noexcept;
 
     IMPLEMENT_SERIALIZE
     (
@@ -245,13 +271,20 @@ class CTxMemPool_impl
 private:
     CTxMemPool_impl() {}
     CTxMemPool_impl(const CTxMemPool_impl &)=delete;
+    CTxMemPool_impl(CTxMemPool_impl &&)=delete;
     CTxMemPool_impl &operator=(const CTxMemPool_impl &)=delete;
-    CTxMemPool_impl &operator=(const CTxMemPool_impl &&)=delete;
+    CTxMemPool_impl &operator=(CTxMemPool_impl &&)=delete;
+
+    mutable CCriticalSection cs;
+    mutable std::map<T, CTransaction_impl<T> > mapTx; // mutable: operator []
+    std::map<COutPoint_impl<T>, CInPoint_impl<T> > mapNextTx;
 public:
     static CTxMemPool_impl mempool;
-    mutable CCriticalSection cs;
-    std::map<T, CTransaction_impl<T> > mapTx;
-    std::map<COutPoint_impl<T>, CInPoint_impl<T> > mapNextTx;
+    CCriticalSection &get_cs() const noexcept {return cs;}
+    const std::map<T, CTransaction_impl<T> > &get_mapTx() const noexcept {return mapTx;}
+    const CTransaction_impl<T> &get_mapTx(T hash) const {return mapTx[hash];}
+
+    std::map<T, CTransaction_impl<T> > &set_mapTx() {return mapTx;}
 
     bool accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fCheckInputs, bool *pfMissingInputs);
     bool addUnchecked(const T &hash, CTransaction_impl<T> &tx);
@@ -260,14 +293,14 @@ public:
     void queryHashes(std::vector<T> &vtxid);
     bool IsFromMe(CTransaction_impl<T> &tx);
     void EraseFromWallets(T hash);
-    size_t size() {
+    size_t size() const noexcept {
         LOCK(cs);
         return mapTx.size();
     }
-    bool exists(T hash) {
+    bool exists(T hash) const noexcept {
         return (mapTx.count(hash) != 0);
     }
-    CTransaction &lookup(T hash) {
+    CTransaction_impl<T> &lookup(T hash) {
         return mapTx[hash];
     }
 };
@@ -279,16 +312,33 @@ using CTxMemPool = CTxMemPool_impl<uint256>;
 template <typename T>
 class CTxIn_impl
 {
-//private:
-    // CTxIn_impl(const CTxIn_impl &)=delete;
-    // CTxIn_impl &operator=(const CTxIn_impl &)=delete;
-    // CTxIn_impl &operator=(const CTxIn_impl &&)=delete;
-public:
+private:
+    //CTxIn_impl(const CTxIn_impl &)=delete;
+    //CTxIn_impl(CTxIn_impl &)=delete;
+    //CTxIn_impl &operator=(const CTxIn_impl &)=delete;
+    //CTxIn_impl &operator=(CTxIn_impl &&)=delete;
+
     COutPoint_impl<T> prevout;
     CScript scriptSig;
     uint32_t nSequence;
+public:
+    const COutPoint_impl<T> &get_prevout() const noexcept {return prevout;}
+    const CScript &get_scriptSig() const noexcept {return scriptSig;}
+    uint32_t get_nSequence() const noexcept {return nSequence;}
 
-    CTxIn_impl() {
+    COutPoint_impl<T> &set_prevout() noexcept {return prevout;}
+    CScript &set_scriptSig() noexcept {return scriptSig;}
+    void set_nSequence(uint32_t _seq) noexcept {nSequence = _seq;}
+    void set_scriptSig(const CScript &_sig) {scriptSig = _sig;}
+
+    // script <valtype>
+    template <typename valtype>
+    CTxIn_impl &operator<<(const valtype &_obj) {
+        scriptSig << _obj;
+        return *this;
+    }
+
+    CTxIn_impl() noexcept {
         nSequence = std::numeric_limits<unsigned int>::max();
     }
     explicit CTxIn_impl(COutPoint_impl<T> prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max()) {
@@ -302,16 +352,16 @@ public:
         nSequence = nSequenceIn;
     }
 
-    bool IsFinal() const {
+    bool IsFinal() const noexcept {
         return (nSequence == std::numeric_limits<unsigned int>::max());
     }
 
-    friend bool operator==(const CTxIn_impl &a, const CTxIn_impl &b) {
+    friend bool operator==(const CTxIn_impl &a, const CTxIn_impl &b) noexcept {
         return (a.prevout   == b.prevout &&
                 a.scriptSig == b.scriptSig &&
                 a.nSequence == b.nSequence);
     }
-    friend bool operator!=(const CTxIn_impl &a, const CTxIn_impl &b) {
+    friend bool operator!=(const CTxIn_impl &a, const CTxIn_impl &b) noexcept {
         return !(a == b);
     }
 
@@ -335,13 +385,22 @@ using CTxIn = CTxIn_impl<uint256>;
 template <typename T>
 class CTxOut_impl
 {
-//private:
-    // CTxOut_impl(const CTxOut_impl &)=delete;
-    // CTxOut_impl &operator=(const CTxOut_impl &)=delete;
-    // CTxOut_impl &operator=(const CTxOut_impl &&)=delete;
-public:
-    int64_t nValue;
+private:
+    //CTxOut_impl(const CTxOut_impl &)=delete;
+    //CTxOut_impl(CTxOut_impl &&)=delete;
+    //CTxOut_impl &operator=(const CTxOut_impl &)=delete;
+    //CTxOut_impl &operator=(CTxOut_impl &&)=delete;
+
+    int64_t nValue; // amount
     CScript scriptPubKey;
+public:
+    int64_t get_nValue() const noexcept {return nValue;}
+    const CScript &get_scriptPubKey() const noexcept {return scriptPubKey;}
+
+    void set_nValue(int64_t _InValue) noexcept {assert(_InValue >= 0); nValue = _InValue;}
+    void add_nValue(int64_t _InValue) noexcept {assert(! IsNull()); nValue += _InValue;}
+    void sub_nValue(int64_t _InValue) noexcept {nValue -= _InValue; assert(nValue >= 0);}
+    CScript &set_scriptPubKey() noexcept {return scriptPubKey;}
 
     CTxOut_impl() {
         SetNull();
@@ -355,25 +414,25 @@ public:
         nValue = -1;
         scriptPubKey.clear();
     }
-    bool IsNull() {
+    bool IsNull() noexcept {
         return (this->nValue == -1);
     }
     void SetEmpty() {
         nValue = 0;
         scriptPubKey.clear();
     }
-    bool IsEmpty() const {
+    bool IsEmpty() const noexcept {
         return (nValue == 0 && scriptPubKey.empty());
     }
     T GetHash() const {
         return hash_basis::SerializeHash(*this);
     }
 
-    friend bool operator==(const CTxOut_impl &a, const CTxOut_impl &b) {
+    friend bool operator==(const CTxOut_impl &a, const CTxOut_impl &b) noexcept {
         return (a.nValue       == b.nValue &&
                 a.scriptPubKey == b.scriptPubKey);
     }
-    friend bool operator!=(const CTxOut_impl &a, const CTxOut_impl &b) {
+    friend bool operator!=(const CTxOut_impl &a, const CTxOut_impl &b) noexcept {
         return !(a == b);
     }
 
@@ -400,31 +459,46 @@ template <typename T>
 class CTransaction_impl
 {
 //private:
-    // CTransaction_impl(const CTransaction_impl &)=delete;
-    // CTransaction_impl &operator=(const CTransaction_impl &)=delete;
-    // CTransaction_impl &operator=(const CTransaction_impl &&)=delete;
-protected:
-    const CTxOut_impl<T> &GetOutputFor(const CTxIn_impl<T> &input, const MapPrevTx &inputs) const;
+    //CTransaction_impl(const CTransaction_impl &)=delete;
+    //CTransaction_impl(CTransaction_impl &&)=delete;
+    //CTransaction_impl &operator=(const CTransaction_impl &)=delete;
+    //CTransaction_impl &operator=(CTransaction_impl &&)=delete;
 public:
     enum GetMinFee_mode {
         GMF_BLOCK,
         GMF_RELAY,
         GMF_SEND
     };
-public:
+protected: // CMerkleTx => CWalletTx
+    const CTxOut_impl<T> &GetOutputFor(const CTxIn_impl<T> &input, const MapPrevTx &inputs) const;
+private:
     static constexpr int CURRENT_VERSION = 1;
     int nVersion;
     uint32_t nTime;
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
-
+public:
     // Denial-of-service detection:
     mutable int nDoS;
     bool DoS(int nDoSIn, bool fIn) const {
         nDoS += nDoSIn;
         return fIn;
     }
+
+    uint32_t get_nTime() const {return nTime;}
+    int get_nVersion() const {return nVersion;}
+    const std::vector<CTxIn> &get_vin() const {return vin;}
+    const CTxIn &get_vin(int index) const {return vin[index];}
+    const std::vector<CTxOut> &get_vout() const {return vout;}
+    const CTxOut &get_vout(int index) const {return vout[index];}
+    uint32_t get_nLockTime() const {return nLockTime;}
+
+    void set_nTime(uint32_t _InTime) {nTime = _InTime;}
+    std::vector<CTxIn> &set_vin() {return vin;}
+    CTxIn &set_vin(int index) {return vin[index];}
+    std::vector<CTxOut> &set_vout() {return vout;}
+    CTxOut &set_vout(int index) {return vout[index];}
 
     CTransaction_impl() {
         SetNull();
@@ -463,20 +537,20 @@ public:
     bool IsNewerThan(const CTransaction &old) const {
         if (vin.size() != old.vin.size()) return false;
         for (unsigned int i = 0; i < vin.size(); ++i) {
-            if (vin[i].prevout != old.vin[i].prevout) return false;
+            if (vin[i].get_prevout() != old.vin[i].get_prevout()) return false;
         }
 
         bool fNewer = false;
         unsigned int nLowest = std::numeric_limits<unsigned int>::max();
         for (unsigned int i = 0; i < vin.size(); ++i) {
-            if (vin[i].nSequence != old.vin[i].nSequence) {
-                if (vin[i].nSequence <= nLowest) {
+            if (vin[i].get_nSequence() != old.vin[i].get_nSequence()) {
+                if (vin[i].get_nSequence() <= nLowest) {
                     fNewer = false;
-                    nLowest = vin[i].nSequence;
+                    nLowest = vin[i].get_nSequence();
                 }
-                if (old.vin[i].nSequence < nLowest) {
+                if (old.vin[i].get_nSequence() < nLowest) {
                     fNewer = true;
-                    nLowest = old.vin[i].nSequence;
+                    nLowest = old.vin[i].get_nSequence();
                 }
             }
         }
@@ -484,10 +558,10 @@ public:
     }
 
     bool IsCoinBase() const {
-        return (vin.size() == 1 && vin[0].prevout.IsNull() && vout.size() >= 1);
+        return (vin.size() == 1 && vin[0].get_prevout().IsNull() && vout.size() >= 1);
     }
     bool IsCoinStake() const { // ppcoin: the coin stake transaction is marked with the first output empty
-        return (vin.size() > 0 && (!vin[0].prevout.IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
+        return (vin.size() > 0 && (!vin[0].get_prevout().IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
 
     // Check for standard transaction types
@@ -598,9 +672,10 @@ public:
 class CScriptCheck
 {
 private:
-    // CScriptCheck(const CScriptCheck &)=delete;
-    // CScriptCheck &operator=(const CScriptCheck &)=delete;
-    // CScriptCheck &operator=(const CScriptCheck &&)=delete;
+    //CScriptCheck(const CScriptCheck &)=delete;
+    //CScriptCheck(CScriptCheck &)=delete;
+    //CScriptCheck &operator=(const CScriptCheck &)=delete;
+    //CScriptCheck &operator=(CScriptCheck &&)=delete;
 
     CScript scriptPubKey;
     const CTransaction *ptxTo;
@@ -611,7 +686,7 @@ private:
 public:
     CScriptCheck() {}
     CScriptCheck(const CTransaction& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
-    scriptPubKey(txFromIn.vout[txToIn.vin[nInIn].prevout.n].scriptPubKey), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) {}
+    scriptPubKey(txFromIn.get_vout(txToIn.get_vin(nInIn).get_prevout().get_n()).get_scriptPubKey()), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) {}
 
     bool operator()() const;
     void swap(CScriptCheck &check) {
@@ -622,5 +697,48 @@ public:
         std::swap(nHashType, check.nHashType);
     }
 };
+
+/** A mutable version of CTransaction. */
+/*
+template <typename T>
+struct CMutableTransaction_impl {
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    int32_t nVersion;
+    uint32_t nLockTime;
+
+    CMutableTransaction_impl();
+    explicit CMutableTransaction_impl(const CTransaction_impl<T> &tx);
+
+    template <typename Stream>
+    inline void Serialize(Stream &s) const {
+        SerializeTransaction(*this, s);
+    }
+
+    template <typename Stream>
+    inline void Unserialize(Stream &s) {
+        UnserializeTransaction(*this, s);
+    }
+
+    template <typename Stream>
+    CMutableTransaction_impl(deserialize_type, Stream &s) {
+        Unserialize(s);
+    }
+
+    // Compute the hash of this CMutableTransaction. This is computed on the
+    // fly, as opposed to GetHash() in CTransaction, which uses a cached result.
+    T GetHash() const;
+
+    bool HasWitness() const {
+        for (size_t i = 0; i < vin.size(); i++) {
+            if (! vin[i].scriptWitness.IsNull()) {
+                return true;
+            }
+        }
+        return false;
+    }
+};
+using CMutableTransaction = CMutableTransaction_impl<uint256>;
+*/
 
 #endif // BITCOIN_TRANSACTION_H

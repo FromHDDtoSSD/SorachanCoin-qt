@@ -200,14 +200,15 @@ std::pair<std::string, data> Decode(const std::string& str) {
 # include <random/random.h>
 class bech32_nothrow_test {
 public:
+    void _test_ref(int &ri) {
+        (void)ri;
+    }
+    int get_n() {
+        return 3;
+    }
     bech32_nothrow_test() {
-        std::string _str = "SoraHtrfkdegbs";
-        //const char _bug = 'p';
-        std::string target = "";
-        for (int i=0; i < 1000; ++i) {
-            auto ret = bech32::Decode(_str+std::to_string(i));
-        }
-        debugcs::instance() << target.c_str() << debugcs::endl();
+        std::string _str = "Sora_test";
+        // _test_ref(get_n()); error OK
     }
 };
 //bech32_nothrow_test __test_obj;

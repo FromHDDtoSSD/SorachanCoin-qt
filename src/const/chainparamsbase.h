@@ -20,9 +20,13 @@ class CBaseChainParams
 {
 public:
     /** BIP70 chain name strings (main, test or regtest) */
-    static std::string MAIN() noexcept {return "main";}
-    static std::string TESTNET() noexcept {return "test";}
-    static std::string REGTEST() noexcept {return "regtest";}
+    static std::string MAIN() {return "main";}
+    static std::string TESTNET() {return "test";}
+    static std::string REGTEST() {return "regtest";}
+
+    /** SorachanCoin chain name strings (test2, prediction) */
+    static std::string TESTNET2() {return "test2";}
+    static std::string PREDICTION() {return "prediction";}
 
     const std::string &DataDir() const noexcept { return strDataDir_; }
     int RPCPort() const noexcept { return nRPCPort_; }

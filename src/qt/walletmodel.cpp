@@ -188,10 +188,10 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     std::vector<COutput> vCoins;
     wallet->AvailableCoins(vCoins, true, coinControl);
 
-    BOOST_FOREACH(const COutput &out, vCoins)
+    for(const COutput &out: vCoins)
     {
         if(out.fSpendable) {
-            nBalance += out.tx->vout[out.i].nValue;
+            nBalance += out.tx->get_vout(out.i).get_nValue();
         }
     }
 
@@ -445,12 +445,12 @@ bool WalletModel::getPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const
 // returns a list of COutputs from COutPoints
 void WalletModel::getOutputs(const std::vector<COutPoint> &vOutpoints, std::vector<COutput> &vOutputs)
 {
-    BOOST_FOREACH(const COutPoint &outpoint, vOutpoints)
+    for(const COutPoint &outpoint: vOutpoints)
     {
-        if (! wallet->mapWallet.count(outpoint.hash)) {
+        if (! wallet->mapWallet.count(outpoint.get_hash())) {
             continue;
         }
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, wallet->mapWallet[outpoint.hash].GetDepthInMainChain(), true);
+        COutput out(&wallet->mapWallet[outpoint.get_hash()], outpoint.get_n(), wallet->mapWallet[outpoint.get_hash()].GetDepthInMainChain(), true);
         vOutputs.push_back(out);
     }
 }
@@ -463,31 +463,31 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     std::vector<COutPoint> vLockedCoins;
 
     // add locked coins
-    BOOST_FOREACH(const COutPoint &outpoint, vLockedCoins)
+    for(const COutPoint &outpoint: vLockedCoins)
     {
-        if (! wallet->mapWallet.count(outpoint.hash)) {
+        if (! wallet->mapWallet.count(outpoint.get_hash())) {
             continue;
         }
-        COutput out(&wallet->mapWallet[outpoint.hash], outpoint.n, wallet->mapWallet[outpoint.hash].GetDepthInMainChain(), true);
-        if (outpoint.n < out.tx->vout.size() && wallet->IsMine(out.tx->vout[outpoint.n]) == MINE_SPENDABLE) {
+        COutput out(&wallet->mapWallet[outpoint.get_hash()], outpoint.get_n(), wallet->mapWallet[outpoint.get_hash()].GetDepthInMainChain(), true);
+        if (outpoint.get_n() < out.tx->get_vout().size() && wallet->IsMine(out.tx->get_vout(outpoint.get_n())) == MINE_SPENDABLE) {
             vCoins.push_back(out);
         }
     }
 
-    BOOST_FOREACH(const COutput &out, vCoins)
+    for(const COutput &out: vCoins)
     {
         COutput cout = out;
 
-        while (wallet->IsChange(cout.tx->vout[cout.i]) && cout.tx->vin.size() > 0 && wallet->IsMine(cout.tx->vin[0]))
+        while (wallet->IsChange(cout.tx->get_vout(cout.i)) && cout.tx->get_vin().size() > 0 && wallet->IsMine(cout.tx->get_vin(0)))
         {
-            if (! wallet->mapWallet.count(cout.tx->vin[0].prevout.hash)) {
+            if (! wallet->mapWallet.count(cout.tx->get_vin(0).get_prevout().get_hash())) {
                 break;
             }
-            cout = COutput(&wallet->mapWallet[cout.tx->vin[0].prevout.hash], cout.tx->vin[0].prevout.n, 0, true);
+            cout = COutput(&wallet->mapWallet[cout.tx->get_vin(0).get_prevout().get_hash()], cout.tx->get_vin(0).get_prevout().get_n(), 0, true);
         }
 
         CBitcoinAddress addressRet;
-        if(!out.fSpendable || !Script_util::ExtractAddress(*wallet, cout.tx->vout[cout.i].scriptPubKey, addressRet)) {
+        if(!out.fSpendable || !Script_util::ExtractAddress(*wallet, cout.tx->get_vout(cout.i).get_scriptPubKey(), addressRet)) {
             continue;
         }
 

@@ -20,7 +20,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock *pblock/*=nullptr*/)
             CTxIndex txindex;
             if (! CTxDB("r").ReadTxIndex(GetHash(), txindex))
                 return 0;
-            if (! blockTmp.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos))
+            if (! blockTmp.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos()))
                 return 0;
             pblock = &blockTmp;
         }

@@ -400,7 +400,20 @@ std::string HelpMessageGroup(const std::string &message);
  */
 std::string HelpMessageOpt(const std::string &option, const std::string &message);
 
+/**
+ * Most paths passed as configuration arguments are treated as relative to
+ * the datadir if they are not absolute.
+ *
+ * @return The normalized path.
+ */
 fs::path GetConfigFile(const std::string &confPath) noexcept;
+
+/**
+ * arginit.cpp
+ */
+namespace arginit {
+    void SetupServerArgs();
+} // namespace arginit
 
 extern ArgsManager gArgs;
 #endif

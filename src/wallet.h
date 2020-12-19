@@ -532,7 +532,7 @@ public:
     (
         CWalletTx *pthis = const_cast<CWalletTx *>(this);
         if (ser_ctr.isRead()) {
-            pthis->Init(NULL);
+            pthis->Init(nullptr);
         }
 
         char fSpent = false;
@@ -540,7 +540,7 @@ public:
             pthis->mapValue["fromaccount"] = pthis->strFromAccount;
 
             std::string str;
-            BOOST_FOREACH(char f, this->vfSpent)
+            for(char f: this->vfSpent)
             {
                 str += (f ? '1' : '0');
                 if (f) {
@@ -569,12 +569,12 @@ public:
             pthis->strFromAccount = pthis->mapValue["fromaccount"];
 
             if (mapValue.count("spent")) {
-                BOOST_FOREACH(char c, pthis->mapValue["spent"])
+                for(char c: pthis->mapValue["spent"])
                 {
                     pthis->vfSpent.push_back(c != '0');
                 }
             } else {
-                pthis->vfSpent.assign(vout.size(), fSpent);
+                pthis->vfSpent.assign(get_vout().size(), fSpent);
             }
 
             mapValuePos::ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
@@ -657,7 +657,7 @@ public:
     }
 
     std::string ToString() const {
-        return strprintf("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, bitstr::FormatMoney(tx->vout[i].nValue).c_str());
+        return strprintf("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, bitstr::FormatMoney(tx->get_vout(i).get_nValue()).c_str());
     }
 };
 

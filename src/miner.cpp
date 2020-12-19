@@ -132,22 +132,23 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
 
     // Create coinbase tx
     CTransaction txCoinBase;
-    txCoinBase.vin.resize(1);
-    txCoinBase.vin[0].prevout.SetNull();
-    txCoinBase.vout.resize(1);
+    txCoinBase.set_vin().resize(1);
+    txCoinBase.set_vin(0).set_prevout().SetNull();
+    txCoinBase.set_vout().resize(1);
 
     if (! fProofOfStake) {
         CReserveKey reservekey(pwallet);
-        txCoinBase.vout[0].scriptPubKey.SetDestination(reservekey.GetReservedKey().GetID());
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
 
         // Add our coinbase tx as first transaction
         pblock->set_vtx().push_back(txCoinBase);
     } else {
         // Coinbase output must be empty for Proof-of-Stake block
-        txCoinBase.vout[0].SetEmpty();
+        txCoinBase.set_vout(0).SetEmpty();
 
         // Syncronize timestamps
-        pblock->set_nTime() = txCoinBase.nTime = txCoinStake->nTime;
+        pblock->set_nTime(txCoinStake->get_nTime());
+        txCoinBase.set_nTime(txCoinStake->get_nTime());
 
         // Add coinbase and coinstake transactions
         pblock->set_vtx().push_back(txCoinBase);
@@ -188,7 +189,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     //
     int64_t nFees = 0;
     {
-        LOCK2(block_process::cs_main, CTxMemPool::mempool.cs);
+        LOCK2(block_process::cs_main, CTxMemPool::mempool.get_cs());
         CBlockIndex *pindexPrev = block_info::pindexBest;
 
         CTxDB txdb("r");
@@ -199,8 +200,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
 
         // This vector will be sorted into a priority queue:
         std::vector<TxPriority> vecPriority;
-        vecPriority.reserve(CTxMemPool::mempool.mapTx.size());
-        for (std::map<uint256, CTransaction>::iterator mi = CTxMemPool::mempool.mapTx.begin(); mi != CTxMemPool::mempool.mapTx.end(); ++mi)
+        vecPriority.reserve(CTxMemPool::mempool.get_mapTx().size());
+        for (std::map<uint256, CTransaction>::iterator mi = CTxMemPool::mempool.set_mapTx().begin(); mi != CTxMemPool::mempool.get_mapTx().end(); ++mi)
         {
             CTransaction& tx = (*mi).second;
             if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal()) {
@@ -211,18 +212,18 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             double dPriority = 0;
             int64_t nTotalIn = 0;
             bool fMissingInputs = false;
-            BOOST_FOREACH(const CTxIn &txin, tx.vin)
+            for(const CTxIn &txin: tx.get_vin())
             {
                 // Read prev transaction
                 CTransaction txPrev;
                 CTxIndex txindex;
-                if (! txPrev.ReadFromDisk(txdb, txin.prevout, txindex)) {
+                if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex)) {
                     //
                     // This should never happen; all transactions in the memory
                     // pool should connect to either transactions in the chain
                     // or other transactions in the memory pool.
                     //
-                    if (! CTxMemPool::mempool.mapTx.count(txin.prevout.hash)) {
+                    if (! CTxMemPool::mempool.get_mapTx().count(txin.get_prevout().get_hash())) {
                         printf("ERROR: CTxMemPool::mempool transaction missing input\n");
                         if (args_bool::fDebug) {
                             assert("CTxMemPool::mempool transaction missing input" == 0);
@@ -242,12 +243,12 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                         vOrphan.push_back(COrphan(&tx));
                         porphan = &vOrphan.back();
                     }
-                    mapDependers[txin.prevout.hash].push_back(porphan);
-                    porphan->setDependsOn.insert(txin.prevout.hash);
-                    nTotalIn += CTxMemPool::mempool.mapTx[txin.prevout.hash].vout[txin.prevout.n].nValue;
+                    mapDependers[txin.get_prevout().get_hash()].push_back(porphan);
+                    porphan->setDependsOn.insert(txin.get_prevout().get_hash());
+                    nTotalIn += CTxMemPool::mempool.get_mapTx(txin.get_prevout().get_hash()).get_vout(txin.get_prevout().get_n()).get_nValue();
                     continue;
                 }
-                int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
+                int64_t nValueIn = txPrev.get_vout(txin.get_prevout().get_n()).get_nValue();
                 nTotalIn += nValueIn;
 
                 int nConf = txindex.GetDepthInMainChain();
@@ -321,7 +322,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Timestamp limit
             //
-            if (tx.nTime > bitsystem::GetAdjustedTime() || (fProofOfStake && tx.nTime > txCoinStake->nTime)) {
+            if (tx.get_nTime() > bitsystem::GetAdjustedTime() || (fProofOfStake && tx.get_nTime() > txCoinStake->get_nTime())) {
                 continue;
             }
 
@@ -369,7 +370,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                 continue;
             }
 
-            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.vout.size());
+            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.get_vout().size());
             std::swap(mapTestPool, mapTestPoolTmp);
 
             // Added
@@ -405,10 +406,10 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         block_info::nLastBlockSize = nBlockSize;
 
         if (! fProofOfStake) {
-            pblock->set_vtx(0).vout[0].nValue = diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees);
+            pblock->set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees));
 
             if (args_bool::fDebug) {
-                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).vout[0].nValue);
+                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).get_vout(0).get_nValue());
             }
         }
 
@@ -443,8 +444,8 @@ void miner::IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigne
     ++nExtraNonce;
 
     unsigned int nHeight = pindexPrev->get_nHeight() + 1;    // Height first in coinbase required for block.version=2
-    pblock->set_vtx(0).vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS;
-    assert(pblock->get_vtx(0).vin[0].scriptSig.size() <= 100);
+    pblock->set_vtx(0).set_vin(0).set_scriptSig((CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS);
+    assert(pblock->get_vtx(0).get_vin(0).get_scriptSig().size() <= 100);
 
     pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
 }
@@ -511,7 +512,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     //// debug print
     printf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).vout[0].nValue).c_str());
+    printf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
 
     //
     // Found a solution
@@ -621,7 +622,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             // Trying to parse scriptPubKey
             TxnOutputType::txnouttype whichType;
             Script_util::statype vSolutions;
-            if (! Script_util::Solver(pcoin->first->vout[pcoin->second].scriptPubKey, whichType, vSolutions)) {
+            if (! Script_util::Solver(pcoin->first->get_vout(pcoin->second).get_scriptPubKey(), whichType, vSolutions)) {
                 continue;
             }
 
@@ -636,7 +637,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             }
 
             // Read block header
-            if (! block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false)) {
+            if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false)) {
                 continue;
             }
 
@@ -654,10 +655,10 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             // Build static part of kernel
             CDataStream ssKernel(SER_GETHASH, 0);
             ssKernel << nStakeModifier;
-            ssKernel << block.get_nTime() << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << pcoin->first->nTime << pcoin->second;
+            ssKernel << block.get_nTime() << (txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos()) << pcoin->first->get_nTime() << pcoin->second;
 
             // (txid, vout.n) => (kernel, (tx.nTime, nAmount))
-            inputsMap[key] = std::make_pair(std::vector<unsigned char>(ssKernel.begin(), ssKernel.end()), std::make_pair(pcoin->first->nTime, pcoin->first->vout[pcoin->second].nValue));
+            inputsMap[key] = std::make_pair(std::vector<unsigned char>(ssKernel.begin(), ssKernel.end()), std::make_pair(pcoin->first->get_nTime(), pcoin->first->get_vout(pcoin->second).get_nValue()));
         }
 
         nStakeInputsMapSize = inputsMap.size();

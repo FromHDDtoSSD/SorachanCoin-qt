@@ -305,7 +305,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                     }
                 }
                 if (!pushed && inv.get_type() == _CINV_MSG_TYPE::MSG_TX) {
-                    LOCK(CTxMemPool::mempool.cs);
+                    LOCK(CTxMemPool::mempool.get_cs());
                     if (CTxMemPool::mempool.exists(inv.get_hash())) {
                         CTransaction tx = CTxMemPool::mempool.lookup(inv.get_hash());
                         CDataStream ss(SER_NETWORK, version::PROTOCOL_VERSION);
@@ -831,7 +831,7 @@ bool block_process::manage::AlreadyHave(CTxDB &txdb, const CInv &inv)
         {
             bool txInMap = false;
             {
-                LOCK(CTxMemPool::mempool.cs);
+                LOCK(CTxMemPool::mempool.get_cs());
                 txInMap = (CTxMemPool::mempool.exists(inv.get_hash()));
             }
             return  txInMap ||
@@ -876,8 +876,8 @@ bool block_process::manage::AddOrphanTx(const CTransaction &tx)
     }
 
     block_process::manage::mapOrphanTransactions[hash] = tx;
-    for(const CTxIn &txin: tx.vin)
-        block_process::manage::mapOrphanTransactionsByPrev[txin.prevout.hash].insert(hash);
+    for(const CTxIn &txin: tx.get_vin())
+        block_process::manage::mapOrphanTransactionsByPrev[txin.get_prevout().get_hash()].insert(hash);
 
     printf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
     return true;
@@ -888,10 +888,10 @@ void block_process::manage::EraseOrphanTx(uint256 hash)
     if (! block_process::manage::mapOrphanTransactions.count(hash))
         return;
     const CTransaction &tx = block_process::manage::mapOrphanTransactions[hash];
-    for(const CTxIn &txin: tx.vin) {
-        block_process::manage::mapOrphanTransactionsByPrev[txin.prevout.hash].erase(hash);
-        if (block_process::manage::mapOrphanTransactionsByPrev[txin.prevout.hash].empty())
-            block_process::manage::mapOrphanTransactionsByPrev.erase(txin.prevout.hash);
+    for(const CTxIn &txin: tx.get_vin()) {
+        block_process::manage::mapOrphanTransactionsByPrev[txin.get_prevout().get_hash()].erase(hash);
+        if (block_process::manage::mapOrphanTransactionsByPrev[txin.get_prevout().get_hash()].empty())
+            block_process::manage::mapOrphanTransactionsByPrev.erase(txin.get_prevout().get_hash());
     }
     block_process::manage::mapOrphanTransactions.erase(hash);
 }

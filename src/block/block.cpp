@@ -225,7 +225,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
         if (fEnforceBIP30) {
             CTxIndex txindexOld;
             if (txdb.ReadTxIndex(hashTx, txindexOld)) {
-                for(CDiskTxPos &pos: txindexOld.vSpent) {
+                for(const CDiskTxPos &pos: txindexOld.get_vSpent()) {
                     if (pos.IsNull()) return false;
                 }
             }
@@ -262,7 +262,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
                 nFees += nTxValueIn - nTxValueOut;
 
             unsigned int nFlags = Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH;
-            if (tx.nTime >= timestamps::CHECKLOCKTIMEVERIFY_SWITCH_TIME) {
+            if (tx.get_nTime() >= timestamps::CHECKLOCKTIMEVERIFY_SWITCH_TIME) {
                 nFlags |= Script_param::SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY;
                 // OP_CHECKSEQUENCEVERIFY is senseless without BIP68, so we're going disable it for now.
                 // nFlags |= Script_param::SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
@@ -274,7 +274,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
 
             control.Add(vChecks);
         }
-        mapQueuedChanges[hashTx] = CTxIndex(posThisTx, tx.vout.size());
+        mapQueuedChanges[hashTx] = CTxIndex(posThisTx, tx.get_vout().size());
     }
     if (! control.Wait())
         return DoS(100, false);
@@ -546,12 +546,12 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
             return DoS(100, print::error("CheckBlock() : non-zero nonce in proof-of-stake block"));
 
         // Coinbase output should be empty if proof-of-stake block
-        if (Merkle_t::vtx[0].vout.size() != 1 || !Merkle_t::vtx[0].vout[0].IsEmpty())
+        if (Merkle_t::vtx[0].get_vout().size() != 1 || !Merkle_t::vtx[0].get_vout(0).IsEmpty())
             return DoS(100, print::error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
 
         // Check coinstake timestamp
-        if (CBlockHeader_impl<T>::GetBlockTime() != (int64_t)Merkle_t::vtx[1].nTime)
-            return DoS(50, print::error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", CBlockHeader_impl<T>::GetBlockTime(), Merkle_t::vtx[1].nTime));
+        if (CBlockHeader_impl<T>::GetBlockTime() != (int64_t)Merkle_t::vtx[1].get_nTime())
+            return DoS(50, print::error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", CBlockHeader_impl<T>::GetBlockTime(), Merkle_t::vtx[1].get_nTime()));
 
         // ppcoin: check proof-of-stake block signature
         if (fCheckSig && !CheckBlockSignature())
@@ -572,7 +572,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
             return print::error("CheckBlock() : block timestamp too far in the future");
 
         // Check coinbase timestamp
-        if (CBlockHeader_impl<T>::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].nTime))
+        if (CBlockHeader_impl<T>::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
             return DoS(50, print::error("CheckBlock() : coinbase timestamp is too late"));
     }
 
@@ -589,7 +589,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
             return DoS(100, print::error("CheckBlock() : coinstake at wrong index"));
 
         // Check transaction timestamp
-        if (CBlockHeader_impl<T>::GetBlockTime() < (int64_t)tx.nTime)
+        if (CBlockHeader_impl<T>::GetBlockTime() < (int64_t)tx.get_nTime())
             return DoS(50, print::error("CheckBlock() : block timestamp earlier than transaction timestamp"));
 
         // Check transaction consistency
@@ -675,7 +675,7 @@ bool CBlock_impl<T>::AcceptBlock()
 
     // Enforce rule that the coinbase starts with serialized block height
     CScript expect = CScript() << nHeight;
-    if (Merkle_t::vtx[0].vin[0].scriptSig.size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].vin[0].scriptSig.begin()))
+    if (Merkle_t::vtx[0].get_vin(0).get_scriptSig().size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].get_vin(0).get_scriptSig().begin()))
         return DoS(100, print::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
 
     // Write block to history file
@@ -734,7 +734,7 @@ bool CBlock_impl<T>::CheckBlockSignature() const
 
     TxnOutputType::txnouttype whichType;
     Script_util::statype vSolutions;
-    if (! Script_util::Solver(Merkle_t::vtx[1].vout[1].scriptPubKey, whichType, vSolutions))
+    if (! Script_util::Solver(Merkle_t::vtx[1].get_vout(1).get_scriptPubKey(), whichType, vSolutions))
         return false;
     if (whichType == TxnOutputType::TX_PUBKEY) {
         Script_util::valtype &vchPubKey = vSolutions[0];

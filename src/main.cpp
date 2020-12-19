@@ -61,7 +61,7 @@ void wallet_process::manage::SyncWithWallets(const CTransaction &tx, const CBloc
 bool CWalletTx::AcceptWalletTransaction(CTxDB &txdb, bool fCheckInputs)
 {
     {
-        LOCK(CTxMemPool::mempool.cs);
+        LOCK(CTxMemPool::mempool.get_cs());
 
         //
         // Add previous supporting transactions first
@@ -86,11 +86,11 @@ bool CWalletTx::AcceptWalletTransaction()
     return AcceptWalletTransaction(txdb);
 }
 
-int CTxIndex::GetDepthInMainChain() const
+int CTxIndex::GetDepthInMainChain() const noexcept
 {
     // Read block header
     CBlock block;
-    if (! block.ReadFromDisk(pos.nFile, pos.nBlockPos, false)) {
+    if (! block.ReadFromDisk(pos.get_nFile(), pos.get_nBlockPos(), false)) {
         return 0;
     }
 
@@ -189,11 +189,11 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         const char *pszTimestamp = block_param::pszTimestamp;
 
         CTransaction txNew;
-        txNew.nTime = !args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet;
-        txNew.vin.resize(1);
-        txNew.vout.resize(1);
-        txNew.vin[0].scriptSig = CScript() << 0 << CBigNum(42) << bignum_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp));
-        txNew.vout[0].SetEmpty();
+        txNew.set_nTime( !args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet );
+        txNew.set_vin().resize(1);
+        txNew.set_vout().resize(1);
+        txNew.set_vin(0).set_scriptSig(CScript() << 0 << CBigNum(42) << bignum_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp)));
+        txNew.set_vout(0).SetEmpty();
 
         CBlock block;
         block.set_vtx().push_back(txNew);

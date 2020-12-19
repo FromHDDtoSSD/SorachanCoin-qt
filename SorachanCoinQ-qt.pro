@@ -722,6 +722,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/util/strencodings.cpp \
     src/util/system.cpp \
     src/util/args.cpp \
+    src/util/arginit.cpp \
     src/file_operate/fs.cpp \
     src/file_operate/iofs.cpp \
     src/address/bech32.cpp \
