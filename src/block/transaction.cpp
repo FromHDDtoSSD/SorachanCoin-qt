@@ -982,6 +982,41 @@ bool CScriptCheck::operator()() const
     return true;
 }
 
+// witness(Segwit) programs
+template <typename T>
+T CTransaction_impl<T>::ComputeHash() const
+{
+    return hash_basis::SerializeHash(*this, SER_GETHASH, SERIALIZE_TRANSACTION_NO_WITNESS);
+}
+
+template <typename T>
+T CTransaction_impl<T>::ComputeWitnessHash() const
+{
+    if (! HasWitness())
+        return hash;
+    return hash_basis::SerializeHash(*this, SER_GETHASH, 0);
+}
+
+/* For backward compatibility, the hash is initialized to 0.
+ * TODO: remove the need for this default constructor entirely. */
+//template <typename T>
+//CTransaction_impl<T>::CTransaction_impl() : vin(), vout(), nVersion(CTransaction_impl<T>::CURRENT_VERSION), nLockTime(0), hash{}, m_witness_hash{} {}
+template <typename T>
+CTransaction_impl<T>::CTransaction_impl(const CMutableTransaction_impl<T> &tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {}
+template <typename T>
+CTransaction_impl<T>::CTransaction_impl(CMutableTransaction_impl<T> &&tx) : vin(std::move(tx.vin)), vout(std::move(tx.vout)), nVersion(tx.nVersion), nLockTime(tx.nLockTime), hash{ComputeHash()}, m_witness_hash{ComputeWitnessHash()} {}
+
+template <typename T>
+CMutableTransaction_impl<T>::CMutableTransaction_impl() : nVersion(CTransaction_impl<T>::CURRENT_VERSION), nLockTime(0) {}
+template <typename T>
+CMutableTransaction_impl<T>::CMutableTransaction_impl(const CTransaction_impl<T> &tx) : vin(tx.vin), vout(tx.vout), nVersion(tx.nVersion), nLockTime(tx.nLockTime) {}
+
+template <typename T>
+T CMutableTransaction_impl<T>::GetHash() const
+{
+    return hash_basis::SerializeHash(*this, SER_GETHASH, SERIALIZE_TRANSACTION_NO_WITNESS);
+}
+
 template class CTransaction_impl<uint256>;
 template class CTxMemPool_impl<uint256>;
 template class COutPoint_impl<uint256>;

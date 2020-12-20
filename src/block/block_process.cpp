@@ -640,7 +640,7 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         }
 
         // Copy message to its own buffer
-        CDataStream vMsg(vRecv.begin(), vRecv.begin() + nMessageSize, vRecv.nType, vRecv.nVersion);
+        CDataStream vMsg(vRecv.begin(), vRecv.begin() + nMessageSize, vRecv.GetType(), vRecv.GetVersion());
         vRecv.ignore(nMessageSize);
 
         // Process message

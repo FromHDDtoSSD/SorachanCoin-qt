@@ -89,7 +89,7 @@ static void PrevectorDeserialize(benchmark::State& state)
         for(auto x = 0; x < 1000; ++x) {
             s0 >> t1;
         }
-        s0.Init(0, 0);
+        s0.Init();
     }
 }
 

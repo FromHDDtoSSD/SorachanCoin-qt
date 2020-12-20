@@ -41,13 +41,19 @@ template<typename CTX, typename UINTOBJ>
 class CHashWriter_q
 {
 private:
+    CHashWriter_q()=delete;
     CHashWriter_q(const CHashWriter_q &)=delete;
-    CHashWriter_q(const CHashWriter_q &&)=delete;
+    CHashWriter_q(CHashWriter_q &&)=delete;
     CHashWriter_q &operator=(const CHashWriter_q &)=delete;
-    CHashWriter_q &operator=(const CHashWriter_q &&)=delete;
+    CHashWriter_q &operator=(CHashWriter_q &&)=delete;
     CTX ctx;
+    const int nType;
+    const int nVersion; // witness
 public:
-    CHashWriter_q() {}
+    CHashWriter_q(int _nType, int _nVersion) : nType(_nType), nVersion(_nVersion) {}
+    int GetType() const noexcept {return nType;}
+    int GetVersion() const noexcept {return nVersion;}
+
     CHashWriter_q &write(const char *pch, size_t size) {
         ctx.Write((const unsigned char *)pch, size);
         return *this;
@@ -75,19 +81,24 @@ public:
 class CHashWriter
 {
 private:
+    CHashWriter()=delete;
     CHashWriter(const CHashWriter &)=delete;
-    CHashWriter(const CHashWriter &&)=delete;
+    CHashWriter(CHashWriter &&)=delete;
     CHashWriter &operator=(const CHashWriter &)=delete;
-    CHashWriter &operator=(const CHashWriter &&)=delete;
+    CHashWriter &operator=(CHashWriter &&)=delete;
     SHA256_CTX ctx;
+    const int nType;
+    const int nVersion; // witness
 public:
     void Init() {
         ::SHA256_Init(&ctx);
     }
 
-    CHashWriter() {
+    CHashWriter(int _nType, int _nVersion) : nType(_nType), nVersion(_nVersion) {
         Init();
     }
+    int GetType() const noexcept {return nType;}
+    int GetVersion() const noexcept {return nVersion;}
 
     CHashWriter &write(const char *pch, size_t size) {
         ::SHA256_Update(&ctx, pch, size);
@@ -197,15 +208,15 @@ public:
     }
 
     template<typename T>
-    static uint256 SerializeHash(const T &obj, int=0, int=0) {
-        CHashWriter_q256 ss;
+    static uint256 SerializeHash(const T &obj, int nType=0, int nVersion=0) {
+        CHashWriter_q256 ss(nType, nVersion);
         ss << obj;
         return ss.GetHash();
     }
 
     template<typename T>
-    static uint65536 SerializeHash65536(const T &obj) {
-        CHashWriter_q65536 ss;
+    static uint65536 SerializeHash65536(const T &obj, int nType=0, int nVersion=0) {
+        CHashWriter_q65536 ss(nType, nVersion);
         ss << obj;
         return ss.GetHash();
     }
