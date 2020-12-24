@@ -42,7 +42,7 @@ void wallet_process::manage::SyncWithWallets(const CTransaction &tx, const CBloc
     if (! fConnect) {
         // wallets need to refund inputs when disconnecting coinstake
         if (tx.IsCoinStake()) {
-            BOOST_FOREACH(CWallet *pwallet, block_info::setpwalletRegistered)
+            for(CWallet *pwallet: block_info::setpwalletRegistered)
             {
                 if (pwallet->IsFromMe(tx)) {
                     pwallet->DisableTransaction(tx);
@@ -52,7 +52,7 @@ void wallet_process::manage::SyncWithWallets(const CTransaction &tx, const CBloc
         return;
     }
 
-    BOOST_FOREACH(CWallet *pwallet, block_info::setpwalletRegistered)
+    for(CWallet *pwallet: block_info::setpwalletRegistered)
     {
         pwallet->AddToWalletIfInvolvingMe(tx, pblock, fUpdate);
     }
@@ -66,7 +66,7 @@ bool CWalletTx::AcceptWalletTransaction(CTxDB &txdb, bool fCheckInputs)
         //
         // Add previous supporting transactions first
         //
-        BOOST_FOREACH(CMerkleTx &tx, this->vtxPrev)
+        for(CMerkleTx &tx: this->vtxPrev)
         {
             if (!(tx.IsCoinBase() || tx.IsCoinStake())) {
                 uint256 hash = tx.GetHash();
@@ -130,7 +130,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
     pindexNew->set_pprev()->set_pnext(pindexNew);
 
     // Delete redundant memory transactions
-    BOOST_FOREACH(CTransaction &tx, this->vtx)
+    for(CTransaction &tx: this->vtx)
     {
         CTxMemPool::mempool.remove(tx);
     }

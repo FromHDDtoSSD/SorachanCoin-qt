@@ -18,7 +18,7 @@
 #include <cleanse/cleanse.h>
 #include "bignum.h"
 #include "key.h"
-#include "script.h"
+#include <script/script.h>
 #include "base58.h"
 
 // Encode a byte sequence as a base58-encoded string

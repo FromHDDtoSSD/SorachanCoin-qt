@@ -441,7 +441,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/txdb-leveldb.h \
     src/walletdb.h \
     src/db_addr.h \
-    src/script.h \
+    src/script/script.h \
+    src/script/interpreter.h \
+    src/script/script_error.h \
     src/init.h \
     src/irc.h \
     src/mruset.h \
@@ -563,6 +565,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/const/attributes.h \
     src/const/assumptions.h \
     src/const/macro.h \
+    src/const/amount.h \
     src/script/lscript.h \
     src/script/scriptnum.h \
     src/consensus/consensus.h \
@@ -604,7 +607,9 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/netbase.cpp \
     src/ntp.cpp \
     src/key.cpp \
-    src/script.cpp \
+    src/script/script.cpp \
+    src/script/interpreter.cpp \
+    src/script/script_error.cpp \
     src/main.cpp \
     src/miner.cpp \
     src/init.cpp \

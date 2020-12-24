@@ -4,7 +4,7 @@
 #include "init.h"
 #include "base58.h"
 #include "bitcoinunits.h"
-#include "script.h"
+#include "script/script.h"
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "optionsmodel.h"

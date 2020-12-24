@@ -217,9 +217,9 @@ bool CWallet::LoadCScript(const CScript &redeemScript)
     /* A sanity check was added in commit 5ed0a2b to avoid adding redeemScripts
      * that never can be redeemed. However, old wallets may still contain
      * these. Do not add them to the wallet and warn. */
-    if (redeemScript.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE) {
+    if (redeemScript.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
         std::string strAddr = CBitcoinAddress(redeemScript.GetID()).ToString();
-        printf("LoadCScript() : Warning: This wallet contains a redeemScript of size %" PRIszu " which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n", redeemScript.size(), Script_param::MAX_SCRIPT_ELEMENT_SIZE, strAddr.c_str());
+        printf("LoadCScript() : Warning: This wallet contains a redeemScript of size %" PRIszu " which exceeds maximum size %i thus can never be redeemed. Do not use address %s.\n", redeemScript.size(), Script_const::MAX_SCRIPT_ELEMENT_SIZE, strAddr.c_str());
         return true;
     }
 
@@ -274,7 +274,7 @@ bool CWallet::Unlock(const SecureString &strWalletPassphrase)
     CKeyingMaterial vMasterKey;
     {
         LOCK(cs_wallet);
-        BOOST_FOREACH(const MasterKeyMap::value_type &pMasterKey, this->mapMasterKeys)
+        for(const MasterKeyMap::value_type &pMasterKey: this->mapMasterKeys)
         {
             if(! crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod)) {
                 return false;
@@ -300,7 +300,7 @@ bool CWallet::ChangeWalletPassphrase(const SecureString &strOldWalletPassphrase,
 
         CCrypter crypter;
         CKeyingMaterial vMasterKey;
-        BOOST_FOREACH(MasterKeyMap::value_type &pMasterKey, mapMasterKeys)
+        for(MasterKeyMap::value_type &pMasterKey: mapMasterKeys)
         {
             if(! crypter.SetKeyFromPassphrase(strOldWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod)) {
                 return false;
@@ -516,7 +516,7 @@ bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
 
     {
         LOCK(cs_wallet);
-        BOOST_FOREACH(const MasterKeyMap::value_type &pMasterKey, mapMasterKeys)
+        for(const MasterKeyMap::value_type &pMasterKey: mapMasterKeys)
         {
             if(! crypter.SetKeyFromPassphrase(strWalletPassphrase, pMasterKey.second.vchSalt, pMasterKey.second.nDeriveIterations, pMasterKey.second.nDerivationMethod)) {
                 return false;
@@ -638,7 +638,7 @@ CWallet::TxItems CWallet::OrderedTxItems(std::list<CAccountingEntry> &acentries,
 
     acentries.clear();
     walletdb.ListAccountCreditDebit(strAccount, acentries);
-    BOOST_FOREACH(CAccountingEntry &entry, acentries)
+    for(CAccountingEntry &entry: acentries)
     {
         txOrdered.insert(std::make_pair(entry.nOrderPos, TxPair((CWalletTx *)0, &entry)));
     }
@@ -799,7 +799,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
         //
         CScript scriptDefaultKey;
         scriptDefaultKey.SetDestination(vchDefaultKey.GetID());
-        BOOST_FOREACH(const CTxOut &txout, wtx.vout)
+        for(const CTxOut &txout: wtx.vout)
         {
             if (txout.scriptPubKey == scriptDefaultKey) {
                 CPubKey newDefaultKey;
@@ -1481,7 +1481,7 @@ void CWalletTx::AddSupportingTransactions(CTxDB &txdb)
                 std::map<uint256, CWalletTx>::const_iterator mi = pwallet->mapWallet.find(hash);
                 if (mi != pwallet->mapWallet.end()) {
                     tx = (*mi).second;
-                    BOOST_FOREACH(const CMerkleTx &txWalletPrev, (*mi).second.vtxPrev)
+                    for(const CMerkleTx &txWalletPrev: (*mi).second.vtxPrev)
                     {
                         mapWalletPrev[txWalletPrev.GetHash()] = &txWalletPrev;
                     }
@@ -1531,7 +1531,7 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
         {
             CBlock block;
             block.ReadFromDisk(pindex, true);
-            BOOST_FOREACH(CTransaction &tx, block.set_vtx())
+            for(CTransaction &tx: block.set_vtx())
             {
                 if (AddToWalletIfInvolvingMe(tx, &block, fUpdate)) {
                     ++ret;
@@ -1999,7 +1999,7 @@ bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, 
 
     random_shuffle(vCoins.begin(), vCoins.end(), bitsystem::GetRandInt);
 
-    BOOST_FOREACH(const COutput &output, vCoins)
+    for(const COutput &output: vCoins)
     {
         if (! output.fSpendable) {
             continue;
@@ -2129,7 +2129,7 @@ bool CWallet::SelectCoinsSimple(int64_t nTargetValue, int64_t nMinValue, int64_t
     setCoinsRet.clear();
     nValueRet = 0;
 
-    BOOST_FOREACH(COutput output, vCoins)
+    for(COutput output: vCoins)
     {
         if(! output.fSpendable) {
             continue;
@@ -2915,7 +2915,7 @@ bool CWallet::NewKeyPool(unsigned int nSize)
     {
         LOCK(cs_wallet);
         CWalletDB walletdb(strWalletFile);
-        BOOST_FOREACH(int64_t nIndex, setKeyPool)
+        for(int64_t nIndex: setKeyPool)
         {
             walletdb.ErasePool(nIndex);
         }
@@ -3195,12 +3195,12 @@ std::set<std::set<CBitcoinAddress> > CWallet::GetAddressGroupings()
 
     std::set<std::set<CBitcoinAddress> * > uniqueGroupings;          // a set of pointers to groups of addresses
     std::map<CBitcoinAddress, std::set<CBitcoinAddress> * > setmap;  // map addresses to the unique group containing it
-    BOOST_FOREACH(std::set<CBitcoinAddress> grouping, groupings)
+    for(std::set<CBitcoinAddress> grouping: groupings)
     {
         // make a set of all the groups hit by this new group
         std::set<std::set<CBitcoinAddress> * > hits;
         std::map<CBitcoinAddress, std::set<CBitcoinAddress> * >::iterator it;
-        BOOST_FOREACH(CBitcoinAddress address, grouping)
+        for(CBitcoinAddress address: grouping)
         {
             if ((it = setmap.find(address)) != setmap.end()) {
                 hits.insert((*it).second);
@@ -3213,7 +3213,7 @@ std::set<std::set<CBitcoinAddress> > CWallet::GetAddressGroupings()
             throw std::runtime_error("GetAddressGroupings(): Error Memory Allocate Failure.");
         }
 
-        BOOST_FOREACH(std::set<CBitcoinAddress> *hit, hits)
+        for(std::set<CBitcoinAddress> *hit: hits)
         {
             merged->insert(hit->begin(), hit->end());
             uniqueGroupings.erase(hit);
@@ -3222,14 +3222,14 @@ std::set<std::set<CBitcoinAddress> > CWallet::GetAddressGroupings()
         uniqueGroupings.insert(merged);
 
         // update setmap
-        BOOST_FOREACH(CBitcoinAddress element, *merged)
+        for(CBitcoinAddress element: *merged)
         {
             setmap[element] = merged;
         }
     }
 
     std::set<std::set<CBitcoinAddress> > ret;
-    BOOST_FOREACH(std::set<CBitcoinAddress> *uniqueGrouping, uniqueGroupings)
+    for(std::set<CBitcoinAddress> *uniqueGrouping: uniqueGroupings)
     {
         ret.insert(*uniqueGrouping);
         delete uniqueGrouping;
@@ -3364,7 +3364,7 @@ void CWallet::GetAllReserveKeys(std::set<CKeyID> &setAddress) const
     CWalletDB walletdb(strWalletFile);
 
     LOCK2(block_process::cs_main, cs_wallet);
-    BOOST_FOREACH(const int64_t &id, setKeyPool)
+    for(const int64_t &id: setKeyPool)
     {
         CKeyPool keypool;
         if (! walletdb.ReadPool(id, keypool)) {

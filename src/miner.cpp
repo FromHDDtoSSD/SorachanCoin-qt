@@ -387,7 +387,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             // Add transactions that depend on this one to the priority queue
             uint256 hash = tx.GetHash();
             if (mapDependers.count(hash)) {
-                BOOST_FOREACH(COrphan* porphan, mapDependers[hash])
+                for(COrphan* porphan: mapDependers[hash])
                 {
                     if (! porphan->setDependsOn.empty()) {
                         porphan->setDependsOn.erase(hash);

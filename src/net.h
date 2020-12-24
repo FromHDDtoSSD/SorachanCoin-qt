@@ -10,7 +10,6 @@
 #include <deque>
 #ifndef Q_MOC_RUN
 # include <boost/array.hpp>
-# include <boost/foreach.hpp>
 #endif
 #include <openssl/rand.h>
 
@@ -163,7 +162,7 @@ public:
     static unsigned short GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNetAddr = nullptr, const char *pszDest = nullptr);
 
     static void vNodeDisconnected_cleanup() {
-        BOOST_FOREACH(CNode *pnode, vNodesDisconnected)
+        for(CNode *pnode: vNodesDisconnected)
         {
             if (pnode) {
                 delete pnode;
@@ -302,7 +301,7 @@ public:
     static uint64_t nLocalHostNonce;
 
     static void vhListenSocket_cleanup() {
-        BOOST_FOREACH(SOCKET hListenSocket, bitsocket::vhListenSocket)
+        for(SOCKET hListenSocket: bitsocket::vhListenSocket)
         {
             if (hListenSocket != INVALID_SOCKET) {
                 if (! netbase::manage::CloseSocket(hListenSocket)) {
@@ -847,7 +846,7 @@ public:
         //
         {
             LOCK(net_node::cs_vNodes);
-            BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+            for(CNode *pnode: net_node::vNodes)
             {
                 pnode->PushInventory(inv);
             }

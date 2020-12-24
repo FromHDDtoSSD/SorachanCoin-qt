@@ -3,9 +3,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <boost/foreach.hpp>
-
-#include <script.h>
+#include <script/script.h>
+#include <script/interpreter.h>
 #include <keystore.h>
 #include <bignum.h>
 #include <key.h>
@@ -13,22 +12,14 @@
 #include <sync/sync.h>
 #include <util.h>
 
-const Script_util::valtype Script_util::vchFalse((uint32_t)0);
-const Script_util::valtype Script_util::vchZero((uint32_t)0);
-const Script_util::valtype Script_util::vchTrue((uint32_t)1, (uint8_t)1);
-const CBigNum Script_util::bnZero(0);
-const CBigNum Script_util::bnOne(1);
-const CBigNum Script_util::bnFalse(0);
-const CBigNum Script_util::bnTrue(1);
-
-CBigNum Script_util::CastToBigNum(const valtype &vch)
-{
-    static const size_t nMaxNumSize = 4;
-    if (vch.size() > nMaxNumSize) {
-        throw std::runtime_error("EvalScript CastToBigNum : overflow");
-    }
-    // Get rid of extra leading zeros
-    return CBigNum(CBigNum(vch).getvch());
+namespace {
+const Script_util::valtype vchFalse((uint32_t)0);
+const Script_util::valtype vchZero((uint32_t)0);
+const Script_util::valtype vchTrue((uint32_t)1, (uint8_t)1);
+const CScriptNum bnZero(0);
+const CScriptNum bnOne(1);
+const CScriptNum bnFalse(0);
+const CScriptNum bnTrue(1);
 }
 
 bool Script_util::CastToBool(const valtype &vch)
@@ -46,38 +37,8 @@ bool Script_util::CastToBool(const valtype &vch)
     return false;
 }
 
-//
-// WARNING: This does not work as expected for signed integers; the sign-bit
-// is left in place as the integer is zero-extended. The correct behavior
-// would be to move the most significant bit of the last byte during the
-// resize process. MakeSameSize() is currently only used by the disabled
-// opcodes OP_AND, OP_OR, and OP_XOR.
-//
-/**
-void MakeSameSize(valtype &vch1, valtype &vch2)
-{
-    // Lengthen the shorter one
-    if (vch1.size() < vch2.size())
-        // PATCH:
-        // +unsigned char msb = vch1[vch1.size()-1];
-        // +vch1[vch1.size()-1] &= 0x7f;
-        //  vch1.resize(vch2.size(), 0);
-        // +vch1[vch1.size()-1] = msb;
-        vch1.resize(vch2.size(), 0);
-    if (vch2.size() < vch1.size())
-        // PATCH:
-        // +unsigned char msb = vch2[vch2.size()-1];
-        // +vch2[vch2.size()-1] &= 0x7f;
-        //  vch2.resize(vch1.size(), 0);
-        // +vch2[vch2.size()-1] = msb;
-        vch2.resize(vch1.size(), 0);
-}
-**/
-
-//
 // Script is a stack machine (like Forth) that evaluates a predicate
 // returning a bool indicating valid or not.  There are no loops.
-//
 #define stacktop(i) (stack.at(stack.size()+(i)))
 #define altstacktop(i) (altstack.at(altstack.size()+(i)))
 void Script_util::popstack(statype &stack)
@@ -228,6 +189,8 @@ const char *ScriptOpcodes::GetOpName(ScriptOpcodes::opcodetype opcode)
 
     // expanson
     case OP_NOP1                   : return "OP_NOP1";
+    //case OP_NOP2                 : return "OP_NOP2";
+    //case OP_NOP3                 : return "OP_NOP3";
     case OP_NOP4                   : return "OP_NOP4";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
@@ -360,6 +323,32 @@ bool Script_util::IsCanonicalSignature(const valtype &vchSig, unsigned int flags
     return Script_util::IsDERSignature(vchSig, true, (flags & Script_param::SCRIPT_VERIFY_LOW_S) != 0);
 }
 
+bool Script_util::CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetype opcode) {
+    using namespace ScriptOpcodes;
+    // Excludes OP_1NEGATE, OP_1-16 since they are by definition minimal
+    assert(0 <= opcode && opcode <= OP_PUSHDATA4);
+    if (data.size() == 0) {
+        // Should have used OP_0.
+        return opcode == OP_0;
+    } else if (data.size() == 1 && data[0] >= 1 && data[0] <= 16) {
+        // Should have used OP_1 .. OP_16.
+        return false;
+    } else if (data.size() == 1 && data[0] == 0x81) {
+        // Should have used OP_1NEGATE.
+        return false;
+    } else if (data.size() <= 75) {
+        // Must have used a direct push (opcode indicating number of bytes pushed + those bytes).
+        return opcode == data.size();
+    } else if (data.size() <= 255) {
+        // Must have used OP_PUSHDATA.
+        return opcode == OP_PUSHDATA1;
+    } else if (data.size() <= 65535) {
+        // Must have used OP_PUSHDATA2.
+        return opcode == OP_PUSHDATA2;
+    }
+    return true;
+}
+
 bool Script_util::EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
     using namespace ScriptOpcodes;
@@ -376,14 +365,14 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
             (txTo.get_nLockTime() <  block_param::LOCKTIME_THRESHOLD && nLockTime < block_param::LOCKTIME_THRESHOLD) ||
             (txTo.get_nLockTime() >= block_param::LOCKTIME_THRESHOLD && nLockTime >= block_param::LOCKTIME_THRESHOLD)
             )) {
-            printf("EvalScript_CheckLockTime Failure A.\n");
+            //printf("EvalScript_CheckLockTime Failure A.\n");
             return false;
         }
 
         // Now that we know we're comparing apples-to-apples, the
         // comparison is a simple numeric one.
         if (nLockTime > (int64_t)txTo.get_nLockTime()) {
-            printf("EvalScript_CheckLockTime Failure B.\n");
+            //printf("EvalScript_CheckLockTime Failure B.\n");
             return false;
         }
 
@@ -397,8 +386,8 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // prevent this condition. Alternatively we could test all
         // inputs, but testing just this input minimizes the data
         // required to prove correct CHECKLOCKTIMEVERIFY execution.
-        if (SEQUENCE_FINAL == txTo.get_vin(nIn).get_nSequence()) {
-            printf("EvalScript_CheckLockTime Failure C.\n");
+        if (CTxIn::SEQUENCE_FINAL == txTo.get_vin(nIn).get_nSequence()) {
+            //printf("EvalScript_CheckLockTime Failure C.\n");
             return false;
         }
 
@@ -414,14 +403,14 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // consensus constrained. Testing that the transaction's sequence
         // number do not have this bit set prevents using this property
         // to get around a CHECKSEQUENCEVERIFY check.
-        if (txToSequence & SEQUENCE_LOCKTIME_DISABLE_FLAG) {
-            printf("EvalScript_Sequence Failure A.\n");
+        if (txToSequence & CTxIn::SEQUENCE_LOCKTIME_DISABLE_FLAG) {
+            //printf("EvalScript_Sequence Failure A.\n");
             return false;
         }
 
         // Mask off any bits that do not have consensus-enforced meaning
         // before doing the integer comparisons
-        const uint32_t nLockTimeMask = SEQUENCE_LOCKTIME_TYPE_FLAG | SEQUENCE_LOCKTIME_MASK;
+        const uint32_t nLockTimeMask = CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG | CTxIn::SEQUENCE_LOCKTIME_MASK;
         const int64_t txToSequenceMasked = txToSequence & nLockTimeMask;
         const int64_t nSequenceMasked = nSequence & nLockTimeMask;
 
@@ -433,24 +422,24 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // unless the type of nSequenceMasked being tested is the same as
         // the nSequenceMasked in the transaction.
         if (!(
-            (txToSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked <  SEQUENCE_LOCKTIME_TYPE_FLAG) ||
-            (txToSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked >= SEQUENCE_LOCKTIME_TYPE_FLAG)
+            (txToSequenceMasked <  CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked <  CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG) ||
+            (txToSequenceMasked >= CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG && nSequenceMasked >= CTxIn::SEQUENCE_LOCKTIME_TYPE_FLAG)
             )) {
-            debugcs::instance() << "EvalScript_Sequence Failure B." << debugcs::endl();
+            //debugcs::instance() << "EvalScript_Sequence Failure B." << debugcs::endl();
             return false;
         }
 
         // Now that we know we're comparing apples-to-apples, the
         // comparison is a simple numeric one.
         if (nSequenceMasked > txToSequenceMasked) {
-            debugcs::instance() << "EvalScript_Sequence Failure C." << debugcs::endl();
+            //debugcs::instance() << "EvalScript_Sequence Failure C." << debugcs::endl();
             return false;
         }
 
         return true;
     };
 
-    CAutoBN_CTX pctx;
+    //CAutoBN_CTX pctx;
     CScript::const_iterator pc = script.begin();
     CScript::const_iterator pend = script.end();
     CScript::const_iterator pbegincodehash = script.begin();
@@ -458,10 +447,12 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
     valtype vchPushValue;
     std::vector<bool> vfExec;
     statype altstack;
-    if (script.size() > 10000) {
-        debugcs::instance() << "EvalScript Failure A." << debugcs::endl();
+    if (script.size() > Script_const::MAX_SCRIPT_SIZE) {
+        //debugcs::instance() << "EvalScript Failure A." << debugcs::endl();
         return false;
     }
+
+    bool fRequireMinimal = (flags & Script_param::SCRIPT_VERIFY_MINIMALDATA) != 0;
 
     int nOpCount = 0;
     try
@@ -474,15 +465,15 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
             // Read instruction
             //
             if (! script.GetOp(pc, opcode, vchPushValue)) {
-                debugcs::instance() << "EvalScript GetOp Failure." << debugcs::endl();
+                //debugcs::instance() << "EvalScript GetOp Failure." << debugcs::endl();
                 return false;
             }
-            if (vchPushValue.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE) {
-                debugcs::instance() << "EvalScript Failure B." << debugcs::endl();
+            if (vchPushValue.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
+                //debugcs::instance() << "EvalScript Failure B." << debugcs::endl();
                 return false;
             }
-            if (opcode > OP_16 && ++nOpCount > 201) {
-                debugcs::instance() << "EvalScript Failure C." << debugcs::endl();
+            if (opcode > OP_16 && ++nOpCount > Script_const::MAX_OPS_PER_SCRIPT) {
+                //debugcs::instance() << "EvalScript Failure C." << debugcs::endl();
                 return false;
             }
 
@@ -501,11 +492,14 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                 opcode == OP_MOD ||
                 opcode == OP_LSHIFT ||
                 opcode == OP_RSHIFT) {
-                debugcs::instance() << "EvalScript Failure, disabled opecodes is used." << debugcs::endl();
+                //debugcs::instance() << "EvalScript Failure, disabled opecodes is used." << debugcs::endl();
                 return false; // Disabled opcodes.
             }
 
             if (fExec && 0 <= opcode && opcode <= OP_PUSHDATA4) {
+                if (fRequireMinimal && !CheckMinimalPush(vchPushValue, opcode)) {
+                    return false;
+                }
                 stack.push_back(vchPushValue);
             } else if (fExec || (OP_IF <= opcode && opcode <= OP_ENDIF)) {
                 switch (opcode)
@@ -532,7 +526,8 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_16:
                     {
                         // ( -- value)
-                        CBigNum bn((int)opcode - (int)(OP_1 - 1));
+                        //CBigNum bn((int)opcode - (int)(OP_1 - 1));
+                        CScriptNum bn((int)opcode - (int)(OP_1 - 1));
                         stack.push_back(bn.getvch());
                     }
                     break;
@@ -541,14 +536,95 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     // Control
                     //
                     case OP_NOP:
-                    case OP_NOP1:
-                    case OP_NOP4:
-                    case OP_NOP5:
-                    case OP_NOP6:
-                    case OP_NOP7:
-                    case OP_NOP8:
-                    case OP_NOP9:
-                    case OP_NOP10:
+                    //case OP_NOP1:
+                    //case OP_NOP4:
+                    //case OP_NOP5:
+                    //case OP_NOP6:
+                    //case OP_NOP7:
+                    //case OP_NOP8:
+                    //case OP_NOP9:
+                    //case OP_NOP10:
+                    break;
+
+                    case OP_CHECKLOCKTIMEVERIFY:
+                    {
+                        if (!(flags & Script_param::SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)) {
+                            // not enabled; treat as a NOP2
+                            break;
+                        }
+
+                        if (stack.size() < 1)
+                            return false;
+
+                        // Note that elsewhere numeric opcodes are limited to
+                        // operands in the range -2**31+1 to 2**31-1, however it is
+                        // legal for opcodes to produce results exceeding that
+                        // range. This limitation is implemented by CScriptNum's
+                        // default 4-byte limit.
+                        //
+                        // If we kept to that limit we'd have a year 2038 problem,
+                        // even though the nLockTime field in transactions
+                        // themselves is uint32 which only becomes meaningless
+                        // after the year 2106.
+                        //
+                        // Thus as a special case we tell CScriptNum to accept up
+                        // to 5-byte bignums, which are good until 2**39-1, well
+                        // beyond the 2**32-1 limit of the nLockTime field itself.
+                        const CScriptNum nLockTime(stacktop(-1), fRequireMinimal, 5);
+
+                        // In the rare event that the argument may be < 0 due to
+                        // some arithmetic being done first, you can always use
+                        // 0 MAX CHECKLOCKTIMEVERIFY.
+                        if (nLockTime < 0)
+                            return false;
+
+                        // Actually compare the specified lock time with the transaction.
+                        if (! CheckLockTime(nLockTime.getint64(), txTo, nIn))
+                            return false;
+
+                        break;
+                    }
+
+                    case OP_CHECKSEQUENCEVERIFY:
+                    {
+                        if (!(flags & Script_param::SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)) {
+                            // not enabled; treat as a NOP3
+                            break;
+                        }
+
+                        if (stack.size() < 1)
+                            return false;
+
+                        // nSequence, like nLockTime, is a 32-bit unsigned integer
+                        // field. See the comment in CHECKLOCKTIMEVERIFY regarding
+                        // 5-byte numeric operands.
+                        const CScriptNum nSequence(stacktop(-1), fRequireMinimal, 5);
+
+                        // In the rare event that the argument may be < 0 due to
+                        // some arithmetic being done first, you can always use
+                        // 0 MAX CHECKSEQUENCEVERIFY.
+                        if (nSequence < 0)
+                            return false;
+
+                        // To provide for future soft-fork extensibility, if the
+                        // operand has the disabled lock-time flag set,
+                        // CHECKSEQUENCEVERIFY behaves as a NOP.
+                        if ((nSequence & CTxIn::SEQUENCE_LOCKTIME_DISABLE_FLAG) != 0)
+                            break;
+
+                        // Compare the specified sequence number with the input.
+                        if (! CheckSequence(nSequence.getint64(), txTo, nIn))
+                            return false;
+
+                        break;
+                    }
+
+                    case OP_NOP1: case OP_NOP4: case OP_NOP5:
+                    case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
+                    {
+                        if (flags & Script_param::SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
+                            return false;
+                    }
                     break;
 
                     case OP_IF:
@@ -558,10 +634,10 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         bool fValue = false;
                         if (fExec) {
                             if (stack.size() < 1) {
-                                debugcs::instance() << "EvalScript Failure D." << debugcs::endl();
+                                //debugcs::instance() << "EvalScript Failure D." << debugcs::endl();
                                 return false;
                             }
-                            valtype& vch = stacktop(-1);
+                            valtype &vch = stacktop(-1);
                             fValue = CastToBool(vch);
                             if (opcode == OP_NOTIF) {
                                 fValue = !fValue;
@@ -575,7 +651,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_ELSE:
                     {
                         if (vfExec.empty()) {
-                            debugcs::instance() << "EvalScript Failure E." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure E." << debugcs::endl();
                             return false;
                         }
                         vfExec.back() = !vfExec.back();
@@ -585,7 +661,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_ENDIF:
                     {
                         if (vfExec.empty()) {
-                            debugcs::instance() << "EvalScript Failure F." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure F." << debugcs::endl();
                             return false;
                         }
                         vfExec.pop_back();
@@ -597,7 +673,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         // (true -- ) or
                         // (false -- false) and return
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure G." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure G." << debugcs::endl();
                             return false;
                         }
 
@@ -605,7 +681,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         if (fValue) {
                             popstack(stack);
                         } else {
-                            debugcs::instance() << "EvalScript Failure H." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure H." << debugcs::endl();
                             return false;
                         }
                     }
@@ -613,11 +689,12 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                     case OP_RETURN:
                     {
-                        debugcs::instance() << "EvalScript OP_RET." << debugcs::endl();
+                        //debugcs::instance() << "EvalScript OP_RET." << debugcs::endl();
                         return false;
                     }
                     break;
 
+                    /*
                     case OP_CHECKLOCKTIMEVERIFY:
                     {
                         //
@@ -654,7 +731,9 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                         break;
                     }
+                    */
 
+                    /*
                     case OP_CHECKSEQUENCEVERIFY:
                     {
                         if (!(flags & Script_param::SCRIPT_VERIFY_CHECKSEQUENCEVERIFY)) {
@@ -697,6 +776,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                         break;
                     }
+                    */
 
                     //
                     // Stack ops
@@ -704,7 +784,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_TOALTSTACK:
                     {
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure O." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure O." << debugcs::endl();
                             return false;
                         }
                         altstack.push_back(stacktop(-1));
@@ -715,7 +795,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_FROMALTSTACK:
                     {
                         if (altstack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure P." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure P." << debugcs::endl();
                             return false;
                         }
                         stack.push_back(altstacktop(-1));
@@ -727,7 +807,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- )
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure Q." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure Q." << debugcs::endl();
                             return false;
                         }
                         popstack(stack);
@@ -739,7 +819,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- x1 x2 x1 x2)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure R." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure R." << debugcs::endl();
                             return false;
                         }
                         valtype vch1 = stacktop(-2);
@@ -753,7 +833,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 x3 -- x1 x2 x3 x1 x2 x3)
                         if (stack.size() < 3) {
-                            debugcs::instance() << "EvalScript Failure S." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure S." << debugcs::endl();
                             return false;
                         }
                         valtype vch1 = stacktop(-3);
@@ -769,7 +849,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 x3 x4 -- x1 x2 x3 x4 x1 x2)
                         if (stack.size() < 4) {
-                            debugcs::instance() << "EvalScript Failure T." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure T." << debugcs::endl();
                             return false;
                         }
                         valtype vch1 = stacktop(-4);
@@ -783,7 +863,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 x3 x4 x5 x6 -- x3 x4 x5 x6 x1 x2)
                         if (stack.size() < 6) {
-                            debugcs::instance() << "EvalScript Failure U." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure U." << debugcs::endl();
                             return false;
                         }
                         valtype vch1 = stacktop(-6);
@@ -798,7 +878,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 x3 x4 -- x3 x4 x1 x2)
                         if (stack.size() < 4) {
-                            debugcs::instance() << "EvalScript Failure V." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure V." << debugcs::endl();
                             return false;
                         }
                         std::swap(stacktop(-4), stacktop(-2));
@@ -810,7 +890,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x - 0 | x x)
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure W." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure W." << debugcs::endl();
                             return false;
                         }
                         valtype vch = stacktop(-1);
@@ -823,7 +903,8 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_DEPTH:
                     {
                         // -- stacksize
-                        CBigNum bn((uint16_t) stack.size());
+                        //CBigNum bn((uint16_t) stack.size());
+                        CScriptNum bn((uint16_t)stack.size());
                         stack.push_back(bn.getvch());
                     }
                     break;
@@ -832,7 +913,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x -- )
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure X." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure X." << debugcs::endl();
                             return false;
                         }
                         popstack(stack);
@@ -843,7 +924,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x -- x x)
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure Y." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure Y." << debugcs::endl();
                             return false;
                         }
                         valtype vch = stacktop(-1);
@@ -855,7 +936,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- x2)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure Z." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure Z." << debugcs::endl();
                             return false;
                         }
                         stack.erase(stack.end() - 2);
@@ -866,7 +947,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- x1 x2 x1)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AA." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AA." << debugcs::endl();
                             return false;
                         }
                         valtype vch = stacktop(-2);
@@ -880,14 +961,15 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         // (xn ... x2 x1 x0 n - xn ... x2 x1 x0 xn)
                         // (xn ... x2 x1 x0 n - ... x2 x1 x0 xn)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AB." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AB." << debugcs::endl();
                             return false;
                         }
 
-                        int n = CastToBigNum(stacktop(-1)).getint32();
+                        //int n = CastToBigNum(stacktop(-1)).getint32();
+                        int n = CScriptNum(stacktop(-1), fRequireMinimal).getint();
                         popstack(stack);
                         if (n < 0 || n >= (int)stack.size()) {
-                            debugcs::instance() << "EvalScript Failure AC." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AC." << debugcs::endl();
                             return false;
                         }
 
@@ -905,7 +987,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         //  x2 x1 x3  after first swap
                         //  x2 x3 x1  after second swap
                         if (stack.size() < 3) {
-                            debugcs::instance() << "EvalScript Failure AD." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AD." << debugcs::endl();
                             return false;
                         }
                         std::swap(stacktop(-3), stacktop(-2));
@@ -917,7 +999,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- x2 x1)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AE." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AE." << debugcs::endl();
                             return false;
                         }
                         std::swap(stacktop(-2), stacktop(-1));
@@ -928,7 +1010,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 -- x2 x1 x2)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AF." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AF." << debugcs::endl();
                             return false;
                         }
                         valtype vch = stacktop(-1);
@@ -941,10 +1023,11 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (in -- in size)
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure AG." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AG." << debugcs::endl();
                             return false;
                         }
-                        CBigNum bn((uint16_t) stacktop(-1).size());
+                        //CBigNum bn((uint16_t) stacktop(-1).size());
+                        CScriptNum bn((uint16_t)stacktop(-1).size());
                         stack.push_back(bn.getvch());
                     }
                     break;
@@ -959,7 +1042,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x1 x2 - bool)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AH." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AH." << debugcs::endl();
                             return false;
                         }
                         valtype &vch1 = stacktop(-2);
@@ -979,7 +1062,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             if (fEqual) {
                                 popstack(stack);
                             } else {
-                                debugcs::instance() << "EvalScript Failure AI." << debugcs::endl();
+                                //debugcs::instance() << "EvalScript Failure AI." << debugcs::endl();
                                 return false;
                             }
                         }
@@ -998,11 +1081,12 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (in -- out)
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure AJ." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AJ." << debugcs::endl();
                             return false;
                         }
 
-                        CBigNum bn = CastToBigNum(stacktop(-1));
+                        //CScrNum bn = CastToBigNum(stacktop(-1));
+                        CScriptNum bn(stacktop(-1), fRequireMinimal);
                         switch (opcode)
                         {
                         case OP_1ADD:       bn += bnOne; break;
@@ -1038,9 +1122,12 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             return false;
                         }
 
-                        CBigNum bn1 = CastToBigNum(stacktop(-2));
-                        CBigNum bn2 = CastToBigNum(stacktop(-1));
-                        CBigNum bn;
+                        //CScrNum bn1 = CastToBigNum(stacktop(-2));
+                        //CScrNum bn2 = CastToBigNum(stacktop(-1));
+                        //CScrNum bn;
+                        CScriptNum bn1(stacktop(-2), fRequireMinimal);
+                        CScriptNum bn2(stacktop(-1), fRequireMinimal);
+                        CScriptNum bn(0);
                         switch (opcode)
                         {
                         case OP_ADD:
@@ -1072,7 +1159,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             if (CastToBool(stacktop(-1))) {
                                 popstack(stack);
                             } else {
-                                debugcs::instance() << "EvalScript Failure AL." << debugcs::endl();
+                                //debugcs::instance() << "EvalScript Failure AL." << debugcs::endl();
                                 return false;
                             }
                         }
@@ -1083,13 +1170,16 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (x min max -- out)
                         if (stack.size() < 3) {
-                            debugcs::instance() << "EvalScript Failure AM." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AM." << debugcs::endl();
                             return false;
                         }
 
-                        CBigNum bn1 = CastToBigNum(stacktop(-3));
-                        CBigNum bn2 = CastToBigNum(stacktop(-2));
-                        CBigNum bn3 = CastToBigNum(stacktop(-1));
+                        //CScrNum bn1 = CastToBigNum(stacktop(-3));
+                        //CScrNum bn2 = CastToBigNum(stacktop(-2));
+                        //CScrNum bn3 = CastToBigNum(stacktop(-1));
+                        CScriptNum bn1(stacktop(-3), fRequireMinimal);
+                        CScriptNum bn2(stacktop(-2), fRequireMinimal);
+                        CScriptNum bn3(stacktop(-1), fRequireMinimal);
                         bool fValue = (bn2 <= bn1 && bn1 < bn3);
                         popstack(stack);
                         popstack(stack);
@@ -1109,7 +1199,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (in -- hash)
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure AN." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AN." << debugcs::endl();
                             return false;
                         }
 
@@ -1145,7 +1235,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // (sig pubkey -- bool)
                         if (stack.size() < 2) {
-                            debugcs::instance() << "EvalScript Failure AO." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AO." << debugcs::endl();
                             return false;
                         }
 
@@ -1173,7 +1263,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             if (fSuccess) {
                                 popstack(stack);
                             } else {
-                                debugcs::instance() << "EvalScript Failure AP." << debugcs::endl();
+                                //debugcs::instance() << "EvalScript Failure AP." << debugcs::endl();
                                 return false;
                             }
                         }
@@ -1187,39 +1277,41 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                         int i = 1;
                         if ((int)stack.size() < i) {
-                            debugcs::instance() << "EvalScript Failure AQ." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AQ." << debugcs::endl();
                             return false;
                         }
 
-                        int nKeysCount = CastToBigNum(stacktop(-i)).getint32();
+                        //int nKeysCount = CastToBigNum(stacktop(-i)).getint32();
+                        int nKeysCount = CScriptNum(stacktop(-i), fRequireMinimal).getint();
                         if (nKeysCount < 0 || nKeysCount > 20) {
-                            debugcs::instance() << "EvalScript Failure AR." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AR." << debugcs::endl();
                             return false;
                         }
 
                         nOpCount += nKeysCount;
-                        if (nOpCount > 201) {
-                            debugcs::instance() << "EvalScript Failure AS." << debugcs::endl();
+                        if (nOpCount > Script_const::MAX_OPS_PER_SCRIPT) {
+                            //debugcs::instance() << "EvalScript Failure AS." << debugcs::endl();
                             return false;
                         }
 
                         int ikey = ++i;
                         i += nKeysCount;
                         if ((int)stack.size() < i) {
-                            debugcs::instance() << "EvalScript Failure AT." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AT." << debugcs::endl();
                             return false;
                         }
 
-                        int nSigsCount = CastToBigNum(stacktop(-i)).getint32();
+                        //int nSigsCount = CastToBigNum(stacktop(-i)).getint32();
+                        int nSigsCount = CScriptNum(stacktop(-i), fRequireMinimal).getint();
                         if (nSigsCount < 0 || nSigsCount > nKeysCount) {
-                            debugcs::instance() << "EvalScript Failure AU." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AU." << debugcs::endl();
                             return false;
                         }
 
                         int isig = ++i;
                         i += nSigsCount;
                         if ((int)stack.size() < i) {
-                            debugcs::instance() << "EvalScript Failure AV." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AV." << debugcs::endl();
                             return false;
                         }
 
@@ -1270,7 +1362,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         // so optionally verify it is exactly equal to zero prior
                         // to removing it from the stack.
                         if (stack.size() < 1) {
-                            debugcs::instance() << "EvalScript Failure AW." << debugcs::endl();
+                            //debugcs::instance() << "EvalScript Failure AW." << debugcs::endl();
                             return false;
                         }
                         if ((flags & Script_param::SCRIPT_VERIFY_NULLDUMMY) && stacktop(-1).size()) {
@@ -1284,7 +1376,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             if (fSuccess) {
                                 popstack(stack);
                             } else {
-                                debugcs::instance() << "EvalScript Failure AX." << debugcs::endl();
+                                //debugcs::instance() << "EvalScript Failure AX." << debugcs::endl();
                                 return false;
                             }
                         }
@@ -1292,25 +1384,25 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     break;
 
                     default:
-                        debugcs::instance() << "EvalScript Failure OP_CODE no hit. opcode: " << opcode << debugcs::endl();
+                        //debugcs::instance() << "EvalScript Failure OP_CODE no hit. opcode: " << opcode << debugcs::endl();
                         return false;
                 }
 
             } // else if, close
 
             // Size limits
-            if (stack.size() + altstack.size() > 1000) {
-                debugcs::instance() << "EvalScript Failure AY." << debugcs::endl();
+            if (stack.size() + altstack.size() > Script_const::MAX_STACK_SIZE) {
+                //debugcs::instance() << "EvalScript Failure AY." << debugcs::endl();
                 return false;
             }
         }
     } catch (...) {
-        debugcs::instance() << "EvalScript Failure AZ." << debugcs::endl();
+        //debugcs::instance() << "EvalScript Failure AZ." << debugcs::endl();
         return false;
     }
 
     if (! vfExec.empty()) {
-        debugcs::instance() << "EvalScript Failure BA." << debugcs::endl();
+        //debugcs::instance() << "EvalScript Failure BA." << debugcs::endl();
         return false;
     }
 
@@ -1498,6 +1590,16 @@ bool Script_util::CheckSig(script_vector vchSig, const script_vector &vchPubKey,
 //
 bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet)
 {
+    auto CastToBigNum = [](const valtype &vch)
+    {
+        static constexpr size_t nMaxNumSize = 4;
+        if (vch.size() > nMaxNumSize) {
+            throw std::runtime_error("EvalScript CastToBigNum : overflow");
+        }
+        // Get rid of extra leading zeros
+        return CBigNum(CBigNum(vch).getvch());
+    };
+
     // Templates
     static std::map<TxnOutputType::txnouttype, CScript> mTemplates;
 
@@ -1802,7 +1904,7 @@ bool Script_util::IsStandard(const CScript &scriptPubKey, TxnOutputType::txnoutt
 unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore)
 {
     unsigned int nResult = 0;
-    BOOST_FOREACH(const valtype &pubkey, pubkeys)
+    for(const valtype &pubkey: pubkeys)
     {
         CKeyID keyID = CPubKey(pubkey).GetID();
         if (keystore.HaveKey(keyID)) {
@@ -1991,7 +2093,7 @@ public:
         std::vector<CTxDestination> vDest;
         int nRequired;
         if (Script_util::ExtractDestinations(script, type, vDest, nRequired)) {
-            BOOST_FOREACH(const CTxDestination &dest, vDest)
+            for(const CTxDestination &dest: vDest)
             {
                 boost::apply_visitor(*this, dest);
             }
@@ -2166,7 +2268,7 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
 
     auto PushAll = [](const statype &values) {
         CScript result;
-        BOOST_FOREACH(const valtype &v, values)
+        for(const valtype &v: values)
         {
             result << v;
         }
@@ -2178,13 +2280,13 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
         // Combine all the signatures we've got
         //
         std::set<valtype> allsigs;
-        BOOST_FOREACH(const valtype &v, sigs1)
+        for(const valtype &v: sigs1)
         {
             if (! v.empty()) {
                 allsigs.insert(v);
             }
         }
-        BOOST_FOREACH(const valtype &v, sigs2)
+        for(const valtype &v: sigs2)
         {
             if (! v.empty()) {
                 allsigs.insert(v);
@@ -2198,7 +2300,7 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
         unsigned int nSigsRequired = vSolutions.front()[0];
         unsigned int nPubKeys = (unsigned int)(vSolutions.size() - 2);
         std::map<valtype, valtype> sigs;
-        BOOST_FOREACH(const valtype &sig, allsigs)
+        for(const valtype &sig: allsigs)
         {
             for (unsigned int i = 0; i < nPubKeys; ++i)
             {
@@ -2465,7 +2567,7 @@ void CScript::SetMultisig(int nRequired, const std::vector<CPubKey> &keys)
     clear();
 
     *this << EncodeOP_N(nRequired);
-    BOOST_FOREACH(const CPubKey &key, keys)
+    for(const CPubKey &key: keys)
     {
         *this << key;
     }

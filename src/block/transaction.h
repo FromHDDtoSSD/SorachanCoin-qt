@@ -19,7 +19,7 @@
 #include <timestamps.h>
 #include <bignum.h>
 #include <sync/sync.h>
-#include <script.h>
+#include <script/script.h>
 #include <scrypt.h>
 #include <checkqueue.h>
 #include <prevector/prevector.h>
@@ -361,6 +361,7 @@ public:
     CScript &set_scriptSig() noexcept {return scriptSig;}
     void set_nSequence(uint32_t _seq) noexcept {nSequence = _seq;}
     void set_scriptSig(const CScript &_sig) {scriptSig = _sig;}
+    CScriptWitness &set_scriptWitness() {return scriptWitness;}
 
     // script <valtype>
     template <typename valtype>
@@ -501,14 +502,16 @@ struct CMutableTransaction_impl;
 /**
  * Basic transaction serialization format:
  * - int32_t nVersion
- * - uint32_t nTime (CURRENT_VERSION == 1)
+ * - if (CURRENT_VERSION == 1)
+ *   - uint32_t nTime
  * - std::vector<CTxIn> vin
  * - std::vector<CTxOut> vout
  * - uint32_t nLockTime
  *
  * Extended transaction serialization format:
  * - int32_t nVersion
- * - uint32_t nTime (CURRENT_VERSION == 1)
+ * - if (CURRENT_VERSION == 1)
+ *   - uint32_t nTime
  * - unsigned char dummy = 0x00
  * - unsigned char flags (!= 0)
  * - std::vector<CTxIn> vin
@@ -519,9 +522,9 @@ struct CMutableTransaction_impl;
  */
 template<typename Stream, typename TxType>
 inline void UnserializeTransaction(TxType &tx, Stream &s) {
+    s >> tx.set_nVersion();
     const bool fAllowWitness = (tx.get_nVersion() >= 2) && (!(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS));
 
-    s >> tx.set_nVersion();
     if(tx.get_nVersion() == 1)
         s >> tx.set_nTime();
     unsigned char flags = 0;
@@ -543,8 +546,8 @@ inline void UnserializeTransaction(TxType &tx, Stream &s) {
     if ((flags & 1) && fAllowWitness) {
         /* The witness flag is present, and we support witnesses. */
         flags ^= 1;
-        for (size_t i = 0; i < tx.vin.size(); i++) {
-            s >> tx.set_vin(i).set_scriptWitness().stack;
+        for (size_t i = 0; i < tx.get_vin().size(); i++) {
+            s >> tx.set_vin(i).set_scriptWitness().stack; // todo: std::vector<std::vector<unsigned char> >
         }
         if (! tx.HasWitness()) {
             /* It's illegal to encode witnesses when all witness stacks are empty. */
@@ -659,10 +662,13 @@ public:
     uint32_t get_nLockTime() const {return nLockTime;}
 
     void set_nTime(uint32_t _InTime) {nTime = _InTime;}
+    uint32_t &set_nTime() {return nTime;}
+    int &set_nVersion() {return nVersion;}
     std::vector<CTxIn> &set_vin() {return vin;}
     CTxIn &set_vin(int index) {return vin[index];}
     std::vector<CTxOut> &set_vout() {return vout;}
     CTxOut &set_vout(int index) {return vout[index];}
+    uint32_t &set_nLockTime() {return nLockTime;}
 
     /** Construct a CTransaction that qualifies as IsNull() */
     CTransaction_impl() : hash{}, m_witness_hash{} {
@@ -856,19 +862,29 @@ public:
         return false;
     }
 
+    // CURRENT_VERSION==1 serialize methods
+    size_t GetSerializeSize() const {
+        if(this->nVersion == 1) {
+            size_t size = 0;
+            size += ::GetSerializeSize(this->nVersion);
+            size += ::GetSerializeSize(this->nTime);
+            size += ::GetSerializeSize(this->vin);
+            size += ::GetSerializeSize(this->vout);
+            size += ::GetSerializeSize(this->nLockTime);
+            return size;
+        } else {
+            assert(!"Only using CTransaction_impl<T>::GetSerializeSize is (nVersion == 1)");
+            size_t size = 0;
+            size += ::GetSerializeSize(this->nVersion);
+            size += ::GetSerializeSize(this->vin);
+            size += ::GetSerializeSize(this->vout);
+            size += ::GetSerializeSize(this->nLockTime);
+            return size;
+        }
+    }
     template <typename Stream>
     inline void Serialize(Stream &s) const {
-        ::SerializeTransaction(*this, s);
-    }
-
-    size_t GetSerializeSize() const {
-        size_t size = 0;
-        size += ::GetSerializeSize(this->nVersion);
-        size += ::GetSerializeSize(this->nTime);
-        size += ::GetSerializeSize(this->vin);
-        size += ::GetSerializeSize(this->vout);
-        size += ::GetSerializeSize(this->nLockTime);
-        return size;
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
     }
     template <typename Stream>
     inline void Unserialize(Stream &s) {
@@ -878,14 +894,16 @@ public:
     inline void SerializationOp(Stream &s, Operation ser_action) {
         if(this->nVersion == 1) {
             LREADWRITE(this->nVersion);
-            nVersion = this->nVersion;
             LREADWRITE(this->nTime);
             LREADWRITE(this->vin);
             LREADWRITE(this->vout);
             LREADWRITE(this->nLockTime);
         } else {
             assert(!"Only using CTransaction_impl<T>::Unserialize is (nVersion == 1)");
-            throw std::runtime_error("Error: Only using CTransaction_impl<T>::Unserialize is (nVersion == 1).");
+            LREADWRITE(this->nVersion);
+            LREADWRITE(this->vin);
+            LREADWRITE(this->vout);
+            LREADWRITE(this->nLockTime);
         }
     }
 
@@ -946,17 +964,17 @@ struct CMutableTransaction_impl {
 
     template <typename Stream>
     inline void Serialize(Stream &s) const {
-        SerializeTransaction(*this, s);
+        ::SerializeTransaction(*this, s);
     }
 
     template <typename Stream>
     inline void Unserialize(Stream &s) {
-        UnserializeTransaction(*this, s);
+        ::UnserializeTransaction(*this, s);
     }
 
     template <typename Stream>
     CMutableTransaction_impl(deserialize_type, Stream &s) {
-        Unserialize(s);
+        this->Unserialize(s);
     }
 
     // Compute the hash of this CMutableTransaction. This is computed on the

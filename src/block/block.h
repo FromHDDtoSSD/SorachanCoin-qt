@@ -7,10 +7,10 @@
 #ifndef BITCOIN_BLOCK_H
 #define BITCOIN_BLOCK_H
 
+#include <script/interpreter.h>
 #include <block/transaction.h>
 #include <block/block_locator.h>
 #include <merkle/merkle_tree.h>
-#include <prevector/prevector.h>
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work

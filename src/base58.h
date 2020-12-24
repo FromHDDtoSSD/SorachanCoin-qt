@@ -18,9 +18,9 @@
 #include <string>
 #include <vector>
 #include <cleanse/cleanse.h>
-#include "bignum.h"
-#include "key.h"
-#include "script.h"
+#include <bignum.h>
+#include <key.h>
+#include <script/script.h>
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 typedef prevector<PREVECTOR_N, uint8_t> base58_vector;

@@ -25,9 +25,36 @@ template <typename T> class CTransaction_impl;
 using CTransaction = CTransaction_impl<uint256>;
 class CBitcoinAddress;
 
+namespace Script_const {
+    // Maximum number of bytes pushable to the stack
+    static constexpr unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520;
+
+    // Maximum number of non-push operations per script
+    static constexpr int MAX_OPS_PER_SCRIPT = 201;
+
+    // Maximum number of public keys per multisig
+    static constexpr int MAX_PUBKEYS_PER_MULTISIG = 20;
+
+    // Maximum script length in bytes
+    static constexpr int MAX_SCRIPT_SIZE = 10000;
+
+    // Maximum number of values on script interpreter stack
+    static constexpr int MAX_STACK_SIZE = 1000;
+
+    // Threshold for nLockTime: below this value it is interpreted as block number,
+    // otherwise as UNIX timestamp.
+    static constexpr unsigned int LOCKTIME_THRESHOLD = 500000000; // Tue Nov  5 00:53:20 1985 UTC
+
+    // Maximum nLockTime. Since a lock time indicates the last invalid timestamp, a
+    // transaction with this lock time will never be valid unless lock time
+    // checking is disabled (by setting all input sequence numbers to
+    // SEQUENCE_FINAL).
+    static constexpr uint32_t LOCKTIME_MAX = 0xFFFFFFFFU;
+}
+
 namespace Script_param
 {
-    constexpr unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
+    // constexpr unsigned int MAX_SCRIPT_ELEMENT_SIZE = 520; // bytes
 
     //
     // Strict verification:
@@ -42,6 +69,8 @@ namespace Script_param
         SCRIPT_VERIFY_LOW_S     = (1U << 2),            // enforce low S values in signatures (depends on STRICTENC)
         SCRIPT_VERIFY_NOCACHE   = (1U << 3),            // do not store results in signature cache (but do query it)
         SCRIPT_VERIFY_NULLDUMMY = (1U << 4),            // verify dummy stack item consumed by CHECKMULTISIG is of zero-length
+        SCRIPT_VERIFY_MINIMALDATA = (1U << 6),          // Require minimal encodings for all push operations, Evaluating any other push causes the script to fail (BIP62 rule 3)
+        SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS = (1U << 7), // Discourage use of NOPs reserved for upgrades (NOP1-10)
         SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY = (1U << 9),
         SCRIPT_VERIFY_CHECKSEQUENCEVERIFY = (1U << 10)
     };
@@ -151,8 +180,8 @@ namespace ScriptOpcodes
         OP_ENDIF = 0x68,
         OP_VERIFY = 0x69,
         OP_RETURN = 0x6a,
-        OP_CHECKLOCKTIMEVERIFY = 0xb1,
-        OP_CHECKSEQUENCEVERIFY = 0xb2,
+        //OP_CHECKLOCKTIMEVERIFY = 0xb1,
+        //OP_CHECKSEQUENCEVERIFY = 0xb2,
 
         // stack ops
         OP_TOALTSTACK = 0x6b,
@@ -238,6 +267,10 @@ namespace ScriptOpcodes
 
         // expansion
         OP_NOP1 = 0xb0,
+        OP_CHECKLOCKTIMEVERIFY = 0xb1,
+        OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
+        OP_CHECKSEQUENCEVERIFY = 0xb2,
+        OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
         OP_NOP4 = 0xb3,
         OP_NOP5 = 0xb4,
         OP_NOP6 = 0xb5,
@@ -659,86 +692,4 @@ public:
     }
 };
 
-//
-// Script_util
-//
-class Script_util : private no_instance
-{
-public:
-    typedef script_vector valtype;
-    typedef stack_vector statype;
-
-private:
-    // Setting nSequence to this value for every input in a transaction disables nLockTime.
-    static const uint32_t SEQUENCE_FINAL = 0xffffffff;
-
-    // Threshold for inverted nSequence: below this value it is interpreted as a relative lock-time, otherwise ignored.
-    // static const uint32_t SEQUENCE_THRESHOLD = 0x80000000;
-
-    // If this flag set, CTxIn::nSequence is NOT interpreted as a relative lock-time.
-    static const uint32_t SEQUENCE_LOCKTIME_DISABLE_FLAG = 0x80000000;
-
-    // If CTxIn::nSequence encodes a relative lock-time and this flag is set, the relative lock-time has units of 512 seconds,
-    // otherwise it specifies blocks with a granularity of 1.
-    static const uint32_t SEQUENCE_LOCKTIME_TYPE_FLAG = 0x00400000;
-
-    // If CTxIn::nSequence encodes a relative lock-time, this mask is applied to extract that lock-time from the sequence field.
-    static const uint32_t SEQUENCE_LOCKTIME_MASK = 0x0000ffff;
-
-    static const valtype vchFalse;
-    static const valtype vchZero;
-    static const valtype vchTrue;
-    static const CBigNum bnZero;
-    static const CBigNum bnOne;
-    static const CBigNum bnFalse;
-    static const CBigNum bnTrue;
-
-    static CBigNum CastToBigNum(const valtype &vch);
-    static bool CastToBool(const valtype &vch);
-
-    static void popstack(statype &stack);
-
-    static uint256 SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
-    static bool CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
-    static unsigned int HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore);
-
-    static bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags);
-    static bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags);
-    static bool Solver(const CKeyStore &keystore, const CScript &scriptPubKey, const uint256& hash, int nHashType, CScript &scriptSigRet, TxnOutputType::txnouttype &whichTypeRet);
-
-    static bool Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
-    static bool SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
-    static bool SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
-
-    static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2);
-
-public:
-    static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
-    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
-    static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet);
-    static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions);
-    static bool IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType);
-
-    static isminetype IsMine(const CKeyStore &keystore, const CBitcoinAddress &dest);
-    static isminetype IsMine(const CKeyStore &keystore, const CScript &scriptPubKey);
-    static void ExtractAffectedKeys(const CKeyStore &keystore, const CScript &scriptPubKey, std::vector<CKeyID> &vKeys);
-    
-    static bool ExtractDestination(const CScript &scriptPubKey, CTxDestination &addressRet);
-    static bool ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<CTxDestination> &addressRet, int &nRequiredRet);
-    static bool ExtractAddress(const CKeyStore &keystore, const CScript &scriptPubKey, CBitcoinAddress &addressRet);
-
-    static bool SignSignature(const CKeyStore &keystore, const CScript &fromPubKey, CTransaction &txTo, unsigned int nIn, int nHashType=Script_param::SIGHASH_ALL);
-    static bool SignSignature(const CKeyStore &keystore, const CTransaction &txFrom, CTransaction &txTo, unsigned int nIn, int nHashType=Script_param::SIGHASH_ALL);
-    static bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
-
-    //
-    // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
-    // combine them intelligently and return the result.
-    //
-    static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const CScript &scriptSig1, const CScript &scriptSig2);
-};
-
-// isminetype IsMine(const CKeyStore& keystore, const CTxDestination& dest);    // unused: CTxDestination -> CBitcoinAddress (A CTxDestination is the internal data type encoded in a CBitcoinAddress)
-
 #endif
-

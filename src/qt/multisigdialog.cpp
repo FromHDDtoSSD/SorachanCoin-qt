@@ -13,7 +13,7 @@
 #include "multisiginputentry.h"
 #include "multisigdialog.h"
 #include "ui_multisigdialog.h"
-#include "script.h"
+#include <script/script.h>
 #include "sendcoinsentry.h"
 #include "util.h"
 #include "wallet.h"
@@ -191,8 +191,8 @@ void MultisigDialog::on_createAddressButton_clicked()
 
     CScript script;
     script.SetMultisig(required, pubkeys);
-    if (script.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE) {
-        QMessageBox::warning(this, tr("Error"), tr("Redeem script exceeds size limit: %1 > %2\nReduce the number of addresses involved in the address creation.").arg(script.size()).arg(Script_param::MAX_SCRIPT_ELEMENT_SIZE), QMessageBox::Ok);
+    if (script.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
+        QMessageBox::warning(this, tr("Error"), tr("Redeem script exceeds size limit: %1 > %2\nReduce the number of addresses involved in the address creation.").arg(script.size()).arg(Script_const::MAX_SCRIPT_ELEMENT_SIZE), QMessageBox::Ok);
         return;
     }
     CScriptID scriptID = script.GetID();

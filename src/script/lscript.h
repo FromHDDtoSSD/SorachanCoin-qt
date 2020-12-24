@@ -9,6 +9,7 @@
 
 #ifndef BITCOIN_SCRIPT_LSCRIPT_H
 #define BITCOIN_SCRIPT_LSCRIPT_H
+static_assert(false, "Currently, lscript.h is no using.");
 
 #include <crypto/common.h>
 #include <prevector/prevector.h>
@@ -16,7 +17,7 @@
 
 #include <assert.h>
 #include <climits>
-//#include <stdexcept>
+#include <stdexcept>
 #include <stdint.h>
 #include <string.h>
 #include <string>

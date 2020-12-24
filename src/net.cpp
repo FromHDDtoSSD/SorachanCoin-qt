@@ -391,7 +391,7 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
 void ext_ip::AdvertizeLocal()
 {
     LOCK(net_node::cs_vNodes);
-    BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+    for(CNode *pnode: net_node::vNodes)
     {
         if(pnode->fSuccessfullyConnected) {
             CAddress addrLocal = ext_ip::GetLocalAddress(&pnode->addr);
@@ -585,7 +585,7 @@ void net_node::AddressCurrentlyConnected(const CService &addr)
 CNode *net_node::FindNode(const CNetAddr &ip)
 {
     LOCK(net_node::cs_vNodes);
-    BOOST_FOREACH(CNode *pnode, vNodes)
+    for(CNode *pnode: vNodes)
     {
         if((CNetAddr)pnode->addr == ip) {
             return (pnode);
@@ -597,7 +597,7 @@ CNode *net_node::FindNode(const CNetAddr &ip)
 CNode *net_node::FindNode(std::string addrName)
 {
     LOCK(net_node::cs_vNodes);
-    BOOST_FOREACH(CNode *pnode, vNodes)
+    for(CNode *pnode: vNodes)
     {
         if(pnode->addrName == addrName) {
             return (pnode);
@@ -609,7 +609,7 @@ CNode *net_node::FindNode(std::string addrName)
 CNode *net_node::FindNode(const CService &addr)
 {
     LOCK(net_node::cs_vNodes);
-    BOOST_FOREACH(CNode *pnode, vNodes)
+    for(CNode *pnode: vNodes)
     {
         if((CService)pnode->addr == addr) {
             return (pnode);
@@ -851,7 +851,7 @@ void net_node::ThreadSocketHandler2(void *parg)
             LOCK(net_node::cs_vNodes);
             // Disconnect unused nodes
             std::vector<CNode *> vNodesCopy = net_node::vNodes;
-            BOOST_FOREACH(CNode *pnode, vNodesCopy)
+            for(CNode *pnode: vNodesCopy)
             {
                 if(pnode->fDisconnect ||
                     (pnode->GetRefCount() <= 0 && pnode->vRecv.empty() && pnode->vSend.empty())) {
@@ -878,7 +878,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 
             // Delete disconnected nodes
             std::list<CNode *> vNodesDisconnectedCopy = vNodesDisconnected;
-            BOOST_FOREACH(CNode *pnode, vNodesDisconnectedCopy)
+            for(CNode *pnode: vNodesDisconnectedCopy)
             {
                 // wait until threads are done using it
                 if(pnode->GetRefCount() <= 0) {
@@ -927,7 +927,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         SOCKET hSocketMax = 0;
         bool have_fds = false;
 
-        BOOST_FOREACH(SOCKET hListenSocket, bitsocket::vhListenSocket)
+        for(SOCKET hListenSocket: bitsocket::vhListenSocket)
         {
             FD_SET(hListenSocket, &fdsetRecv);
             hSocketMax = std::max(hSocketMax, hListenSocket);
@@ -935,7 +935,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         }
         {
             LOCK(net_node::cs_vNodes);
-            BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+            for(CNode *pnode: net_node::vNodes)
             {
                 if(pnode->hSocket == INVALID_SOCKET) {
                     continue;
@@ -979,7 +979,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         //
         // Accept new connections
         //
-        BOOST_FOREACH(SOCKET hListenSocket, bitsocket::vhListenSocket)
+        for(SOCKET hListenSocket: bitsocket::vhListenSocket)
         {
             if(hListenSocket != INVALID_SOCKET && FD_ISSET(hListenSocket, &fdsetRecv)) {
 #ifdef USE_IPV6
@@ -1000,7 +1000,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 
                 {
                     LOCK(net_node::cs_vNodes);
-                    BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+                    for(CNode *pnode: net_node::vNodes)
                     {
                         if(pnode->fInbound) {
                             ++nInbound;
@@ -1047,13 +1047,13 @@ void net_node::ThreadSocketHandler2(void *parg)
         {
             LOCK(net_node::cs_vNodes);
             vNodesCopy = net_node::vNodes;
-            BOOST_FOREACH(CNode *pnode, vNodesCopy)
+            for(CNode *pnode: vNodesCopy)
             {
                 pnode->AddRef();
             }
         }
 
-        BOOST_FOREACH(CNode *pnode, vNodesCopy)
+        for(CNode *pnode: vNodesCopy)
         {
             if(args_bool::fShutdown) {
                 return;
@@ -1181,7 +1181,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                     pnode->fDisconnect = true;
                 }
             }
-        } // BOOST_FOREACH(CNode *pnode, vNodesCopy)
+        } // for(CNode *pnode: vNodesCopy)
 
         {
             LOCK(net_node::cs_vNodes);
@@ -1369,7 +1369,7 @@ void dns_seed::ThreadDNSAddressSeed2(void *parg)
                 std::vector<CNetAddr> vaddr;
                 std::vector<CAddress> vAdd;
                 if(netbase::manage::LookupHost(dns_seed::strDNSSeed[seed_idx][1], vaddr)) {
-                    BOOST_FOREACH(CNetAddr &ip, vaddr)
+                    for(CNetAddr &ip: vaddr)
                     {
                         CAddress addr = CAddress(CService(ip, net_basis::GetDefaultPort(net_basis::DNS_SEED)));
                         addr.set_nTime(bitsystem::GetTime() - 3 * util::nOneDay - bitsystem::GetRand(4 * util::nOneDay)); // use a random age between 3 and 7 days old
@@ -1481,7 +1481,7 @@ void net_node::ThreadOpenConnections2(void *parg)
         for(int64_t nLoop = 0; ; ++nLoop)
         {
             shot::ProcessOneShot();
-            BOOST_FOREACH(std::string strAddr, map_arg::GetMapMultiArgsString("-connect"))
+            for(std::string strAddr: map_arg::GetMapMultiArgsString("-connect"))
             {
                 CAddress addr;
                 net_node::OpenNetworkConnection(addr, nullptr, strAddr.c_str());
@@ -1560,7 +1560,7 @@ void net_node::ThreadOpenConnections2(void *parg)
         std::set<std::vector<unsigned char> > setConnected;
         {
             LOCK(net_node::cs_vNodes);
-            BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+            for(CNode *pnode: net_node::vNodes)
             {
                 if(!pnode->fInbound) {
                     setConnected.insert(pnode->addr.GetGroup());
@@ -1648,12 +1648,12 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
             std::list<std::string> lAddresses(0);
             {
                 LOCK(net_node::cs_vAddedNodes);
-                BOOST_FOREACH(std::string &strAddNode, net_node::vAddedNodes)
+                for(std::string &strAddNode: net_node::vAddedNodes)
                 {
                     lAddresses.push_back(strAddNode);
                 }
             }
-            BOOST_FOREACH(std::string &strAddNode, lAddresses)
+            for(std::string &strAddNode: lAddresses)
             {
                 CAddress addr;
                 CSemaphoreGrant grant(*shot::semOutbound);
@@ -1672,14 +1672,14 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
         std::list<std::string> lAddresses(0);
         {
             LOCK(net_node::cs_vAddedNodes);
-            BOOST_FOREACH(std::string &strAddNode, net_node::vAddedNodes)
+            for(std::string &strAddNode: net_node::vAddedNodes)
             {
                 lAddresses.push_back(strAddNode);
             }
         }
 
         std::list<std::vector<CService> > lservAddressesToAdd(0);
-        BOOST_FOREACH(std::string &strAddNode, lAddresses)
+        for(std::string &strAddNode: lAddresses)
         {
             std::vector<CService> vservNode(0);
             CNetAddr netAddr(strAddNode.c_str(), true);
@@ -1688,7 +1688,7 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
                 lservAddressesToAdd.push_back(vservNode);
                 {
                     LOCK(net_node::cs_setservAddNodeAddresses);
-                    BOOST_FOREACH(CService &serv, vservNode)
+                    for(CService &serv: vservNode)
                     {
                         net_node::setservAddNodeAddresses.insert(serv);
                     }
@@ -1700,11 +1700,11 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
         // (keeping in mind that addnode entries can have many IPs if fNameLookup)
         {
             LOCK(net_node::cs_vNodes);
-            BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+            for(CNode *pnode: net_node::vNodes)
             {
                 for(std::list<std::vector<CService> >::iterator it = lservAddressesToAdd.begin(); it != lservAddressesToAdd.end(); ++it)
                 {
-                    BOOST_FOREACH(CService& addrNode, *(it))
+                    for(CService& addrNode: *(it))
                     {
                         if(pnode->addr == addrNode) {
                             it = lservAddressesToAdd.erase(it);
@@ -1721,7 +1721,7 @@ void net_node::ThreadOpenAddedConnections2(void *parg)
             }
         }
 
-        BOOST_FOREACH(std::vector<CService> &vserv, lservAddressesToAdd)
+        for(std::vector<CService> &vserv: lservAddressesToAdd)
         {
             if(vserv.size() == 0) {
                 continue;
@@ -1804,7 +1804,7 @@ void net_node::StartSync(const std::vector<CNode *> &__vNodes)
     //
     // Iterate over all nodes
     //
-    BOOST_FOREACH(CNode *pnode, __vNodes)
+    for(CNode *pnode: __vNodes)
     {
         // check preconditions for allowing a sync
         if(!pnode->fClient && !pnode->fOneShot &&
@@ -1866,7 +1866,7 @@ void net_node::ThreadMessageHandler2(void *parg)
         {
             LOCK(net_node::cs_vNodes);
             vNodesCopy = net_node::vNodes;
-            BOOST_FOREACH(CNode *pnode, vNodesCopy)
+            for(CNode *pnode: vNodesCopy)
             {
                 pnode->AddRef();
                 if(pnode == pnodeSync) {
@@ -1880,7 +1880,7 @@ void net_node::ThreadMessageHandler2(void *parg)
         }
 
         // Poll the connected nodes for messages
-        BOOST_FOREACH(CNode *pnode, vNodesCopy)
+        for(CNode *pnode: vNodesCopy)
         {
             // Receive messages
             {
@@ -2045,7 +2045,7 @@ void net_node::Discover()
     if(::gethostname(pszHostName, sizeof(pszHostName)) != SOCKET_ERROR) {
         std::vector<CNetAddr> vaddr;
         if(netbase::manage::LookupHost(pszHostName, vaddr)) {
-            BOOST_FOREACH(const CNetAddr &addr, vaddr)
+            for(const CNetAddr &addr: vaddr)
             {
                 ext_ip::AddLocal(addr, LOCAL_IF);
             }
@@ -2248,7 +2248,7 @@ private:
         //
         // Close sockets
         //
-        BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+        for(CNode *pnode: net_node::vNodes)
         {
             if(pnode->hSocket != INVALID_SOCKET) {
                 netbase::manage::CloseSocket(pnode->hSocket);
@@ -2260,7 +2260,7 @@ private:
         //
         // clean up some globals (to help leak detection)
         //
-        BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+        for(CNode *pnode: net_node::vNodes)
         {
             if(pnode) {
                 delete pnode;

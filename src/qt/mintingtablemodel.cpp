@@ -79,7 +79,7 @@ public:
             for(std::map<uint256, CWalletTx>::iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             {
                 std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
-                BOOST_FOREACH(KernelRecord& kr, txList)
+                for(KernelRecord& kr: txList)
                 {
                     if(! kr.spent) {
                         cachedWallet.append(kr);
@@ -139,7 +139,7 @@ public:
                             KernelRecord::decomposeOutput(wallet, mi->second);
                     if(! toInsert.empty()) {    /* only if something to insert */
                         int insert_idx = lowerIndex;
-                        BOOST_FOREACH(const KernelRecord &rec, toInsert)
+                        for(const KernelRecord &rec: toInsert)
                         {
                             if(! rec.spent) {
                                 parent->beginInsertRows(QModelIndex(), insert_idx, insert_idx);
@@ -157,7 +157,7 @@ public:
                 } else if(inWallet && inModel) {
                     // Updated -- remove spent coins from table
                     std::vector<KernelRecord> toCheck = KernelRecord::decomposeOutput(wallet, mi->second);
-                    BOOST_FOREACH(const KernelRecord &rec, toCheck)
+                    for(const KernelRecord &rec: toCheck)
                     {
                         if(rec.spent) {
                             for(int i = 0; i < cachedWallet.size(); i++)

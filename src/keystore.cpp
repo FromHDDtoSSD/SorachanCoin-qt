@@ -3,10 +3,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "keystore.h"
-#include "script.h"
-#include "base58.h"
-#include "wallet.h" // CWallet::fWalletUnlockMintOnly
+#include <keystore.h>
+#include <script/script.h>
+#include <base58.h>
+#include <wallet.h> // CWallet::fWalletUnlockMintOnly
 
 bool CBasicKeyStore::AddKey(const CKey &key)
 {
@@ -31,8 +31,8 @@ bool CBasicKeyStore::AddMalleableKey(const CMalleableKeyView &keyView, const CSe
 
 bool CBasicKeyStore::AddCScript(const CScript &redeemScript)
 {
-    if (redeemScript.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE) {
-        return print::error("CBasicKeyStore::AddCScript() : redeemScripts > %i bytes are invalid", Script_param::MAX_SCRIPT_ELEMENT_SIZE);
+    if (redeemScript.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
+        return print::error("CBasicKeyStore::AddCScript() : redeemScripts > %i bytes are invalid", Script_const::MAX_SCRIPT_ELEMENT_SIZE);
     }
 
     {
@@ -367,7 +367,7 @@ bool CCryptoKeyStore::EncryptKeys(CKeyingMaterial &vMasterKeyIn)
         }
 
         fUseCrypto = true;
-        BOOST_FOREACH(KeyMap::value_type &mKey, mapKeys)
+        for(KeyMap::value_type &mKey: mapKeys)
         {
             CKey key;
             if (! key.SetSecret(mKey.second.first, mKey.second.second)) {
@@ -386,7 +386,7 @@ bool CCryptoKeyStore::EncryptKeys(CKeyingMaterial &vMasterKeyIn)
         }
         mapKeys.clear();
 
-        BOOST_FOREACH(MalleableKeyMap::value_type &mKey, mapMalleableKeys)
+        for(MalleableKeyMap::value_type &mKey: mapMalleableKeys)
         {
             const CPubKey vchPubKeyH = mKey.first.GetMalleablePubKey().GetH();
             std::vector<unsigned char> vchCryptedSecretH;

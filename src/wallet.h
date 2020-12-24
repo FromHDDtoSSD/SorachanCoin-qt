@@ -11,14 +11,14 @@
 
 #include <stdlib.h>
 
-#include "main.h"
-#include "key.h"
-#include "keystore.h"
-#include "script.h"
-#include "ui_interface.h"
-#include "util.h"
-#include "walletdb.h"
-#include "base58.h"
+#include <main.h>
+#include <key.h>
+#include <keystore.h>
+#include <script/script.h>
+#include <ui_interface.h>
+#include <util.h>
+#include <walletdb.h>
+#include <base58.h>
 
 #include <merkle/merkle_tx.h>
 

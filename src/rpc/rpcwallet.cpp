@@ -917,8 +917,8 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
     // BIP16: Construct using pay-to-script-hash:
     CScript inner;
     inner.SetMultisig(nRequired, pubkeys);
-    if (inner.size() > Script_param::MAX_SCRIPT_ELEMENT_SIZE)
-        return data.runtime_error(strprintf("redeemScript exceeds size limit: %" PRIszu " > %d", inner.size(), Script_param::MAX_SCRIPT_ELEMENT_SIZE));
+    if (inner.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE)
+        return data.runtime_error(strprintf("redeemScript exceeds size limit: %" PRIszu " > %d", inner.size(), Script_const::MAX_SCRIPT_ELEMENT_SIZE));
 
     entry::pwalletMain->AddCScript(inner);
     CBitcoinAddress address(inner.GetID());

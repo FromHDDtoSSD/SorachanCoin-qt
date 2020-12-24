@@ -660,7 +660,7 @@ bool entry::AppInit2()
 
     if (map_arg::GetMapArgsCount("-onlynet")) {
         std::set<enum netbase::Network> nets;
-        BOOST_FOREACH(std::string snet, map_arg::GetMapMultiArgsString("-onlynet"))
+        for(std::string snet: map_arg::GetMapMultiArgsString("-onlynet"))
         {
             enum netbase::Network net = netbase::manage::ParseNetwork(snet);
             if (net == netbase::NET_UNROUTABLE) {
@@ -750,7 +750,7 @@ bool entry::AppInit2()
     if (! args_bool::fNoListen) {
         std::string strError;
         if (map_arg::GetMapArgsCount("-bind")) {
-            BOOST_FOREACH(std::string strBind, map_arg::GetMapMultiArgsString("-bind"))
+            for(std::string strBind: map_arg::GetMapMultiArgsString("-bind"))
             {
                 CService addrBind;
                 if (! netbase::manage::Lookup(strBind.c_str(), addrBind, net_basis::GetListenPort(), false)) {
@@ -793,7 +793,7 @@ bool entry::AppInit2()
     }
 
     if (map_arg::GetMapArgsCount("-externalip")) {
-        BOOST_FOREACH(std::string strAddr, map_arg::GetMapMultiArgsString("-externalip"))
+        for(std::string strAddr: map_arg::GetMapMultiArgsString("-externalip"))
         {
             CService addrLocal(strAddr, net_basis::GetListenPort(), netbase::fNameLookup);
             if (! addrLocal.IsValid()) {
@@ -816,7 +816,7 @@ bool entry::AppInit2()
         }
     }
 
-    BOOST_FOREACH(std::string strDest, map_arg::GetMapMultiArgsString("-seednode"))
+    for(std::string strDest: map_arg::GetMapMultiArgsString("-seednode"))
     {
         shot::AddOneShot(strDest);
     }
@@ -1026,7 +1026,7 @@ bool entry::AppInit2()
     if (map_arg::GetMapArgsCount("-loadblock")) {
         CClientUIInterface::uiInterface.InitMessage(_("Importing blockchain data file."));
 
-        BOOST_FOREACH(std::string strFile, map_arg::GetMapMultiArgsString("-loadblock"))
+        for(std::string strFile: map_arg::GetMapMultiArgsString("-loadblock"))
         {
             FILE *file = ::fopen(strFile.c_str(), "rb");
             if (file) {

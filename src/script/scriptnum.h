@@ -16,11 +16,6 @@ public:
     explicit scriptnum_error(const std::string &str) : std::runtime_error(str) {}
 };
 
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-using script_vector = prevector<PREVECTOR_N, uint8_t>;
-#else
-using script_vector = std::vector<uint8_t>;
-#endif
 class CScriptNum
 {
 /**
@@ -32,15 +27,20 @@ class CScriptNum
  * throwing an exception if arithmetic is done or the result is interpreted as an integer.
  */
 public:
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+using script_vector = prevector<PREVECTOR_N, unsigned char>;
+#else
+using script_vector = std::vector<unsigned char>;
+#endif
 
     explicit CScriptNum(const int64_t& n)
     {
         m_value = n;
     }
 
-    static const size_t nDefaultMaxNumSize = 4;
+    static constexpr size_t nDefaultMaxNumSize = 4;
 
-    explicit CScriptNum(const std::vector<unsigned char>& vch, bool fRequireMinimal,
+    explicit CScriptNum(const script_vector &vch, bool fRequireMinimal,
                         const size_t nMaxNumSize = nDefaultMaxNumSize)
     {
         if (vch.size() > nMaxNumSize) {
@@ -137,6 +137,10 @@ public:
         return m_value;
     }
 
+    int64_t getint64() const {
+        return m_value;
+    }
+
     script_vector getvch() const
     {
         return serialize(m_value);
@@ -176,7 +180,7 @@ public:
     }
 
 private:
-    static int64_t set_vch(const std::vector<unsigned char>& vch)
+    static int64_t set_vch(const script_vector &vch)
     {
       if (vch.empty())
           return 0;
