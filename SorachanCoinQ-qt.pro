@@ -568,8 +568,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/const/amount.h \
     src/script/lscript.h \
     src/script/scriptnum.h \
+    src/script/standard.h \
     src/consensus/consensus.h \
     src/consensus/params.h \
+    src/policy/policy.h \
+    src/policy/feerate.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -736,6 +739,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/const/clientversion.cpp \
     src/bip32/hdwalletutil.cpp \
     src/script/lscript.cpp \
+    src/script/standard.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp

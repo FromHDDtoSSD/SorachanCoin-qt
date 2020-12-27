@@ -18,6 +18,8 @@
 #include <key/pubkey.h>
 #include <openssl/ec.h> // for EC_KEY definition
 
+class CScript;
+
 class key_error : public std::runtime_error
 {
 public:
@@ -29,6 +31,7 @@ class CScriptID : public uint160
 {
 public:
     CScriptID() : uint160(0) {}
+    explicit CScriptID(const CScript &in);
     CScriptID(const uint160 &in) : uint160(in) {}
 };
 

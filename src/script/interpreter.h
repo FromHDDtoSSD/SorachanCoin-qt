@@ -12,6 +12,7 @@
 #include <block/transaction.h>
 #include <const/amount.h>
 #include <prevector/prevector.h>
+#include <script/standard.h>
 
 #include <vector>
 #include <stdint.h>
@@ -27,7 +28,6 @@ class uint256;
 // script.cpp
 class Script_util : private no_instance {
 public:
-    //using CScrNum = CScriptNum;
 #ifdef CSCRIPT_PREVECTOR_ENABLE
     using valtype = prevector<PREVECTOR_N, uint8_t>;
     using statype = prevector<PREVECTOR_N, prevector<PREVECTOR_N, uint8_t> >;
@@ -36,25 +36,6 @@ public:
     using statype = std::vector<std::vector<uint8_t> >;
 #endif
 private:
-    // Setting nSequence to this value for every input in a transaction disables nLockTime.
-    // static constexpr uint32_t SEQUENCE_FINAL = 0xffffffff;
-
-    // Threshold for inverted nSequence:
-    // below this value it is interpreted as a relative lock-time, otherwise ignored.
-    // static constexpr uint32_t SEQUENCE_THRESHOLD = 0x80000000;
-
-    // If this flag set, CTxIn::nSequence is NOT interpreted as a relative lock-time.
-    // static constexpr uint32_t SEQUENCE_LOCKTIME_DISABLE_FLAG = 0x80000000;
-
-    // If CTxIn::nSequence encodes a relative lock-time and this flag is set,
-    // the relative lock-time has units of 512 seconds,
-    // otherwise it specifies blocks with a granularity of 1.
-    // static constexpr uint32_t SEQUENCE_LOCKTIME_TYPE_FLAG = 0x00400000;
-
-    // If CTxIn::nSequence encodes a relative lock-time,
-    // this mask is applied to extract that lock-time from the sequence field.
-    // static constexpr uint32_t SEQUENCE_LOCKTIME_MASK = 0x0000ffff;
-
     static bool CastToBool(const valtype &vch);
     static void popstack(statype &stack);
 
@@ -75,7 +56,7 @@ private:
     static bool CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetype opcode);
 public:
     static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
-    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
+    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) noexcept;
     static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet);
     static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions);
     static bool IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType);
@@ -97,14 +78,16 @@ public:
     static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const CScript &scriptSig1, const CScript &scriptSig2);
 };
 
-// with witness Script
-// interpreter.cpp
+// latest core: with witness Script
+// interpreter.cpp, standard.cpp
 class latest_script_util : private no_instance {
 public:
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-using valtype = prevector<PREVECTOR_N, unsigned char>;
+    using valtype = prevector<PREVECTOR_N, unsigned char>;
+    using statype = prevector<PREVECTOR_N, prevector<PREVECTOR_N, unsigned char> >;
 #else
-using valtype = std::vector<unsigned char>;
+    using valtype = std::vector<uint8_t>;
+    using statype = std::vector<std::vector<uint8_t> >;
 #endif
     enum class SigVersion {
         BASE = 0,
@@ -287,6 +270,66 @@ public:
     using MutableTransactionSignatureChecker = GenericTransactionSignatureChecker<CMutableTransaction>;
     static bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CScriptWitness *witness, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror = nullptr);
     static size_t CountWitnessSigOps(const CScript &scriptSig, const CScript &scriptPubKey, const CScriptWitness *witness, unsigned int flags);
+
+    /**
+     * Parse a scriptPubKey and identify script type for standard scripts. If
+     * successful, returns script type and parsed pubkeys or hashes, depending on
+     * the type. For example, for a P2SH script, vSolutionsRet will contain the
+     * script hash, for P2PKH it will contain the key hash, etc.
+     *
+     * @param[in]   scriptPubKey   Script to parse
+     * @param[out]  vSolutionsRet  Vector of parsed pubkeys and hashes
+     * @return                     The script type. TX_NONSTANDARD represents a failed solve.
+     */
+    static TxnOutputType::txnouttype Solver(const CScript &scriptPubKey, statype &vSolutionsRet);
+
+    /**
+     * Parse a standard scriptPubKey for the destination address. Assigns result to
+     * the addressRet parameter and returns true if successful. For multisig
+     * scripts, instead use ExtractDestinations. Currently only works for P2PK,
+     * P2PKH, P2SH, P2WPKH, and P2WSH scripts.
+     */
+    static bool ExtractDestination(const CScript &scriptPubKey, LCTxDestination &addressRet);
+
+    /**
+     * Parse a standard scriptPubKey with one or more destination addresses. For
+     * multisig scripts, this populates the addressRet vector with the pubkey IDs
+     * and nRequiredRet with the n required to spend. For other destinations,
+     * addressRet is populated with a single value and nRequiredRet is set to 1.
+     * Returns true if successful. Currently does not extract address from
+     * pay-to-witness scripts.
+     *
+     * Note: this function confuses destinations (a subset of CScripts that are
+     * encodable as an address) with key identifiers (of keys involved in a
+     * CScript), and its use should be phased out.
+     */
+    static bool ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<LCTxDestination> &addressRet, int &nRequiredRet);
+
+    /**
+     * Generate a Bitcoin scriptPubKey for the given LCTxDestination. Returns a P2PKH
+     * script for a CKeyID destination, a P2SH script for a CScriptID, and an empty
+     * script for CNoDestination.
+     */
+    static CScript GetScriptForDestination(const LCTxDestination &dest);
+
+    /** Generate a P2PK script for the given pubkey. */
+    static CScript GetScriptForRawPubKey(const CPubKey &pubkey);
+
+    /** Generate a multisig script. */
+    static CScript GetScriptForMultisig(int nRequired, const std::vector<CPubKey> &keys);
+
+    /**
+     * Generate a pay-to-witness script for the given redeem script. If the redeem
+     * script is P2PK or P2PKH, this returns a P2WPKH script, otherwise it returns a
+     * P2WSH script.
+     *
+     * TODO: replace calls to GetScriptForWitness with GetScriptForDestination using
+     * the various witness-specific LCTxDestination subtypes.
+     */
+    static CScript GetScriptForWitness(const CScript &redeemscript);
+
+    /** Check whether a LCTxDestination is a CNoDestination. */
+    static bool IsValidDestination(const LCTxDestination &dest);
 };
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

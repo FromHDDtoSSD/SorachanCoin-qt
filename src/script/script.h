@@ -4,11 +4,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// SorachanCoin:
-// script.h: for old core, random wallet
-
-// note: script require throw.
-
 #ifndef H_BITCOIN_SCRIPT
 #define H_BITCOIN_SCRIPT
 
@@ -16,6 +11,7 @@
 #include <vector>
 #include <prevector/prevector.h>
 #include <script/scriptnum.h>
+#include <script/standard.h>
 
 #include <keystore.h>
 #include <bignum.h>
@@ -124,16 +120,19 @@ namespace TxnOutputType
     enum txnouttype
     {
         TX_NONSTANDARD,
-
         // 'standard' transaction types:
         TX_PUBKEY,
-        TX_PUBKEY_DROP,
+        TX_PUBKEY_DROP, // old core
         TX_PUBKEYHASH,
         TX_SCRIPTHASH,
         TX_MULTISIG,
-        TX_NULL_DATA
+        TX_NULL_DATA, //!< unspendable OP_RETURN script that carries data
+        TX_WITNESS_V0_SCRIPTHASH,
+        TX_WITNESS_V0_KEYHASH,
+        TX_WITNESS_UNKNOWN, //!< Only for Witness versions not already defined above
     };
-    const char *GetTxnOutputType(TxnOutputType::txnouttype t);
+    /** Get the name of a txnouttype as a C string, or nullptr if unknown. */
+    const char *GetTxnOutputType(TxnOutputType::txnouttype t) noexcept;
 }
 
 //
@@ -289,7 +288,11 @@ namespace ScriptOpcodes
 
         OP_INVALIDOPCODE = 0xff
     };
-    const char *GetOpName(ScriptOpcodes::opcodetype opcode);
+
+    // Maximum value that an opcode can be
+    static constexpr unsigned int MAX_OPCODE = OP_PUBKEY;
+
+    const char *GetOpName(ScriptOpcodes::opcodetype opcode) noexcept;
 }
 
 //
@@ -304,6 +307,12 @@ using stack_vector = std::vector<std::vector<uint8_t> >;
 #endif
 class CScript final : public script_vector
 {
+public:
+    template <typename T>
+    static script_vector ToByteVector(const T &in) {
+        return script_vector(in.begin(), in.end());
+    }
+
 private:
     static std::string ValueString(const script_vector &vch) {
         if (vch.size() <= 4)
@@ -329,21 +338,6 @@ protected:
         } else if (n == 0) {
             push_back(ScriptOpcodes::OP_0);
         } else {
-            /* SorachanCoin: checked.
-            debugcs::instance() << "CScript: CBigNum == CScriptNum: checking ..." << debugcs::endl();
-            CBigNum bn(n);
-            bignum_vector vch = bn.getvch();
-            script_vector sv = CScriptNum::serialize(n);
-            for(int i=0; i<vch.size(); ++i) {
-                char buf[128];
-                ::sprintf(buf, "%d", vch[i]);
-                debugcs::instance() << "CScript::push_int64(CBigNum): " << buf << debugcs::endl();
-                ::sprintf(buf, "%d", sv[i]);
-                debugcs::instance() << "CScript::push_int64(CScriptNum): " << buf << debugcs::endl();
-                assert(vch[i] == sv[i]);
-            }
-            */
-
             *this << CScriptNum::serialize(n);
         }
         return *this;
@@ -379,9 +373,11 @@ public:
         return ret;
     }
 
-    IMPLEMENT_SERIALIZE(
-        READWRITE(*this);
-    )
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITEAS(script_vector, *this);
+    }
 
     operator std::vector<unsigned char>() const { // convert from prevector to std::vector<unsigned char>
         std::vector<unsigned char> obj(this->begin(), this->end());
@@ -452,7 +448,7 @@ public:
     }
 
     CScript &operator<<(const script_vector &b) {
-        if (b.size() < ScriptOpcodes::OP_PUSHDATA1) { // escp256k1 pubkey size: below 75 byte.
+        if (b.size() < ScriptOpcodes::OP_PUSHDATA1) { // secp256k1 pubkey size: below 75 byte.
             insert(end(), (uint8_t)b.size());
         } else if (b.size() <= 0xff) {
             insert(end(), ScriptOpcodes::OP_PUSHDATA1);
@@ -480,85 +476,11 @@ public:
     //
     // Wrapper so it can be called with either iterator or const_iterator
     //
-    bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) {
-         const_iterator pc2 = pc;
-         bool fRet = GetOp2(pc2, opcodeRet, &vchRet);
-         pc = begin() + (pc2 - begin());
-         return fRet;
-    }
-
-    bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet) {
-         const_iterator pc2 = pc;
-         bool fRet = GetOp2(pc2, opcodeRet, nullptr);
-         pc = begin() + (pc2 - begin());
-         return fRet;
-    }
-
-    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) const {
-        return GetOp2(pc, opcodeRet, &vchRet);
-    }
-
-    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet) const {
-        return GetOp2(pc, opcodeRet, nullptr);
-    }
-
-    bool GetOp2(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector *pvchRet) const {
-        opcodeRet = ScriptOpcodes::OP_INVALIDOPCODE;
-        if (pvchRet) {
-            pvchRet->clear();
-        }
-        if (pc >= end()) {
-            //debugcs::instance() << "CScript_GetOp2 pc >= end() OK." << debugcs::endl();
-            return false;
-        }
-
-        // Read instruction
-        if (end() - pc < 1) {
-            //debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure A." << debugcs::endl();
-            return false;
-        }
-        uint32_t opcode = *pc++;
-
-        // Immediate operand
-        if (opcode <= ScriptOpcodes::OP_PUSHDATA4) {
-            uint32_t nSize = ScriptOpcodes::OP_0;
-            if (opcode < ScriptOpcodes::OP_PUSHDATA1) {
-                nSize = opcode;
-            } else if (opcode == ScriptOpcodes::OP_PUSHDATA1) {
-                if (end() - pc < 1) {
-                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 1 Failure B." << debugcs::endl();
-                    return false;
-                }
-                nSize = *pc++;
-            } else if (opcode == ScriptOpcodes::OP_PUSHDATA2) {
-                if (end() - pc < 2) {
-                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 2 Failure." << debugcs::endl();
-                    return false;
-                }
-                ::memcpy(&nSize, &pc[0], 2);
-                pc += 2;
-            } else if (opcode == ScriptOpcodes::OP_PUSHDATA4) {
-                if (end() - pc < 4) {
-                    //debugcs::instance() << "CScript_GetOp2 end() - pc < 4 Failure." << debugcs::endl();
-                    return false;
-                }
-                ::memcpy(&nSize, &pc[0], 4);
-                pc += 4;
-            }
-            if (end() - pc < 0 || (uint32_t)(end() - pc) < nSize) {
-                //debugcs::instance() << "CScript_GetOp2 check Failure. end() - pc: " << end() - pc << " / nSize: " << nSize << debugcs::endl();
-                return false;
-            }
-            if (pvchRet) {
-                pvchRet->assign(pc, pc + nSize);
-            }
-            pc += nSize;
-        }
-
-        opcodeRet = (ScriptOpcodes::opcodetype)opcode;
-        //debugcs::instance() << "GetOp2 OP_CODE: " << opcode << debugcs::endl();
-        return true;
-    }
+    bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet);
+    bool GetOp(iterator &pc, ScriptOpcodes::opcodetype &opcodeRet);
+    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet, script_vector &vchRet) const;
+    bool GetOp(const_iterator &pc, ScriptOpcodes::opcodetype &opcodeRet) const;
+    static bool GetScriptOp(const_iterator &pc, script_vector::const_iterator end, ScriptOpcodes::opcodetype &opcodeRet, script_vector *pvchRet);
 
     //
     // Encode/decode small integers
@@ -626,26 +548,20 @@ public:
     unsigned int GetSigOpCount(const CScript &scriptSig) const;
 
     bool IsPayToScriptHash() const;
-    bool IsPushOnly(const_iterator pc) const {
-        while (pc < end())
-        {
-            ScriptOpcodes::opcodetype opcode;
-            if (! GetOp(pc, opcode)) {
-                return false;
-            }
-            if (opcode > ScriptOpcodes::OP_16) {
-                return false;
-            }
-        }
-        return true;
-    }
+    bool IsPushOnly(const_iterator pc) const;
+
+    //
+    // witness transactions:
+    //
+    bool IsPayToWitnessScriptHash() const;
+    bool IsWitnessProgram(int &version, script_vector &program) const;
+
+    bool HasValidOps() const;
 
     //
     // Called by CTransaction::IsStandard and P2SH VerifyScript (which makes it consensus-critical).
     //
-    bool IsPushOnly() const {
-        return IsPushOnly(begin());
-    }
+    bool IsPushOnly() const;
 
     //
     // Called by CTransaction::IsStandard.
@@ -660,30 +576,8 @@ public:
         printf("CScript(%s)\n", util::HexStr(begin(), end(), true).c_str());
     }
 
-    std::string ToString(bool fShort=false) const {
-        std::string str;
-        ScriptOpcodes::opcodetype opcode;
-        script_vector vch;
-        const_iterator pc = begin();
-        while (pc < end())
-        {
-            if (! str.empty()) {
-                str += " ";
-            }
-            if (! GetOp(pc, opcode, vch)) {
-                str += "[error]";
-                return str;
-            }
-            if (0 <= opcode && opcode <= ScriptOpcodes::OP_PUSHDATA4) {
-                str += fShort? ValueString(vch).substr(0, 10) : ValueString(vch);
-            } else {
-                str += ScriptOpcodes::GetOpName(opcode);
-            }
-        }
-        return str;
-    }
-
-    void script_print() const {        // rename: print => script_print
+    std::string ToString(bool fShort=false) const;
+    void script_print() const { // rename: print => script_print
         printf("%s\n", ToString().c_str());
     }
 

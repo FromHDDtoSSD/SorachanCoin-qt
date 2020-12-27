@@ -201,7 +201,7 @@ public:
         SetData(args_bool::fTestNet ? SCRIPT_ADDRESS_TEST : SCRIPT_ADDRESS, &id, 20);
         return true;
     }
-    bool Set(const CTxDestination &dest);    // base58.cpp
+    bool Set(const CTxDestination &dest);
     bool Set(const CMalleablePubKey &mpk) {
         base58_vector vchPubkeyPair = mpk.Raw();
         SetData(args_bool::fTestNet ? PUBKEY_PAIR_ADDRESS_TEST : PUBKEY_PAIR_ADDRESS, &vchPubkeyPair[0], 68);
@@ -229,7 +229,7 @@ public:
     bool operator()(const CKeyID &id) const                   { return addr->Set(id); }
     bool operator()(const CScriptID &id) const                { return addr->Set(id); }
     bool operator()(const CMalleablePubKey &mpk) const        { return addr->Set(mpk); }
-    bool operator()(const CNoDestination &id) const           { return false; }
+    bool operator()(const CNoDestination &id) const { (void)id; return false; }
 };
 
 /** A base58-encoded secret key */

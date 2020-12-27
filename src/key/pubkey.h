@@ -324,7 +324,7 @@ private:
     }
 
 public:
-    static bool ValidSize(const std::vector<unsigned char> &_vch) noexcept {
+    static bool ValidSize(const key_vector &_vch) noexcept {
       return _vch.size() > 0 && GetLen(_vch[0]) == _vch.size();
     }
 

@@ -3,11 +3,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// SorachanCoin adopt Blockchain script below:
-// CScript => old core, random wallet
-// LCScript => latest core, HD wallet and witness
-// must be used, CScript: sync.h, LCScript: lsync.h
-
 /*
 #include <script/lscript.h>
 

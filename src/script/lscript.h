@@ -4,9 +4,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// script/lscript.h, script/lscript.cpp: for latest core
-//! should be care OP_CODE confliction.
-
 #ifndef BITCOIN_SCRIPT_LSCRIPT_H
 #define BITCOIN_SCRIPT_LSCRIPT_H
 static_assert(false, "Currently, lscript.h is no using.");
