@@ -71,7 +71,10 @@ struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness 
 using CTxDestination = boost::variant<
                        CNoDestination,
                        CKeyID, // pubkey.h
-                       CScriptID>; // key.h
+                       CScriptID, // key.h
+                       WitnessV0ScriptHash,
+                       WitnessV0KeyHash,
+                       WitnessUnknown>;
 
 /** latest core:
  * A txout script template with a specific destination. It is either:

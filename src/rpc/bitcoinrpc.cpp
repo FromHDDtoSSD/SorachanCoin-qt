@@ -1174,7 +1174,7 @@ json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMet
 
     SSLIOStreamDevice<boost::asio::ip::tcp> d(sslStream, fUseSSL);
     boost::iostreams::stream<SSLIOStreamDevice<boost::asio::ip::tcp> > stream(d);
-    if (!d.connect(map_arg::GetArg("-rpcconnect", net_basis::strLocal), map_arg::GetArg("-rpcport", itostr(GetDefaultRPCPort())))) {
+    if (!d.connect(map_arg::GetArg("-rpcconnect", net_basis::strLocal), map_arg::GetArg("-rpcport", strenc::itostr(GetDefaultRPCPort())))) {
         json_spirit::json_flags status;
         return data.runtime_error("couldn't connect to server", 0).get_obj(status);
     }

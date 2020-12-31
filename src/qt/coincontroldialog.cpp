@@ -2,7 +2,7 @@
 #include "ui_coincontroldialog.h"
 
 #include "init.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "bitcoinunits.h"
 #include "script/script.h"
 #include "walletmodel.h"

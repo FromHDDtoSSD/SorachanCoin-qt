@@ -10,13 +10,14 @@
 #include <init.h>
 #include <util.h>
 #include <ntp.h>
-#include <base58.h>
+#include <address/base58.h>
 #include <miner.h>
 #include <boot/shutdown.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <block/block_alert.h>
 #include <util/time.h>
+#include <util/strencodings.h> // HexStr
 
 std::string CRPCTable::HelpRequiringPassphrase() noexcept {
     return entry::pwalletMain->IsCrypted()
@@ -1664,17 +1665,110 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(coin_param::strCoinName + " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.");
 }
 
+namespace {
+class DescribeAddressVisitor__ : public boost::static_visitor<json_spirit::Object>
+{
+public:
+    explicit DescribeAddressVisitor__() {}
+
+    json_spirit::Object operator()(const CNoDestination &dest) const {
+        (void)dest;
+        return json_spirit::Object();
+    }
+
+    json_spirit::Object operator()(const CKeyID &keyID) const {
+        (void)keyID;
+        json_spirit::Object obj;
+        obj.push_back(json_spirit::Pair("isscript", false));
+        obj.push_back(json_spirit::Pair("iswitness", false));
+        return obj;
+    }
+
+    json_spirit::Object operator()(const CScriptID &scriptID) const {
+        (void)scriptID;
+        json_spirit::Object obj;
+        obj.push_back(json_spirit::Pair("isscript", true));
+        obj.push_back(json_spirit::Pair("iswitness", false));
+        return obj;
+    }
+
+    json_spirit::Object operator()(const WitnessV0KeyHash &id) const {
+        json_spirit::Object obj;
+        obj.push_back(json_spirit::Pair("isscript", false));
+        obj.push_back(json_spirit::Pair("iswitness", true));
+        obj.push_back(json_spirit::Pair("witness_version", 0));
+        obj.push_back(json_spirit::Pair("witness_program", strenc::HexStr(id.begin(), id.end())));
+        return obj;
+    }
+
+    json_spirit::Object operator()(const WitnessV0ScriptHash &id) const {
+        json_spirit::Object obj;
+        obj.push_back(json_spirit::Pair("isscript", true));
+        obj.push_back(json_spirit::Pair("iswitness", true));
+        obj.push_back(json_spirit::Pair("witness_version", 0));
+        obj.push_back(json_spirit::Pair("witness_program", strenc::HexStr(id.begin(), id.end())));
+        return obj;
+    }
+
+    json_spirit::Object operator()(const WitnessUnknown &id) const {
+        json_spirit::Object obj;
+        obj.push_back(json_spirit::Pair("iswitness", true));
+        obj.push_back(json_spirit::Pair("witness_version", (int)id.version));
+        obj.push_back(json_spirit::Pair("witness_program", strenc::HexStr(id.program, id.program + id.length)));
+        return obj;
+    }
+};
+
+void DescribeAddress(const CTxDestination &dest, json_spirit::Object &obj) {
+    json_spirit::Object ret = boost::apply_visitor(DescribeAddressVisitor__(), dest);
+    for(const json_spirit::Pair &data: ret)
+        obj.push_back(data);
+}
+
 class DescribeAddressVisitor : public boost::static_visitor<json_spirit::Object>
 {
 private:
-    DescribeAddressVisitor(const DescribeAddressVisitor &)=delete;
-    DescribeAddressVisitor &operator=(const DescribeAddressVisitor &)=delete;
-    DescribeAddressVisitor &operator=(const DescribeAddressVisitor &&)=delete;
     isminetype mine;
-public:
-    DescribeAddressVisitor(isminetype mineIn) : mine(mineIn) {}
+    CWallet *const pwallet;
 
-    json_spirit::Object operator()(const CNoDestination &dest) const {
+    void ProcessSubScript(const CScript &subscript, json_spirit::Object &obj) const {
+        // Always present: script type and redeemscript
+        Script_util::statype solutions_data;
+        TxnOutputType::txnouttype which_type;
+        if(! Script_util::Solver(subscript, which_type, solutions_data)) return;
+        obj.push_back(json_spirit::Pair("script", TxnOutputType::GetTxnOutputType(which_type)));
+        obj.push_back(json_spirit::Pair("hex", strenc::HexStr(subscript.begin(), subscript.end())));
+
+        CTxDestination embedded;
+        if (Script_util::ExtractDestination(subscript, embedded)) {
+            // Only when the script corresponds to an address.
+            json_spirit::Object subobj;
+            DescribeAddress(embedded, subobj);
+            subobj << (const json_spirit::Object &)boost::apply_visitor(*this, embedded);
+            //subobj.push_back(json_spirit::Pair("address", EncodeDestination(embedded)));
+            subobj.push_back(json_spirit::Pair("scriptPubKey", strenc::HexStr(subscript.begin(), subscript.end())));
+            // Always report the pubkey at the top level, so that `getnewaddress()['pubkey']` always works.
+            if (subobj.exists("pubkey")) obj.push_back(json_spirit::Pair("pubkey", subobj["pubkey"]));
+            obj.push_back(json_spirit::Pair("embedded", subobj));
+        } else if (which_type == TxnOutputType::TX_MULTISIG) {
+            // Also report some information on multisig scripts (which do not have a corresponding address).
+            // TODO: abstract out the common functionality between this logic and ExtractDestinations.
+            obj.push_back(json_spirit::Pair("sigsrequired", solutions_data[0][0]));
+            json_spirit::Array pubkeys;
+            for (size_t i = 1; i < solutions_data.size() - 1; ++i) {
+                CPubKey key(solutions_data[i].begin(), solutions_data[i].end());
+                pubkeys.push_back(strenc::HexStr(key.begin(), key.end()));
+            }
+            obj.push_back(json_spirit::Pair("pubkeys", pubkeys));
+        }
+    }
+
+public:
+    explicit DescribeAddressVisitor(isminetype mineIn) noexcept : mine(mineIn), pwallet(nullptr) {}
+    explicit DescribeAddressVisitor(CWallet *walletIn) noexcept : pwallet(walletIn) {}
+
+    json_spirit::Object operator()(const CNoDestination &dest) const noexcept {
+        (void)dest;
         return json_spirit::Object();
     }
 
@@ -1713,7 +1807,34 @@ public:
         }
         return obj;
     }
+
+    json_spirit::Object operator()(const WitnessV0KeyHash &id) const {
+        json_spirit::Object obj;
+        CPubKey pubkey;
+        if (pwallet && pwallet->GetPubKey(CKeyID(id), pubkey)) {
+            obj.push_back(json_spirit::Pair("pubkey", strenc::HexStr(pubkey)));
+        }
+        return obj;
+    }
+
+    json_spirit::Object operator()(const WitnessV0ScriptHash &id) const {
+        json_spirit::Object obj;
+        CScript subscript;
+        latest_crypto::CRIPEMD160 hasher;
+        uint160 hash;
+        hasher.Write(id.begin(), 32).Finalize(hash.begin());
+        if (pwallet && pwallet->GetCScript(CScriptID(hash), subscript)) {
+            ProcessSubScript(subscript, obj);
+        }
+        return obj;
+    }
+
+    json_spirit::Object operator()(const WitnessUnknown &id) const {
+        (void)id;
+        return json_spirit::Object();
+    }
 };
+} // namespace
 
 json_spirit::Value CRPCTable::validateaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 1) {

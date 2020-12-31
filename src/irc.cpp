@@ -4,7 +4,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "irc.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "net.h"
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE

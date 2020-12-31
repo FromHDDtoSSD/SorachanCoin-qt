@@ -2,7 +2,7 @@
 #include "ui_signverifymessagedialog.h"
 
 #include "addressbookpage.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "guiutil.h"
 #include "dialogwindowflags.h"
 #include "init.h"

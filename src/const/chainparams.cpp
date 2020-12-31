@@ -4,7 +4,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-/*
 #include <const/chainparams.h>
 
 //#include <chainparamsseeds.h>
@@ -19,6 +18,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 
+/*
 static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
 {
     CMutableTransaction txNew;
@@ -448,28 +448,44 @@ public:
     }
     //void UpdateVersionBitsParametersFromArgs(const ArgsManager& args);
 };
-
-static std::unique_ptr<const CChainParams> globalChainParams;
-
-const CChainParams &Params() {
-    assert(globalChainParams);
-    return *globalChainParams;
-}
-
-std::unique_ptr<const CChainParams> CreateChainParams(const std::string& chain)
-{
-    if (chain == CBaseChainParams::MAIN)
-        return std::unique_ptr<CChainParams>(new CMainParams());
-    else if (chain == CBaseChainParams::TESTNET)
-        return std::unique_ptr<CChainParams>(new CTestNetParams());
-    else if (chain == CBaseChainParams::REGTEST)
-        return std::unique_ptr<CChainParams>(new CRegTestParams(gArgs));
-    throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
-}
-
-void SelectParams(const std::string& network)
-{
-    SelectBaseParams(network);
-    globalChainParams = CreateChainParams(network);
-}
 */
+
+namespace Chain_info {
+    static std::unique_ptr<const CChainParams> globalChainParams;
+
+    const CChainParams &Params() {
+        assert(globalChainParams);
+        return *globalChainParams;
+    }
+
+    std::unique_ptr<const CChainParams> CreateChainParams(const std::string &chain) {
+        /*
+        try {
+            if (chain == CBaseChainParams::MAIN())
+                return std::unique_ptr<CChainParams>(new CMainParams());
+            else if (chain == CBaseChainParams::TESTNET())
+                return std::unique_ptr<CChainParams>(new CTestNetParams());
+            else if (chain == CBaseChainParams::TESTNET2())
+                return std::unique_ptr<CChainParams>(new CTestNet2Params());
+            else if (chain == CBaseChainParams::REGTEST())
+                return std::unique_ptr<CChainParams>(new CRegTestParams(gArgs));
+            else if (chain == CBaseChainParams::PREDICTIONTEST())
+                return std::unique_ptr<CChainParams>(new CPredictionTestParams(gArgs));
+        } catch (const std::exception &) {
+            throw std::runtime_error("CreateChainParams: out of memory");
+            return std::unique_ptr<const CChainParams>();
+        }
+        */
+        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+        return std::unique_ptr<const CChainParams>();
+    }
+
+    void SelectParams(const std::string &network) {
+        /*
+        SelectBaseParams(network);
+        globalChainParams = CreateChainParams(network);
+        */
+    }
+
+} // namespace Chain_info
+

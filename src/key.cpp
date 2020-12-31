@@ -9,7 +9,7 @@
 #include <openssl/obj_mac.h>
 #include <key.h>
 #include <key/pubkey.h>
-#include <base58.h>
+#include <address/base58.h>
 #include <script/script.h>
 
 CScriptID::CScriptID(const CScript &in) : uint160(hash_basis::Hash160(in.begin(), in.end())) {}

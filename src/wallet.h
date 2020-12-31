@@ -2,24 +2,21 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_WALLET_H
 #define BITCOIN_WALLET_H
 
 #include <string>
 #include <vector>
-
 #include <stdlib.h>
-
 #include <main.h>
 #include <key.h>
 #include <keystore.h>
 #include <script/script.h>
 #include <ui_interface.h>
-#include <util.h>
+#include <util/strencodings.h>
 #include <walletdb.h>
-#include <base58.h>
-
+#include <address/key_io.h>
 #include <merkle/merkle_tx.h>
 
 class CAccountingEntry;
@@ -423,14 +420,14 @@ namespace mapValuePos
             nOrderPos = -1; // TODO: calculate elsewhere
             return;
         }
-        nOrderPos = atoi64(mapValue["n"].c_str());
+        nOrderPos = strenc::atoi64(mapValue["n"].c_str());
     }
 
     inline void WriteOrderPos(const int64_t &nOrderPos, mapValue_t &mapValue) {
         if (nOrderPos == -1) {
             return;
         }
-        mapValue["n"] = i64tostr(nOrderPos);
+        mapValue["n"] = strenc::i64tostr(nOrderPos);
     }
 }
 
@@ -579,7 +576,7 @@ public:
 
             mapValuePos::ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
 
-            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)atoi64(pthis->mapValue["timesmart"]) : 0;
+            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)strenc::atoi64(pthis->mapValue["timesmart"]) : 0;
         }
 
         pthis->mapValue.erase("fromaccount");

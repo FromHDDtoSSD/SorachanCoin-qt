@@ -3,7 +3,7 @@
 
 #include "init.h"
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
 
 std::map<const TransactionRecord *, int> TransactionRecord::mapConfirmations;
 

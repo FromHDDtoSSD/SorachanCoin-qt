@@ -15,11 +15,14 @@
 
 #include <keystore.h>
 #include <bignum.h>
-#include <base58.h>
+#include <address/base58.h>
 
 template <typename T> class CTransaction_impl;
 using CTransaction = CTransaction_impl<uint256>;
-class CBitcoinAddress;
+template <typename ENC, typename VER> class CBitcoinAddress_impl;
+class CBase58Data;
+class VERBase58;
+using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data, VERBase58>;
 
 namespace Script_const {
     // Maximum number of bytes pushable to the stack

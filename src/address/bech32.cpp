@@ -3,12 +3,11 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <address/bech32.h>
-#include <debugcs/debugcs.h>
 
 namespace
 {
 
-typedef std::vector<uint8_t> data;
+typedef bech32_vector data;
 
 /** The Bech32 character set for encoding. */
 const char* CHARSET = "qpzry9x8gf2tvdw0s3jn54khce6mua7l";
@@ -145,20 +144,19 @@ namespace bech32
 {
 
 /** Encode a Bech32 string. */
-std::string Encode(const std::string& hrp, const data& values) {
+std::string Encode(const std::string &hrp, const data &values) {
     data checksum = CreateChecksum(hrp, values);
     data combined = Cat(values, checksum);
     std::string ret = hrp + '1';
     ret.reserve(ret.size() + combined.size());
     for (const auto c : combined) {
-        //debugcs::instance() << "Bech32 Encode: " << std::string(std::to_string(c)).c_str() << debugcs::endl();
         ret += CHARSET[c];
     }
     return ret;
 }
 
 /** Decode a Bech32 string. */
-std::pair<std::string, data> Decode(const std::string& str) {
+std::pair<std::string, data> Decode(const std::string &str) {
     bool lower = false, upper = false;
     for (size_t i = 0; i < str.size(); ++i) {
         unsigned char c = str[i];
@@ -185,31 +183,10 @@ std::pair<std::string, data> Decode(const std::string& str) {
     for (size_t i = 0; i < pos; ++i) {
         hrp += LowerCase(str[i]);
     }
-    if (!VerifyChecksum(hrp, values)) {
+    if (! VerifyChecksum(hrp, values)) {
         return {};
     }
     return {hrp, data(values.begin(), values.end() - 6)};
 }
 
 } // namespace bech32
-
-//
-// SorachanCoin: bech32 and nothrow test class
-//
-#ifdef DEBUG
-# include <random/random.h>
-class bech32_nothrow_test {
-public:
-    void _test_ref(int &ri) {
-        (void)ri;
-    }
-    int get_n() {
-        return 3;
-    }
-    bech32_nothrow_test() {
-        std::string _str = "Sora_test";
-        // _test_ref(get_n()); error OK
-    }
-};
-//bech32_nothrow_test __test_obj;
-#endif

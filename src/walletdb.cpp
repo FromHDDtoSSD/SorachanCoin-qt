@@ -5,7 +5,7 @@
 
 #include "walletdb.h"
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
 
 #include <iostream>
 #include <fstream>

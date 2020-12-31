@@ -5,6 +5,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// SECP256k1: private key
+
 #ifndef BITCOIN_PRIVKEY_H
 #define BITCOIN_PRIVKEY_H
 
@@ -222,6 +224,46 @@ public:
 
     //! PrivKey ERROR callback
     static int PrivKey_ERROR_callback(void (*fn)()=nullptr) noexcept {if(fn) fn(); return 0;}
+};
+
+// BIP32
+struct CExtFirmKey {
+    unsigned char nDepth;
+    unsigned char vchFingerprint[4];
+    unsigned int nChild;
+    ChainCode chaincode;
+    CFirmKey key;
+
+    friend bool operator==(const CExtFirmKey &a, const CExtFirmKey &b) noexcept {
+        return a.nDepth == b.nDepth &&
+            ::memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], sizeof(vchFingerprint)) == 0 &&
+            a.nChild == b.nChild &&
+            a.chaincode == b.chaincode &&
+            a.key == b.key;
+    }
+
+    void Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const noexcept;
+    void Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
+    bool Derive(CExtFirmKey &out, unsigned int nChild, bool *fret) const;
+    CExtPubKey Neuter(bool *fret) const noexcept;
+    void SetSeed(const unsigned char *seed, unsigned int nSeedLen);
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        unsigned int len = CExtPubKey::BIP32_EXTKEY_SIZE;
+        ::WriteCompactSize(s, len);
+        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
+        Encode(code);
+        s.write((const char *)&code[0], len);
+    }
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        unsigned int len = compact_size::manage::ReadCompactSize(s);
+        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
+        if (len != CExtPubKey::BIP32_EXTKEY_SIZE)
+            throw std::runtime_error("Invalid extended key size\n");
+        s.read((char *)&code[0], len);
+        Decode(code);
+    }
 };
 
 #endif

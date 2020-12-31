@@ -336,13 +336,21 @@ std::string entry::HelpMessage()
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
 //
+//#define INIT_DEBUG_CS
+#ifdef INIT_DEBUG_CS
+# define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
+#else
+# define I_DEBUG_CS(str)
+#endif
 bool entry::AppInit2()
 {
-    // ********************************************************* log open
+    // ********************************************************* Step 0: log open
+    I_DEBUG_CS("Step 0: log open")
     InitLogging();
     OpenDebugFile();
 
     // ********************************************************* Step 1: setup
+    I_DEBUG_CS("Step 1: setup")
 
 #ifdef _MSC_VER
     // Turn off Microsoft heap dump noise
@@ -404,6 +412,7 @@ bool entry::AppInit2()
 #endif
 
     // ********************************************************* Step 2: parameter interactions
+    I_DEBUG_CS("Step 2: parameter interactions")
 
     args_uint::nNodeLifespan = map_arg::GetArgUInt("-addrlifespan", 7);
     args_bool::fUseFastIndex = map_arg::GetBoolArg("-fastindex", true);
@@ -472,6 +481,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+    I_DEBUG_CS("Step 3: parameter-to-internal-flags")
 
     //
     // -par=0 means autodetect, but block_info::nScriptCheckThreads==0 means no concurrency
@@ -549,6 +559,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+    I_DEBUG_CS("Step 4: application initialization: dir lock, daemonize, pidfile, debug log")
 
     std::string strDataDir = iofs::GetDataDir().string();
     strWalletFileName = map_arg::GetArg("-wallet", "wallet.dat");
@@ -621,6 +632,7 @@ bool entry::AppInit2()
     int64_t nStart;
 
     // ********************************************************* Step 5: verify database integrity
+    I_DEBUG_CS("Step 5: verify database integrity")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
 
@@ -651,6 +663,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 6: network initialization
+    I_DEBUG_CS("Step 6: network initialization")
 
     int nSocksVersion = map_arg::GetArgInt("-socks", 5);
 
@@ -822,6 +835,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 7: load blockchain
+    I_DEBUG_CS("Step 7: load blockchain")
 
     if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
         std::string msg = strprintfc(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
@@ -905,6 +919,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 8: load wallet
+    I_DEBUG_CS("Step 8: load wallet")
 
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
@@ -1022,6 +1037,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 9: import blocks
+    I_DEBUG_CS("Step 9: import blocks")
 
     if (map_arg::GetMapArgsCount("-loadblock")) {
         CClientUIInterface::uiInterface.InitMessage(_("Importing blockchain data file."));
@@ -1049,6 +1065,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 10: load peers
+    I_DEBUG_CS("Step 10: load peers")
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading addresses..."));
     printf("Loading addresses...\n");
@@ -1064,6 +1081,7 @@ bool entry::AppInit2()
     printf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
 
     // ********************************************************* Step 11: start node
+    I_DEBUG_CS("Step 11: start node")
 
     if (! file_open::CheckDiskSpace()) {
         return false;
@@ -1086,14 +1104,16 @@ bool entry::AppInit2()
         bitthread::manage::NewThread(bitrpc::ThreadRPCServer, NULL);
     }
 
-    // ********************************************************* Step 13: IP collection thread
+    // ********************************************************* Step 12: IP collection thread
+    I_DEBUG_CS("Step 12: IP collection thread")
 
     ip_coll::strCollectorCommand = map_arg::GetArg("-peercollector", "");
     if (!args_bool::fTestNet && ip_coll::strCollectorCommand != "") {
         bitthread::manage::NewThread(ip_coll::ThreadIPCollector, NULL);
     }
 
-    // ********************************************************* Step 14: finished
+    // ********************************************************* Step 13: finished
+    I_DEBUG_CS("Step 13: finished")
 
     CClientUIInterface::uiInterface.InitMessage(_("Done loading"));
     printf("Done loading\n");

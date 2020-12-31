@@ -6,7 +6,7 @@
 #include <vector>
 
 #include "addresstablemodel.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "key.h"
 #include "main.h"
 #include "multisigaddressentry.h"

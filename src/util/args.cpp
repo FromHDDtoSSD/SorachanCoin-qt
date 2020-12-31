@@ -154,7 +154,7 @@ bool map_arg::ParseParameters(int argc, const char *const argv[], std::string *e
             str = str.substr(0, is_index);
         }
 #ifdef WIN32
-        std::transform(str.begin(), str.end(), str.begin(), ToLower);
+        std::transform(str.begin(), str.end(), str.begin(), strenc::ToLower);
         if (boost::algorithm::starts_with(str, "/"))
             str = "-" + str.substr(1);
 #endif
@@ -200,21 +200,21 @@ std::string map_arg::GetArg(const std::string &strArg, const std::string &strDef
 
 int64_t map_arg::GetArg(const std::string &strArg, int64_t nDefault) {
     if (mapArgs.count(strArg)) {
-        return ::atoi64(mapArgs[strArg]);
+        return strenc::atoi64(mapArgs[strArg]);
     }
     return nDefault;
 }
 
 int32_t map_arg::GetArgInt(const std::string &strArg, int32_t nDefault) {
     if (mapArgs.count(strArg)) {
-        return ::strtol(mapArgs[strArg]);
+        return strenc::strtol(mapArgs[strArg]);
     }
     return nDefault;
 }
 
 uint32_t map_arg::GetArgUInt(const std::string &strArg, uint32_t nDefault) {
     if (mapArgs.count(strArg)) {
-        return ::strtoul(mapArgs[strArg]);
+        return strenc::strtoul(mapArgs[strArg]);
     }
     return nDefault;
 }
@@ -224,7 +224,7 @@ bool map_arg::GetBoolArg(const std::string &strArg, bool fDefault /*= false*/) {
         if (mapArgs[strArg].empty()) {
             return true;
         }
-        return (::atoi(mapArgs[strArg]) != 0);
+        return (strenc::atoi(mapArgs[strArg]) != 0);
     }
     return fDefault;
 }
@@ -569,7 +569,7 @@ bool ArgsManager::ParseParameters(int argc, const char *const argv[], std::strin
             key.erase(is_index);
         }
 #ifdef WIN32
-        std::transform(key.begin(), key.end(), key.begin(), ToLower);
+        std::transform(key.begin(), key.end(), key.begin(), strenc::ToLower);
         if (key[0] == '/')
             key[0] = '-';
 #endif
@@ -673,7 +673,7 @@ std::string ArgsManager::GetArg(const std::string &strArg, const std::string &st
 int64_t ArgsManager::GetArg(const std::string &strArg, int64_t nDefault) const {
     if (IsArgNegated(strArg)) return 0;
     std::pair<bool, std::string> found_res = ArgsManagerHelper::GetArg(*this, strArg);
-    if (found_res.first) return atoi64(found_res.second);
+    if (found_res.first) return strenc::atoi64(found_res.second);
     return nDefault;
 }
 
@@ -933,7 +933,7 @@ std::string HelpMessageGroup(const std::string &message) {
 std::string HelpMessageOpt(const std::string &option, const std::string &message) {
     return std::string(optIndent,' ') + std::string(option) +
            std::string("\n") + std::string(msgIndent,' ') +
-           FormatParagraph(message, screenWidth - msgIndent, msgIndent) +
+           strenc::FormatParagraph(message, screenWidth - msgIndent, msgIndent) +
            std::string("\n\n");
 }
 

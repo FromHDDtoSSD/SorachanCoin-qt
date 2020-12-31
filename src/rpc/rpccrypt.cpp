@@ -7,7 +7,7 @@
 #include <wallet.h>
 #include <rpc/bitcoinrpc.h>
 #include <init.h>
-#include <base58.h>
+#include <address/base58.h>
 
 json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 2) {

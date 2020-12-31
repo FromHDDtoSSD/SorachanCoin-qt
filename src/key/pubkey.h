@@ -5,6 +5,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+// SECP256K1: public key
+
 #ifndef BITCOIN_PUBKEY_H
 #define BITCOIN_PUBKEY_H
 
@@ -20,9 +22,9 @@
 class CKey;
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> key_vector;
+using key_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> key_vector;
+using key_vector = std::vector<uint8_t>;
 #endif
 
 /** A reference to a CKey: the Hash160 of its serialized public key */
@@ -44,11 +46,6 @@ class CPubKey
 {
     friend class CKey;
 public:
-    enum key_mode {
-        SECP256K1,
-        LAMPORT,
-    } mode_;
-
     //! secp256k1
     //structure: struct secp256k1_data {BIGNUM *r; BIGNUM *s;};
     //about size: header=>1 + r=>32 + s=>32 = 65 byte
@@ -467,12 +464,7 @@ public:
 };
 
 // BIP32
-class CExtPubKey {
-    CExtPubKey(const CExtPubKey &)=delete;
-    CExtPubKey(CExtPubKey &&)=delete;
-    CExtPubKey &operator=(const CExtPubKey &)=delete;
-    CExtPubKey &operator=(CExtPubKey &&)=delete;
-public:
+struct CExtPubKey {
     static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
@@ -488,28 +480,28 @@ public:
                a.pubkey == b.pubkey;
     }
 
-    void Invalidate(unsigned char (*code)[BIP32_EXTKEY_SIZE]) const noexcept {
-        (*code)[0] = 0xFF;
+    void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const noexcept {
+        code[0] = 0xFF;
     }
-    void Encode(unsigned char (*code)[BIP32_EXTKEY_SIZE]) const noexcept;
-    void Decode(const unsigned char (*code)[BIP32_EXTKEY_SIZE]) noexcept;
+    void Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const noexcept;
+    void Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
     bool Derive(CExtPubKey &out, unsigned int nChild) const noexcept;
 
-    /*
     void Serialize(CSizeComputer &s) const {
         // Optimized implementation for ::GetSerializeSize that avoids copying.
         s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
     }
-    */
+    /*
     unsigned int GetSerializeSize() const {
         return BIP32_EXTKEY_SIZE + 1;
     }
+    */
     template <typename Stream>
     void Serialize(Stream &s) const {
         unsigned int len = BIP32_EXTKEY_SIZE;
         compact_size::manage::WriteCompactSize(s, len);
         unsigned char code[BIP32_EXTKEY_SIZE];
-        Encode(&code);
+        Encode(code);
         s.write((const char *)&code[0], len);
     }
     template <typename Stream>
@@ -518,7 +510,7 @@ public:
         unsigned char code[BIP32_EXTKEY_SIZE];
         if (len != BIP32_EXTKEY_SIZE) {
             if(len <= 0) {
-                Invalidate(&code);
+                Invalidate(code);
                 return;
             }
             char dummy;
@@ -526,10 +518,10 @@ public:
                 s.read((char *)&dummy, sizeof(char));
                 cleanse::OPENSSL_cleanse(&dummy, sizeof(char));
             }
-            Invalidate(&code);
+            Invalidate(code);
         } else {
             s.read((char *)&code[0], len);
-            Decode(&code);
+            Decode(code);
         }
     }
 };

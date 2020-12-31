@@ -2,7 +2,7 @@
 #define COINCONTROL_H
 //
 
-#include "base58.h"
+#include "address/base58.h"
 
 //
 // Coin Control Features

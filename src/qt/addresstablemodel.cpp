@@ -4,7 +4,7 @@
 #include "walletmodel.h"
 
 #include "wallet.h"
-#include "base58.h"
+#include "address/key_io.h"
 
 #include <QFont>
 #include <QColor>

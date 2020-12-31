@@ -10,6 +10,7 @@
 #include <ui_interface.h>
 #include <boost/algorithm/string/join.hpp>
 #include <thread/threadsafety.h>
+#include <util/strencodings.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
@@ -712,7 +713,7 @@ bool bitstr::ParseMoney(const char *pszIn, int64_t &nRet) {
         return false;
     if (nUnits < 0 || nUnits > util::COIN)
         return false;
-    int64_t nWhole = ::atoi64(strWhole);
+    int64_t nWhole = strenc::atoi64(strWhole);
     int64_t nValue = nWhole * util::COIN + nUnits;
     nRet = nValue;
     return true;

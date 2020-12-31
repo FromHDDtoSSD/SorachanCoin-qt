@@ -13,6 +13,12 @@
 #include <map>
 #include <QString>
 
+// throw Qt Error
+class qt_error : public std::runtime_error {
+public:
+    explicit qt_error(const std::string &err) : runtime_error(err) {}
+};
+
 // SorachanCoin: QtSecureAllocator
 // singleton class
 using namespace latest_crypto;

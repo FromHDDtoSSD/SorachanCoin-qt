@@ -13,6 +13,7 @@
 #include <main.h>
 #include <sync/sync.h>
 #include <util.h>
+#include <address/key_io.h>
 
 namespace {
 const Script_util::valtype vchFalse((uint32_t)0);
@@ -1942,6 +1943,9 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
     case TX_MULTISIG:
         scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
         return (SignN(vSolutions, keystore, hash, nHashType, scriptSigRet));
+    default:
+        assert(!"Witness is not supported.");
+        return false;
     }
     return false;
 }
@@ -1966,6 +1970,9 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statyp
         return vSolutions[0][0] + 1;
     case TX_SCRIPTHASH:
         return 1; // doesn't include args needed by the script
+    default:
+        assert(!"Witness is not supported.");
+        return -1;
     }
     return -1;
 }
@@ -2004,31 +2011,6 @@ unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CK
     }
     return nResult;
 }
-
-class CKeyStoreIsMineVisitor : public boost::static_visitor<bool> {
-private:
-    CKeyStoreIsMineVisitor()=delete;
-    CKeyStoreIsMineVisitor(const CKeyStoreIsMineVisitor &)=delete;
-    CKeyStoreIsMineVisitor(CKeyStoreIsMineVisitor &)=delete;
-    CKeyStoreIsMineVisitor &operator=(const CKeyStoreIsMineVisitor &)=delete;
-    CKeyStoreIsMineVisitor &operator=(CKeyStoreIsMineVisitor &&)=delete;
-
-    const CKeyStore *keystore;
-public:
-    explicit CKeyStoreIsMineVisitor(const CKeyStore *keystoreIn) : keystore(keystoreIn) {}
-    bool operator()(const CNoDestination &dest) const noexcept { return false; }
-    bool operator()(const CKeyID &keyID) const { return keystore->HaveKey(keyID); }
-    bool operator()(const CScriptID &scriptID) const { return keystore->HaveCScript(scriptID); }
-};
-
-/*** unused: A CTxDestination is the internal data type encoded in a CBitcoinAddress.
-isminetype IsMine(const CKeyStore &keystore, const CTxDestination &dest)
-{
-    CScript script;
-    script.SetDestination(dest);
-    return Script_util::IsMine(keystore, script);
-}
-***/
 
 isminetype Script_util::IsMine(const CKeyStore &keystore, const CBitcoinAddress &dest) {
     CScript script;
@@ -2203,6 +2185,12 @@ public:
     }
 
     void operator()(const CNoDestination &none) {}
+
+    void operator()(const WitnessV0KeyHash &id) const {}
+
+    void operator()(const WitnessV0ScriptHash &id) const {}
+
+    void operator()(const WitnessUnknown &id) const {}
 };
 } // namespace
 
@@ -2474,14 +2462,15 @@ CScript Script_util::CombineSignatures(const CScript &scriptPubKey, const CTrans
     return Script_util::CombineSignatures(scriptPubKey, txTo, nIn, txType, vSolutions, stack1, stack2);
 }
 
-class CScriptVisitor : public boost::static_visitor<bool> {
+namespace {
+class CScriptVisitor : public boost::static_visitor<bool>
+{
 private:
     CScriptVisitor()=delete;
     CScriptVisitor(const CScriptVisitor &)=delete;
     CScriptVisitor(CScriptVisitor &&)=delete;
     CScriptVisitor &operator=(const CScriptVisitor &)=delete;
     CScriptVisitor &operator=(CScriptVisitor &&)=delete;
-
     CScript *script;
 public:
     explicit CScriptVisitor(CScript *scriptin) noexcept {
@@ -2494,17 +2483,40 @@ public:
     }
 
     bool operator()(const CKeyID &keyID) const {
+        using namespace ScriptOpcodes;
         script->clear();
-        *script << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASH160 << keyID << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG;
+        *script << OP_DUP << OP_HASH160 << keyID << OP_EQUALVERIFY << OP_CHECKSIG;
         return true;
     }
 
     bool operator()(const CScriptID &scriptID) const {
+        using namespace ScriptOpcodes;
         script->clear();
-        *script << ScriptOpcodes::OP_HASH160 << scriptID << ScriptOpcodes::OP_EQUAL;
+        *script << OP_HASH160 << scriptID << OP_EQUAL;
+        return true;
+    }
+
+    bool operator()(const WitnessV0KeyHash &id) const {
+        using namespace ScriptOpcodes;
+        script->clear();
+        *script << OP_0 << CScript::ToByteVector(id);
+        return true;
+    }
+
+    bool operator()(const WitnessV0ScriptHash &id) const {
+        using namespace ScriptOpcodes;
+        script->clear();
+        *script << OP_0 << CScript::ToByteVector(id);
+        return true;
+    }
+
+    bool operator()(const WitnessUnknown &id) const {
+        script->clear();
+        *script << CScript::EncodeOP_N(id.version) << Script_util::valtype(id.program, id.program + id.length);
         return true;
     }
 };
+} // namespace
 
 void CScript::SetDestination(const CTxDestination &dest) {
     boost::apply_visitor(CScriptVisitor(this), dest);

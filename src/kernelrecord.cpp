@@ -2,7 +2,7 @@
 #include "kernelrecord.h"
 
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
 #include <miner/diff.h>
 #include <block/block_check.h>
 

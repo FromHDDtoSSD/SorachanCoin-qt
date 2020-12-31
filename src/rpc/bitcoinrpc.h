@@ -20,7 +20,7 @@
 
 #include <util.h>
 #include <checkpoints.h>
-#include <base58.h>
+#include <address/base58.h>
 
 //
 // HTTP status codes

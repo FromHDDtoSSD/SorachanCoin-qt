@@ -5,7 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <boost/assign/list_of.hpp>
-#include <base58.h>
+#include <address/base58.h>
 #include <rpc/bitcoinrpc.h>
 #include <txdb.h>
 #include <init.h>

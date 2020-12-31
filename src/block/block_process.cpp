@@ -34,7 +34,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
     seed::RandAddSeedPerfmon();
     if (args_bool::fDebug)
         printf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
-    if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
+    if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(strenc::atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
         printf("dropmessagestest DROPPING RECV MESSAGE\n");
         return true;
     }

@@ -414,7 +414,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/kernelrecord.h \
     src/alert.h \
     src/addrman.h \
-    src/base58.h \
+    src/address/base58.h \
+    src/address/key_io.h \
     src/bignum.h \
     src/checkpoints.h \
     src/compat.h \
@@ -662,7 +663,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/multisiginputentry.cpp \
     src/qt/multisigdialog.cpp \
     src/qt/secondauthdialog.cpp \
-    src/base58.cpp \
+    src/address/base58.cpp \
+    src/address/key_io.cpp \
     src/cryptogram.cpp \
     src/ecies.cpp \
     src/ipcollector.cpp \

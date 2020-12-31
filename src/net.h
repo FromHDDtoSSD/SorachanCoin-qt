@@ -17,11 +17,12 @@
 # include <arpa/inet.h>
 #endif
 
-#include "mruset.h"
-#include "netbase.h"
-#include "addrman.h"
-#include "hash.h"
+#include <mruset.h>
+#include <netbase.h>
+#include <addrman.h>
+#include <hash.h>
 #include <block/block.h>
+#include <util/strencodings.h>
 
 class CRequestTracker;
 class CNode;
@@ -701,7 +702,7 @@ public:
     }
 
     void EndMessage() {
-        if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
+        if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(strenc::atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
             printf("dropmessages DROPPING SEND MESSAGE\n");
             AbortMessage();
             return;

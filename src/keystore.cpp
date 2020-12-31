@@ -5,7 +5,7 @@
 
 #include <keystore.h>
 #include <script/script.h>
-#include <base58.h>
+#include <address/base58.h>
 #include <wallet.h> // CWallet::fWalletUnlockMintOnly
 
 bool CBasicKeyStore::AddKey(const CKey &key)

@@ -146,13 +146,35 @@ namespace json_spirit
         String_type name_;
         Value_type value_;
     };
+    template <typename String_type, typename Value_type, typename Pair_type>
+    class json_vector : public std::vector<Pair_type> {
+    public:
+        bool exists(const String_type &name) const {
+            for(const Pair_type &data: *this) {
+                if(data.name_ == name) return true;
+            }
+            return false;
+        }
+        const Value_type &operator[](const String_type &key) const {
+            for(const Pair_type &data: *this) {
+                if(data.name_ == key) return data.value_;
+            }
+            return Value_type::null;
+        }
+        json_vector &operator<<(const json_vector &&)=delete;
+        json_vector &operator<<(const json_vector &in) {
+            for(const Pair_type &data: in)
+                this->push_back(data);
+            return *this;
+        }
+    };
     template<typename String>
     struct Config_vector {
         using String_type = String;
         using Value_type = Value_impl<Config_vector>;
         using Pair_type = Pair_impl<Config_vector>;
         using Array_type = std::vector<Value_type>;
-        using Object_type = std::vector<Pair_type>;
+        using Object_type = json_vector<String_type, Value_type, Pair_type>;
 
         static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) {
             obj.push_back(Pair_type(name, value));

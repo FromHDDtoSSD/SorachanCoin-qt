@@ -2,7 +2,7 @@
 #include "ui_sendcoinsdialog.h"
 
 #include "init.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "addressbookpage.h"

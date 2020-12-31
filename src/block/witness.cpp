@@ -12,7 +12,7 @@ std::string CScriptWitness::ToString() const
         if (i) {
             ret += ", ";
         }
-        ret += HexStr(stack[i]);
+        ret += strenc::HexStr(stack[i]);
     }
     return ret + ")";
 }
