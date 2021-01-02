@@ -5,8 +5,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <boost/assign/list_of.hpp>
-
 #include "kernel.h"
 #include "kernel_worker.h"
 #include "txdb.h"
@@ -17,17 +15,21 @@ unsigned int bitkernel::nModifierUpgradeTime = 0;
 // Hard checkpoints of stake modifiers to ensure they are deterministic
 //
 std::map<int, unsigned int> bitkernel::mapStakeModifierCheckpoints =
-    boost::assign::map_list_of
-        ( 0, 0xe00670b )
-    ;
+    {
+        { 0, 0xe00670bu },
+        { 377262, 0x10e0e614u },
+        { 426387, 0xdf71ab5fu },
+        { 434550, 0x2511363fu }
+    };
 
 //
 // Hard checkpoints of stake modifiers to ensure they are deterministic (testNet)
 //
 std::map<int, unsigned int> bitkernel::mapStakeModifierCheckpointsTestNet =
-    boost::assign::map_list_of
-        ( 0, 0xfd11f4e7u )
-    ;
+    {
+        { 0, 0xfd11f4e7u }
+        //{ 10, 0xfd11f4e7u } // [OK] NG test
+    };
 
 // Whether the given block is subject to new modifier protocol
 bool bitkernel::IsFixedModifierInterval(unsigned int nTimeBlock)
@@ -520,7 +522,10 @@ uint32_t bitkernel::GetStakeModifierChecksum(const CBlockIndex *pindex)
     ss << pindex->nFlags << pindex->hashProofOfStake << pindex->nStakeModifier;
     uint256 hashChecksum = hash_basis::Hash(ss.begin(), ss.end());
     hashChecksum >>= (256 - 32);
-    return static_cast<uint32_t>(hashChecksum.Get64());
+
+    uint32_t ret = static_cast<uint32_t>(hashChecksum.Get64());
+    //printf("StakeModifierChecksum: nHeight_%d checksum_%x\n", pindex->nHeight, ret);
+    return ret;
 }
 
 // Check stake modifier hard checkpoints

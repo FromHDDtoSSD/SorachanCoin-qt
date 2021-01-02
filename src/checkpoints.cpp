@@ -2,7 +2,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <boost/assign/list_of.hpp> // for 'map_list_of()'
 #include <boost/foreach.hpp>
 #include <algorithm>
 
@@ -29,36 +28,37 @@ std::string CSyncCheckpoint::strMasterPrivKey = "";
 // checkpoint and checkpoint last time
 //
 const MapCheckpoints Checkpoints::manage::mapCheckpoints = 
-        boost::assign::map_list_of
-        ( 0, block_param::hashGenesisBlock )
-        ( 1275, uint256("0x000000dd7de58fad01cfa1799b5809df4c1d9c164fc49da39eb2954531e1a36c") )    // 1533654441
-        ( 4930, uint256("0x000000153d5cf5fed61add322826c8ec6f32ffe5f99a714fcbf5ac53aee09b14") )    // 1534233069
-        ( 6624, uint256("0x5130b59e93325dd0a2332f99edb763cdb4189a4e6b0cc481023d1a21fe2327c5") )    // 1534481948
-        ( 18370, uint256("0x00000000f02a6a28449fbec9b50f7eb9e1ccd283ee7130e3ef159111aee803e9") )   // 1536369343
-        ( 26720, uint256("0x00000001edb4be82456835ed10942e0c49e2820021b01753872787738f556562") )   // 1537575003
-        ( 46092, uint256("0x000000003f7e00cee468b4f8ba08cdf804480b8f31315295fa1db223d4183718") )   // 1540469131
-        ( 60880, uint256("0x0000000032ecb49115ca08061cdc29ca7bc9036549d81ecb8f47fd6630cd584e") )   // 1543067199
-        ( 71270, uint256("0x000000001ff29e42c75e57fde60b0fd624c2522bd782a792016fa89f4f0a40c7") )   // 1544927452
-        ( 155369, uint256("0x000000065f542624a28575f960ba5d049f8a9be17996767c0911b20cf508177e") )  // 1560485640
-        ( 239007, uint256("0x0000000000ea3dad03ca3273aa758085933d6e01ea7fc0a560b81c8c137e21c3") )  // 1574467654
-        ( 351634, uint256("0x00000000000084b537f65746dbd28a0abc87adadad97231c7b8bb054027a31f6") )  // 1594278898
-        ;
+    {
+        { 0, block_param::hashGenesisBlock },
+        { 1275, uint256("0x000000dd7de58fad01cfa1799b5809df4c1d9c164fc49da39eb2954531e1a36c") },    // 1533654441
+        { 4930, uint256("0x000000153d5cf5fed61add322826c8ec6f32ffe5f99a714fcbf5ac53aee09b14") },    // 1534233069
+        { 6624, uint256("0x5130b59e93325dd0a2332f99edb763cdb4189a4e6b0cc481023d1a21fe2327c5") },    // 1534481948
+        { 18370, uint256("0x00000000f02a6a28449fbec9b50f7eb9e1ccd283ee7130e3ef159111aee803e9") },   // 1536369343
+        { 26720, uint256("0x00000001edb4be82456835ed10942e0c49e2820021b01753872787738f556562") },   // 1537575003
+        { 46092, uint256("0x000000003f7e00cee468b4f8ba08cdf804480b8f31315295fa1db223d4183718") },   // 1540469131
+        { 60880, uint256("0x0000000032ecb49115ca08061cdc29ca7bc9036549d81ecb8f47fd6630cd584e") },   // 1543067199
+        { 71270, uint256("0x000000001ff29e42c75e57fde60b0fd624c2522bd782a792016fa89f4f0a40c7") },   // 1544927452
+        { 155369, uint256("0x000000065f542624a28575f960ba5d049f8a9be17996767c0911b20cf508177e") },  // 1560485640
+        { 239007, uint256("0x0000000000ea3dad03ca3273aa758085933d6e01ea7fc0a560b81c8c137e21c3") },  // 1574467654
+        { 351634, uint256("0x00000000000084b537f65746dbd28a0abc87adadad97231c7b8bb054027a31f6") },  // 1594278898
+        { 434550, uint256("0x0000000000060688d53e999a30ad6165fe2d18262820b597aab2f68eaea91359") }   // 1609580025
+    };
 
 const MapCheckpoints Checkpoints::manage::mapCheckpointsTestnet = 
-        boost::assign::map_list_of
-        ( 0, block_param::hashGenesisBlockTestNet )
-        ( 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") )    // 1533660799
-        ;
+    {
+        { 0, block_param::hashGenesisBlockTestNet },
+        { 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }     // 1533660799
+        //{ 15330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }  // [OK] NG test 1533660799
+    };
 
-const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1594278898;
+const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1609580025;
 const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1533660799;
 
 //
 // Banned
 //
 const ListBannedBlocks Checkpoints::manage::listBanned;
-    // boost::assign::list_of
-    // ( uint256("0x ... ") );
+    // { uint256("0x ... ") };
 
 bool Checkpoints::manage::CheckHardened(int nHeight, const uint256 &hash)
 {
