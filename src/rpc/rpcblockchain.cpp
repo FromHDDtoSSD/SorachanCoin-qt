@@ -81,7 +81,7 @@ double CRPCTable::GetPoSKernelPS() noexcept {
     return dStakeKernelsTriedAvg / nStakesTime;
 }
 
-json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail) noexcept {
+json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail) {
     json_spirit::Object result;
     result.push_back(json_spirit::Pair("hash", block.GetHash().GetHex()));
 
@@ -152,6 +152,7 @@ json_spirit::Value CRPCTable::getblockcount(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(block_info::nBestHeight);
 }
 
+/*
 class CWaitforthread {
 private:
     mutable std::thread th;
@@ -161,9 +162,7 @@ public:
 };
 
 // waitforblock
-
-
-
+*/
 
 json_spirit::Value CRPCTable::getdifficulty(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 0) {
@@ -195,7 +194,7 @@ json_spirit::Value CRPCTable::settxfee(const json_spirit::Array &params, CBitrpc
     return data.JSONRPCSuccess(true);
 }
 
-json_spirit::Value CRPCTable::getrawmempool(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getrawmempool(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getrawmempool\n"
@@ -247,7 +246,7 @@ json_spirit::Value CRPCTable::getblockqhash(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(tt.GetHex());
 }
 
-json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getblock <hash> [txinfo]\n"
@@ -270,7 +269,7 @@ json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, CBitrpc
     return data.JSONRPCSuccess(blockToJSON(block, pblockindex, params.size() > 1 ? fparam1 : false));
 }
 
-json_spirit::Value CRPCTable::getblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getblockbynumber(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getblockbynumber <number> [txinfo]\n"
@@ -315,7 +314,7 @@ bool CRPCTable::ExportBlock(const std::string &strBlockHash, const CDataStream &
     }
 }
 
-json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "dumpblock <hash> [destination]\n"
@@ -344,7 +343,7 @@ json_spirit::Value CRPCTable::dumpblock(const json_spirit::Array &params, CBitrp
     return data.JSONRPCSuccess(util::HexStr(ssBlock.begin(), ssBlock.end()));
 }
 
-json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "dumpblockbynumber <number>  [destination]\n"
@@ -377,7 +376,7 @@ json_spirit::Value CRPCTable::dumpblockbynumber(const json_spirit::Array &params
 }
 
 // get information of sync-checkpoint
-json_spirit::Value CRPCTable::getcheckpoint(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getcheckpoint(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getcheckpoint\n"
@@ -390,21 +389,21 @@ json_spirit::Value CRPCTable::getcheckpoint(const json_spirit::Array &params, CB
     CBlockIndex *pindexCheckpoint = block_info::mapBlockIndex[Checkpoints::manage::getHashSyncCheckpoint()];
     result.push_back(json_spirit::Pair("height", pindexCheckpoint->get_nHeight()));
     result.push_back(json_spirit::Pair("timestamp", util::DateTimeStrFormat(pindexCheckpoint->GetBlockTime()).c_str()));
-    if (Checkpoints::checkpointMessage.vchSig.size() != 0) {
+    if (Checkpoints::checkpointMessage.Get_vchSig().size() != 0) {
         json_spirit::Object msgdata;
         CUnsignedSyncCheckpoint checkpoint;
 
-        CDataStream sMsg(Checkpoints::checkpointMessage.vchMsg, SER_NETWORK, version::PROTOCOL_VERSION);
+        CDataStream sMsg(Checkpoints::checkpointMessage.Get_vchMsg(), SER_NETWORK, version::PROTOCOL_VERSION);
         sMsg >> checkpoint;
 
         json_spirit::Object parsed; // message version and data (block hash)
-        parsed.push_back(json_spirit::Pair("version", checkpoint.nVersion));
-        parsed.push_back(json_spirit::Pair("hash", checkpoint.hashCheckpoint.GetHex().c_str()));
+        parsed.push_back(json_spirit::Pair("version", checkpoint.Get_nVersion()));
+        parsed.push_back(json_spirit::Pair("hash", checkpoint.Get_hashCheckpoint().GetHex().c_str()));
         msgdata.push_back(json_spirit::Pair("parsed", parsed));
 
         json_spirit::Object raw; // raw checkpoint message data
-        raw.push_back(json_spirit::Pair("data", util::HexStr(Checkpoints::checkpointMessage.vchMsg).c_str()));
-        raw.push_back(json_spirit::Pair("signature", util::HexStr(Checkpoints::checkpointMessage.vchSig).c_str()));
+        raw.push_back(json_spirit::Pair("data", util::HexStr(Checkpoints::checkpointMessage.Get_vchMsg()).c_str()));
+        raw.push_back(json_spirit::Pair("signature", util::HexStr(Checkpoints::checkpointMessage.Get_vchSig()).c_str()));
         msgdata.push_back(json_spirit::Pair("raw", raw));
 
         result.push_back(json_spirit::Pair("data", msgdata));

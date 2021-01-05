@@ -575,7 +575,7 @@ bool Script_util::CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetyp
     return true;
 }
 
-bool Script_util::EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) noexcept {
+bool Script_util::EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) {
     using namespace ScriptOpcodes;
     auto CheckLockTime = [](const int64_t &nLockTime, const CTransaction &txTo, unsigned int nIn) {
         // There are two kinds of nLockTime: lock-by-blockheight

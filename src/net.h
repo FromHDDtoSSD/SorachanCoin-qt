@@ -2,7 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_NET_H
 #define BITCOIN_NET_H
 
@@ -11,12 +11,10 @@
 #ifndef Q_MOC_RUN
 # include <boost/array.hpp>
 #endif
-#include <openssl/rand.h>
-
+#include <random/random.h>
 #ifndef WIN32
 # include <arpa/inet.h>
 #endif
-
 #include <mruset.h>
 #include <netbase.h>
 #include <addrman.h>
@@ -767,7 +765,7 @@ public:
 
     void PushRequest(const char *pszCommand, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -778,7 +776,7 @@ public:
     template<typename T1>
     void PushRequest(const char *pszCommand, const T1 &a1, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -789,7 +787,7 @@ public:
     template<typename T1, typename T2>
     void PushRequest(const char *pszCommand, const T1 &a1, const T2 &a2, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);

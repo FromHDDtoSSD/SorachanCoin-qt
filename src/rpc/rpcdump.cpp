@@ -31,7 +31,7 @@ public:
     }
 };
 
-json_spirit::Value CRPCTable::importprivkey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::importprivkey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 3) {
         return data.JSONRPCSuccess(
             "importprivkey <privkey> [label] [rescan=true]\n"
@@ -92,7 +92,7 @@ json_spirit::Value CRPCTable::importprivkey(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 3) {
         return data.JSONRPCSuccess(
             "importaddress <address> [label] [rescan=true]\n"
@@ -150,7 +150,7 @@ json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::removeaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::removeaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "removeaddress 'address'\n"
@@ -190,7 +190,7 @@ json_spirit::Value CRPCTable::removeaddress(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::importwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::importwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "importwallet <filename>\n"
@@ -208,7 +208,7 @@ json_spirit::Value CRPCTable::importwallet(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::dumpprivkey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumpprivkey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "dumpprivkey <coinaddress>\n"
@@ -238,7 +238,7 @@ json_spirit::Value CRPCTable::dumpprivkey(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(CBitcoinSecret(vchSecret, fCompressed).ToString());
 }
 
-json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 3) {
         return data.JSONRPCSuccess(
             "dumppem <coinaddress> <filename> <passphrase>\n"
@@ -275,7 +275,7 @@ json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, CBitrpcD
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::dumpwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumpwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "dumpwallet <filename>\n"
@@ -293,7 +293,7 @@ json_spirit::Value CRPCTable::dumpwallet(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::dumpmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::dumpmalleablekey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "dumpmalleablekey <Key view>\n"
@@ -317,7 +317,7 @@ json_spirit::Value CRPCTable::dumpmalleablekey(const json_spirit::Array &params,
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::importmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::importmalleablekey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "importmalleablekey <Key data>\n"

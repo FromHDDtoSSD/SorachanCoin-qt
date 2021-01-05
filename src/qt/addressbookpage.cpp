@@ -1,29 +1,27 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "addressbookpage.h"
-#include "ui_addressbookpage.h"
-
-#include "addresstablemodel.h"
-#include "optionsmodel.h"
-#include "bitcoingui.h"
-#include "editaddressdialog.h"
-#include "csvmodelwriter.h"
-#include "guiutil.h"
-
-#ifdef USE_QRCODE
-#include "qrcodedialog.h"
-#endif
-
+#include <qt/addressbookpage.h>
+#include <ui_addressbookpage.h>
+#include <qt/addresstablemodel.h>
+#include <qt/optionsmodel.h>
+#include <qt/bitcoingui.h>
+#include <qt/editaddressdialog.h>
+#include <qt/csvmodelwriter.h>
+#include <qt/guiutil.h>
+#include <allocator/qtsecure.h>
 #include <QSortFilterProxyModel>
 #include <QClipboard>
 #include <QMessageBox>
 #include <QMenu>
+#ifdef USE_QRCODE
+# include <qt/qrcodedialog.h>
+#endif
 
-AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=NULL*/) : QDialog(parent), ui(NULL), model(0), optionsModel(0), mode(mode), tab(tab)
-{
-    ui = new(std::nothrow) Ui::AddressBookPage;
-    if(! ui) {
-        throw std::runtime_error("AddressBookPage(ui) Failed to allocate memory.");
-    }
+AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=nullptr*/) : QDialog(parent), ui(new(std::nothrow) Ui::AddressBookPage), model(0), optionsModel(0), mode(mode), tab(tab) {
+    if(! ui) throw qt_error("AddressBookPage(ui) Failed to allocate memory.", this);
 
     ui->setupUi(this);
 
@@ -61,9 +59,7 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=NULL*/) 
     }
 
     try {
-        //
         // Context menu actions
-        //
         QAction *copyLabelAction = new QAction(tr("Copy &Label"), this);
         QAction *copyAddressAction = new QAction(ui->copyToClipboard->text(), this);
         QAction *editAction = new QAction(tr("&Edit"), this);
@@ -74,9 +70,7 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=NULL*/) 
         QAction *verifyMessageAction = new QAction(ui->verifyMessage->text(), this);
         deleteAction = new QAction(ui->deleteButton->text(), this);
 
-        //
         // Build context menu
-        //
         contextMenu = new QMenu();
         contextMenu->addAction(copyAddressAction);
         contextMenu->addAction(copyLabelAction);
@@ -94,9 +88,7 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=NULL*/) 
             contextMenu->addAction(verifyMessageAction);
         }
 
-        //
         // Connect signals for context menu actions
-        //
         connect(copyAddressAction, SIGNAL(triggered()), this, SLOT(on_copyToClipboard_clicked()));
         connect(copyLabelAction, SIGNAL(triggered()), this, SLOT(onCopyLabelAction()));
         connect(editAction, SIGNAL(triggered()), this, SLOT(onEditAction()));
@@ -108,23 +100,19 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=NULL*/) 
         connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(on_verifyMessage_clicked()));
         connect(this->ui->tableView, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
 
-        //
         // Pass through accept action from button box
-        //
         connect(ui->buttonBox, SIGNAL(accepted()), this, SLOT(accept()));
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("AddressBookPage Failed to allocate memory.");
+        throw qt_error("AddressBookPage Failed to allocate memory.", this);
     }
 }
 
-AddressBookPage::~AddressBookPage()
-{
+AddressBookPage::~AddressBookPage() {
     delete ui;
-    ui = NULL;
+    ui = nullptr;
 }
 
-void AddressBookPage::setModel(AddressTableModel *__model)
-{
+void AddressBookPage::setModel(AddressTableModel *__model) {
     model = __model;
     if(! __model) {
         return;
@@ -132,7 +120,7 @@ void AddressBookPage::setModel(AddressTableModel *__model)
 
     proxyModel = new(std::nothrow) QSortFilterProxyModel(this);
     if(! proxyModel) {
-        throw std::runtime_error("AddressBookPage Failed to allocate memory.");
+        throw qt_error("AddressBookPage Failed to allocate memory.", this);
     }
     proxyModel->setSourceModel(this->model);
     proxyModel->setDynamicSortFilter(true);
@@ -155,9 +143,7 @@ void AddressBookPage::setModel(AddressTableModel *__model)
     ui->tableView->setModel(this->proxyModel);
     ui->tableView->sortByColumn(0, Qt::AscendingOrder);
 
-    //
     // Set column widths
-    //
     ui->tableView->horizontalHeader()->resizeSection(AddressTableModel::Address, 320);
 #if QT_VERSION < 0x050000
     ui->tableView->horizontalHeader()->setResizeMode(AddressTableModel::Label, QHeaderView::Stretch);
@@ -172,23 +158,19 @@ void AddressBookPage::setModel(AddressTableModel *__model)
     selectionChanged();
 }
 
-void AddressBookPage::setOptionsModel(OptionsModel *optionsModelIn)
-{
+void AddressBookPage::setOptionsModel(OptionsModel *optionsModelIn) {
     optionsModel = optionsModelIn;
 }
 
-void AddressBookPage::on_copyToClipboard_clicked()
-{
+void AddressBookPage::on_copyToClipboard_clicked() {
     GUIUtil::copyEntryData(ui->tableView, AddressTableModel::Address);
 }
 
-void AddressBookPage::onCopyLabelAction()
-{
+void AddressBookPage::onCopyLabelAction() {
     GUIUtil::copyEntryData(ui->tableView, AddressTableModel::Label);
 }
 
-void AddressBookPage::onEditAction()
-{
+void AddressBookPage::onEditAction() {
     if(! ui->tableView->selectionModel()) {
         return;
     }
@@ -206,52 +188,43 @@ void AddressBookPage::onEditAction()
     dlg.exec();
 }
 
-void AddressBookPage::on_signMessage_clicked()
-{
+void AddressBookPage::on_signMessage_clicked() {
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
 
     QString addr;
-    foreach (QModelIndex index, indexes)
-    {
+    foreach (QModelIndex index, indexes) {
         QVariant address = index.data();
         addr = address.toString();
     }
-
     emit signMessage(addr);
 }
 
-void AddressBookPage::on_verifyMessage_clicked()
-{
+void AddressBookPage::on_verifyMessage_clicked() {
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
 
     QString addr;
-    foreach (QModelIndex index, indexes)
-    {
+    foreach (QModelIndex index, indexes) {
         QVariant address = index.data();
         addr = address.toString();
     }
-
     emit verifyMessage(addr);
 }
 
-void AddressBookPage::on_newAddressButton_clicked()
-{
+void AddressBookPage::on_newAddressButton_clicked() {
     if(! model) {
         return;
     }
 
     EditAddressDialog dlg(tab == SendingTab ? EditAddressDialog::NewSendingAddress : EditAddressDialog::NewReceivingAddress, this);
-
     dlg.setModel(model);
     if(dlg.exec()) {
         this->newAddressToSelect = dlg.getAddress();
     }
 }
 
-void AddressBookPage::on_deleteButton_clicked()
-{
+void AddressBookPage::on_deleteButton_clicked() {
     QTableView *table = ui->tableView;
     if(! table->selectionModel()) {
         return;
@@ -263,11 +236,8 @@ void AddressBookPage::on_deleteButton_clicked()
     }
 }
 
-void AddressBookPage::selectionChanged()
-{
-    //
+void AddressBookPage::selectionChanged() {
     // Set button states based on selected tab and selection
-    //
     QTableView *table = ui->tableView;
     if(! table->selectionModel()) {
         return;
@@ -306,77 +276,61 @@ void AddressBookPage::selectionChanged()
     }
 }
 
-void AddressBookPage::done(int retval)
-{
+void AddressBookPage::done(int retval) {
     QTableView *table = ui->tableView;
     if(!table->selectionModel() || !table->model()) {
         return;
     }
 
-    //
     // When this is a tab/widget and not a model dialog, ignore "done"
-    //
     if(mode == ForEditing) {
         return;
     }
 
-    //
     // Figure out which address was selected, and return it
-    //
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
 
-    foreach (QModelIndex index, indexes)
-    {
+    foreach (QModelIndex index, indexes) {
         QVariant address = table->model()->data(index);
         returnValue = address.toString();
     }
 
     if(returnValue.isEmpty()) {
-        //
         // If no address entry selected, return rejected
-        //
         retval = Rejected;
     }
 
     QDialog::done(retval);
 }
 
-void AddressBookPage::exportClicked()
-{
+void AddressBookPage::exportClicked() {
     // CSV is currently the only supported format
     QString filename = GUIUtil::getSaveFileName( this, tr("Export Address Book Data"), QString(), tr("Comma separated file (*.csv)") );
-
     if (filename.isNull()) {
         return;
     }
 
     CSVModelWriter writer(filename);
 
-    //
     // name, column, role
-    //
     writer.setModel(proxyModel);
     writer.addColumn("Label", AddressTableModel::Label, Qt::EditRole);
     writer.addColumn("Address", AddressTableModel::Address, Qt::EditRole);
-
     if(! writer.write()) {
         QMessageBox::critical(this, tr("Error exporting"), tr("Could not write to file %1.").arg(filename), QMessageBox::Abort, QMessageBox::Abort);
     }
 }
 
-void AddressBookPage::on_showQRCode_clicked()
-{
+void AddressBookPage::on_showQRCode_clicked() {
 #ifdef USE_QRCODE
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
-
-    foreach (QModelIndex index, indexes)
-    {
+    foreach (QModelIndex index, indexes) {
         QString address = index.data().toString(), label = index.sibling(index.row(), 0).data(Qt::EditRole).toString();
-
         QRCodeDialog *dialog = new(std::nothrow) QRCodeDialog(address, label, tab == ReceivingTab, this);
         if(! dialog){
-            QMessageBox::critical(this, tr("Memory allocate failure"), tr("Could not allocate memory."));
+            //QMessageBox::critical(this, tr("Memory allocate failure"), tr("Could not allocate memory."));
+            qt_error("AddressBookPage: Could not allocate memory", this);
         } else {
             if(optionsModel) {
                 dialog->setModel(optionsModel);
@@ -388,21 +342,17 @@ void AddressBookPage::on_showQRCode_clicked()
 #endif
 }
 
-void AddressBookPage::contextualMenu(const QPoint &point)
-{
+void AddressBookPage::contextualMenu(const QPoint &point) {
     QModelIndex index = ui->tableView->indexAt(point);
     if(index.isValid()) {
         contextMenu->exec(QCursor::pos());
     }
 }
 
-void AddressBookPage::selectNewAddress(const QModelIndex &parent, int begin, int end)
-{
+void AddressBookPage::selectNewAddress(const QModelIndex &parent, int begin, int end) {
     QModelIndex idx = proxyModel->mapFromSource(model->index(begin, AddressTableModel::Address, parent));
     if(idx.isValid() && (idx.data(Qt::EditRole).toString() == newAddressToSelect)) {
-        //
         // Select row of newly created address, once
-        //
         ui->tableView->setFocus();
         ui->tableView->selectRow(idx.row());
         newAddressToSelect.clear();

@@ -1,18 +1,18 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_CHECKPOINT_H
-#define  BITCOIN_CHECKPOINT_H
+#define BITCOIN_CHECKPOINT_H
 
 #include <map>
-#include "util.h"
-#include "net.h"
-
+#include <serialize.h>
+#include <util.h>
+#include <net.h>
 #ifdef WIN32
-#undef STRICT
-#undef PERMISSIVE
-#undef ADVISORY
+# undef STRICT
+# undef PERMISSIVE
+# undef ADVISORY
 #endif
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
@@ -24,29 +24,33 @@ typedef std::vector<uint8_t> checkpoints_vector;
 template<typename T> class CBlockIndex_impl;
 using CBlockIndex = CBlockIndex_impl<uint256>;
 
-//
 // ppcoin: synchronized checkpoint
-//
 class CUnsignedSyncCheckpoint
 {
-//private:
-    // CUnsignedSyncCheckpoint(const CUnsignedSyncCheckpoint &); // {}
-    // CUnsignedSyncCheckpoint &operator=(const CUnsignedSyncCheckpoint &); // {}
+private:
+    // CUnsignedSyncCheckpoint(const CUnsignedSyncCheckpoint &)=delete;
+    // CUnsignedSyncCheckpoint &operator=(const CUnsignedSyncCheckpoint &)=delete;
+    // CUnsignedSyncCheckpoint(CUnsignedSyncCheckpoint &&)=delete;
+    // CUnsignedSyncCheckpoint &operator=(CUnsignedSyncCheckpoint &&)=delete;
+
+protected:
+    int nVersion;
+    uint256 hashCheckpoint; // checkpoint block
 
 public:
-    int nVersion;
-    uint256 hashCheckpoint;      // checkpoint block
-
     CUnsignedSyncCheckpoint() {
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
-        READWRITE(this->hashCheckpoint);
-    )
+    int Get_nVersion() const {
+        return nVersion;
+    }
+    //void Set_hashCheckpoint(const uint256 &in) {
+    //    hashCheckpoint = in;
+    //}
+    const uint256 &Get_hashCheckpoint() const {
+        return hashCheckpoint;
+    }
 
     void SetNull() {
         nVersion = 1;
@@ -62,30 +66,77 @@ public:
                 nVersion,
                 hashCheckpoint.ToString().c_str());
     }
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nVersion);
+        LREADWRITE(this->hashCheckpoint);
+    }
+    /*
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->nVersion);
+        nVersion = this->nVersion;
+        READWRITE(this->hashCheckpoint);
+    )
+    */
 };
 
 class CSyncCheckpoint : public CUnsignedSyncCheckpoint
 {
-private:
-    CSyncCheckpoint(const CSyncCheckpoint &); // {}
-    // CSyncCheckpoint &operator=(const CSyncCheckpoint &); // {}
+//private:
+    // CSyncCheckpoint(const CSyncCheckpoint &)=delete;
+    // CSyncCheckpoint &operator=(const CSyncCheckpoint &)=delete;
+    // CSyncCheckpoint(CSyncCheckpoint &&)=delete;
+    // CSyncCheckpoint &operator=(CSyncCheckpoint &&)=delete;
 
-public:
+private:
     static const std::string strMasterPubKey;
     static std::string strMasterPrivKey;
-
     checkpoints_vector vchMsg;
     checkpoints_vector vchSig;
 
+public:
     CSyncCheckpoint() {
         SetNull();
     }
+    explicit CSyncCheckpoint(const uint256 &in) {
+        SetNull();
+        hashCheckpoint = in;
+    }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->vchMsg);
-        READWRITE(this->vchSig);
-    )
+    static const std::string &Get_strMasterPubKey() {
+        return strMasterPubKey;
+    }
+
+    static const std::string &Get_strMasterPrivKey() {
+        return strMasterPrivKey;
+    }
+    static void Set_strMasterPrivKey(const std::string &in) {
+        strMasterPrivKey = in;
+    }
+
+    void Set_vchMsg(CDataStream::const_iterator begin, CDataStream::const_iterator end) {
+        vchMsg.clear();
+        vchMsg.insert(vchMsg.end(), begin, end);
+    }
+    checkpoints_vector::const_iterator Get_vchMsg_begin() const {
+        return vchMsg.begin();
+    }
+    checkpoints_vector::const_iterator Get_vchMsg_end() const {
+        return vchMsg.end();
+    }
+    const checkpoints_vector &Get_vchMsg() const {
+        return vchMsg;
+    }
+
+    checkpoints_vector &Set_vchSig() { // insert: key.Sign()
+        return vchSig;
+    }
+    const checkpoints_vector &Get_vchSig() const {
+        return vchSig;
+    }
 
     void SetNull() {
         // CUnsignedSyncCheckpoint::SetNull();
@@ -101,7 +152,7 @@ public:
         return hash_basis::SerializeHash(*this);
     }
 
-    bool RelayTo(CNode *pnode) const {    // returns true if wasn't already sent
+    bool RelayTo(CNode *pnode) const { // returns true if wasn't already sent
         if (pnode->hashCheckpointKnown != hashCheckpoint) {
             pnode->hashCheckpointKnown = hashCheckpoint;
             pnode->PushMessage("checkpoint", *this);
@@ -112,15 +163,27 @@ public:
 
     bool CheckSignature();
     bool ProcessSyncCheckpoint(CNode *pfrom);
+
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->vchMsg);
+        LREADWRITE(this->vchSig);
+    }
+    /*
+    IMPLEMENT_SERIALIZE
+    (
+        READWRITE(this->vchMsg);
+        READWRITE(this->vchSig);
+    )
+    */
 };
 
-//
 // Block-chain checkpoints are compiled-in sanity checks.
 // They are updated every release or three.
-//
-typedef std::map<int, uint256> MapCheckpoints;
-typedef std::list<uint256> ListBannedBlocks;
-typedef unsigned int LastCheckpointTime;
+using MapCheckpoints = std::map<int, uint256>;
+using ListBannedBlocks = std::list<uint256>;
+using LastCheckpointTime = unsigned int;
 namespace Checkpoints
 {
     enum CPMode
@@ -130,7 +193,7 @@ namespace Checkpoints
         PERMISSIVE = 2     // Permissive checkpoints policy, don't perform any checking
     };
 
-    extern CCriticalSection cs_hashSyncCheckpoint;
+    extern LCCriticalSection cs_hashSyncCheckpoint;
     extern uint256 hashPendingCheckpoint;// = 0;
 
     extern CSyncCheckpoint checkpointMessage;
@@ -191,4 +254,3 @@ namespace Checkpoints
 }
 
 #endif
-//@

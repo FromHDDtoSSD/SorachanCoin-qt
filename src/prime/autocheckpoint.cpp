@@ -9,6 +9,7 @@
 #include <prevector/prevector.h>
 #include <block/block.h>
 #include <util.h>
+#include <random/random.h>
 #include <debugcs/debugcs.h>
 
 #ifdef BLOCK_PREVECTOR_ENABLE
@@ -117,7 +118,7 @@ bool CAutocheckPoint_impl<T>::Check() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::BuildAutocheckPoint() {
     unsigned short randv = 0;
-    ::RAND_bytes((unsigned char *)&randv, sizeof(randv));
+    latest_crypto::random::GetStrongRandBytes((unsigned char *)&randv, sizeof(randv));
     std::string tmpfn = strprintf("%s.%04x", autocheckpoint::datname, randv);
     boost::filesystem::path pathTmp = iofs::GetDataDir() / tmpfn;
     CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);

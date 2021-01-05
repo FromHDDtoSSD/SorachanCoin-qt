@@ -389,7 +389,7 @@ contains(LIMIT_NOMP_MODE, 0) {
 #
 # warning(-W -Wno) and error(-Werror=) flags setting
 #
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-type -Werror=unused-result -Werror=comment -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=write-strings -Werror=return-type -Werror=unused-result -Werror=comment -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 
 #
 # target source codes
@@ -570,6 +570,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/script/lscript.h \
     src/script/scriptnum.h \
     src/script/standard.h \
+    src/script/sign.h \
+    src/stream/streams.h \
     src/consensus/consensus.h \
     src/consensus/params.h \
     src/policy/policy.h \
@@ -614,6 +616,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/script/script.cpp \
     src/script/interpreter.cpp \
     src/script/script_error.cpp \
+    src/script/sign.cpp \
     src/main.cpp \
     src/miner.cpp \
     src/init.cpp \

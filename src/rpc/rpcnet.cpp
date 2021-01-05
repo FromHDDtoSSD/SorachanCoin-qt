@@ -22,7 +22,7 @@ json_spirit::Value CRPCTable::getconnectioncount(const json_spirit::Array &param
     return data.JSONRPCSuccess((int)net_node::vNodes.size());
 }
 
-json_spirit::Value CRPCTable::getaddrmaninfo(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getaddrmaninfo(const json_spirit::Array &params, CBitrpcData &data) {
     // Sort function object
     struct addrManItemSort {
         bool operator()(const CAddrInfo &leftItem, const CAddrInfo &rightItem) {
@@ -84,7 +84,7 @@ json_spirit::Value CRPCTable::getaddrmaninfo(const json_spirit::Array &params, C
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::getpeerinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getpeerinfo(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getpeerinfo\n"
@@ -128,7 +128,7 @@ json_spirit::Value CRPCTable::getpeerinfo(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::addnode(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::addnode(const json_spirit::Array &params, CBitrpcData &data) {
     std::string strCommand;
     json_spirit::json_flags status;
     if (params.size() == 2) {
@@ -167,7 +167,7 @@ json_spirit::Value CRPCTable::addnode(const json_spirit::Array &params, CBitrpcD
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::getaddednodeinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getaddednodeinfo(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getaddednodeinfo <dns> [node]\n"
@@ -254,7 +254,7 @@ json_spirit::Value CRPCTable::getaddednodeinfo(const json_spirit::Array &params,
 // There is a known deadlock situation with ThreadMessageHandler
 // ThreadMessageHandler: holds cs_vSend and acquiring block_process::cs_main in block_process::manage::SendMessages()
 // ThreadRPCServer: holds block_process::cs_main and acquiring cs_vSend in alert.RelayTo()/PushMessage()/BeginMessage()
-json_spirit::Value CRPCTable::sendalert(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::sendalert(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 6) {
         return data.JSONRPCSuccess(
             "sendalert <message> <privatekey> <minver> <maxver> <priority> <id> [cancelupto]\n"
@@ -334,7 +334,7 @@ json_spirit::Value CRPCTable::getnettotals(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(obj);
 }
 
-json_spirit::Value CRPCTable::ntptime(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::ntptime(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "ntptime [ntpserver]\n"

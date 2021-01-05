@@ -21,21 +21,21 @@ namespace util {
  * compare numbers with different units, or compare a mocktime to system time).
  */
 
-int64_t GetTime() noexcept;
-int64_t GetTimeMillis() noexcept;
-int64_t GetTimeMicros() noexcept;
-int64_t GetSystemTimeInSeconds() noexcept; // Like GetTime(), but not mockable
-void SetMockTime(int64_t nMockTimeIn) noexcept;
-int64_t GetMockTime() noexcept;
-void MilliSleep(int64_t n) noexcept;
+int64_t GetTime();
+int64_t GetTimeMillis();
+int64_t GetTimeMicros();
+int64_t GetSystemTimeInSeconds(); // Like GetTime(), but not mockable
+void SetMockTime(int64_t nMockTimeIn);
+int64_t GetMockTime();
+void MilliSleep(int64_t n);
 
 /**
  * ISO 8601 formatting is preferred. Use the FormatISO8601{DateTime,Date,Time}
  * helper functions if possible.
  */
-std::string FormatISO8601DateTime(int64_t nTime) noexcept;
-std::string FormatISO8601Date(int64_t nTime) noexcept;
-std::string FormatISO8601Time(int64_t nTime) noexcept;
+std::string FormatISO8601DateTime(int64_t nTime);
+std::string FormatISO8601Date(int64_t nTime);
+std::string FormatISO8601Time(int64_t nTime);
 
 } // namespace util
 

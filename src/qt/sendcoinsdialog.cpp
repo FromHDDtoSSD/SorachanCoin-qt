@@ -380,7 +380,7 @@ void SendCoinsDialog::setBalance(qint64 total, qint64 watchOnly, qint64 stake, q
         return;
     }
 
-    int unit = model->getOptionsModel()->getDisplayUnit();
+    BitcoinUnits::Unit unit = model->getOptionsModel()->getDisplayUnit();
     ui->labelBalance->setText(BitcoinUnits::formatWithUnit(unit, total - watchOnly));
 }
 

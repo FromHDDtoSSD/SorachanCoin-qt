@@ -146,7 +146,7 @@ void lutil::PrintExceptionContinue(const std::exception *pex, const char *pszThr
     tfm::format(std::cerr, "\n\n************************\n%s\n", message.c_str());
 }
 
-fs::path lutil::GetDefaultDataDir() noexcept {
+fs::path lutil::GetDefaultDataDir() {
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\SorachanCoin
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\SorachanCoin
     // Mac: ~/Library/Application Support/SorachanCoin
@@ -238,7 +238,7 @@ void lutil::ClearDatadirCache() {
     g_blocks_path_cache_net_specific = fs::path();
 }
 
-bool lutil::RenameOver(fs::path src, fs::path dest) noexcept {
+bool lutil::RenameOver(fs::path src, fs::path dest) {
 #ifdef WIN32
     return MoveFileExW(src.wstring().c_str(), dest.wstring().c_str(),
                        MOVEFILE_REPLACE_EXISTING) != 0;
@@ -265,7 +265,7 @@ bool lutil::TryCreateDirectories(const fs::path &p) {
     return false;
 }
 
-bool lutil::FileCommit(FILE *file) noexcept {
+bool lutil::FileCommit(FILE *file) {
     if (::fflush(file) != 0) { // harmless if redundantly called
         LogPrintf("%s: fflush failed: %d\n", __func__, errno);
         return false;
@@ -332,7 +332,7 @@ int lutil::RaiseFileDescriptorLimit(int nMinFD) noexcept {
  * this function tries to make a particular range of a file allocated (corresponding to disk space)
  * it is advisory, and the range specified in the arguments will never contain live data
  */
-void lutil::AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) noexcept {
+void lutil::AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) {
 #if defined(WIN32)
     // Windows-specific version
     HANDLE hFile = (HANDLE)::_get_osfhandle(::_fileno(file));
@@ -388,7 +388,7 @@ fs::path lutil::GetSpecialFolderPath(int nFolder, bool fCreate) noexcept {
 }
 #endif
 
-void lutil::runCommand(const std::string &strCommand) noexcept {
+void lutil::runCommand(const std::string &strCommand) {
     if (strCommand.empty()) return;
 #ifndef WIN32
     int nErr = ::system(strCommand.c_str());
@@ -461,12 +461,12 @@ bool lutil::SetupNetworking() noexcept {
     return true;
 }
 
-int lutil::GetNumCores() noexcept {
+int lutil::GetNumCores() {
     return std::thread::hardware_concurrency();
 }
 
 /*
-std::string lutil::CopyrightHolders(const std::string &strPrefix) noexcept {
+std::string lutil::CopyrightHolders(const std::string &strPrefix) {
     const auto copyright_devs = strprintfc(_(COPYRIGHT_HOLDERS), COPYRIGHT_HOLDERS_SUBSTITUTION);
     std::string strCopyrightHolders = strPrefix + copyright_devs;
 
@@ -531,7 +531,7 @@ lutil::WinCmdLineArgs::~WinCmdLineArgs() {
     delete [] argv_;
 }
 
-std::pair<int, char **> lutil::WinCmdLineArgs::get() noexcept {
+std::pair<int, char **> lutil::WinCmdLineArgs::get() {
     return std::make_pair(argc_, argv_);
 }
 #endif

@@ -56,7 +56,7 @@ private:
     static bool CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetype opcode);
 public:
     static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
-    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) noexcept;
+    static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
     static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet);
     static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions);
     static bool IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType);

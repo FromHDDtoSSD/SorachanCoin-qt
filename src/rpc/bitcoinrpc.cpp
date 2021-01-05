@@ -9,6 +9,7 @@
 #include <sync/sync.h>
 #include <ui_interface.h>
 #include <rpc/bitcoinrpc.h>
+#include <random/random.h>
 #include <db.h>
 #include <boot/shutdown.h>
 #include <block/block_process.h>
@@ -36,7 +37,7 @@ unsigned short bitrpc::GetDefaultRPCPort() noexcept {
     return map_arg::GetBoolArg("-testnet", false) ? tcp_port::uJsonRpcTest : tcp_port::uJsonRpcMain;
 }
 
-void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, const std::list<json_spirit::Value_type> &typesExpected, bool fAllowNull/* =false */) noexcept {
+void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, const std::list<json_spirit::Value_type> &typesExpected, bool fAllowNull/* =false */) {
     unsigned int i = 0;
     for(json_spirit::Value_type t: typesExpected) {
         if (params.size() <= i)
@@ -53,7 +54,7 @@ void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, c
     data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const std::map<std::string, json_spirit::Value_type> &typesExpected, bool fAllowNull/* =false */) noexcept {
+void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const std::map<std::string, json_spirit::Value_type> &typesExpected, bool fAllowNull/* =false */) {
     for(const std::pair<std::string, json_spirit::Value_type> &t: typesExpected) {
         const json_spirit::Value& v = find_value(o, t.first);
         if (!fAllowNull && v.type() == json_spirit::null_type) {
@@ -70,7 +71,7 @@ void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const
     data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-int64_t CRPCTable::AmountFromValue(const json_spirit::Value &value, CBitrpcData &data) noexcept {
+int64_t CRPCTable::AmountFromValue(const json_spirit::Value &value, CBitrpcData &data) {
     json_spirit::json_flags status;
     double dAmount = value.get_real(status);
     if(! status.fSuccess()) {data.JSONRPCError(RPC_JSON_ERROR, status.e); return 0.0;}
@@ -94,7 +95,7 @@ json_spirit::Value CRPCTable::ValueFromAmount(int64_t amount) noexcept {
     return (double)amount / (double)util::COIN;
 }
 
-std::string CRPCTable::HexBits(unsigned int nBits) noexcept {
+std::string CRPCTable::HexBits(unsigned int nBits) {
     union
     {
         int32_t nBits;
@@ -275,7 +276,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[92] =
 
 // HTTP protocol
 // This ain't Apache. We're just using HTTP header for the length field and to be compatible with other JSON-RPC implementations.
-std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string, std::string> &mapRequestHeaders) noexcept {
+std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string, std::string> &mapRequestHeaders) {
     std::ostringstream s;
       s << "POST / HTTP/1.1\r\n"
         << "User-Agent: "
@@ -294,7 +295,7 @@ std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string
     return s.str();
 }
 
-std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepalive) noexcept {
+std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepalive) {
     if (nStatus == HTTP_UNAUTHORIZED) {
         return strprintf(
             "HTTP/1.0 401 Authorization Required\r\n"
@@ -341,7 +342,7 @@ std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepali
         strMsg.c_str());
 }
 
-int http::ReadHTTPStatus(std::basic_istream<char> &stream, int &proto) noexcept {
+int http::ReadHTTPStatus(std::basic_istream<char> &stream, int &proto) {
     std::string str;
     std::getline(stream, str);
     std::vector<std::string> vWords;
@@ -358,7 +359,7 @@ int http::ReadHTTPStatus(std::basic_istream<char> &stream, int &proto) noexcept 
     return ::atoi(vWords[1].c_str());
 }
 
-int http::ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet) noexcept {
+int http::ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet) {
     int nLen = 0;
     for (;;) {
         std::string str;
@@ -381,7 +382,7 @@ int http::ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string,
     return nLen;
 }
 
-int http::ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet, std::string &strMessageRet) noexcept {
+int http::ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet, std::string &strMessageRet) {
     mapHeadersRet.clear();
     strMessageRet.clear();
 
@@ -412,7 +413,7 @@ int http::ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::
     return nStatus;
 }
 
-bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders) noexcept {
+bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders) {
     std::string strAuth = mapHeaders["authorization"];
     if (strAuth.substr(0, 6) != "Basic ")
         return false;
@@ -428,7 +429,7 @@ bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders) noex
 // 1.0 spec: http://json-rpc.org/wiki/specification
 // 1.2 spec: http://groups.google.com/group/json-rpc/web/json-rpc-over-http
 // http://www.codeproject.com/KB/recipes/JSON_Spirit.aspx
-std::string json::JSONRPCRequest(const std::string &strMethod, const json_spirit::Array &params, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept {
+std::string json::JSONRPCRequest(const std::string &strMethod, const json_spirit::Array &params, const json_spirit::Value &id, json_spirit::json_flags &status) {
     json_spirit::Object request;
     request.push_back(json_spirit::Pair("method", strMethod));
     request.push_back(json_spirit::Pair("params", params));
@@ -439,7 +440,7 @@ std::string json::JSONRPCRequest(const std::string &strMethod, const json_spirit
     return ret;
 }
 
-json_spirit::Object json::JSONRPCReplyObj(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id) noexcept {
+json_spirit::Object json::JSONRPCReplyObj(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id) {
     json_spirit::Object reply;
     if (error.type() != json_spirit::null_type)
         reply.push_back(json_spirit::Pair("result", json_spirit::Value::null));
@@ -451,7 +452,7 @@ json_spirit::Object json::JSONRPCReplyObj(const json_spirit::Value &result, cons
     return reply;
 }
 
-std::string json::JSONRPCReply(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept {
+std::string json::JSONRPCReply(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id, json_spirit::json_flags &status) {
     json_spirit::Object reply = JSONRPCReplyObj(result, error, id);
     std::string ret = json_spirit::write_string(json_spirit::Value(reply), false, status);
     if(! status.fSuccess()) return status.e;
@@ -459,7 +460,7 @@ std::string json::JSONRPCReply(const json_spirit::Value &result, const json_spir
     return ret;
 }
 
-void json::ErrorReply(std::ostream &stream, const json_spirit::Object &objError, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept {
+void json::ErrorReply(std::ostream &stream, const json_spirit::Object &objError, const json_spirit::Value &id, json_spirit::json_flags &status) {
     // Send error reply from json-rpc error object
     int nStatus = HTTP_INTERNAL_SERVER_ERROR;
     int code = find_value(objError, "code").get_int(status);
@@ -474,7 +475,7 @@ void json::ErrorReply(std::ostream &stream, const json_spirit::Object &objError,
         stream << http::HTTPReply(nStatus, strReply, false) << std::flush;
 }
 
-bool bitrpc::ClientAllowed(const boost::asio::ip::address &address) noexcept {
+bool bitrpc::ClientAllowed(const boost::asio::ip::address &address) {
     // Make sure that IPv4-compatible and IPv4-mapped IPv6 addresses are treated as IPv4 addresses
     if (address.is_v6() && (address.to_v6().is_v4_compatible() || address.to_v6().is_v4_mapped()))
         return bitrpc::ClientAllowed(address.to_v6().to_v4());
@@ -505,28 +506,28 @@ public:
         fNeedHandshake = fUseSSLIn;
     }
 
-    void handshake(boost::asio::ssl::stream_base::handshake_type role) noexcept {
+    void handshake(boost::asio::ssl::stream_base::handshake_type role) {
         if (! fNeedHandshake)
             return;
         fNeedHandshake = false;
         stream.handshake(role);
     }
 
-    std::streamsize read(char *s, std::streamsize n) noexcept {
+    std::streamsize read(char *s, std::streamsize n) {
         handshake(boost::asio::ssl::stream_base::server); // HTTPS servers read first
         if (fUseSSL)
             return stream.read_some(boost::asio::buffer(s, n));
         return stream.next_layer().read_some(boost::asio::buffer(s, n));
     }
 
-    std::streamsize write(const char *s, std::streamsize n) noexcept {
+    std::streamsize write(const char *s, std::streamsize n) {
         handshake(boost::asio::ssl::stream_base::client); // HTTPS clients write first
         if (fUseSSL)
             return boost::asio::write(stream, boost::asio::buffer(s, n));
         return boost::asio::write(stream.next_layer(), boost::asio::buffer(s, n));
     }
 
-    bool connect(const std::string &server, const std::string &port) noexcept {
+    bool connect(const std::string &server, const std::string &port) {
 #if BOOST_VERSION >= 106900
         boost::asio::ip::tcp::resolver resolver(stream.get_executor());
 #else
@@ -547,10 +548,10 @@ private:
     bool fNeedHandshake;
     bool fUseSSL;
 
-    // SSLIOStreamDevice &operator=(SSLIOStreamDevice const &)=delete;
+    // SSLIOStreamDevice &operator=(const SSLIOStreamDevice const &)=delete;
     // SSLIOStreamDevice &operator=(SSLIOStreamDevice const &&)=delete;
     // SSLIOStreamDevice(const SSLIOStreamDevice &)=delete;
-    // SSLIOStreamDevice(const SSLIOStreamDevice &&)=delete;
+    // SSLIOStreamDevice(SSLIOStreamDevice &&)=delete;
 
     boost::asio::ssl::stream<typename Protocol::socket> &stream;
 };
@@ -570,8 +571,9 @@ class AcceptedConnectionImpl : public AcceptedConnection
 private:
     AcceptedConnectionImpl()=delete;
     AcceptedConnectionImpl(const AcceptedConnectionImpl &)=delete;
+    AcceptedConnectionImpl(AcceptedConnectionImpl &&)=delete;
     AcceptedConnectionImpl &operator=(const AcceptedConnectionImpl &)=delete;
-    AcceptedConnectionImpl &operator=(const AcceptedConnectionImpl &&)=delete;
+    AcceptedConnectionImpl &operator=(AcceptedConnectionImpl &&)=delete;
 
 public:
 #if BOOST_VERSION >= 106900
@@ -600,7 +602,7 @@ private:
     boost::iostreams::stream<SSLIOStreamDevice<Protocol> > _stream;
 };
 
-void bitrpc::ThreadRPCServer(void *parg) noexcept {
+void bitrpc::ThreadRPCServer(void *parg) {
     // Make this thread recognisable as the RPC listener
     bitthread::manage::RenameThread((coin_param::strCoinName + "-rpclist").c_str());
 
@@ -621,7 +623,7 @@ void bitrpc::ThreadRPCServer(void *parg) noexcept {
 // Sets up I/O resources to accept and handle a new connection.
 #if BOOST_VERSION >= 106900
 template <typename Protocol>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) noexcept {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_executor(), context, fUseSSL);
     if (conn == nullptr) {
@@ -643,7 +645,7 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
 }
 #elif BOOST_VERSION >= 106600
 template <typename Protocol>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) noexcept {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
@@ -665,7 +667,7 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
 }
 #else
 template <typename Protocol, typename SocketAcceptorService>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) noexcept {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
@@ -690,7 +692,7 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
 // Accept and handle incoming connection.
 #if BOOST_VERSION >= 106600
 template <typename Protocol>
-void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) noexcept {
+void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) {
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
 
     // Immediately start accepting new connections, except when we're cancelled or our socket is closed.
@@ -727,7 +729,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
 }
 #else
 template <typename Protocol, typename SocketAcceptorService>
-void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) noexcept {
+void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) {
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
 
     // Immediately start accepting new connections, except when we're cancelled or our socket is closed.
@@ -764,14 +766,14 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
 }
 #endif
 
-void bitrpc::ThreadRPCServer2(void *parg) noexcept {
+void bitrpc::ThreadRPCServer2(void *parg) {
     printf("ThreadRPCServer started\n");
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     strRPCUserColonPass = map_arg::GetMapArgsString("-rpcuser") + ":" + map_arg::GetMapArgsString("-rpcpassword");
     if (map_arg::GetMapArgsString("-rpcpassword").empty()) {
         unsigned char rand_pwd[32];
-        ::RAND_bytes(rand_pwd, 32);
+        latest_crypto::random::GetStrongRandBytes(rand_pwd, 32);
         std::string strWhatAmI = "To use ";
         strWhatAmI += (coin_param::strCoinName + "d").c_str();
         if (map_arg::GetMapArgsCount("-server"))
@@ -911,7 +913,7 @@ void bitrpc::ThreadRPCServer2(void *parg) noexcept {
     darg->ok();
 }
 
-bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcData &data) noexcept {
+bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcData &data) {
     // Parse request
     if (valRequest.type() != json_spirit::obj_type) {
         data.JSONRPCError(RPC_INVALID_REQUEST, "Invalid Request object");
@@ -958,7 +960,7 @@ bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcDa
     return true;
 }
 
-json_spirit::Object bitrpc::JSONRPCExecOne(const json_spirit::Value &req, CBitrpcData &data) noexcept {
+json_spirit::Object bitrpc::JSONRPCExecOne(const json_spirit::Value &req, CBitrpcData &data) {
     json_spirit::Object rpc_result;
     bitjson::JSONRequest jreq;
     do {
@@ -974,7 +976,7 @@ json_spirit::Object bitrpc::JSONRPCExecOne(const json_spirit::Value &req, CBitrp
     return rpc_result;
 }
 
-std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData &data) noexcept {
+std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData &data) {
     json_spirit::Array ret;
     for (unsigned int reqIdx = 0; reqIdx < vReq.size(); ++reqIdx) {
         ret.push_back(JSONRPCExecOne(vReq[reqIdx], data));
@@ -989,7 +991,7 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData
     return str;
 }
 
-void bitrpc::ThreadRPCServer3(void *parg) noexcept {
+void bitrpc::ThreadRPCServer3(void *parg) {
     printf("ThreadRPCServer3 started\n");
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
@@ -1108,7 +1110,7 @@ void bitrpc::ThreadRPCServer3(void *parg) noexcept {
     }
 }
 
-json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params, CBitrpcData &data) {
     const CRPCCommand *pcmd = CRPCCmd::get_instance()[strMethod];
     if (! pcmd) {
         printf("ThreadRPCServer3 execute Error1\n");
@@ -1145,7 +1147,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 }
 
-json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params) noexcept {
+json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params) {
     if (map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
         json_spirit::json_flags status;
         return data.runtime_error(strprintfc(
@@ -1222,7 +1224,7 @@ json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMet
 }
 
 template<typename T>
-void bitrpc::ConvertTo(CBitrpcData &data, json_spirit::Value &value, bool fAllowNull/* =false */) noexcept {
+void bitrpc::ConvertTo(CBitrpcData &data, json_spirit::Value &value, bool fAllowNull/* =false */) {
     if (fAllowNull && value.type() == json_spirit::null_type) {
         data.JSONRPCSuccess(json_spirit::Value::null);
         return;
@@ -1261,7 +1263,7 @@ void bitrpc::ConvertTo(CBitrpcData &data, json_spirit::Value &value, bool fAllow
 }
 
 // Convert strings to command-specific RPC representation
-json_spirit::Array bitrpc::RPCConvertValues(CBitrpcData &data, const std::string &strMethod, const std::vector<std::string> &strParams) noexcept {
+json_spirit::Array bitrpc::RPCConvertValues(CBitrpcData &data, const std::string &strMethod, const std::vector<std::string> &strParams) {
     json_spirit::Array params;
     for(const std::string &param: strParams)
         params.push_back(param);
@@ -1333,7 +1335,7 @@ json_spirit::Array bitrpc::RPCConvertValues(CBitrpcData &data, const std::string
     return params;
 }
 
-int bitrpc::CommandLineRPC(int argc, char *argv[]) noexcept {
+int bitrpc::CommandLineRPC(int argc, char *argv[]) {
     std::string strPrint;
     int nRet = 0;
     CBitrpcData data;

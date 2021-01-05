@@ -10,9 +10,9 @@
 #include <compat/sanity.h>
 #include <hash.h>
 #include <crypto/hmac_qhash65536.h>
-
 #include <openssl/sha.h>
 #include <openssl/rand.h>
+#include <random/random.h>
 
 static const std::string bench_source = "We hope that the infectious diseases will converge as possible early.";
 
@@ -95,7 +95,7 @@ static void Ripemd160Assertcheck_(benchmark::State& state)
         uint160 old = hash_basis_org::Hash160(std::begin(bench_source), std::end(bench_source));
         assert(latest == old);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint160 _latest = hash_basis::Hash160(random_value.begin(), random_value.end());
         uint160 _old = hash_basis_org::Hash160(random_value.begin(), random_value.end());
         assert(_latest == _old);
@@ -110,7 +110,7 @@ static void SHA256Assertcheck_(benchmark::State& state)
         uint256 old1 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source));
         assert(latest1 == old1);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint256 _latest1 = hash_basis::Hash(random_value.begin(), random_value.end());
         uint256 _old1 = hash_basis_org::Hash(random_value.begin(), random_value.end());
         assert(_latest1 == _old1);
@@ -119,7 +119,7 @@ static void SHA256Assertcheck_(benchmark::State& state)
         uint256 old2 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest2 == old2);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint256 _latest2 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint256 _old2 = hash_basis_org::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest2 == _old2);
@@ -128,7 +128,7 @@ static void SHA256Assertcheck_(benchmark::State& state)
         uint256 old3 = hash_basis_org::Hash(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest3 == old3);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint256 _latest3 = hash_basis::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint256 _old3 = hash_basis_org::Hash(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest3 == _old3);
@@ -191,7 +191,7 @@ static void SHA512Assertcheck_(benchmark::State& state)
         uint512 old1 = openssl::sha512(std::begin(bench_source), std::end(bench_source));
         assert(latest1 == old1);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint512 _latest1 = hash_basis::Hash512(random_value.begin(), random_value.end());
         uint512 _old1 = openssl::sha512(random_value.begin(), random_value.end());
         assert(_latest1 == _old1);
@@ -200,7 +200,7 @@ static void SHA512Assertcheck_(benchmark::State& state)
         uint512 old2 = openssl::sha512_2(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest2 == old2);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint512 _latest2 = hash_basis::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint512 _old2 = openssl::sha512_2(random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest2 == _old2);
@@ -209,7 +209,7 @@ static void SHA512Assertcheck_(benchmark::State& state)
         uint512 old3 = openssl::sha512_3(std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source), std::begin(bench_source), std::end(bench_source));
         assert(latest3 == old3);
 
-        ::RAND_bytes(random_value.data(), random_value.size());
+        latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
         uint512 _latest3 = hash_basis::Hash512(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         uint512 _old3 = openssl::sha512_3(random_value.begin(), random_value.end(), random_value.begin(), random_value.end(), random_value.begin(), random_value.end());
         assert(_latest3 == _old3);
@@ -222,7 +222,7 @@ static void Blake2Assertcheck_(benchmark::State& state)
     while(state.KeepRunning()) {
         // Blake2
         for (int i=0; i < 1000; ++i) {
-            ::RAND_bytes(random_value.data(), random_value.size());
+            latest_crypto::random::GetStrongRandBytes(random_value.data(), random_value.size());
             Lamport::CPrivateKey pKey(random_value.data(), random_value.size());
             Lamport::BLAKE2KeyHash h(pKey);
 
@@ -250,7 +250,7 @@ static void LamportAssertcheck_(benchmark::State& state)
         vdata.resize(buf_size, 0x00);
         byte *data = &vdata.at(0);
 
-        ::RAND_bytes(data, buf_size);
+        latest_crypto::random::GetStrongRandBytes(data, buf_size);
         Lamport::CLamport lamport; // Note: generate private key (ramdom).
         std::shared_ptr<Lamport::CPublicKey> pubKey = lamport.create_pubkey(data, buf_size);
         assert(lamport.check(data, buf_size, pubKey) == true);

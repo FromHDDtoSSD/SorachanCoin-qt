@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -131,6 +132,13 @@ public:
     };
 };
 
+#define BECH32_TEST_MODE
+#ifdef BECH32_TEST_MODE
+# include <debugcs/debugcs.h>
+# define DEBUG_CS_BECH32(str) debugcs::instance() << "Bech32: " << (str) << debugcs::endl()
+#else
+# define DEBUG_CS_BECH32(str)
+#endif
 class CBech32Data : public IKeyData {
 protected:
     CBech32Data() {}
@@ -149,8 +157,13 @@ protected:
 
 public:
     bool SetString(const char *psz) {
+#ifndef BECH32_TEST_MODE
+        std::pair<std::string, bech32_vector> ret = bech32::Decode(std::string(psz));
+        bech32_vector &vchTemp = ret.second;
+#else
         base58_vector vchTemp;
         base58::manage::DecodeBase58Check(psz, vchTemp);
+#endif
         if (vchTemp.empty()) {
             vchData.clear();
             nVersion = 0;
@@ -170,9 +183,20 @@ public:
     }
 
     std::string ToString() const {
-        base58_vector vch((uint32_t)1, (uint8_t)nVersion);
+        static const char *hrp_main = "sora";
+        static const char *hrp_test = "sora_testnet";
+        const char *hrp = args_bool::fTestNet ? hrp_test: hrp_main;
+        bech32_vector vch((uint32_t)1, (uint8_t)nVersion);
         vch.insert(vch.end(), vchData.begin(), vchData.end());
-        return base58::manage::EncodeBase58Check(vch);
+#ifdef BECH32_TEST_MODE
+        DEBUG_CS_BECH32(bech32::Encode(hrp, vch).c_str());
+
+        base58_vector vch58((uint32_t)1, (uint8_t)nVersion);
+        vch58.insert(vch58.end(), vchData.begin(), vchData.end());
+        return base58::manage::EncodeBase58Check(vch58);
+#else
+        return bech32::Encode(hrp, vch);
+#endif
     }
 };
 

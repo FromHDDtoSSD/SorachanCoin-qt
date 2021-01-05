@@ -5,56 +5,50 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <const/chainparams.h>
-
 //#include <chainparamsseeds.h>
 //#include <consensus/merkle.h>
 #include <util/tinyformat.h>
 #include <util/system.h>
 #include <util/strencodings.h>
 //#include <versionbitsinfo.h>
-
 #include <assert.h>
-
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
+#include <const/block_param.h>
+#include <miner/diff.h>
 
-/*
-static CBlock CreateGenesisBlock(const char* pszTimestamp, const CScript& genesisOutputScript, uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
-{
-    CMutableTransaction txNew;
-    txNew.nVersion = 1;
-    txNew.vin.resize(1);
-    txNew.vout.resize(1);
-    txNew.vin[0].scriptSig = CScript() << 0 << CScriptNum(4) << std::vector<unsigned char>((const unsigned char*)pszTimestamp, (const unsigned char*)pszTimestamp + strlen(pszTimestamp));
-    txNew.vout[0].nValue = genesisReward;
-    txNew.vout[0].scriptPubKey = genesisOutputScript;
+namespace {
+CBlock CreateGenesisBlock() {
+    const char *const pszTimestamp = block_param::pszTimestamp;
 
-    CBlock genesis;
-    genesis.nTime    = nTime;
-    genesis.nBits    = nBits;
-    genesis.nNonce   = nNonce;
-    genesis.nVersion = nVersion;
-    genesis.vtx.push_back(MakeTransactionRef(std::move(txNew)));
-    genesis.hashPrevBlock.SetNull();
-    genesis.hashMerkleRoot = BlockMerkleRoot(genesis);
-    return genesis;
+    CTransaction txNew;
+    txNew.set_nTime(!args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet);
+    txNew.set_vin().resize(1);
+    txNew.set_vout().resize(1);
+    txNew.set_vin(0).set_scriptSig(CScript() << 0 << CScriptNum(42) << script_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp)));
+    txNew.set_vout(0).SetEmpty();
+
+    CBlock block;
+    block.set_vtx().push_back(txNew);
+    block.set_hashPrevBlock(0);
+    block.set_hashMerkleRoot(block.BuildMerkleTree());
+    block.set_nVersion(1);
+    block.set_nTime(!args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet);
+    block.set_nBits(diff::bnProofOfWorkLimit.GetCompact());
+    block.set_nNonce(!args_bool::fTestNet ? block_param::nGenesisNonceMainnet : block_param::nGenesisNonceTestnet);
+    return block;
 }
-
-static CBlock CreateGenesisBlock(uint32_t nTime, uint32_t nNonce, uint32_t nBits, int32_t nVersion, const CAmount& genesisReward)
-{
-    const char* pszTimestamp = "";
-    const CScript genesisOutputScript = CScript() << ParseHex("") << OP_CHECKSIG;
-    return CreateGenesisBlock(pszTimestamp, genesisOutputScript, nTime, nNonce, nBits, nVersion, genesisReward);
-}
+} // namespace
 
 // Main network
+/*
 class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
         consensus.nSubsidyHalvingInterval = 840000;
-        consensus.BIP16Height = 218579;
-        consensus.BIP34Height = 710000;
+        consensus.BIP16Height = 0;
+        consensus.BIP34Height = 0;
         consensus.BIP34Hash = uint256S("");
         consensus.BIP65Height = 918684;
         consensus.BIP66Height = 811879;
@@ -141,11 +135,13 @@ public:
         m_fallback_fee_enabled = false;
     }
 };
+*/
 
 // Testnet (v2)
 
 
 // Testnet (v3)
+/*
 class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
@@ -488,4 +484,3 @@ namespace Chain_info {
     }
 
 } // namespace Chain_info
-

@@ -138,7 +138,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
 
         // Relay sync-checkpoint
         {
-            LOCK(Checkpoints::cs_hashSyncCheckpoint);
+            LLOCK(Checkpoints::cs_hashSyncCheckpoint);
             if (! Checkpoints::checkpointMessage.IsNull())
                 Checkpoints::checkpointMessage.RelayTo(pfrom);
         }
@@ -358,7 +358,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
 
         if (checkpoint.ProcessSyncCheckpoint(pfrom)) {
             // Relay
-            pfrom->hashCheckpointKnown = checkpoint.hashCheckpoint;
+            pfrom->hashCheckpointKnown = checkpoint.Get_hashCheckpoint();
             LOCK(net_node::cs_vNodes);
             for(CNode* pnode: net_node::vNodes)
                 checkpoint.RelayTo(pnode);
@@ -1050,7 +1050,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
     printf("block_process::manage::ProcessBlock: ACCEPTED\n");
 
     // ppcoin: if responsible for sync-checkpoint send it
-    if (pfrom && !CSyncCheckpoint::strMasterPrivKey.empty())
+    if (pfrom && !CSyncCheckpoint::Get_strMasterPrivKey().empty())
         Checkpoints::manage::AutoSendSyncCheckpoint();
 
     return true;

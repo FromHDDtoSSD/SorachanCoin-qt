@@ -3,29 +3,27 @@
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
-#include "irc.h"
-#include "db.h"
-#include "net.h"
-#include "init.h"
-#include "addrman.h"
-#include "ui_interface.h"
-#include "miner.h"
-#include "ntp.h"
+
+#include <irc.h>
+#include <db.h>
+#include <net.h>
+#include <init.h>
+#include <addrman.h>
+#include <ui_interface.h>
+#include <miner.h>
+#include <ntp.h>
 #include <boot/shutdown.h>
 #include <block/block_process.h>
 #include <block/block_check.h>
 #include <util/time.h>
-
 #ifdef WIN32
 # include <string.h>
 #endif
-
 #ifdef USE_UPNP
-# include "miniwget.h"
-# include "miniupnpc.h"
-# include "upnpcommands.h"
-# include "upnperrors.h"
+# include <miniwget.h>
+# include <miniupnpc.h>
+# include <upnpcommands.h>
+# include <upnperrors.h>
 #endif
 
 const char *const net_basis::strIpZero = tcp_ip::strIpZero;
@@ -735,7 +733,7 @@ void CNode::PushVersion()
         addrMe = ext_ip::GetLocalAddress(&addr);
     }
 
-    ::RAND_bytes((unsigned char *)&bitsocket::nLocalHostNonce, sizeof(bitsocket::nLocalHostNonce));
+    latest_crypto::random::GetStrongRandBytes((unsigned char *)&bitsocket::nLocalHostNonce, sizeof(bitsocket::nLocalHostNonce));
     printf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", version::PROTOCOL_VERSION, block_info::nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", version::PROTOCOL_VERSION, net_node::nLocalServices, nTime, addrYou, addrMe, bitsocket::nLocalHostNonce, format_version::FormatSubVersion(version::CLIENT_NAME, version::CLIENT_VERSION, std::vector<std::string>()), block_info::nBestHeight);
 }

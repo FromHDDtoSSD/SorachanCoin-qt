@@ -683,6 +683,29 @@ bool match::WildcardMatch(const std::string &str, const std::string &mask)
     return match::WildcardMatch(str.c_str(), mask.c_str());
 }
 
+std::string bitstr::FormatMoney(int64_t n, bool fPlus /*= false*/) {
+    // Note: not using straight sprintf here because we do NOT want
+    // localized number formatting.
+    int64_t n_abs = (n > 0 ? n : -n);
+    int64_t quotient = n_abs / util::COIN;
+    int64_t remainder = n_abs % util::COIN;
+    std::string str = strprintf("%" PRId64 ".%06" PRId64, quotient, remainder);
+
+    // Right-trim excess zeros before the decimal point:
+    size_t nTrim = 0;
+    for (size_t i = str.size() - 1; (str[i] == '0' && isdigit(str[i - 2])); --i)
+        ++nTrim;
+    if (nTrim)
+        str.erase(str.size() - nTrim, nTrim);
+
+    if (n < 0)
+        str.insert(0u, 1, '-');
+    else if (fPlus && n > 0)
+        str.insert(0u, 1, '+');
+
+    return str;
+}
+
 bool bitstr::ParseMoney(const char *pszIn, int64_t &nRet) {
     std::string strWhole;
     int64_t nUnits = 0;

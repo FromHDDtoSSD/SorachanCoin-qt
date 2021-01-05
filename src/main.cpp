@@ -266,12 +266,12 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         // if checkpoint master key changed must reset sync-checkpoint
         //
         std::string strPubKey = "";
-        if (!txdb.ReadCheckpointPubKey(strPubKey) || strPubKey != CSyncCheckpoint::strMasterPubKey) {
+        if (!txdb.ReadCheckpointPubKey(strPubKey) || strPubKey != CSyncCheckpoint::Get_strMasterPubKey()) {
             //
             // write checkpoint master key to db
             //
             txdb.TxnBegin();
-            if (! txdb.WriteCheckpointPubKey(CSyncCheckpoint::strMasterPubKey)) {
+            if (! txdb.WriteCheckpointPubKey(CSyncCheckpoint::Get_strMasterPubKey())) {
                 return print::error("LoadBlockIndex() : failed to write new checkpoint master key to db");
             }
             if (! txdb.TxnCommit()) {

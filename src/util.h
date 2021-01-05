@@ -40,39 +40,18 @@
 #include <file_operate/iofs.h>
 #include <util/logging.h>
 #include <const/macro.h>
-
-//
-// This GNU C extension enables the compiler to check the format string against the parameters provided.
-// X is the number of the "format string" parameter, and Y is the number of the first variadic parameter.
-// Parameters count from 1.
-//
-#ifdef __GNUC__
-# define ATTR_WARN_PRINTF(X,Y) __attribute__((format(printf,X,Y)))
-#else
-# define ATTR_WARN_PRINTF(X,Y)
-#endif
+#include <random/random.h>
 
 //
 // Redefine printf so that it directs output to debug.log
 //
-
-//
-// Do this *after* defining the other printf-like functions, because otherwise the
-// __attribute__((format(printf,X,Y))) gets expanded to __attribute__((format(print::OutputDebugStringF,X,Y)))
-// which confuses gcc.
-//
-// #define printf print::OutputDebugStringF => gcc confused in this place. under, namespace print.
-//
-
 class trace : private no_instance
 {
 private:
     static FILE *_fileout;
-
 protected:
     static FILE *get_fileout() { return _fileout; }
     static void set_fileout(FILE *f) { _fileout = f; }
-
 public:
     static void LogStackTrace();
 };
@@ -82,16 +61,7 @@ public:
 // Use a dummy argument to work around this, and use a macro to keep similar semantics.
 class print : public trace
 {
-private:
-    //static std::string vstrprintf(const char *format, va_list ap);
 public:
-    //static int ATTR_WARN_PRINTF(1, 2) OutputDebugStringF(const char *pszFormat, ...);
-
-    /** Overload strprintf for char*, so that GCC format type warnings can be given */
-    //static std::string ATTR_WARN_PRINTF(1, 3) real_strprintf(const char *format, int dummy, ...);
-
-    /** Overload strprintf for std::string, to be able to use it with _ (translation). This will not support GCC format type warnings (-Wformat) so be careful. */
-    //static bool ATTR_WARN_PRINTF(1, 2) error(const char *format, ...);
     template <typename... Args>
     static bool error(const char *fmt, const Args&... args) {
         std::ostringstream oss;
@@ -125,7 +95,6 @@ class excep : private no_instance
 {
 private:
     static std::string strMiscWarning;
-
     static std::string FormatException(const std::exception *pex, const char *pszThread) {
 #ifdef WIN32
         char pszModule[MAX_PATH];
@@ -164,19 +133,19 @@ public:
 };
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> util_vector;
+using util_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> util_vector;
+using util_vector = std::vector<uint8_t>;
 #endif
 
-namespace util
+namespace util // used json-RPC
 {
-    const int32_t nOneHour = 60 * 60;
-    const int32_t nOneDay = 24 * 60 * 60;
-    const int64_t nOneWeek = 7 * 24 * 60 * 60;
+    constexpr int32_t nOneHour = 60 * 60;
+    constexpr int32_t nOneDay = 24 * 60 * 60;
+    constexpr int64_t nOneWeek = 7 * 24 * 60 * 60;
 
-    const int64_t COIN = 1000000;
-    const int64_t CENT = 10000;
+    constexpr int64_t COIN = 1000000;
+    constexpr int64_t CENT = 10000;
 
 #ifdef WIN32 // Windows MAX_PATH 256, ::Sleep(msec)
 # define MSG_NOSIGNAL        0
@@ -199,16 +168,6 @@ namespace util
         boost::thread::sleep(boost::get_system_time() + boost::posix_time::milliseconds(n>315576000000LL ? 315576000000LL : n));
     }
 #endif
-
-    /*
-    inline void MilliSleep(int64_t n) {
-#if BOOST_VERSION >= 105000
-        boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
-#else
-        boost::this_thread::sleep(boost::posix_time::milliseconds(n));
-#endif
-    }
-    */
 
     inline int roundint(double d) {
         return (int)(d > 0 ? d + 0.5 : d - 0.5);
@@ -236,8 +195,7 @@ namespace util
         static const char hexmap[16] = { '0', '1', '2', '3', '4', '5', '6', '7',
                                          '8', '9', 'a', 'b', 'c', 'd', 'e', 'f' };
         rv.reserve((itend - itbegin) * 3);
-        for (T it = itbegin; it < itend; ++it)
-        {
+        for (T it = itbegin; it < itend; ++it) {
             unsigned char val = (unsigned char)(*it);
             if (fSpaces && it != itbegin) {
                 rv.push_back(' ');
@@ -262,18 +220,6 @@ namespace util
     inline void PrintHex(const util_vector &vch, const char *pszFormat = "%s", bool fSpaces = true) {
         printf(pszFormat, util::HexStr(vch, fSpaces).c_str());
     }
-
-    /*
-    inline int64_t GetTimeMillis() {
-        return (boost::posix_time::microsec_clock::universal_time() -
-            boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_milliseconds();
-    }
-
-    inline int64_t GetTimeMicros() {
-        return (boost::posix_time::microsec_clock::universal_time() -
-            boost::posix_time::ptime(boost::gregorian::date(1970, 1, 1))).total_microseconds();
-    }
-    */
 
     inline std::string DateTimeStrFormat(const char *pszFormat, int64_t nTime) {
         // std::locale takes ownership of the pointer
@@ -330,18 +276,17 @@ namespace util
 // Median filter over a stream of values.
 // Returns the median of the last N numbers
 //
-template <typename T> class CMedianFilter
-{
+template <typename T>
+class CMedianFilter {
 private:
-    CMedianFilter(const CMedianFilter &); // {}
-    CMedianFilter(const CMedianFilter &&); // {}
-    CMedianFilter &operator=(const CMedianFilter &); // {}
-    CMedianFilter &operator=(const CMedianFilter &&); // {}
+    CMedianFilter(const CMedianFilter &)=delete;
+    CMedianFilter(CMedianFilter &&)=delete;
+    CMedianFilter &operator=(const CMedianFilter &)=delete;
+    CMedianFilter &operator=(CMedianFilter &&)=delete;
 
     std::vector<T> vValues;
     std::vector<T> vSorted;
     unsigned int nSize;
-
 public:
     CMedianFilter(unsigned int size, T initial_value) : nSize(size) {
         vValues.reserve(size);
@@ -386,6 +331,7 @@ namespace ntp_ext    // ntp.h namespace
 {
     extern int64_t GetNtpOffset();
 }
+
 class bitsystem : private no_instance
 {
 private:
@@ -397,7 +343,7 @@ private:
         if (util::abs64(ntp_ext::GetNtpOffset()) < 40 * 60) {    // If NTP and system clock are in agreement within 40 minutes, then use NTP.
             return ntp_ext::GetNtpOffset();
         }
-        if (util::abs64(nNodesOffset) < 70 * 60) {    // If not, then choose between median peer time and system clock.
+        if (util::abs64(nNodesOffset) < 70 * 60) {               // If not, then choose between median peer time and system clock.
             return nNodesOffset;
         }
         return 0;
@@ -434,16 +380,15 @@ public:
         // to give every possible output value an equal possibility
         uint64_t nRange = ((std::numeric_limits<uint64_t>::max)() / nMax) * nMax;
         uint64_t nRand = 0;
-        do
-        {
-            RAND_bytes((unsigned char *)&nRand, sizeof(nRand));
+        do {
+            latest_crypto::random::GetStrongRandBytes((unsigned char *)&nRand, sizeof(nRand));
         } while (nRand >= nRange);
 
         return (nRand % nMax);
     }
     static uint256 GetRandHash() {
         uint256 hash;
-        ::RAND_bytes((unsigned char *)&hash, sizeof(hash));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hash, sizeof(hash));
         return hash;
     }
     static int64_t GetNodesOffset() {
@@ -462,8 +407,7 @@ namespace bitstr
 
         std::string::size_type i1 = 0;
         std::string::size_type i2;
-        for ( ; ; )
-        {
+        for (;;) {
             i2 = str.find(c, i1);
             if (i2 == str.npos) {
                 v.push_back(str.substr(i1));
@@ -473,47 +417,22 @@ namespace bitstr
             i1 = i2 + 1;
         }
     }
-    inline std::string FormatMoney(int64_t n, bool fPlus = false) {
-        // Note: not using straight sprintf here because we do NOT want
-        // localized number formatting.
-        int64_t n_abs = (n > 0 ? n : -n);
-        int64_t quotient = n_abs / util::COIN;
-        int64_t remainder = n_abs % util::COIN;
-        std::string str = strprintf("%" PRId64 ".%06" PRId64, quotient, remainder);
 
-        // Right-trim excess zeros before the decimal point:
-        size_t nTrim = 0;
-        for (size_t i = str.size() - 1; (str[i] == '0' && isdigit(str[i - 2])); --i)
-        {
-            ++nTrim;
-        }
-        if (nTrim) {
-            str.erase(str.size() - nTrim, nTrim);
-        }
-
-        if (n < 0) {
-            str.insert(0u, 1, '-');
-        }
-        else if (fPlus && n > 0) {
-            str.insert(0u, 1, '+');
-        }
-
-        return str;
-    }
+    std::string FormatMoney(int64_t n, bool fPlus = false);
     bool ParseMoney(const char *pszIn, int64_t &nRet);
 }
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> hex_vector;
+using hex_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> hex_vector;
+using hex_vector = std::vector<uint8_t>;
 #endif
 class hex : private no_instance
 {
 private:
     static const signed char phexdigit[256];
 public:
-    static hex_vector ParseHex(const char *psz) noexcept {
+    static hex_vector ParseHex(const char *psz) {
         // convert hex dump to vector
         hex_vector vch;
         for (;;) {
@@ -534,7 +453,7 @@ public:
         }
         return vch;
     }
-    static hex_vector ParseHex(const std::string &str) noexcept {
+    static hex_vector ParseHex(const std::string &str) {
         return hex::ParseHex(str.c_str());
     }
     static bool IsHex(const std::string &str) noexcept {
@@ -608,36 +527,21 @@ namespace cmd
 }
 #endif
 
-#if defined(_MSC_VER) || defined(__MSVCRT__)
-/* Silence compiler warnings on Windows related to MinGWs inttypes.h */
-# undef PRIu64
-# undef PRId64
-# undef PRIx64
-
-# define PRIu64 "I64u"
-# define PRId64 "I64d"
-# define PRIx64 "I64x"
-#endif
-
-/* Format characters for (s)size_t and ptrdiff_t */
-#if defined(_MSC_VER) || defined(__MSVCRT__)
-/* (s)size_t and ptrdiff_t have the same size specifier in MSVC:
-http://msdn.microsoft.com/en-us/library/tcxf1dw6%28v=vs.100%29.aspx
-*/
-# define PRIszx    "Ix"
-# define PRIszu    "Iu"
-# define PRIszd    "Id"
-# define PRIpdx    "Ix"
-# define PRIpdu    "Iu"
-# define PRIpdd    "Id"
-#else /* C99 standard */
-# define PRIszx    "zx"
-# define PRIszu    "zu"
-# define PRIszd    "zd"
-# define PRIpdx    "tx"
-# define PRIpdu    "tu"
-# define PRIpdd    "td"
-#endif
+//
+// tiny format
+//
+#undef PRIu64
+#undef PRId64
+#undef PRIx64
+#define PRIu64 "u"
+#define PRId64 "d"
+#define PRIx64 "x"
+#define PRIszx "x"
+#define PRIszu "u"
+#define PRIszd "d"
+#define PRIpdx "x"
+#define PRIpdu "u"
+#define PRIpdd "d"
 
 namespace bitthread
 {
@@ -647,12 +551,10 @@ namespace bitthread
         static bool NewThread(void(*pfn)(void *), void *parg) {
             try {
                 boost::thread(pfn, parg); // thread detaches when out of scope
-            }
-            catch (boost::thread_resource_error &e) {
+            } catch (boost::thread_resource_error &e) {
                 printf("Error creating thread: %s\n", e.what());
                 return false;
             }
-
             return true;
         }
 

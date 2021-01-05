@@ -3,25 +3,24 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "txdb.h"
-#include "wallet.h"
-#include "walletdb.h"
-#include "crypter.h"
-#include "ui_interface.h"
-#include "address/base58.h"
-#include "kernel.h"
-#include "coincontrol.h"
-#include "miner.h"
+#include <txdb.h>
+#include <wallet.h>
+#include <walletdb.h>
+#include <crypter.h>
+#include <ui_interface.h>
+#include <address/base58.h>
+#include <kernel.h>
+#include <coincontrol.h>
+#include <miner.h>
 #include <boost/algorithm/string/replace.hpp>
 #include <openssl/bio.h>
-
-#include "main.h"
+#include <main.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <util.h>
 #include <net.h>
-
 #include <util/time.h>
+#include <random/random.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -421,15 +420,13 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
 
     CKeyingMaterial vMasterKey;
     seed::RandAddSeedPerfmon();
-
     vMasterKey.resize(crypter_param::WALLET_CRYPTO_KEY_SIZE);
-    RAND_bytes(&vMasterKey[0], crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    latest_crypto::random::GetStrongRandBytes(&vMasterKey[0], crypter_param::WALLET_CRYPTO_KEY_SIZE);
 
     CMasterKey kMasterKey;
-
     seed::RandAddSeedPerfmon();
     kMasterKey.vchSalt.resize(crypter_param::WALLET_CRYPTO_SALT_SIZE);
-    RAND_bytes(&kMasterKey.vchSalt[0], crypter_param::WALLET_CRYPTO_SALT_SIZE);
+    latest_crypto::random::GetStrongRandBytes(&kMasterKey.vchSalt[0], crypter_param::WALLET_CRYPTO_SALT_SIZE);
 
     CCrypter crypter;
     int64_t nStartTime = util::GetTimeMillis();
@@ -611,7 +608,7 @@ bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const Sec
     return result;
 }
 
-int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb) noexcept {
+int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb) {
     int64_t nRet = nOrderPosNext++;
     if (pwalletdb) {
         pwalletdb->WriteOrderPosNext(nOrderPosNext);
@@ -2943,7 +2940,7 @@ bool CWallet::NewKeyPool(unsigned int nSize)
     return true;
 }
 
-bool CWallet::TopUpKeyPool(unsigned int nSize/*=0*/) noexcept {
+bool CWallet::TopUpKeyPool(unsigned int nSize/*=0*/) {
     {
         LOCK(cs_wallet);
         if (IsLocked())

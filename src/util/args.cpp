@@ -141,7 +141,7 @@ bool map_arg::IsArgKnown(const std::string &key) {
     */
 }
 
-bool map_arg::ParseParameters(int argc, const char *const argv[], std::string *error/*=nullptr*/) noexcept {
+bool map_arg::ParseParameters(int argc, const char *const argv[], std::string *error/*=nullptr*/) {
     LLOCK(cs_args);
     mapArgs.clear();
     mapMultiArgs.clear();
@@ -476,7 +476,7 @@ static bool GetConfigOptions(std::istream &stream, std::string &error, std::vect
     return true;
 }
 
-fs::path GetConfigFile(const std::string &confPath) noexcept {
+fs::path GetConfigFile(const std::string &confPath) {
     /**
      * Most paths passed as configuration arguments are treated as relative to
      * the datadir if they are not absolute.
@@ -818,7 +818,7 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
     return true;
 }
 
-bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) noexcept {
+bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) {
     {
         LLOCK(cs_args);
         m_config_args.clear();

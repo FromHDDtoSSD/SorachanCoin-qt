@@ -4,9 +4,9 @@
 
 #ifndef WIN32
 
-#if defined(HAVE_CONFIG_H)
-# include <config/bitcoin-config.h>
-#endif
+//#if defined(HAVE_CONFIG_H)
+//# include <config/bitcoin-config.h>
+//#endif
 
 #include <cstddef>
 #include <cstdint>

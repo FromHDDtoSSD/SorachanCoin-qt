@@ -4,8 +4,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "db_addr.h"
+#include <db_addr.h>
 #include <block/block_info.h>
+#include <random/random.h>
 
 //
 // CAddrDB
@@ -19,7 +20,7 @@ bool CAddrDB::Write(const CAddrMan &addr)
 {
     // Generate random temporary filename
     unsigned short randv = 0;
-    ::RAND_bytes((unsigned char *)&randv, sizeof(randv));
+    latest_crypto::random::GetStrongRandBytes((unsigned char *)&randv, sizeof(randv));
     std::string tmpfn = strprintf("peers.dat.%04x", randv);
 
     // serialize addresses, checksum data up to that point, then append csum

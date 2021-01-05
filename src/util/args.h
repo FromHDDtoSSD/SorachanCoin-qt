@@ -119,7 +119,7 @@ private:
 
     static bool IsArgKnown(const std::string &key);
 public:
-    NODISCARD static bool ParseParameters(int argc, const char *const argv[], std::string *error=nullptr) noexcept;
+    NODISCARD static bool ParseParameters(int argc, const char *const argv[], std::string *error=nullptr);
     NODISCARD static bool ReadConfigFile() {return config::ReadConfigFile(mapArgs, mapMultiArgs);}
 
     static size_t GetMapArgsCount(const std::string &target) {
@@ -251,7 +251,7 @@ public:
     void SelectConfigNetwork(const std::string &network);
 
     NODISCARD bool ParseParameters(int argc, const char* const argv[], std::string &error);
-    NODISCARD bool ReadConfigFiles(std::string &error, bool ignore_invalid_keys = false) noexcept;
+    NODISCARD bool ReadConfigFiles(std::string &error, bool ignore_invalid_keys = false);
 
     /**
      * Log warnings for options in m_section_only_args when
@@ -406,7 +406,7 @@ std::string HelpMessageOpt(const std::string &option, const std::string &message
  *
  * @return The normalized path.
  */
-fs::path GetConfigFile(const std::string &confPath) noexcept;
+fs::path GetConfigFile(const std::string &confPath);
 
 /**
  * arginit.cpp

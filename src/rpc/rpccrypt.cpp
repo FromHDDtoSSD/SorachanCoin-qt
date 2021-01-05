@@ -9,7 +9,7 @@
 #include <init.h>
 #include <address/base58.h>
 
-json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
         return data.JSONRPCSuccess(
             "encryptdata <public key> <hex data>\n"
@@ -27,7 +27,7 @@ json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(util::HexStr(vchEncrypted));
 }
 
-json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
         return data.JSONRPCSuccess(
             "decryptdata <coin address or private key> <encrypted stream>\n"
@@ -64,7 +64,7 @@ json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(util::HexStr(vchDecrypted));
 }
 
-json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
         return data.JSONRPCSuccess(
             "encryptmessage <public key> <message string>\n"
@@ -82,7 +82,7 @@ json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, C
     return data.JSONRPCSuccess(base58::manage::EncodeBase58Check(vchEncrypted));
 }
 
-json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
         return data.JSONRPCSuccess(
             "decryptmessage <coin address or private key> <encrypted message>\n"

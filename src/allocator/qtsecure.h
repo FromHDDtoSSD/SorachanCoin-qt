@@ -12,11 +12,16 @@
 #include <sync/sync.h>
 #include <map>
 #include <QString>
+#include <QDialog>
+#include <QMessageBox>
 
 // throw Qt Error
 class qt_error : public std::runtime_error {
 public:
-    explicit qt_error(const std::string &err) : runtime_error(err) {}
+    explicit qt_error(const std::string &err, QWidget *widget) : runtime_error(err) {
+        if(widget)
+            QMessageBox::critical(widget, QDialog::tr("Qt Error: critical"), QDialog::tr(err.c_str()));
+    }
 };
 
 // SorachanCoin: QtSecureAllocator

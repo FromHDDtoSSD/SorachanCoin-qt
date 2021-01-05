@@ -1,6 +1,12 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef BITCOINFIELD_H
 #define BITCOINFIELD_H
 
+#include <qt/bitcoinunits.h>
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
@@ -15,12 +21,13 @@ class BitcoinAmountField: public QWidget
     Q_OBJECT
     Q_PROPERTY(qint64 value READ value WRITE setValue NOTIFY textChanged USER true)
 private:
-    BitcoinAmountField(const BitcoinAmountField &); // {}
-    BitcoinAmountField &operator=(const BitcoinAmountField &); // {}
+    BitcoinAmountField(const BitcoinAmountField &)=delete;
+    BitcoinAmountField &operator=(const BitcoinAmountField &)=delete;
+    BitcoinAmountField(BitcoinAmountField &&)=delete;
+    BitcoinAmountField &operator=(BitcoinAmountField &&)=delete;
 public:
-    explicit BitcoinAmountField(QWidget *parent = 0);
-
-    qint64 value(bool *valid=0) const;
+    explicit BitcoinAmountField(QWidget *parent = nullptr);
+    qint64 value(bool *valid = nullptr) const;
     void setValue(qint64 value);
 
     /** Mark current value as invalid in UI. */
@@ -29,7 +36,7 @@ public:
     bool validate();
 
     /** Change unit used to display amount. */
-    void setDisplayUnit(int unit);
+    void setDisplayUnit(BitcoinUnits::Unit unit);
 
     /** Make field empty and ready for new input. */
     void clear();
@@ -49,16 +56,13 @@ protected:
 private:
     QDoubleSpinBox *amount;
     QValueComboBox *unit;
-    int currentUnit;
+    BitcoinUnits::Unit currentUnit;
 
     void setText(const QString &text);
     QString text() const;
 
 private slots:
     void unitChanged(int idx);
-
 };
 
-
 #endif // BITCOINFIELD_H
-//@

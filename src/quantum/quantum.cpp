@@ -17,24 +17,6 @@
 #include <random/random.h>
 #include <cleanse/cleanse.h>
 
-//
-// TEST: runtime.
-//
-#ifdef DEBUG_RUNTIME_TEST
-# define SANITY_TEST
-#endif
-
-//
-// CHECK: prevector, aes, memory, hash, json
-//
-#ifdef DEBUG_ALGO_CHECK
-# define PREVECTOR_CHECK
-# define AES_CHECK
-# define MEMORY_CHECK
-# define HASH_CHECK
-//# define JSON_CHECK // note: univalue is checking ... (still failure)
-#endif
-
 namespace latest_crypto {
 
 void quantum_lib::manage::readonly() const {
@@ -447,6 +429,29 @@ void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noex
 }} // latest_crypto and Lamport
 
 
+
+
+
+//
+// TEST: runtime.
+//
+#ifdef DEBUG_RUNTIME_TEST
+# define SANITY_TEST
+#endif
+
+//
+// CHECK: prevector, aes, memory, hash, json
+//
+#ifdef DEBUG_ALGO_CHECK
+# define PREVECTOR_CHECK
+# define AES_CHECK
+# define MEMORY_CHECK
+# define HASH_CHECK
+//# define JSON_CHECK // note: univalue is checking ... (still failure)
+#endif
+
+#include <util/tinyformat.h>
+
 class Quantum_startup
 {
 private:
@@ -577,6 +582,19 @@ private:
         std::thread th2(&Quantum_startup::benchmark, nullptr);
         th1.join();
         th2.join();
+
+        // tiny format test
+        int64_t num = 0x1000000000000;
+        std::string tny1 = strprintf("%d", num);
+        std::string tny2 = strprintf("%u", num);
+        //std::string tny3 = strprintf("%", num); // NG
+        std::string tny4 = strprintf("%x", num);
+        debugcs::instance() << "tny1: " << tny1.c_str()
+                            << " tny2: " << tny2.c_str()
+                            //<< " tny3: " << tny3.c_str()
+                            << " tny4: " << tny4.c_str()
+                            << debugcs::endl();
+        assert(tny1==tny2); // d == u, I64d == d, x(16), %(NG)
 #endif
     }
     ~Quantum_startup() {}

@@ -561,7 +561,7 @@ OpenSSL_startup dummy_openssl;
 
 void random::SeedTimestamp(CSHA512 &hasher) noexcept {
     int64_t perfcounter = GetPerformanceCounter();
-    hasher.Write((const unsigned char*)&perfcounter, sizeof(perfcounter));
+    hasher.Write((const unsigned char *)&perfcounter, sizeof(perfcounter));
 }
 
 void random::SeedFast(CSHA512 &hasher) noexcept {
@@ -576,6 +576,8 @@ void random::SeedFast(CSHA512 &hasher) noexcept {
 
     // High-precision timestamp
     SeedTimestamp(hasher);
+
+    cleanse::OPENSSL_cleanse(buffer, sizeof(buffer));
 }
 
 void random::SeedSlow(CSHA512 &hasher) noexcept {
@@ -589,7 +591,8 @@ void random::SeedSlow(CSHA512 &hasher) noexcept {
     hasher.Write(buffer, sizeof(buffer));
 
     // OpenSSL RNG (for now)
-    RAND_bytes(buffer, sizeof(buffer));
+    seed::RandAddSeedPerfmon();
+    ::RAND_bytes(buffer, sizeof(buffer));
     hasher.Write(buffer, sizeof(buffer));
 
     // High-precision timestamp.
@@ -597,6 +600,8 @@ void random::SeedSlow(CSHA512 &hasher) noexcept {
     // Note that we also commit to a timestamp in the Fast seeder, so we indirectly commit to a
     // benchmark of all the entropy gathering sources in this function).
     SeedTimestamp(hasher);
+
+    cleanse::OPENSSL_cleanse(buffer, sizeof(buffer));
 }
 
 void random::SeedSleep(CSHA512 &hasher) {

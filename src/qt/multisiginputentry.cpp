@@ -18,7 +18,7 @@
 #include <allocator/qtsecure.h>
 
 MultisigInputEntry::MultisigInputEntry(QWidget *parent) : QFrame(parent), ui(new(std::nothrow) Ui::MultisigInputEntry), model(0) {
-    if(! ui) throw qt_error(std::string("Qt: MultisigInputEntry, Out of memory"));
+    if(! ui) throw qt_error(std::string("Qt: MultisigInputEntry, Out of memory"), this);
     ui->setupUi(this);
 }
 

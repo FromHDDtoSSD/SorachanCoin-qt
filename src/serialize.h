@@ -13,7 +13,6 @@
 #define BITCOIN_SERIALIZE_H
 
 #include <compat/endian.h>
-
 #include <string>
 #include <vector>
 #include <prevector/prevector.h>
@@ -25,12 +24,10 @@
 #include <limits>
 #include <cstring>
 #include <cstdio>
-
 #if defined __USE_MINGW_ANSI_STDIO
 # undef __USE_MINGW_ANSI_STDIO // This constant forces MinGW to conduct stupid behavior
 #endif
 #include <inttypes.h>
-
 #include <allocator/allocators.h>
 #include <version.h>
 #include <const/no_instance.h>
@@ -86,22 +83,22 @@ template<typename Stream> inline void ser_writedata8(Stream &s, uint8_t obj)
 }
 template<typename Stream> inline void ser_writedata16(Stream &s, uint16_t obj)
 {
-    obj = ::htole16(obj);
+    obj = endian::htole16(obj);
     s.write((char *)&obj, 2);
 }
 template<typename Stream> inline void ser_writedata16be(Stream &s, uint16_t obj)
 {
-    obj = ::htobe16(obj);
+    obj = endian::htobe16(obj);
     s.write((char *)&obj, 2);
 }
 template<typename Stream> inline void ser_writedata32(Stream &s, uint32_t obj)
 {
-    obj = ::htole32(obj);
+    obj = endian::htole32(obj);
     s.write((char *)&obj, 4);
 }
 template<typename Stream> inline void ser_writedata64(Stream &s, uint64_t obj)
 {
-    obj = ::htole64(obj);
+    obj = endian::htole64(obj);
     s.write((char *)&obj, 8);
 }
 template<typename Stream> inline uint8_t ser_readdata8(Stream &s)
@@ -114,25 +111,25 @@ template<typename Stream> inline uint16_t ser_readdata16(Stream &s)
 {
     uint16_t obj;
     s.read((char *)&obj, 2);
-    return ::le16toh(obj);
+    return endian::le16toh(obj);
 }
 template<typename Stream> inline uint16_t ser_readdata16be(Stream &s)
 {
     uint16_t obj;
     s.read((char *)&obj, 2);
-    return ::be16toh(obj);
+    return endian::be16toh(obj);
 }
 template<typename Stream> inline uint32_t ser_readdata32(Stream &s)
 {
     uint32_t obj;
     s.read((char *)&obj, 4);
-    return ::le32toh(obj);
+    return endian::le32toh(obj);
 }
 template<typename Stream> inline uint64_t ser_readdata64(Stream &s)
 {
     uint64_t obj;
     s.read((char *)&obj, 8);
-    return ::le64toh(obj);
+    return endian::le64toh(obj);
 }
 inline uint64_t ser_double_to_uint64(double x)
 {
@@ -174,52 +171,52 @@ private:
     static inline double uint64_to_double(uint64_t s) { union { double x; uint64_t y; } tmp; tmp.y = s; return tmp.x; }
 
     static inline uint8_t _htole(uint8_t s) { return s; }
-    static inline uint16_t _htole(uint16_t s) { return ::htole16(s); }
-    static inline uint32_t _htole(uint32_t s) { return ::htole32(s); }
-    static inline uint64_t _htole(uint64_t s) { return ::htole64(s); }
+    static inline uint16_t _htole(uint16_t s) { return endian::htole16(s); }
+    static inline uint32_t _htole(uint32_t s) { return endian::htole32(s); }
+    static inline uint64_t _htole(uint64_t s) { return endian::htole64(s); }
     static inline uint8_t _htole(int8_t s) { return (uint8_t)s; }
-    static inline uint16_t _htole(int16_t s) { return ::htole16((uint16_t)s); }
-    static inline uint32_t _htole(int32_t s) { return ::htole32((uint32_t)s); }
-    static inline uint64_t _htole(int64_t s) { return ::htole64((uint64_t)s); }
-    static inline _CINV_MSG_TYPE _htole(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::htole32((uint32_t)s); }
-    static inline uint32_t _htole(float s) { uint32_t tmp = float_to_uint32(s); return ::htole32(tmp); }
-    static inline uint64_t _htole(double s) { uint64_t tmp = double_to_uint64(s); return ::htole64(tmp); }
+    static inline uint16_t _htole(int16_t s) { return endian::htole16((uint16_t)s); }
+    static inline uint32_t _htole(int32_t s) { return endian::htole32((uint32_t)s); }
+    static inline uint64_t _htole(int64_t s) { return endian::htole64((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _htole(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)endian::htole32((uint32_t)s); }
+    static inline uint32_t _htole(float s) { uint32_t tmp = float_to_uint32(s); return endian::htole32(tmp); }
+    static inline uint64_t _htole(double s) { uint64_t tmp = double_to_uint64(s); return endian::htole64(tmp); }
 
     static inline uint8_t _htobe(uint8_t s) { return s; }
-    static inline uint16_t _htobe(uint16_t s) { return ::htobe16(s); }
-    static inline uint32_t _htobe(uint32_t s) { return ::htobe32(s); }
-    static inline uint64_t _htobe(uint64_t s) { return ::htobe64(s); }
+    static inline uint16_t _htobe(uint16_t s) { return endian::htobe16(s); }
+    static inline uint32_t _htobe(uint32_t s) { return endian::htobe32(s); }
+    static inline uint64_t _htobe(uint64_t s) { return endian::htobe64(s); }
     static inline uint8_t _htobe(int8_t s) { return (uint8_t)s; }
-    static inline uint16_t _htobe(int16_t s) { return ::htobe16((uint16_t)s); }
-    static inline uint32_t _htobe(int32_t s) { return ::htobe32((uint32_t)s); }
-    static inline uint64_t _htobe(int64_t s) { return ::htobe64((uint64_t)s); }
-    static inline _CINV_MSG_TYPE _htobe(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::htobe32((uint32_t)s); }
-    static inline uint32_t _htobe(float s) { uint32_t tmp = float_to_uint32(s); return ::htobe32(tmp); }
-    static inline uint64_t _htobe(double s) { uint64_t tmp = double_to_uint64(s); return ::htobe64(tmp); }
+    static inline uint16_t _htobe(int16_t s) { return endian::htobe16((uint16_t)s); }
+    static inline uint32_t _htobe(int32_t s) { return endian::htobe32((uint32_t)s); }
+    static inline uint64_t _htobe(int64_t s) { return endian::htobe64((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _htobe(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)endian::htobe32((uint32_t)s); }
+    static inline uint32_t _htobe(float s) { uint32_t tmp = float_to_uint32(s); return endian::htobe32(tmp); }
+    static inline uint64_t _htobe(double s) { uint64_t tmp = double_to_uint64(s); return endian::htobe64(tmp); }
 
     static inline uint8_t _letoh(uint8_t s) { return s; }
-    static inline uint16_t _letoh(uint16_t s) { return ::le16toh(s); }
-    static inline uint32_t _letoh(uint32_t s) { return ::le32toh(s); }
-    static inline uint64_t _letoh(uint64_t s) { return ::le64toh(s); }
+    static inline uint16_t _letoh(uint16_t s) { return endian::le16toh(s); }
+    static inline uint32_t _letoh(uint32_t s) { return endian::le32toh(s); }
+    static inline uint64_t _letoh(uint64_t s) { return endian::le64toh(s); }
     static inline uint8_t _letoh(int8_t s) { return (uint8_t)s; }
-    static inline uint16_t _letoh(int16_t s) { return ::le16toh((uint16_t)s); }
-    static inline uint32_t _letoh(int32_t s) { return ::le32toh((uint32_t)s); }
-    static inline uint64_t _letoh(int64_t s) { return ::le64toh((uint64_t)s); }
-    static inline _CINV_MSG_TYPE _letoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::le32toh((uint32_t)s); }
-    static inline float _letoh(uint32_t s, int) { uint32_t tmp = ::le32toh(s); return uint32_to_float(tmp); }
-    static inline double _letoh(uint64_t s, int) { uint64_t tmp = ::le64toh(s); return uint64_to_double(tmp); }
+    static inline uint16_t _letoh(int16_t s) { return endian::le16toh((uint16_t)s); }
+    static inline uint32_t _letoh(int32_t s) { return endian::le32toh((uint32_t)s); }
+    static inline uint64_t _letoh(int64_t s) { return endian::le64toh((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _letoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)endian::le32toh((uint32_t)s); }
+    static inline float _letoh(uint32_t s, int) { uint32_t tmp = endian::le32toh(s); return uint32_to_float(tmp); }
+    static inline double _letoh(uint64_t s, int) { uint64_t tmp = endian::le64toh(s); return uint64_to_double(tmp); }
 
     static inline uint8_t _betoh(uint8_t s) { return s; }
-    static inline uint16_t _betoh(uint16_t s) { return ::be16toh(s); }
-    static inline uint32_t _betoh(uint32_t s) { return ::be32toh(s); }
-    static inline uint64_t _betoh(uint64_t s) { return ::be64toh(s); }
+    static inline uint16_t _betoh(uint16_t s) { return endian::be16toh(s); }
+    static inline uint32_t _betoh(uint32_t s) { return endian::be32toh(s); }
+    static inline uint64_t _betoh(uint64_t s) { return endian::be64toh(s); }
     static inline uint8_t _betoh(int8_t s) { return (uint8_t)s; }
-    static inline uint16_t _betoh(int16_t s) { return ::be16toh((uint16_t)s); }
-    static inline uint32_t _betoh(int32_t s) { return ::be32toh((uint32_t)s); }
-    static inline uint64_t _betoh(int64_t s) { return ::be64toh((uint64_t)s); }
-    static inline _CINV_MSG_TYPE _betoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)::be32toh((uint32_t)s); }
-    static inline float _betoh(uint32_t s, int) { uint32_t tmp = ::be32toh(s); return uint32_to_float(tmp); }
-    static inline double _betoh(uint64_t s, int) { uint64_t tmp = ::be64toh(s); return uint64_to_double(tmp); }
+    static inline uint16_t _betoh(int16_t s) { return endian::be16toh((uint16_t)s); }
+    static inline uint32_t _betoh(int32_t s) { return endian::be32toh((uint32_t)s); }
+    static inline uint64_t _betoh(int64_t s) { return endian::be64toh((uint64_t)s); }
+    static inline _CINV_MSG_TYPE _betoh(_CINV_MSG_TYPE s) { return (_CINV_MSG_TYPE)endian::be32toh((uint32_t)s); }
+    static inline float _betoh(uint32_t s, int) { uint32_t tmp = endian::be32toh(s); return uint32_to_float(tmp); }
+    static inline double _betoh(uint64_t s, int) { uint64_t tmp = endian::be64toh(s); return uint64_to_double(tmp); }
 
 public:
     template<typename Stream, typename T> static inline void write(Stream &s, const T obj) {
@@ -1291,7 +1288,6 @@ namespace imp_ser
 // >> and << read and write unformatted data using the above serialization templates.
 // Fills with data in linear time; some stringstream implementations take N^2 time.
 typedef std::vector<char, zero_after_free_allocator<char> > CSerializeData;
-
 #ifdef DATASTREAM_PREVECTOR_ENABLE
 typedef prevector<PREVECTOR_DATASTREAM_N, uint8_t> datastream_vector;
 typedef prevector<PREVECTOR_DATASTREAM_N, int8_t> datastream_signed_vector;
@@ -1299,7 +1295,6 @@ typedef prevector<PREVECTOR_DATASTREAM_N, int8_t> datastream_signed_vector;
 typedef std::vector<uint8_t> datastream_vector;
 typedef std::vector<int8_t> datastream_signed_vector;
 #endif
-
 class CDataStream : public CTypeVersion
 {
 private:
@@ -1572,6 +1567,33 @@ public:
         CDataStream ret(a);
         ret += b;
         return ret;
+    }
+
+    //
+    // port to latest core
+    //
+
+    // XOR the contents of this stream with a certain key.
+    // @param[in] key    The key used to XOR the data in this stream.
+    void Xor(const datastream_vector &key) {
+        if (key.size() == 0)
+            return;
+        for (size_type i = 0, j = 0; i != size(); ++i) {
+            vch[i] ^= key[j++];
+
+            // This potentially acts on very many bytes of data, so it's
+            // important that we calculate `j`, i.e. the `key` index in this
+            // way instead of doing a %, which would effectively be a division
+            // for each byte Xor'd -- much slower than need be.
+            if (j == key.size())
+                j = 0;
+        }
+    }
+
+    template <typename... Args>
+    CDataStream(int nTypeIn, int nVersionIn, Args&&... args) : CTypeVersion(nTypeIn, nVersionIn) {
+        Init();
+        ::SerializeMany(*this, std::forward<Args>(args)...);
     }
 };
 

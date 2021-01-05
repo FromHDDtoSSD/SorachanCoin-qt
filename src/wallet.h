@@ -243,7 +243,7 @@ public:
     // Increment the next transaction order id
     // @return next transaction order id
     //
-    int64_t IncOrderPosNext(CWalletDB *pwalletdb = NULL) noexcept;
+    int64_t IncOrderPosNext(CWalletDB *pwalletdb = nullptr);
 
     typedef std::pair<CWalletTx *, CAccountingEntry *> TxPair;
     typedef std::multimap<int64_t, TxPair > TxItems;
@@ -293,7 +293,7 @@ public:
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &wtxNew, bool fAskFee=false);
 
     bool NewKeyPool(unsigned int nSize = 0);
-    bool TopUpKeyPool(unsigned int nSize = 0) noexcept;
+    bool TopUpKeyPool(unsigned int nSize = 0);
     int64_t AddReserveKey(const CKeyPool &keypool);
     void ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool);
     void KeepKey(int64_t nIndex);

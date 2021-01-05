@@ -10,14 +10,11 @@
 #include <string>
 #include <list>
 #include <map>
-
 #include <json/json_spirit_reader_template.h>
 #include <json/json_spirit_writer_template.h>
 #include <json/json_spirit_utils.h>
-
 #include <boost/asio.hpp>
 #include <boost/asio/ssl.hpp>
-
 #include <util.h>
 #include <checkpoints.h>
 #include <address/base58.h>
@@ -105,8 +102,8 @@ public:
         eg = "";
         sr = "";
     }
-    bool fHelp() const {return (param == BITRPC_PARAM_HELP);}
-    bool fSuccess() const {return (ret == BITRPC_STATUS_OK);}
+    bool fHelp() const noexcept {return (param == BITRPC_PARAM_HELP);}
+    bool fSuccess() const noexcept {return (ret == BITRPC_STATUS_OK);}
     template <typename T>
     json_spirit::Value JSONRPCSuccess(T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) noexcept {
         ret = BITRPC_STATUS_OK;
@@ -153,33 +150,33 @@ public:
 // JSON request
 namespace json
 {
-    std::string JSONRPCRequest(const std::string &strMethod, const json_spirit::Array &params, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept;
-    json_spirit::Object JSONRPCReplyObj(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id) noexcept;
-    std::string JSONRPCReply(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept;
-    void ErrorReply(std::ostream &stream, const json_spirit::Object &objError, const json_spirit::Value &id, json_spirit::json_flags &status) noexcept;
+    std::string JSONRPCRequest(const std::string &strMethod, const json_spirit::Array &params, const json_spirit::Value &id, json_spirit::json_flags &status);
+    json_spirit::Object JSONRPCReplyObj(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id);
+    std::string JSONRPCReply(const json_spirit::Value &result, const json_spirit::Value &error, const json_spirit::Value &id, json_spirit::json_flags &status);
+    void ErrorReply(std::ostream &stream, const json_spirit::Object &objError, const json_spirit::Value &id, json_spirit::json_flags &status);
 }
 
 // HTTP protocol
 namespace http
 {
-    std::string HTTPPost(const std::string &strMsg, const std::map<std::string, std::string> &mapRequestHeaders) noexcept;
-    std::string HTTPReply(int nStatus, const std::string &strMsg, bool keepalive) noexcept;
-    int ReadHTTPStatus(std::basic_istream<char> &stream, int &proto) noexcept;
-    int ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet) noexcept;
-    int ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet, std::string &strMessageRet) noexcept;
+    std::string HTTPPost(const std::string &strMsg, const std::map<std::string, std::string> &mapRequestHeaders);
+    std::string HTTPReply(int nStatus, const std::string &strMsg, bool keepalive);
+    int ReadHTTPStatus(std::basic_istream<char> &stream, int &proto);
+    int ReadHTTPHeader(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet);
+    int ReadHTTP(std::basic_istream<char> &stream, std::map<std::string, std::string> &mapHeadersRet, std::string &strMessageRet);
 }
 
 // JSON Basis
 namespace bitjson
 {
-    inline json_spirit::Object JSONRPCError(int code, const std::string &message) noexcept {
+    inline json_spirit::Object JSONRPCError(int code, const std::string &message) {
         json_spirit::Object error;
         error.push_back(json_spirit::Pair("code", code));
         error.push_back(json_spirit::Pair("message", message));
         return error;
     }
 
-    inline std::string rfc1123Time() noexcept {
+    inline std::string rfc1123Time() {
         return util::DateTimeStrFormat("%a, %d %b %Y %H:%M:%S +0000", bitsystem::GetTime());
     }
 
@@ -187,29 +184,29 @@ namespace bitjson
     {
     private:
         JSONRequest(const JSONRequest &)=delete;
-        JSONRequest(const JSONRequest &&)=delete;
+        JSONRequest(JSONRequest &&)=delete;
         JSONRequest &operator=(const JSONRequest &)=delete;
-        JSONRequest &operator=(const JSONRequest &&)=delete;
+        JSONRequest &operator=(JSONRequest &&)=delete;
     public:
         json_spirit::Value id;
         std::string strMethod;
         json_spirit::Array params;
 
         JSONRequest() noexcept { id = json_spirit::Value::null; }
-        bool parse(const json_spirit::Value &valRequest, CBitrpcData &data) noexcept;
+        bool parse(const json_spirit::Value &valRequest, CBitrpcData &data);
     };
 }
 
 // Utilities: convert hex-encoded Values
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> hexrpc_vector;
+using hexrpc_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> hexrpc_vector;
+using hexrpc_vector = std::vector<uint8_t>;
 #endif
 class hexrpc : private no_instance
 {
 public:
-    static uint256 ParseHashV(const json_spirit::Value &v, std::string strName, CBitrpcData &data) noexcept {
+    static uint256 ParseHashV(const json_spirit::Value &v, std::string strName, CBitrpcData &data) {
         std::string strHex;
         static uint256 err_h(0);
         json_spirit::json_flags status;
@@ -230,11 +227,11 @@ public:
         return result;
     }
 
-    static uint256 ParseHashO(const json_spirit::Object &o, std::string strKey, CBitrpcData &data) noexcept {
+    static uint256 ParseHashO(const json_spirit::Object &o, std::string strKey, CBitrpcData &data) {
         return hexrpc::ParseHashV(json_spirit::find_value(o, strKey), strKey, data);
     }
 
-    static hexrpc_vector ParseHexV(const json_spirit::Value &v, std::string strName, CBitrpcData &data) noexcept {
+    static hexrpc_vector ParseHexV(const json_spirit::Value &v, std::string strName, CBitrpcData &data) {
         std::string strHex;
         static hexrpc_vector err_v;
         json_spirit::json_flags status;
@@ -253,7 +250,7 @@ public:
         return hex::ParseHex(strHex);
     }
 
-    static hexrpc_vector ParseHexO(const json_spirit::Object &o, std::string strKey, CBitrpcData &data) noexcept {
+    static hexrpc_vector ParseHexO(const json_spirit::Object &o, std::string strKey, CBitrpcData &data) {
         return hexrpc::ParseHexV(json_spirit::find_value(o, strKey), strKey, data);
     }
 };
@@ -282,59 +279,59 @@ private:
         }
     };
     static unsigned short GetDefaultRPCPort() noexcept;
-    static void ThreadRPCServer2(void *parg) noexcept;
-    static void ThreadRPCServer3(void *parg) noexcept; // ThreadRPCServer => ThreadRPCServer2 => RPCListen => bind:RPCAcceptHandler => ThreadRPCServer3 => exec
+    static void ThreadRPCServer2(void *parg);
+    static void ThreadRPCServer3(void *parg); // ThreadRPCServer => ThreadRPCServer2 => RPCListen => bind:RPCAcceptHandler => ThreadRPCServer3 => exec
 
 #if BOOST_VERSION >= 106600
     template <typename Protocol>
-    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) noexcept;
+    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg);
 #else
     template <typename Protocol, typename SocketAcceptorService>
-    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) noexcept;
+    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg);
 #endif
 #if BOOST_VERSION >= 106600
     template <typename Protocol>
-    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) noexcept;
+    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg);
 #else
     template <typename Protocol, typename SocketAcceptorService>
-    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) noexcept;
+    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg);
 #endif
 
-    static bool HTTPAuthorized(std::map<std::string, std::string> &mapHeaders) noexcept;
-    static bool ClientAllowed(const boost::asio::ip::address &address) noexcept;
-    static json_spirit::Object JSONRPCExecOne(const json_spirit::Value &req, CBitrpcData &data) noexcept;
-    static std::string JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData &data) noexcept;
+    static bool HTTPAuthorized(std::map<std::string, std::string> &mapHeaders);
+    static bool ClientAllowed(const boost::asio::ip::address &address);
+    static json_spirit::Object JSONRPCExecOne(const json_spirit::Value &req, CBitrpcData &data);
+    static std::string JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData &data);
 
     /*
     ** Convert parameter values for RPC call from strings to command-specific JSON objects.
     */
-    template<typename T> static void ConvertTo(CBitrpcData &data, json_spirit::Value &value, bool fAllowNull = false) noexcept;
-    static json_spirit::Array RPCConvertValues(CBitrpcData &data, const std::string &strMethod, const std::vector<std::string> &strParams) noexcept;
-    static json_spirit::Object CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params) noexcept;
+    template<typename T> static void ConvertTo(CBitrpcData &data, json_spirit::Value &value, bool fAllowNull = false);
+    static json_spirit::Array RPCConvertValues(CBitrpcData &data, const std::string &strMethod, const std::vector<std::string> &strParams);
+    static json_spirit::Object CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params);
 
 public:
-    static void ThreadRPCServer(void *parg) noexcept;
-    static int CommandLineRPC(int argc, char *argv[]) noexcept;
+    static void ThreadRPCServer(void *parg);
+    static int CommandLineRPC(int argc, char *argv[]);
 
     /*
     ** Type-check arguments; throws bitjson::JSONRPCError if wrong type given. Does not check that
     ** the right number of arguments are passed, just that any passed are the correct type.
-    ** Use like: RPCTypeCheck(params, boost::assign::list_of(str_type)(int_type)(obj_type));
+    ** Use like: RPCTypeCheck(params, {{str_type},{int_type},{obj_type}});
     */
-    static void RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, const std::list<json_spirit::Value_type> &typesExpected, bool fAllowNull = false) noexcept;
+    static void RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, const std::list<json_spirit::Value_type> &typesExpected, bool fAllowNull = false);
 
     /*
     ** Check for expected keys/value types in an Object.
-    ** Use like: RPCTypeCheck(object, boost::assign::map_list_of("name", str_type)("value", int_type));
+    ** Use like: RPCTypeCheck(object, {{"name", str_type},{"value", int_type}});
     */
-    static void RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const std::map<std::string, json_spirit::Value_type> &typesExpected, bool fAllowNull = false) noexcept;
+    static void RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const std::map<std::string, json_spirit::Value_type> &typesExpected, bool fAllowNull = false);
 };
 
 // Bitcoin RPC command dispatcher.
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> rpctable_vector;
+using rpctable_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> rpctable_vector;
+using rpctable_vector = std::vector<uint8_t>;
 #endif
 class CWalletTx;
 class CWalletDB;
@@ -376,40 +373,40 @@ private:
 
     // CBitrpcData helper
     static json_spirit::Value help(std::string name, CBitrpcData &data); // bitcoinrpc.cpp
-    static std::string HexBits(unsigned int nBits) noexcept;
+    static std::string HexBits(unsigned int nBits);
     static json_spirit::Value ValueFromAmount(int64_t amount) noexcept;
-    static int64_t AmountFromValue(const json_spirit::Value &value, CBitrpcData &data) noexcept;
+    static int64_t AmountFromValue(const json_spirit::Value &value, CBitrpcData &data);
 
-    static CBitcoinAddress GetAccountAddress(CBitrpcData &data, std::string strAccount, bool bForceNew = false, bool *ret = nullptr) noexcept; // rpcwallet.cpp
-    static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress) noexcept;
-    static int64_t GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter) noexcept;
-    static int64_t GetAccountBalance(const std::string &strAccount, int nMinDepth, const isminefilter &filter) noexcept;
+    static CBitcoinAddress GetAccountAddress(CBitrpcData &data, std::string strAccount, bool bForceNew = false, bool *ret = nullptr); // rpcwallet.cpp
+    static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress);
+    static int64_t GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter);
+    static int64_t GetAccountBalance(const std::string &strAccount, int nMinDepth, const isminefilter &filter);
     static json_spirit::Value ListReceived(const json_spirit::Array &params, bool fByAccounts, CBitrpcData &data) noexcept;
     static void MaybePushAddress(json_spirit::Object &entry, const CBitcoinAddress &dest) noexcept;
-    static void ListTransactions(const CWalletTx &wtx, const std::string &strAccount, int nMinDepth, bool fLong, json_spirit::Array &ret, const isminefilter &filter) noexcept;
-    static void AcentryToJSON(const CAccountingEntry &acentry, const std::string &strAccount, json_spirit::Array &ret) noexcept;
+    static void ListTransactions(const CWalletTx &wtx, const std::string &strAccount, int nMinDepth, bool fLong, json_spirit::Array &ret, const isminefilter &filter);
+    static void AcentryToJSON(const CAccountingEntry &acentry, const std::string &strAccount, json_spirit::Array &ret);
 
-    static void ScriptPubKeyToJSON(const CScript &scriptPubKey, json_spirit::Object &out, bool fIncludeHex) noexcept; // rpcrawtransaction.cpp
-    static void TxToJSON(const CTransaction &tx, const uint256 &hashBlock, json_spirit::Object &entry) noexcept;
+    static void ScriptPubKeyToJSON(const CScript &scriptPubKey, json_spirit::Object &out, bool fIncludeHex); // rpcrawtransaction.cpp
+    static void TxToJSON(const CTransaction &tx, const uint256 &hashBlock, json_spirit::Object &entry);
 
     static double GetDifficulty(const CBlockIndex *blockindex = nullptr) noexcept; //rpcblockchain.cpp
     static double GetPoSKernelPS() noexcept;
     static double GetPoWMHashPS() noexcept;
-    static json_spirit::Object blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail) noexcept;
+    static json_spirit::Object blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail);
     static bool ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock);
 
     static std::string HelpRequiringPassphrase() noexcept; // rpcwallet.cpp
     static json_spirit::Value EnsureWalletIsUnlocked(CBitrpcData &data) noexcept;
-    static void WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry) noexcept;
-    static bool TopUpKeyPool(CBitrpcData &data, unsigned int nSize = 0) noexcept;
-    static std::string AccountFromValue(const json_spirit::Value &value, CBitrpcData &data) noexcept;
+    static void WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry);
+    static bool TopUpKeyPool(CBitrpcData &data, unsigned int nSize = 0);
+    static std::string AccountFromValue(const json_spirit::Value &value, CBitrpcData &data);
 
 public:
     static CCriticalSection cs_nWalletUnlockTime;
     static int64_t nWalletUnlockTime;
     static CCriticalSection cs_getwork;
-    static void ThreadTopUpKeyPool(void *parg) noexcept;
-    static void ThreadCleanWalletPassphrase(void *parg) noexcept;
+    static void ThreadTopUpKeyPool(void *parg);
+    static void ThreadCleanWalletPassphrase(void *parg);
 
     /**
     * Execute a method.
@@ -417,7 +414,7 @@ public:
     * @param params   Array of arguments (JSON objects)
     * @returns Result of the call.
     */
-    static json_spirit::Value execute(const std::string &method, const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value execute(const std::string &method, const json_spirit::Array &params, CBitrpcData &data);
 
 private:
     // Bitcoin RPC function
@@ -425,102 +422,102 @@ private:
     static json_spirit::Value stop(const json_spirit::Array &params, CBitrpcData &data) noexcept;
 
     static json_spirit::Value getconnectioncount(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcnet.cpp
-    static json_spirit::Value getpeerinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getaddrmaninfo(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value addnode(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getaddednodeinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value sendalert(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getpeerinfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getaddrmaninfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value addnode(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getaddednodeinfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value sendalert(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value getnettotals(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value ntptime(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value ntptime(const json_spirit::Array &params, CBitrpcData &data);
 
-    static json_spirit::Value dumpprivkey(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcdump.cpp
-    static json_spirit::Value importprivkey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value importaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value removeaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumpwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value importwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumppem(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumpmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value importmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value dumpprivkey(const json_spirit::Array &params, CBitrpcData &data); // in rpcdump.cpp
+    static json_spirit::Value importprivkey(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value importaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value removeaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumpwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value importwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumppem(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumpmalleablekey(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value importmalleablekey(const json_spirit::Array &params, CBitrpcData &data);
 
-    static json_spirit::Value getsubsidy(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcmining.cpp
-    static json_spirit::Value getmininginfo(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value scaninput(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getwork(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getworkex(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getblocktemplate(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value submitblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getsubsidy(const json_spirit::Array &params, CBitrpcData &data); // in rpcmining.cpp
+    static json_spirit::Value getmininginfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value scaninput(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getwork(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getworkex(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getblocktemplate(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value submitblock(const json_spirit::Array &params, CBitrpcData &data);
 
-    static json_spirit::Value getnewaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcwallet.cpp
-    static json_spirit::Value getaccountaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value setaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getaddressesbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value sendtoaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value signmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value verifymessage(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getbalance(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value movecmd(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value sendfrom(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value sendmany(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value addmultisigaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value addredeemscript(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listtransactions(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listaddressgroupings(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listaccounts(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listsinceblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value gettransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value backupwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value keypoolrefill(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value keypoolreset(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value walletpassphrase(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value walletpassphrasechange(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value walletlock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value encryptwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value validateaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value reservebalance(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value checkwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value repairwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value resendtx(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value resendwallettransactions(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value makekeypair(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value mergecoins(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value newmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value adjustmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value adjustmalleablepubkey(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value listmalleableviews(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getnewaddress(const json_spirit::Array &params, CBitrpcData &data); // in rpcwallet.cpp
+    static json_spirit::Value getaccountaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value setaccount(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getaccount(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getaddressesbyaccount(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value sendtoaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value signmessage(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value verifymessage(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getbalance(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value movecmd(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value sendfrom(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value sendmany(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value addmultisigaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value addredeemscript(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listtransactions(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listaddressgroupings(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listaccounts(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listsinceblock(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value gettransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value backupwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value keypoolrefill(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value keypoolreset(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value walletpassphrase(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value walletpassphrasechange(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value walletlock(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value encryptwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value validateaddress(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getinfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value reservebalance(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value checkwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value repairwallet(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value resendtx(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value resendwallettransactions(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value makekeypair(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value mergecoins(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value newmalleablekey(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value adjustmalleablekey(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value adjustmalleablepubkey(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value listmalleableviews(const json_spirit::Array &params, CBitrpcData &data);
 
-    static json_spirit::Value encryptdata(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpccrypt.cpp
-    static json_spirit::Value decryptdata(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value encryptmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value decryptmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value encryptdata(const json_spirit::Array &params, CBitrpcData &data); // in rpccrypt.cpp
+    static json_spirit::Value decryptdata(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value encryptmessage(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value decryptmessage(const json_spirit::Array &params, CBitrpcData &data);
 
-    static json_spirit::Value getrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rcprawtransaction.cpp
-    static json_spirit::Value listunspent(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value createrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value createmultisig(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value decodescript(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value signrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getrawtransaction(const json_spirit::Array &params, CBitrpcData &data); // in rcprawtransaction.cpp
+    static json_spirit::Value listunspent(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value createrawtransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value decoderawtransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value createmultisig(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value decodescript(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value signrawtransaction(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value sendrawtransaction(const json_spirit::Array &params, CBitrpcData &data);
 
     static json_spirit::Value getbestblockhash(const json_spirit::Array &params, CBitrpcData &data) noexcept; // in rpcblockchain.cpp
     static json_spirit::Value getblockcount(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getdifficulty(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value settxfee(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getrawmempool(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getrawmempool(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value getblockhash(const json_spirit::Array &params, CBitrpcData &data) noexcept;
     static json_spirit::Value getblockqhash(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumpblock(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data) noexcept;
-    static json_spirit::Value getcheckpoint(const json_spirit::Array &params, CBitrpcData &data) noexcept;
+    static json_spirit::Value getblock(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getblockbynumber(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumpblock(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value dumpblockbynumber(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getcheckpoint(const json_spirit::Array &params, CBitrpcData &data);
 };
 
 // singleton class

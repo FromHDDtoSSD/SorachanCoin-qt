@@ -71,11 +71,11 @@ bool error(const char* fmt, const Args&... args) noexcept {
 }
 
 void PrintExceptionContinue(const std::exception *pex, const char* pszThread);
-bool FileCommit(FILE *file) noexcept;
+bool FileCommit(FILE *file);
 bool TruncateFile(FILE *file, unsigned int length) noexcept;
 int RaiseFileDescriptorLimit(int nMinFD) noexcept;
-void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length) noexcept;
-bool RenameOver(fs::path src, fs::path dest) noexcept;
+void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length);
+bool RenameOver(fs::path src, fs::path dest);
 bool LockDirectory(const fs::path &directory, const std::string lockfile_name, bool probe_only=false);
 void UnlockDirectory(const fs::path &directory, const std::string &lockfile_name);
 bool DirIsWritable(const fs::path &directory);
@@ -87,7 +87,7 @@ fs::path AbsPathForConfigVal(const fs::path &path, bool net_specific=true);
 void ReleaseDirectoryLocks();
 
 bool TryCreateDirectories(const fs::path& p);
-fs::path GetDefaultDataDir() noexcept;
+fs::path GetDefaultDataDir();
 // The blocks directory is always net specific.
 const fs::path &GetBlocksDir();
 const fs::path &GetDataDir(bool fNetSpecific = true);
@@ -95,7 +95,7 @@ void ClearDatadirCache();
 #ifdef WIN32
 fs::path GetSpecialFolderPath(int nFolder, bool fCreate = true) noexcept;
 #endif
-void runCommand(const std::string &strCommand) noexcept;
+void runCommand(const std::string &strCommand);
 
 inline bool IsSwitchChar(char c)
 {
@@ -110,7 +110,7 @@ inline bool IsSwitchChar(char c)
  * Return the number of cores available on the current system.
  * @note This does count virtual cores, such as those provided by HyperThreading.
  */
-int GetNumCores() noexcept;
+int GetNumCores();
 
 void RenameThread(const char *name);
 
@@ -170,7 +170,7 @@ class WinCmdLineArgs
 public:
     WinCmdLineArgs();
     ~WinCmdLineArgs();
-    std::pair<int, char **> get() noexcept;
+    std::pair<int, char **> get();
 private:
     WinCmdLineArgs(const WinCmdLineArgs &)=delete;
     WinCmdLineArgs(WinCmdLineArgs &&)=delete;

@@ -18,7 +18,7 @@ namespace util {
     static std::atomic<int64_t> nMockTime(0); //!< For unit testing
 }
 
-int64_t util::GetTime() noexcept {
+int64_t util::GetTime() {
     int64_t mocktime = nMockTime.load(std::memory_order_relaxed);
     if (mocktime) return mocktime;
 
@@ -27,33 +27,33 @@ int64_t util::GetTime() noexcept {
     return now;
 }
 
-void util::SetMockTime(int64_t nMockTimeIn) noexcept {
+void util::SetMockTime(int64_t nMockTimeIn) {
     nMockTime.store(nMockTimeIn, std::memory_order_relaxed);
 }
 
-int64_t util::GetMockTime() noexcept {
+int64_t util::GetMockTime() {
     return nMockTime.load(std::memory_order_relaxed);
 }
 
-int64_t util::GetTimeMillis() noexcept {
+int64_t util::GetTimeMillis() {
     int64_t now = (boost::posix_time::microsec_clock::universal_time() -
                    boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_milliseconds();
     assert(now > 0);
     return now;
 }
 
-int64_t util::GetTimeMicros() noexcept {
+int64_t util::GetTimeMicros() {
     int64_t now = (boost::posix_time::microsec_clock::universal_time() -
                    boost::posix_time::ptime(boost::gregorian::date(1970,1,1))).total_microseconds();
     assert(now > 0);
     return now;
 }
 
-int64_t util::GetSystemTimeInSeconds() noexcept {
+int64_t util::GetSystemTimeInSeconds() {
     return GetTimeMicros()/1000000;
 }
 
-void util::MilliSleep(int64_t n) noexcept {
+void util::MilliSleep(int64_t n) {
 #if BOOST_VERSION >= 105000
     boost::this_thread::sleep_for(boost::chrono::milliseconds(n));
 #else
@@ -74,7 +74,7 @@ void util::MilliSleep(int64_t n) noexcept {
 //#endif
 }
 
-std::string util::FormatISO8601DateTime(int64_t nTime) noexcept {
+std::string util::FormatISO8601DateTime(int64_t nTime) {
     struct tm ts;
     time_t time_val = nTime;
 #ifdef _MSC_VER
@@ -85,7 +85,7 @@ std::string util::FormatISO8601DateTime(int64_t nTime) noexcept {
     return strprintf("%04i-%02i-%02iT%02i:%02i:%02iZ", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
 }
 
-std::string util::FormatISO8601Date(int64_t nTime) noexcept {
+std::string util::FormatISO8601Date(int64_t nTime) {
     struct tm ts;
     time_t time_val = nTime;
 #ifdef _MSC_VER
@@ -96,7 +96,7 @@ std::string util::FormatISO8601Date(int64_t nTime) noexcept {
     return strprintf("%04i-%02i-%02i", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday);
 }
 
-std::string util::FormatISO8601Time(int64_t nTime) noexcept {
+std::string util::FormatISO8601Time(int64_t nTime) {
     struct tm ts;
     time_t time_val = nTime;
 #ifdef _MSC_VER

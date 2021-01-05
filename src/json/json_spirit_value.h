@@ -15,6 +15,7 @@
 #include <noexcept/try.hpp>
 #include <boost/config.hpp>
 #include <boost/variant.hpp>
+#include <allocator/allocators.h>
 #include <debugcs/debugcs.h>
 
 namespace json_spirit
@@ -62,7 +63,7 @@ namespace json_spirit
             return obj;
         }
         template <typename B, typename E, typename T=B&>
-        T JSONRet(B *__v, E *__err, bool fexcept=true) const {
+        T JSONRet(B *__v, E *__err, bool fexcept=true) const noexcept {
             if(__v && type_==Status_success) {
                 //type_=Status_success;
                 return *__v;
@@ -122,6 +123,12 @@ namespace json_spirit
 
         static const Value_impl null;
 
+        // instead of secure allocator
+        ~Value_impl() {
+            cleanse::OPENSSL_cleanse(&type_, sizeof(Value_type));
+            cleanse::OPENSSL_cleanse(&is_uint64_, sizeof(bool));
+        }
+
     private:
         void check_type(const Value_type vtype, json_flags &status) const noexcept;
         using Variant = boost::variant<String_type,
@@ -141,13 +148,24 @@ namespace json_spirit
 
         Pair_impl(const String_type &name, const Value_type &value);
 
-        bool operator==(const Pair_impl& lhs) const noexcept;
+        bool operator==(const Pair_impl &lhs) const noexcept;
 
         String_type name_;
         Value_type value_;
+
+        ~Pair_impl() {
+            if(0 < name_.size())
+                cleanse::OPENSSL_cleanse(&name_.at(0), name_.size());
+            if(IS_TRIVIALLY_CONSTRUCTIBLE<Value_type>::value) {
+                unsigned char *er = (unsigned char *)&value_;
+                cleanse::OPENSSL_cleanse(er, sizeof(Value_type));
+            } else {
+                // object: when destructor operate, secure_allocator<Pair_type>
+            }
+        }
     };
     template <typename String_type, typename Value_type, typename Pair_type>
-    class json_vector : public std::vector<Pair_type> {
+    class json_vector : public std::vector<Pair_type, secure_allocator<Pair_type> > {
     public:
         bool exists(const String_type &name) const {
             for(const Pair_type &data: *this) {
@@ -173,7 +191,7 @@ namespace json_spirit
         using String_type = String;
         using Value_type = Value_impl<Config_vector>;
         using Pair_type = Pair_impl<Config_vector>;
-        using Array_type = std::vector<Value_type>;
+        using Array_type = std::vector<Value_type, secure_allocator<Value_type> >;
         using Object_type = json_vector<String_type, Value_type, Pair_type>;
 
         static Value_type &add(Object_type &obj, const String_type &name, const Value_type &value) {

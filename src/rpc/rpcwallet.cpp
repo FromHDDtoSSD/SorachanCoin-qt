@@ -17,7 +17,7 @@
 #include <miner/diff.h>
 #include <block/block_alert.h>
 #include <util/time.h>
-#include <util/strencodings.h> // HexStr
+#include <util/strencodings.h> // HexStr (Witness)
 
 std::string CRPCTable::HelpRequiringPassphrase() noexcept {
     return entry::pwalletMain->IsCrypted()
@@ -33,7 +33,7 @@ json_spirit::Value CRPCTable::EnsureWalletIsUnlocked(CBitrpcData &data) noexcept
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-void CRPCTable::WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry) noexcept {
+void CRPCTable::WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry) {
     int confirms = wtx.GetDepthInMainChain();
     entry.push_back(json_spirit::Pair("confirmations", confirms));
     if (wtx.IsCoinBase() || wtx.IsCoinStake())
@@ -51,13 +51,13 @@ void CRPCTable::WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry)
         entry.push_back(json_spirit::Pair(item.first, item.second));
 }
 
-bool CRPCTable::TopUpKeyPool(CBitrpcData &data, unsigned int nSize/* = 0*/) noexcept {
+bool CRPCTable::TopUpKeyPool(CBitrpcData &data, unsigned int nSize/* = 0*/) {
     bool ret = entry::pwalletMain->TopUpKeyPool(nSize);
     if(! ret) data.runtime_error("TopUpKeyPool() : writing generated key failed");
     return ret;
 }
 
-std::string CRPCTable::AccountFromValue(const json_spirit::Value &value, CBitrpcData &data) noexcept {
+std::string CRPCTable::AccountFromValue(const json_spirit::Value &value, CBitrpcData &data) {
     json_spirit::json_flags status;
     std::string strAccount = value.get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
@@ -70,7 +70,7 @@ std::string CRPCTable::AccountFromValue(const json_spirit::Value &value, CBitrpc
     return strAccount;
 }
 
-json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getinfo\n"
@@ -122,7 +122,7 @@ json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, CBitrpcD
     return data.JSONRPCSuccess(obj);
 }
 
-json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             sts_c("getnewaddress [account]\n"
@@ -151,7 +151,7 @@ json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(address.ToString());
 }
 
-CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strAccount, bool bForceNew/* =false */, bool *ret/*=nullptr*/) noexcept {
+CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strAccount, bool bForceNew/* =false */, bool *ret/*=nullptr*/) {
     CWalletDB walletdb(entry::pwalletMain->strWalletFile);
     CAccount account;
     walletdb.ReadAccount(strAccount, account);
@@ -186,7 +186,7 @@ CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strA
     return addr;
 }
 
-json_spirit::Value CRPCTable::getaccountaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getaccountaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "getaccountaddress <account>\n"
@@ -201,7 +201,7 @@ json_spirit::Value CRPCTable::getaccountaddress(const json_spirit::Array &params
     return data.JSONRPCSuccess(addr.ToString());
 }
 
-json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "setaccount <coinaddress> <account>\n"
@@ -235,7 +235,7 @@ json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::getaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getaccount(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "getaccount <coinaddress>\n"
@@ -257,7 +257,7 @@ json_spirit::Value CRPCTable::getaccount(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess(strAccount);
 }
 
-json_spirit::Value CRPCTable::getaddressesbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getaddressesbyaccount(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "getaddressesbyaccount <account>\n"
@@ -278,7 +278,7 @@ json_spirit::Value CRPCTable::getaddressesbyaccount(const json_spirit::Array &pa
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::mergecoins(const json_spirit::Array& params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::mergecoins(const json_spirit::Array& params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 3) {
         return data.JSONRPCSuccess(
             "mergecoins <amount> <minvalue> <outputvalue>\n"
@@ -308,13 +308,13 @@ json_spirit::Value CRPCTable::mergecoins(const json_spirit::Array& params, CBitr
     if(! data.fSuccess()) return data.JSONRPCError();
 
     if (nAmount < block_info::nMinimumInputValue)
-        return data.JSONRPCError(-101, "Send amount too small");
+        return data.JSONRPCError(RPC_WALLET_AMOUNT_TOO_SMALL, "Send amount too small");
     if (nMinValue < block_info::nMinimumInputValue)
-        return data.JSONRPCError(-101, "Max value too small");
+        return data.JSONRPCError(RPC_WALLET_AMOUNT_TOO_SMALL, "Max value too small");
     if (nOutputValue < block_info::nMinimumInputValue)
-        return data.JSONRPCError(-101, "Output value too small");
+        return data.JSONRPCError(RPC_WALLET_AMOUNT_TOO_SMALL, "Output value too small");
     if (nOutputValue < nMinValue)
-        return data.JSONRPCError(-101, "Output value is lower than min value");
+        return data.JSONRPCError(RPC_WALLET_AMOUNT_TOO_SMALL, "Output value is lower than min value");
 
     std::list<uint256> listMerged;
     if (! entry::pwalletMain->MergeCoins(nAmount, nMinValue, nOutputValue, listMerged))
@@ -327,7 +327,7 @@ json_spirit::Value CRPCTable::mergecoins(const json_spirit::Array& params, CBitr
     return data.JSONRPCSuccess(mergedHashes);
 }
 
-json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 2 || params.size() > 4) {
         return data.JSONRPCSuccess(
             "sendtoaddress <coinaddress> <amount> [comment] [comment-to]\n"
@@ -372,7 +372,7 @@ json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(wtx.GetHash().GetHex());
 }
 
-json_spirit::Value CRPCTable::listaddressgroupings(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listaddressgroupings(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp()) {
         return data.JSONRPCSuccess(
             "listaddressgroupings\n"
@@ -401,7 +401,7 @@ json_spirit::Value CRPCTable::listaddressgroupings(const json_spirit::Array &par
     return data.JSONRPCSuccess(jsonGroupings);
 }
 
-json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
         return data.JSONRPCSuccess(
             "signmessage <coinaddress> <message>\n"
@@ -439,7 +439,7 @@ json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(base64::EncodeBase64(&vchSig[0], vchSig.size()));
 }
 
-json_spirit::Value CRPCTable::verifymessage(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::verifymessage(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 3) {
         return data.JSONRPCSuccess(
             "verifymessage <coinaddress> <signature> <message>\n"
@@ -479,7 +479,7 @@ json_spirit::Value CRPCTable::verifymessage(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(key.GetID() == keyID);
 }
 
-json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getreceivedbyaddress <coinaddress> [minconf=1]\n"
@@ -522,7 +522,7 @@ json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &par
     return data.JSONRPCSuccess(ValueFromAmount(nAmount));
 }
 
-void CRPCTable::GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress) noexcept {
+void CRPCTable::GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress) {
     for(const std::pair<CBitcoinAddress, std::string> &item: entry::pwalletMain->mapAddressBook) {
         const CBitcoinAddress &address = item.first;
         const std::string &strName = item.second;
@@ -531,7 +531,7 @@ void CRPCTable::GetAccountAddresses(std::string strAccount, std::set<CBitcoinAdd
     }
 }
 
-json_spirit::Value CRPCTable::getreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getreceivedbyaccount <account> [minconf=1]\n"
@@ -572,7 +572,7 @@ json_spirit::Value CRPCTable::getreceivedbyaccount(const json_spirit::Array &par
 }
 
 
-int64_t CRPCTable::GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter) noexcept {
+int64_t CRPCTable::GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter) {
     int64_t nBalance = 0;
 
     // Tally wallet transactions
@@ -594,12 +594,12 @@ int64_t CRPCTable::GetAccountBalance(CWalletDB &walletdb, const std::string &str
     return nBalance;
 }
 
-int64_t CRPCTable::GetAccountBalance(const std::string &strAccount, int nMinDepth, const isminefilter &filter) noexcept {
+int64_t CRPCTable::GetAccountBalance(const std::string &strAccount, int nMinDepth, const isminefilter &filter) {
     CWalletDB walletdb(entry::pwalletMain->strWalletFile);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
 }
 
-json_spirit::Value CRPCTable::getbalance(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getbalance(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getbalance [account] [minconf=1] [watchonly=0]\n"
@@ -663,7 +663,7 @@ json_spirit::Value CRPCTable::getbalance(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess(ValueFromAmount(nBalance));
 }
 
-json_spirit::Value CRPCTable::movecmd(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::movecmd(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 3 || params.size() > 5) {
         return data.JSONRPCSuccess(
             "move <fromaccount> <toaccount> <amount> [minconf=1] [comment]\n"
@@ -726,7 +726,7 @@ json_spirit::Value CRPCTable::movecmd(const json_spirit::Array &params, CBitrpcD
     return data.JSONRPCSuccess(true);
 }
 
-json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 3 || params.size() > 6) {
         return data.JSONRPCSuccess(
             "sendfrom <from account> <to coinaddress> <amount> [minconf=1] [comment] [comment-to]\n"
@@ -787,7 +787,7 @@ json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpc
     return data.JSONRPCSuccess(wtx.GetHash().GetHex());
 }
 
-json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 2 || params.size() > 4) {
         return data.JSONRPCSuccess(
             "sendmany <fromaccount> '{address:amount,...}' [minconf=1] [comment]\n"
@@ -861,7 +861,7 @@ json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpc
     return data.JSONRPCSuccess(wtx.GetHash().GetHex());
 }
 
-json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 2 || params.size() > 3) {
         return data.JSONRPCSuccess(sts_c("addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
             "Add a nrequired-to-sign multisignature address to the wallet\"\n"
@@ -927,7 +927,7 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
     return data.JSONRPCSuccess(address.ToString());
 }
 
-json_spirit::Value CRPCTable::addredeemscript(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::addredeemscript(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess("addredeemscript <redeemScript> [account]\n"
             "Add a P2SH address with a specified redeemScript to the wallet.\n"
@@ -1027,7 +1027,7 @@ json_spirit::Value CRPCTable::ListReceived(const json_spirit::Array &params, boo
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::listreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listreceivedbyaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "listreceivedbyaddress [minconf=1] [includeempty=false]\n"
@@ -1044,7 +1044,7 @@ json_spirit::Value CRPCTable::listreceivedbyaddress(const json_spirit::Array &pa
     return data.fSuccess()? data.JSONRPCSuccess(ret): data.JSONRPCError();
 }
 
-json_spirit::Value CRPCTable::listreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listreceivedbyaccount(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "listreceivedbyaccount [minconf=1] [includeempty=false]\n"
@@ -1064,7 +1064,7 @@ void CRPCTable::MaybePushAddress(json_spirit::Object &entry, const CBitcoinAddre
     entry.push_back(json_spirit::Pair("address", dest.ToString()));
 }
 
-void CRPCTable::ListTransactions(const CWalletTx &wtx, const std::string &strAccount, int nMinDepth, bool fLong, json_spirit::Array &ret, const isminefilter &filter) noexcept {
+void CRPCTable::ListTransactions(const CWalletTx &wtx, const std::string &strAccount, int nMinDepth, bool fLong, json_spirit::Array &ret, const isminefilter &filter) {
     int64_t nGeneratedImmature, nGeneratedMature, nFee;
     std::string strSentAccount;
     std::list<std::pair<CBitcoinAddress, int64_t> > listReceived;
@@ -1149,7 +1149,7 @@ void CRPCTable::ListTransactions(const CWalletTx &wtx, const std::string &strAcc
     }
 }
 
-void CRPCTable::AcentryToJSON(const CAccountingEntry &acentry, const std::string &strAccount, json_spirit::Array &ret) noexcept {
+void CRPCTable::AcentryToJSON(const CAccountingEntry &acentry, const std::string &strAccount, json_spirit::Array &ret) {
     bool fAllAccounts = (strAccount == std::string("*"));
     if (fAllAccounts || acentry.strAccount == strAccount) {
         json_spirit::Object entry;
@@ -1163,7 +1163,7 @@ void CRPCTable::AcentryToJSON(const CAccountingEntry &acentry, const std::string
     }
 }
 
-json_spirit::Value CRPCTable::listtransactions(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listtransactions(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 3) {
         return data.JSONRPCSuccess(
             "listtransactions [account] [count=10] [from=0]\n"
@@ -1237,7 +1237,7 @@ json_spirit::Value CRPCTable::listtransactions(const json_spirit::Array &params,
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "listaccounts [minconf=1]\n"
@@ -1297,7 +1297,7 @@ json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::listsinceblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listsinceblock(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp()) {
         return data.JSONRPCSuccess(
             "listsinceblock [blockhash] [target-confirmations]\n"
@@ -1351,7 +1351,7 @@ json_spirit::Value CRPCTable::listsinceblock(const json_spirit::Array &params, C
     return data.JSONRPCSuccess(ret);
 }
 
-json_spirit::Value CRPCTable::gettransaction(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::gettransaction(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "gettransaction <txid>\n"
@@ -1411,7 +1411,7 @@ json_spirit::Value CRPCTable::gettransaction(const json_spirit::Array &params, C
     return data.JSONRPCSuccess(entry);
 }
 
-json_spirit::Value CRPCTable::backupwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::backupwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "backupwallet <destination>\n"
@@ -1427,7 +1427,7 @@ json_spirit::Value CRPCTable::backupwallet(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::keypoolrefill(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::keypoolrefill(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "keypoolrefill [new-size]\n"
@@ -1456,7 +1456,7 @@ json_spirit::Value CRPCTable::keypoolrefill(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::keypoolreset(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::keypoolreset(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "keypoolreset [new-size]\n"
@@ -1484,13 +1484,14 @@ json_spirit::Value CRPCTable::keypoolreset(const json_spirit::Array &params, CBi
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-void CRPCTable::ThreadTopUpKeyPool(void *parg) noexcept {
+void CRPCTable::ThreadTopUpKeyPool(void *parg) {
+    (void)parg;
     // Make this thread recognisable as the key-topping-up thread
     bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-key-top"));
     entry::pwalletMain->TopUpKeyPool();
 }
 
-void CRPCTable::ThreadCleanWalletPassphrase(void *parg) noexcept {
+void CRPCTable::ThreadCleanWalletPassphrase(void *parg) {
     // Make this thread recognisable as the wallet relocking thread
     // parg: int64_t *, dynamic object
     bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-lock-wa"));
@@ -1524,7 +1525,7 @@ void CRPCTable::ThreadCleanWalletPassphrase(void *parg) noexcept {
     delete (int64_t*)parg;
 }
 
-json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params, CBitrpcData &data) {
     if (entry::pwalletMain->IsCrypted() && (data.fHelp() || params.size() < 2 || params.size() > 3)) {
         return data.JSONRPCSuccess(
             "walletpassphrase <passphrase> <timeout> [mintonly]\n"
@@ -1578,7 +1579,7 @@ json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params,
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::walletpassphrasechange(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::walletpassphrasechange(const json_spirit::Array &params, CBitrpcData &data) {
     if (entry::pwalletMain->IsCrypted() && (data.fHelp() || params.size() != 2)) {
         return data.JSONRPCSuccess(
             "walletpassphrasechange <oldpassphrase> <newpassphrase>\n"
@@ -1612,7 +1613,7 @@ json_spirit::Value CRPCTable::walletpassphrasechange(const json_spirit::Array &p
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::walletlock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::walletlock(const json_spirit::Array &params, CBitrpcData &data) {
     if (entry::pwalletMain->IsCrypted() && (data.fHelp() || params.size() != 0)) {
         return data.JSONRPCSuccess(
             "walletlock\n"
@@ -1634,7 +1635,7 @@ json_spirit::Value CRPCTable::walletlock(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (!entry::pwalletMain->IsCrypted() && (data.fHelp() || params.size() != 1)) {
         return data.JSONRPCSuccess(
             "encryptwallet <passphrase>\n"
@@ -1666,10 +1667,10 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CB
 }
 
 namespace {
-class DescribeAddressVisitor__ : public boost::static_visitor<json_spirit::Object>
+class JSON_DescribeAddressVisitor : public boost::static_visitor<json_spirit::Object>
 {
 public:
-    explicit DescribeAddressVisitor__() {}
+    explicit JSON_DescribeAddressVisitor() {}
 
     json_spirit::Object operator()(const CNoDestination &dest) const {
         (void)dest;
@@ -1720,7 +1721,7 @@ public:
 };
 
 void DescribeAddress(const CTxDestination &dest, json_spirit::Object &obj) {
-    json_spirit::Object ret = boost::apply_visitor(DescribeAddressVisitor__(), dest);
+    json_spirit::Object ret = boost::apply_visitor(JSON_DescribeAddressVisitor(), dest);
     for(const json_spirit::Pair &data: ret)
         obj.push_back(data);
 }
@@ -1745,7 +1746,9 @@ private:
             json_spirit::Object subobj;
             DescribeAddress(embedded, subobj);
             subobj << (const json_spirit::Object &)boost::apply_visitor(*this, embedded);
+
             //subobj.push_back(json_spirit::Pair("address", EncodeDestination(embedded)));
+
             subobj.push_back(json_spirit::Pair("scriptPubKey", strenc::HexStr(subscript.begin(), subscript.end())));
             // Always report the pubkey at the top level, so that `getnewaddress()['pubkey']` always works.
             if (subobj.exists("pubkey")) obj.push_back(json_spirit::Pair("pubkey", subobj["pubkey"]));
@@ -1767,7 +1770,7 @@ public:
     explicit DescribeAddressVisitor(isminetype mineIn) noexcept : mine(mineIn), pwallet(nullptr) {}
     explicit DescribeAddressVisitor(CWallet *walletIn) noexcept : pwallet(walletIn) {}
 
-    json_spirit::Object operator()(const CNoDestination &dest) const noexcept {
+    json_spirit::Object operator()(const CNoDestination &dest) const {
         (void)dest;
         return json_spirit::Object();
     }
@@ -1836,7 +1839,7 @@ public:
 };
 } // namespace
 
-json_spirit::Value CRPCTable::validateaddress(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::validateaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "validateaddress <coinaddress>\n"
@@ -1882,7 +1885,7 @@ json_spirit::Value CRPCTable::validateaddress(const json_spirit::Array &params, 
 }
 
 // ppcoin: reserve balance from being staked for network protection
-json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "reservebalance [<reserve> [amount]]\n"
@@ -1891,6 +1894,9 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, C
             "Set reserve amount not participating in network protection.\n"
             "If no parameters provided current setting is printed.\n");
     }
+
+    bitrpc::RPCTypeCheck(data, params, {{json_spirit::bool_type},{json_spirit::real_type}});
+    if(! data.fSuccess()) return data.JSONRPCError();
 
     if (params.size() > 0) {
         json_spirit::json_flags status;
@@ -1915,6 +1921,8 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, C
         }
     }
 
+    debugcs::instance() << "RPC, reservebalance: " << bitstr::FormatMoney(1000).c_str() << debugcs::endl();
+
     json_spirit::Object result;
     if (map_arg::GetMapArgsCount("-reservebalance") &&
         !bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance))
@@ -1926,7 +1934,7 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, C
 }
 
 // ppcoin: check wallet integrity
-json_spirit::Value CRPCTable::checkwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::checkwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 0) {
         return data.JSONRPCSuccess(
             "checkwallet\n"
@@ -1947,7 +1955,7 @@ json_spirit::Value CRPCTable::checkwallet(const json_spirit::Array &params, CBit
 }
 
 // ppcoin: repair wallet
-json_spirit::Value CRPCTable::repairwallet(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::repairwallet(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 0) {
         return data.JSONRPCSuccess(
             "repairwallet\n"
@@ -1968,7 +1976,7 @@ json_spirit::Value CRPCTable::repairwallet(const json_spirit::Array &params, CBi
 }
 
 // ppcoin: resend unconfirmed wallet transactions
-json_spirit::Value CRPCTable::resendtx(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::resendtx(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "resendtx\n"
@@ -1979,7 +1987,7 @@ json_spirit::Value CRPCTable::resendtx(const json_spirit::Array &params, CBitrpc
     return data.JSONRPCSuccess(json_spirit::Value::null);
 }
 
-json_spirit::Value CRPCTable::resendwallettransactions(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::resendwallettransactions(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "resendwallettransactions\n"
@@ -1999,7 +2007,7 @@ json_spirit::Value CRPCTable::resendwallettransactions(const json_spirit::Array 
 }
 
 // Make a public-private key pair
-json_spirit::Value CRPCTable::makekeypair(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::makekeypair(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 0) {
         return data.JSONRPCSuccess(
             "makekeypair\n"
@@ -2028,7 +2036,7 @@ json_spirit::Value CRPCTable::makekeypair(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::newmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::newmalleablekey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "newmalleablekey\n"
@@ -2057,7 +2065,7 @@ json_spirit::Value CRPCTable::newmalleablekey(const json_spirit::Array &params, 
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::adjustmalleablekey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::adjustmalleablekey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 3) {
         return data.JSONRPCSuccess(
             "adjustmalleablekey <Malleable key data> <Public key variant data> <R data>\n"
@@ -2086,7 +2094,7 @@ json_spirit::Value CRPCTable::adjustmalleablekey(const json_spirit::Array &param
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::adjustmalleablepubkey(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::adjustmalleablepubkey(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2 || params.size() == 0) {
         return data.JSONRPCSuccess(
             "adjustmalleablepubkey <Malleable address, key view or public key pair>\n"
@@ -2128,7 +2136,7 @@ json_spirit::Value CRPCTable::adjustmalleablepubkey(const json_spirit::Array &pa
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::listmalleableviews(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::listmalleableviews(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "listmalleableviews\n"

@@ -3,12 +3,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef BITCOIN_SCRIPT_NUM_H
+#define BITCOIN_SCRIPT_NUM_H
+
 #include <prevector/prevector.h>
 #include <limits>
 #include <stdexcept>
-
-#ifndef BITCOIN_SCRIPT_NUM_H
-#define BITCOIN_SCRIPT_NUM_H
+#include <bignum.h> // check_script_num
 
 class scriptnum_error : public std::runtime_error
 {
@@ -199,5 +200,15 @@ private:
 
     int64_t m_value;
 };
+
+namespace check_scriptnum {
+    inline void Check_fromBignumToScriptnum(const CBigNum &bignum, const CScriptNum &scriptnum, bool check=false) {
+        if(check) {
+            assert(bignum.getuint32()==scriptnum.getint());
+            assert(bignum.getuint64()==scriptnum.getint64());
+            assert(bignum.getvch()==scriptnum.getvch());
+        }
+    }
+} // namespace check_script_num
 
 #endif

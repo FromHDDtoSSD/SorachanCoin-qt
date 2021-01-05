@@ -15,7 +15,7 @@
 #include <block/block_alert.h>
 #include <boost/format.hpp>
 
-json_spirit::Value CRPCTable::getsubsidy(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getsubsidy(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "getsubsidy [nTarget]\n"
@@ -35,7 +35,7 @@ json_spirit::Value CRPCTable::getsubsidy(const json_spirit::Array &params, CBitr
     return data.JSONRPCSuccess((uint64_t)diff::reward::GetProofOfWorkReward(nBits));
 }
 
-json_spirit::Value CRPCTable::getmininginfo(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getmininginfo(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 0) {
         return data.JSONRPCSuccess(
             "getmininginfo\n"
@@ -66,7 +66,7 @@ json_spirit::Value CRPCTable::getmininginfo(const json_spirit::Array &params, CB
 }
 
 // scaninput '{"txid":"95d640426fe66de866a8cf2d0601d2c8cf3ec598109b4d4ffa7fd03dad6d35ce","difficulty":0.01, "days":10}'
-json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
             "scaninput '{\"txid\":\"txid\", \"vout\":[vout1, vout2, ..., voutN], \"difficulty\":difficulty, \"days\":days}'\n"
@@ -209,7 +209,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
         return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No information available about transaction");
 }
 
-json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getworkex [data, coinbase]\n"
@@ -328,7 +328,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
     }
 }
 
-json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "getwork [data]\n"
@@ -437,7 +437,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
     }
 }
 
-json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "getblocktemplate [params]\n"
@@ -580,7 +580,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     return data.JSONRPCSuccess(result);
 }
 
-json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
             "submitblock <hex data> [optional-params-obj]\n"
@@ -596,11 +596,11 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
     rpctable_vector blockData(hex::ParseHex(hex));
     CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
     CBlock block;
-    //try {
+    try {
         ssBlock >> block;
-    //} catch (const std::exception &) {
-    //    return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
-    //}
+    } catch (const std::exception &) {
+        return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+    }
 
     bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
     if (! fAccepted)
