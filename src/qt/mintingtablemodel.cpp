@@ -14,7 +14,7 @@
 
 #include "wallet.h"
 
-#include "bitcoinrpc.h"
+#include <rpc/bitcoinrpc.h>
 
 #include <QLocale>
 #include <QList>
@@ -23,6 +23,8 @@
 #include <QIcon>
 #include <QDateTime>
 #include <QtAlgorithms>
+
+#include <miner/diff.h>
 
 static int column_alignments[] = {
     Qt::AlignLeft|Qt::AlignVCenter,
@@ -77,7 +79,7 @@ public:
             for(std::map<uint256, CWalletTx>::iterator it = wallet->mapWallet.begin(); it != wallet->mapWallet.end(); ++it)
             {
                 std::vector<KernelRecord> txList = KernelRecord::decomposeOutput(wallet, it->second);
-                BOOST_FOREACH(KernelRecord& kr, txList)
+                for(KernelRecord& kr: txList)
                 {
                     if(! kr.spent) {
                         cachedWallet.append(kr);
@@ -137,7 +139,7 @@ public:
                             KernelRecord::decomposeOutput(wallet, mi->second);
                     if(! toInsert.empty()) {    /* only if something to insert */
                         int insert_idx = lowerIndex;
-                        BOOST_FOREACH(const KernelRecord &rec, toInsert)
+                        for(const KernelRecord &rec: toInsert)
                         {
                             if(! rec.spent) {
                                 parent->beginInsertRows(QModelIndex(), insert_idx, insert_idx);
@@ -155,7 +157,7 @@ public:
                 } else if(inWallet && inModel) {
                     // Updated -- remove spent coins from table
                     std::vector<KernelRecord> toCheck = KernelRecord::decomposeOutput(wallet, mi->second);
-                    BOOST_FOREACH(const KernelRecord &rec, toCheck)
+                    for(const KernelRecord &rec: toCheck)
                     {
                         if(rec.spent) {
                             for(int i = 0; i < cachedWallet.size(); i++)
@@ -234,16 +236,16 @@ void MintingTableModel::update()
     {
         TRY_LOCK(wallet->cs_wallet, lockWallet);
         if (lockWallet && !wallet->vMintingWalletUpdated.empty()) {
-            BOOST_FOREACH(uint256 hash, wallet->vMintingWalletUpdated)
+            for(uint256 hash: wallet->vMintingWalletUpdated)
             {
                 updated.append(hash);
 
                 // Also check the inputs to remove spent outputs from the table if necessary
                 CWalletTx wtx;
                 if(wallet->GetTransaction(hash, wtx)) {
-                    BOOST_FOREACH(const CTxIn& txin, wtx.vin)
+                    for(const CTxIn &txin: wtx.get_vin())
                     {
-                        updated.append(txin.prevout.hash);
+                        updated.append(txin.get_prevout().get_hash());
                     }
                 }
             }
@@ -387,7 +389,7 @@ QString MintingTableModel::lookupAddress(const std::string &address, bool toolti
 
 QString MintingTableModel::formatTxPoSReward(KernelRecord *wtx) const
 {
-    int nBits = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->nBits;
+    int nBits = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true)->get_nBits();
     QString posReward = QString(QObject::tr("from %4 to %5")).arg(BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), wtx->getPoSReward(nBits, 0)), 
                                 BitcoinUnits::formatWithUnit(walletModel->getOptionsModel()->getDisplayUnit(), wtx->getPoSReward(nBits, mintingInterval)));
 
@@ -397,7 +399,7 @@ QString MintingTableModel::formatTxPoSReward(KernelRecord *wtx) const
 double MintingTableModel::getDayToMint(KernelRecord *wtx) const
 {
     const CBlockIndex *p = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true);
-    double difficulty = CRPCTable::CRPCTable_GUI::GetDifficulty(p);
+    double difficulty = QtConsoleRPC::GetDifficulty(p);
 
     double prob = wtx->getProbToMintWithinNMinutes(difficulty, mintingInterval);
     prob = prob * 100;

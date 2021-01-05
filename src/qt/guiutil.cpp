@@ -426,7 +426,7 @@ bool SetStartOnSystemStartup(bool fAutoStart)
         boost::filesystem::remove(GetAutostartFilePath());
     } else {
         char pszExePath[MAX_PATH+1];
-        memset(pszExePath, 0, sizeof(pszExePath));
+        std::memset(pszExePath, 0, sizeof(pszExePath));
         if (readlink("/proc/self/exe", pszExePath, sizeof(pszExePath)-1) == -1) {
             return false;
         }

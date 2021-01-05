@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2018 The Bitcoin Core developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef __cplusplus
 #error This header can only be compiled as C++.
 #endif
@@ -10,21 +11,20 @@
 #ifndef __INCLUDED_PROTOCOL_H__
 #define __INCLUDED_PROTOCOL_H__
 
-#include "serialize.h"
-#include "netbase.h"
+#include <serialize.h>
+#include <netbase.h>
 #include <string>
 #include <limits>
-#include "uint256.h"
-#include "util.h"
+#include <uint256.h>
+#include <util.h>
+#include <block/block_info.h>
 
-namespace protocol
-{
-    const std::string forfill[] = { "ERROR", "tx", "block" }; // TODO: Replace with initializer list constructor when c++11 comes
+namespace protocol {
+    const std::string forfill[] = { "ERROR", "tx", "block" };
     const std::vector<std::string> vpszTypeName(forfill, forfill + 3);
 
     /** nServices flags */
-    enum
-    {
+    enum {
         NODE_NETWORK = (1 << 0)
     };
 }
@@ -35,21 +35,35 @@ namespace protocol
  * (4) size.
  * (4) checksum.
  */
-class CMessageHeader
-{
-private:
-    CMessageHeader(const CMessageHeader &); // {}
-    CMessageHeader &operator=(const CMessageHeader &); // {}
+class CMessageHeader {
+    CMessageHeader(const CMessageHeader &)=delete;
+    CMessageHeader &operator=(const CMessageHeader &)=delete;
+    CMessageHeader(CMessageHeader &&)=delete;
+    CMessageHeader &operator=(CMessageHeader &&)=delete;
 
-    enum CMD_SIZE
-    {
-        MESSAGE_START_SIZE    = sizeof(block_info::gpchMessageStart),
-        COMMAND_SIZE        = 12,
+public: // latest core
+    //static constexpr size_t MESSAGE_START_SIZE = 4;
+    //static constexpr size_t COMMAND_SIZE = 12;
+    //static constexpr size_t MESSAGE_SIZE_SIZE = 4;
+    //static constexpr size_t CHECKSUM_SIZE = 4;
+    //static constexpr size_t MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE;
+    //static constexpr size_t CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE;
+    //static constexpr size_t HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE;
+    //typedef unsigned char MessageStartChars[CMD_SIZE::MESSAGE_START_SIZE];
+
+private:
+    static_assert(sizeof(block_info::gpchMessageStart)==4, "CMessageHeader: MESSAGE_START_SIZE Error");
+    static_assert(sizeof(int)==4, "CMessageHeader: sizeof(int) Error");
+    enum CMD_SIZE {
+        MESSAGE_START_SIZE   = sizeof(block_info::gpchMessageStart),
+        COMMAND_SIZE         = 12,
 
         MESSAGE_SIZE_SIZE    = sizeof(int),
         CHECKSUM_SIZE        = sizeof(int),
-        MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE,
-        CHECKSUM_OFFSET        = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE
+        MESSAGE_SIZE_OFFSET  = MESSAGE_START_SIZE + COMMAND_SIZE,
+        CHECKSUM_OFFSET      = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE,
+
+        HEADER_SIZE          = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE
     };
 
     unsigned int nMessageSize;
@@ -60,6 +74,7 @@ private:
 public:
     CMessageHeader();
     CMessageHeader(const char *pszCommand, unsigned int nMessageSizeIn);
+    typedef unsigned char MessageStartChars[CMD_SIZE::MESSAGE_START_SIZE];
 
     std::string GetCommand() const;
     bool IsValid() const;
@@ -69,6 +84,21 @@ public:
     static unsigned int GetMessageSizeOffset() { return CMD_SIZE::MESSAGE_SIZE_OFFSET; }
     static unsigned int GetChecksumOffset() { return CMD_SIZE::CHECKSUM_OFFSET; }
 
+    ADD_SERIALIZE_METHODS;
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(FLATDATA(this->mpchMessageStart));
+        LREADWRITE(FLATDATA(this->pchCommand));
+        LREADWRITE(this->nMessageSize);
+        LREADWRITE(this->nChecksum);
+
+        //LREADWRITE(pchMessageStart);
+        //LREADWRITE(pchCommand);
+        //LREADWRITE(nMessageSize);
+        //LREADWRITE(pchChecksum);
+    }
+
+    /*
     IMPLEMENT_SERIALIZE
     (
         READWRITE(FLATDATA(this->mpchMessageStart));
@@ -76,6 +106,7 @@ public:
         READWRITE(this->nMessageSize);
         READWRITE(this->nChecksum);
     )
+    */
 };
 
 /** A CService with information about it as peer */
@@ -111,7 +142,7 @@ public:
     (
         CAddress *pthis = const_cast<CAddress *>(this);
         CService *pip = (CService *)pthis;
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->Init();
         }
         if (nType & SER_DISK) {

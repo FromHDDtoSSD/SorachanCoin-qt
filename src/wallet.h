@@ -2,23 +2,22 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_WALLET_H
 #define BITCOIN_WALLET_H
 
 #include <string>
 #include <vector>
-
 #include <stdlib.h>
-
-#include "main.h"
-#include "key.h"
-#include "keystore.h"
-#include "script.h"
-#include "ui_interface.h"
-#include "util.h"
-#include "walletdb.h"
-#include "base58.h"
+#include <main.h>
+#include <key.h>
+#include <keystore.h>
+#include <script/script.h>
+#include <ui_interface.h>
+#include <util/strencodings.h>
+#include <walletdb.h>
+#include <address/key_io.h>
+#include <merkle/merkle_tx.h>
 
 class CAccountingEntry;
 class CWalletTx;
@@ -244,7 +243,7 @@ public:
     // Increment the next transaction order id
     // @return next transaction order id
     //
-    int64_t IncOrderPosNext(CWalletDB *pwalletdb = NULL);
+    int64_t IncOrderPosNext(CWalletDB *pwalletdb = nullptr);
 
     typedef std::pair<CWalletTx *, CAccountingEntry *> TxPair;
     typedef std::multimap<int64_t, TxPair > TxItems;
@@ -421,14 +420,14 @@ namespace mapValuePos
             nOrderPos = -1; // TODO: calculate elsewhere
             return;
         }
-        nOrderPos = atoi64(mapValue["n"].c_str());
+        nOrderPos = strenc::atoi64(mapValue["n"].c_str());
     }
 
     inline void WriteOrderPos(const int64_t &nOrderPos, mapValue_t &mapValue) {
         if (nOrderPos == -1) {
             return;
         }
-        mapValue["n"] = i64tostr(nOrderPos);
+        mapValue["n"] = strenc::i64tostr(nOrderPos);
     }
 }
 
@@ -529,16 +528,16 @@ public:
     IMPLEMENT_SERIALIZE
     (
         CWalletTx *pthis = const_cast<CWalletTx *>(this);
-        if (fRead) {
-            pthis->Init(NULL);
+        if (ser_ctr.isRead()) {
+            pthis->Init(nullptr);
         }
 
         char fSpent = false;
-        if (! fRead) {
+        if (! ser_ctr.isRead()) {
             pthis->mapValue["fromaccount"] = pthis->strFromAccount;
 
             std::string str;
-            BOOST_FOREACH(char f, this->vfSpent)
+            for(char f: this->vfSpent)
             {
                 str += (f ? '1' : '0');
                 if (f) {
@@ -554,7 +553,7 @@ public:
             }
         }
 
-        nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx*)this, nType, nVersion,ser_action);
+        nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx*)this, ser_action);
         READWRITE(this->vtxPrev);
         READWRITE(this->mapValue);
         READWRITE(this->vOrderForm);
@@ -563,21 +562,21 @@ public:
         READWRITE(this->fFromMe);
         READWRITE(fSpent);
 
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             pthis->strFromAccount = pthis->mapValue["fromaccount"];
 
             if (mapValue.count("spent")) {
-                BOOST_FOREACH(char c, pthis->mapValue["spent"])
+                for(char c: pthis->mapValue["spent"])
                 {
                     pthis->vfSpent.push_back(c != '0');
                 }
             } else {
-                pthis->vfSpent.assign(vout.size(), fSpent);
+                pthis->vfSpent.assign(get_vout().size(), fSpent);
             }
 
             mapValuePos::ReadOrderPos(pthis->nOrderPos, pthis->mapValue);
 
-            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)atoi64(pthis->mapValue["timesmart"]) : 0;
+            pthis->nTimeSmart = mapValue.count("timesmart") ? (unsigned int)strenc::atoi64(pthis->mapValue["timesmart"]) : 0;
         }
 
         pthis->mapValue.erase("fromaccount");
@@ -655,7 +654,7 @@ public:
     }
 
     std::string ToString() const {
-        return strprintf("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, bitstr::FormatMoney(tx->vout[i].nValue).c_str());
+        return strprintf("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, bitstr::FormatMoney(tx->get_vout(i).get_nValue()).c_str());
     }
 };
 
@@ -776,7 +775,7 @@ public:
         READWRITE(this->nTime);
         READWRITE(this->strOtherAccount);
 
-        if (! fRead) {
+        if (! ser_ctr.isRead()) {
             mapValuePos::WriteOrderPos(this->nOrderPos, me.mapValue);
 
             if (!(this->mapValue.empty() && this->_ssExtra.empty())) {
@@ -791,10 +790,10 @@ public:
         READWRITE(this->strComment);
 
         size_t nSepPos = this->strComment.find("\0", 0, 1);
-        if (fRead) {
+        if (ser_ctr.isRead()) {
             me.mapValue.clear();
             if (std::string::npos != nSepPos) {
-                CDataStream ss(std::vector<char>(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);
+                CDataStream ss(datastream_signed_vector(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);
                 ss >> me.mapValue;
                 me._ssExtra = std::vector<char>(ss.begin(), ss.end());
             }

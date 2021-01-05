@@ -1,41 +1,40 @@
 #ifdef WIN32
-#include <winsock2.h>
+# include <winsock2.h>
 #else
-#include <sys/socket.h>
-#include <sys/time.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <netdb.h>
+# include <sys/socket.h>
+# include <sys/time.h>
+# include <netinet/in.h>
+# include <arpa/inet.h>
+# include <netdb.h>
 #endif
 #ifndef WIN32
-#include <unistd.h>
+# include <unistd.h>
 #endif
 
 #include "netbase.h"
 #include "net.h"
-//#include "util.h"
 #include "ui_interface.h"
 
 /*
- * NTP uses two fixed point formats.  The first (ntp::l_fp) is the "long"
- * format and is 64 bits long with the decimal between bits 31 and 32.
- * This is used for time stamps in the NTP packet header (in network
- * byte order) and for internal computations of offsets (in local host
- * byte order). We use the same structure for both signed and unsigned
- * values, which is a big hack but saves rewriting all the operators
- * twice. Just to confuse this, we also sometimes just carry the
- * fractional part in calculations, in both signed and unsigned forms.
- * Anyway, an ntp::l_fp looks like:
- *
- *    0                   1                   2                   3
- *    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
- *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *   |                         Integral Part                         |
- *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- *   |                         Fractional Part                       |
- *   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- * REF http://www.eecis.udel.edu/~mills/database/rfc/rfc2030.txt
- */
+* NTP uses two fixed point formats.  The first (ntp::l_fp) is the "long"
+* format and is 64 bits long with the decimal between bits 31 and 32.
+* This is used for time stamps in the NTP packet header (in network
+* byte order) and for internal computations of offsets (in local host
+* byte order). We use the same structure for both signed and unsigned
+* values, which is a big hack but saves rewriting all the operators
+* twice. Just to confuse this, we also sometimes just carry the
+* fractional part in calculations, in both signed and unsigned forms.
+* Anyway, an ntp::l_fp looks like:
+*
+*    0                   1                   2                   3
+*    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*   |                         Integral Part                         |
+*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+*   |                         Fractional Part                       |
+*   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+* REF http://www.eecis.udel.edu/~mills/database/rfc/rfc2030.txt
+*/
 //
 
 class ntp : private no_instance
@@ -74,8 +73,8 @@ private:
     };
 
     //
-    // NTP server, which we unconditionally trust. This may be your own installation of ntpd somewhere, 
-    // for example. 
+    // NTP server, which we unconditionally trust. This may be your own installation of ntpd somewhere,
+    // for example.
     // "localhost" means "trust no one"
     //
     static std::string strTrustedUpstream;
@@ -84,20 +83,18 @@ private:
     // Current offset
     //
     static int64_t nNtpOffset;    // variable (no const)
-
-    // static const int nServersCount = 5;
-    static const std::string NtpServers[5];
+    static const char *const NtpServers[4];
 
     static void Ntp2Unix(const uint32_t &n, time_t &u);
     static void ntohl_fp(l_fp *n, l_fp *h);
 
-    static bool InitWithHost(const std::string &strHostName, SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr);
+    static bool InitWithHost(const char *strHostName, SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr);
     static bool InitWithRandom(SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr);
 
     static int64_t DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr);
 
 public:
-    static void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault=tcp_domain::strLocal);
+    static void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault = tcp_domain::strLocal);
 
     static int64_t NtpGetTime(CNetAddr &ip);
     static int64_t NtpGetTime(const std::string &strHostName);
@@ -108,7 +105,7 @@ public:
 
 namespace ntp_ext
 {
-    void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault=tcp_domain::strLocal) {
+    void SetTrustedUpstream(const std::string &strArg, const std::string &strDefault = tcp_domain::strLocal) {
         ntp::SetTrustedUpstream(strArg, strDefault);
     }
 
@@ -131,17 +128,12 @@ namespace ntp_ext
 
 std::string ntp::strTrustedUpstream = tcp_domain::strLocal;
 int64_t ntp::nNtpOffset = INT64_MAX;
-// const int ntp::nServersCount = 5;
-const std::string ntp::NtpServers[5] = {
-    tcp_domain::strSub,
-
+const char *const ntp::NtpServers[4] = {
     "time1.google.com",
     "time2.google.com",
     "time3.google.com",
-    "time4.google.com"
+    "time4.google.com",
 };
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void ntp::SetTrustedUpstream(const std::string &strArg, const std::string &strDefault/* =tcp_domain::strLocal */)
 {
@@ -161,37 +153,37 @@ void ntp::ntohl_fp(l_fp *n, l_fp *h)
     (h)->Ul_f.Xl_uf = ntohl((n)->Ul_f.Xl_uf);
 }
 
-bool ntp::InitWithHost(const std::string &strHostName, SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr)
+bool ntp::InitWithHost(const char *strHostName, SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr)
 {
     sockfd = INVALID_SOCKET;
 
     std::vector<CNetAddr> vIP;
-    bool fRet = netbase::manage::LookupHost(strHostName.c_str(), vIP, 10, true);
-    if (! fRet) {
+    bool fRet = netbase::manage::LookupHost(strHostName, vIP, 10, true);
+    if(! fRet) {
         return false;
     }
 
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = htons(123);
+    servaddr.sin_port = ::htons(123);
 
     bool found = false;
     for(unsigned int i = 0; i < vIP.size(); ++i)
     {
-        if ((found = vIP[i].GetInAddr(&servaddr.sin_addr)) != false) {
+        if((found = vIP[i].GetInAddr(&servaddr.sin_addr)) != false) {
             break;
         }
     }
-    if (! found) {
+    if(! found) {
         return false;
     }
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    sockfd = ::socket(AF_INET, SOCK_DGRAM, 0);
 
-    if (sockfd == INVALID_SOCKET) {
+    if(sockfd == INVALID_SOCKET) {
         return false; // socket initialization error
     }
-    if (::connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1 ) {
+    if(::connect(sockfd, (struct sockaddr *) &servaddr, sizeof(servaddr)) == -1) {
         return false; // "connection" error
     }
 
@@ -203,12 +195,10 @@ bool ntp::InitWithHost(const std::string &strHostName, SOCKET &sockfd, socklen_t
 
 bool ntp::InitWithRandom(SOCKET &sockfd, socklen_t &servlen, struct sockaddr *pcliaddr)
 {
-    // for (int nAttempt = 0; nAttempt < ntp::nServersCount; ++nAttempt)
-    for (int nAttempt = 0; nAttempt < ARRAYLEN(ntp::NtpServers); ++nAttempt)
+    for(int nAttempt = 0; nAttempt < ARRAYLEN(ntp::NtpServers); ++nAttempt)
     {
-        // int nServerNum = bitsystem::GetRandInt(nServersCount);
         int nServerNum = bitsystem::GetRandInt(ARRAYLEN(ntp::NtpServers));
-        if (ntp::InitWithHost(ntp::NtpServers[nServerNum], sockfd, servlen, pcliaddr)) {
+        if(ntp::InitWithHost(ntp::NtpServers[nServerNum], sockfd, servlen, pcliaddr)) {
             return true;
         }
     }
@@ -220,18 +210,18 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
 {
 #ifdef WIN32
     u_long nOne = 1;
-    if (::ioctlsocket(sockfd, FIONBIO, &nOne) == SOCKET_ERROR) {
+    if(::ioctlsocket(sockfd, FIONBIO, &nOne) == SOCKET_ERROR) {
         printf("ntp::ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
 #else
-    if (::fcntl(sockfd, F_SETFL, O_NONBLOCK) == SOCKET_ERROR) {
+    if(::fcntl(sockfd, F_SETFL, O_NONBLOCK) == SOCKET_ERROR) {
         printf("ntp::ConnectSocket() : fcntl non-blocking setting failed, error %d\n", errno);
 #endif
         return -2;
     }
 
-    struct timeval timeout = {10, 0};
+    struct timeval timeout = { 10, 0 };
     struct pkt *msg = new(std::nothrow) pkt;
-    struct pkt *prt  = new(std::nothrow) pkt;
+    struct pkt *prt = new(std::nothrow) pkt;
     if(!msg || !prt) {
         if(msg) { delete msg; }
         if(prt) { delete prt; }
@@ -242,24 +232,24 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
     time_t seconds_transmit;
     int len = 48;
 
-    msg->li_vn_mode=227;
-    msg->stratum=0;
-    msg->ppoll=4;
-    msg->precision=0;
-    msg->rootdelay=0;
-    msg->rootdispersion=0;
+    msg->li_vn_mode = 227;
+    msg->stratum = 0;
+    msg->ppoll = 4;
+    msg->precision = 0;
+    msg->rootdelay = 0;
+    msg->rootdispersion = 0;
 
-    msg->ref.Ul_i.Xl_i=0;
-    msg->ref.Ul_f.Xl_f=0;
-    msg->org.Ul_i.Xl_i=0;
-    msg->org.Ul_f.Xl_f=0;
-    msg->rec.Ul_i.Xl_i=0;
-    msg->rec.Ul_f.Xl_f=0;
-    msg->xmt.Ul_i.Xl_i=0;
-    msg->xmt.Ul_f.Xl_f=0;
+    msg->ref.Ul_i.Xl_i = 0;
+    msg->ref.Ul_f.Xl_f = 0;
+    msg->org.Ul_i.Xl_i = 0;
+    msg->org.Ul_f.Xl_f = 0;
+    msg->rec.Ul_i.Xl_i = 0;
+    msg->rec.Ul_f.Xl_f = 0;
+    msg->xmt.Ul_i.Xl_i = 0;
+    msg->xmt.Ul_f.Xl_f = 0;
 
-    int retcode = ::sendto(sockfd, (char *) msg, len, 0, &cliaddr, servlen);
-    if (retcode < 0) {
+    int retcode = ::sendto(sockfd, (char *)msg, len, 0, &cliaddr, servlen);
+    if(retcode < 0) {
         printf("sendto() failed: %d\n", retcode);
         seconds_transmit = -3;
         goto _end;
@@ -269,16 +259,16 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
     FD_ZERO(&fdset);
     FD_SET(sockfd, &fdset);
 
-    retcode = ::select(sockfd + 1, &fdset, NULL, NULL, &timeout);
-    if (retcode <= 0) {
+    retcode = ::select(sockfd + 1, &fdset, nullptr, nullptr, &timeout);
+    if(retcode <= 0) {
         printf("ntp recvfrom() error\n");
         seconds_transmit = -4;
         goto _end;
     }
 
-    ::recvfrom(sockfd, (char *) msg, len, 0, NULL, NULL);
+    ::recvfrom(sockfd, (char *)msg, len, 0, nullptr, nullptr);
     ntohl_fp(&msg->xmt, &prt->xmt);
-    Ntp2Unix(prt->xmt.Ul_i.Xl_ui, seconds_transmit);
+    ntp::Ntp2Unix(prt->xmt.Ul_i.Xl_ui, seconds_transmit);
 
 _end:
     delete msg;
@@ -292,7 +282,7 @@ int64_t ntp::NtpGetTime(CNetAddr &ip)
 
     SOCKET sockfd;
     socklen_t servlen;
-    if (! ntp::InitWithRandom(sockfd, servlen, &cliaddr)) {
+    if(! ntp::InitWithRandom(sockfd, servlen, &cliaddr)) {
         return -1;
     }
 
@@ -309,7 +299,7 @@ int64_t ntp::NtpGetTime(const std::string &strHostName)
 
     SOCKET sockfd;
     socklen_t servlen;
-    if (! ntp::InitWithHost(strHostName, sockfd, servlen, &cliaddr)) {
+    if(! ntp::InitWithHost(strHostName.c_str(), sockfd, servlen, &cliaddr)) {
         return -1;
     }
 
@@ -331,7 +321,7 @@ void ntp::ThreadNtpSamples(void *parg)
     printf("Trying to find NTP server at localhost...\n");
 
     std::string strLocalHost = net_basis::strLocal;
-    if (NtpGetTime(strLocalHost) == bitsystem::GetTime()) {
+    if(NtpGetTime(strLocalHost) == bitsystem::GetTime()) {
         printf("There is NTP server active at localhost,  we don't need NTP thread.\n");
         nNtpOffset = 0;
         return;
@@ -341,17 +331,17 @@ void ntp::ThreadNtpSamples(void *parg)
     net_node::vnThreadsRunning[THREAD_NTP]++;
 
     // Make this thread recognisable as time synchronization thread
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-ntp-samples").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-ntp-samples"));
 
-    CMedianFilter<int64_t> vTimeOffsets(200,0);
+    CMedianFilter<int64_t> vTimeOffsets(200, 0);
 
-    while (! args_bool::fShutdown)
+    while(! args_bool::fShutdown)
     {
-        if (strTrustedUpstream != tcp_domain::strLocal) {
+        if(strTrustedUpstream != tcp_domain::strLocal) {
             // Trying to get new offset sample from trusted NTP server.
             int64_t nClockOffset = NtpGetTime(strTrustedUpstream) - bitsystem::GetTime();
 
-            if (util::abs64(nClockOffset) < nMaxOffset) {
+            if(util::abs64(nClockOffset) < nMaxOffset) {
                 // Everything seems right, remember new trusted offset.
                 printf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", strTrustedUpstream.c_str(), nClockOffset);
                 nNtpOffset = nClockOffset;
@@ -361,7 +351,7 @@ void ntp::ThreadNtpSamples(void *parg)
                 strTrustedUpstream = tcp_domain::strLocal;
 
                 int nSleepMinutes = 1 + bitsystem::GetRandInt(9); // Sleep for 1-10 minutes.
-                for (int i = 0; i < nSleepMinutes * 60 && !args_bool::fShutdown; ++i)
+                for(int i = 0; i < nSleepMinutes * 60 && !args_bool::fShutdown; ++i)
                 {
                     util::Sleep(1000);
                 }
@@ -372,24 +362,24 @@ void ntp::ThreadNtpSamples(void *parg)
             // Now, trying to get 2-4 samples from random NTP servers.
             int nSamplesCount = 2 + bitsystem::GetRandInt(2);
 
-            for (int i = 0; i < nSamplesCount; ++i)
+            for(int i = 0; i < nSamplesCount; ++i)
             {
                 CNetAddr ip;
                 int64_t nClockOffset = NtpGetTime(ip) - bitsystem::GetTime();
 
-                if (util::abs64(nClockOffset) < nMaxOffset) { // Skip the deliberately wrong timestamps
+                if(util::abs64(nClockOffset) < nMaxOffset) { // Skip the deliberately wrong timestamps
                     printf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", ip.ToString().c_str(), nClockOffset);
                     vTimeOffsets.input(nClockOffset);
                 }
             }
 
-            if (vTimeOffsets.size() > 1) {
+            if(vTimeOffsets.size() > 1) {
                 nNtpOffset = vTimeOffsets.median();
             } else {
                 // Not enough offsets yet, try to collect additional samples later.
                 nNtpOffset = INT64_MAX;
                 int nSleepMinutes = 1 + bitsystem::GetRandInt(4); // Sleep for 1-5 minutes.
-                for (int i = 0; i < nSleepMinutes * 60 && !args_bool::fShutdown; ++i)
+                for(int i = 0; i < nSleepMinutes * 60 && !args_bool::fShutdown; ++i)
                 {
                     util::Sleep(1000);
                 }
@@ -398,18 +388,18 @@ void ntp::ThreadNtpSamples(void *parg)
             }
         }
 
-        if (bitsystem::GetNodesOffset() == INT_MAX && util::abs64(nNtpOffset) > 40 * 60) {
+        if(bitsystem::GetNodesOffset() == INT_MAX && util::abs64(nNtpOffset) > 40 * 60) {
             // If there is not enough node offsets data and NTP time offset is greater than 40 minutes then give a warning.
-            std::string strMessage = _(("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly.").c_str());
-            excep::set_strMiscWarning( strMessage );
+            std::string strMessage = _(sts_c(std::string("Warning: Please check that your computer's date and time are correct! If your clock is wrong ") + coin_param::strCoinName + " will not work properly."));
+            excep::set_strMiscWarning(strMessage);
             printf("*** %s\n", strMessage.c_str());
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", coin_param::strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
+            CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage + " ", coin_param::strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
         }
 
-        printf("nNtpOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNtpOffset, nNtpOffset/60);
+        printf("nNtpOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNtpOffset, nNtpOffset / 60);
 
         int nSleepHours = 1 + bitsystem::GetRandInt(5); // Sleep for 1-6 hours.
-        for (int i = 0; i < nSleepHours * 3600 && !args_bool::fShutdown; ++i)
+        for(int i = 0; i < nSleepHours * 3600 && !args_bool::fShutdown; ++i)
         {
             util::Sleep(1000);
         }

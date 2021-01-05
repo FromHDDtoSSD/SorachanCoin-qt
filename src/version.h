@@ -1,12 +1,14 @@
 // Copyright (c) 2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_VERSION_H
 #define BITCOIN_VERSION_H
 
-#include "clientversion.h"
+#include <const/clientversion.h>
+#include <const/no_instance.h>
 #include <string>
+#include <vector>
 
 namespace coin_param
 {
@@ -15,8 +17,8 @@ namespace coin_param
     //
     const std::string strCoinName  = "SorachanCoin";
     const std::string strCoinNameL = "sorachancoin";
-    const std::string strEcho = "SorachanCoin_Echo";
-    const std::string strQuantum = "SorachanCoin_Quantum";
+    const std::string strEcho      = "SorachanCoin_Echo";
+    const std::string strQuantum   = "SorachanCoin_Quantum";
 }
 
 namespace version
@@ -69,10 +71,19 @@ namespace version
     extern const std::string CLIENT_DATE;
 }
 
+// clientversion.cpp
+class format_version : private no_instance
+{
+private:
+    static std::string FormatVersion(int nVersion);
+public:
+    static std::string FormatFullVersion();
+    static std::string FormatSubVersion(const std::string &name, int nClientVersion, const std::vector<std::string> &comments);
+};
+
 // display version
-#define DISPLAY_VERSION_MAJOR        1
-#define DISPLAY_VERSION_MINOR        2
+#define DISPLAY_VERSION_MAJOR        2
+#define DISPLAY_VERSION_MINOR        3
 #define DISPLAY_VERSION_REVISION     10
 
 #endif
-//@

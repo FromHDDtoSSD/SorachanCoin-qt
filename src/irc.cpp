@@ -4,8 +4,14 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "irc.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "net.h"
+
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> irc_vector;
+#else
+typedef std::vector<uint8_t> irc_vector;
+#endif
 
 class irc : private no_instance
 {
@@ -57,7 +63,7 @@ std::string irc::EncodeAddress(const CService &addr)
     if (addr.GetInAddr(&tmp.ip)) {
         tmp.port = htons(addr.GetPort());
 
-        std::vector<unsigned char> vch(UBEGIN(tmp), UEND(tmp));
+        irc_vector vch(UBEGIN(tmp), UEND(tmp));
         return std::string("u") + base58::manage::EncodeBase58Check(vch);
     }
     return "";
@@ -65,7 +71,7 @@ std::string irc::EncodeAddress(const CService &addr)
 
 bool irc::DecodeAddress(std::string str, CService &addr)
 {
-    std::vector<unsigned char> vch;
+    irc_vector vch;
     if (! base58::manage::DecodeBase58Check(str.substr(1), vch)) {
         return false;
     }
@@ -74,7 +80,7 @@ bool irc::DecodeAddress(std::string str, CService &addr)
     if (vch.size() != sizeof(tmp)) {
         return false;
     }
-    ::memcpy(&tmp, &vch[0], sizeof(tmp));
+    std::memcpy(&tmp, &vch[0], sizeof(tmp));
 
     addr = CService(tmp.ip, ntohs(tmp.port));
     return true;
@@ -225,7 +231,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 void irc::ThreadIRCSeed(void *parg)
 {
     // Make this thread recognisable as the IRC seeding thread
-    bitthread::manage::RenameThread((coin_param::strCoinName + "coin-ircseed").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "coin-ircseed"));
 
     printf("irc::ThreadIRCSeed started\n");
 
@@ -365,8 +371,8 @@ void irc::ThreadIRCSeed2(void *parg)
             // Channel number is always 0 for initial release
             //
             int channel_number = 0;
-            irc::Send(hSocket, strprintf("JOIN #coin%02d\r", channel_number).c_str());
-            irc::Send(hSocket, strprintf("WHO #coin%02d\r", channel_number).c_str());
+            irc::Send(hSocket, sts_c(strprintf("JOIN #coin%02d\r", channel_number)));
+            irc::Send(hSocket, sts_c(strprintf("WHO #coin%02d\r", channel_number)));
         }
 
         int64_t nStart = bitsystem::GetTime();

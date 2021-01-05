@@ -1,11 +1,14 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef ADDRESSBOOKPAGE_H
 #define ADDRESSBOOKPAGE_H
 
 #include <QDialog>
 
-namespace Ui
-{
+namespace Ui {
     class AddressBookPage;
 }
 
@@ -28,9 +31,11 @@ class AddressBookPage : public QDialog
     Q_OBJECT
 
 private:
-    AddressBookPage(); // {}
-    AddressBookPage(const AddressBookPage &); // {}
-    AddressBookPage &operator=(const AddressBookPage &); // {}
+    AddressBookPage()=delete;
+    AddressBookPage(const AddressBookPage &)=delete;
+    AddressBookPage &operator=(const AddressBookPage &)=delete;
+    AddressBookPage(AddressBookPage &&)=delete;
+    AddressBookPage &operator=(const AddressBookPage &&)=delete;
 
 public:
     enum Tabs
@@ -45,7 +50,7 @@ public:
         ForEditing  /**< Open address book for editing */
     };
 
-    explicit AddressBookPage(Mode mode, Tabs tab, QWidget *parent = NULL);
+    explicit AddressBookPage(Mode mode, Tabs tab, QWidget *parent = nullptr);
     ~AddressBookPage();
 
     void setModel(AddressTableModel *model);
@@ -97,4 +102,3 @@ signals:
 };
 
 #endif // ADDRESSBOOKDIALOG_H
-//@

@@ -8,8 +8,15 @@
 
 #include <stdexcept>
 #include <vector>
+#include <prevector/prevector.h>
 #include <openssl/bn.h>
 #include "util.h"
+
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> bignum_vector;
+#else
+typedef std::vector<uint8_t> bignum_vector;
+#endif
 
 /** Errors thrown by the bignum class */
 class bignum_error : public std::runtime_error
@@ -88,7 +95,7 @@ public:
     CBigNum(uint64_t n) { ::BN_init(this); setuint64(n); }
 
     explicit CBigNum(uint256 n) { BN_init(this); setuint256(n); }
-    explicit CBigNum(const std::vector<uint8_t> &vch) {
+    explicit CBigNum(const bignum_vector &vch) {
         ::BN_init(this);
         setvch(vch);
     }
@@ -362,8 +369,8 @@ public:
         return vchBytes;
     }
 
-    void setvch(const std::vector<uint8_t>& vch) {
-        std::vector<uint8_t> vch2(vch.size() + 4);
+    void setvch(const bignum_vector &vch) {
+        bignum_vector vch2(vch.size() + 4);
         uint32_t nSize = (uint32_t) vch.size();
 
         // BIGNUM's byte stream format expects 4 bytes of
@@ -378,13 +385,13 @@ public:
         ::BN_mpi2bn(&vch2[0], (int) vch2.size(), this);
     }
 
-    std::vector<uint8_t> getvch() const {
-        unsigned int nSize = ::BN_bn2mpi(this, NULL);
+    bignum_vector getvch() const {
+        unsigned int nSize = ::BN_bn2mpi(this, nullptr);
         if (nSize <= 4) {
-            return std::vector<uint8_t>();
+            return bignum_vector();
         }
 
-        std::vector<uint8_t> vch(nSize);
+        bignum_vector vch(nSize);
         ::BN_bn2mpi(this, &vch[0]);
         vch.erase(vch.begin(), vch.begin() + 4);
         std::reverse(vch.begin(), vch.end());
@@ -486,19 +493,19 @@ public:
         return ToString(16);
     }
 
-    unsigned int GetSerializeSize(int nType=0, int nVersion = version::PROTOCOL_VERSION) const {
-        return ::GetSerializeSize(getvch(), nType, nVersion);
+    unsigned int GetSerializeSize() const {
+        return ::GetSerializeSize(getvch());
     }
 
     template<typename Stream>
-    void Serialize(Stream &s, int nType=0, int nVersion = version::PROTOCOL_VERSION) const {
-        ::Serialize(s, getvch(), nType, nVersion);
+    void Serialize(Stream &s) const {
+        ::Serialize(s, getvch());
     }
 
     template<typename Stream>
-    void Unserialize(Stream &s, int nType=0, int nVersion = version::PROTOCOL_VERSION) {
-        std::vector<uint8_t> vch;
-        ::Unserialize(s, vch, nType, nVersion);
+    void Unserialize(Stream &s) {
+        bignum_vector vch;
+        ::Unserialize(s, vch);
         setvch(vch);
     }
 

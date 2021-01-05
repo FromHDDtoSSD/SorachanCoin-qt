@@ -5,13 +5,12 @@
 
 #include "addressbookpage.h"
 #include "addresstablemodel.h"
-#include "base58.h"
+#include "address/key_io.h"
 #include "guiutil.h"
 #include "key.h"
 #include "multisigaddressentry.h"
 #include "ui_multisigaddressentry.h"
 #include "walletmodel.h"
-
 
 MultisigAddressEntry::MultisigAddressEntry(QWidget *parent) : QFrame(parent), ui(new Ui::MultisigAddressEntry), model(0)
 {
@@ -79,7 +78,7 @@ void MultisigAddressEntry::on_addressBookButton_clicked()
 void MultisigAddressEntry::on_pubkey_textChanged(const QString &pubkey)
 {
     // Compute address from public key
-    std::vector<unsigned char> vchPubKey(hex::ParseHex(pubkey.toStdString().c_str()));
+    key_vector vchPubKey(hex::ParseHex(pubkey.toStdString().c_str()));
     CPubKey pkey(vchPubKey);
     CKeyID keyID = pkey.GetID();
     CBitcoinAddress address(keyID);

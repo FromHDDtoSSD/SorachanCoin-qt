@@ -10,7 +10,7 @@ class KernelRecord        // wallet => hash,nTime,address,nValue,spent,coinAge (
 {
 private:
     // KernelRecord(const KernelRecord &); // {}
-    KernelRecord &operator=(const KernelRecord &); // {}
+    // KernelRecord &operator=(const KernelRecord &); // {}
 
     static bool showTransaction(const CWalletTx &wtx);
 public:

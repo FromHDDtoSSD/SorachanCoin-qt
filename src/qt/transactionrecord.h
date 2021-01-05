@@ -16,7 +16,7 @@ class TransactionStatus
 {
 private:
     //TransactionStatus(const TransactionStatus &); // {}
-    TransactionStatus &operator =(const TransactionStatus &); // {}
+    //TransactionStatus &operator =(const TransactionStatus &); // {}
 public:
     TransactionStatus():
             confirmed(false), sortKey(""), maturity(Mature),
@@ -67,7 +67,7 @@ class TransactionRecord
 {
 private:
     //TransactionRecord(const TransactionRecord &); // {}
-    TransactionRecord &operator =(const TransactionRecord &); // {}
+    //TransactionRecord &operator =(const TransactionRecord &); // {}
 public:
     enum Type
     {

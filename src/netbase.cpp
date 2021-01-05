@@ -199,8 +199,8 @@ bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
         return print::error("Cannot get proxy destination address");
     }
 
-    ::memcpy(pszSocks4IP + 2, &addr.sin_port, 2);
-    ::memcpy(pszSocks4IP + 4, &addr.sin_addr, 4);
+    std::memcpy(pszSocks4IP + 2, &addr.sin_port, 2);
+    std::memcpy(pszSocks4IP + 4, &addr.sin_addr, 4);
     char *pszSocks4 = pszSocks4IP;
     int nSize = sizeof(pszSocks4IP);
 
@@ -601,12 +601,12 @@ bool netbase::manage::CloseSocket(SOCKET &hSocket)
 
 void CNetAddr::Init()
 {
-    ::memset(ip, 0, sizeof(ip));
+    std::memset(ip, 0, sizeof(ip));
 }
 
 void CNetAddr::SetIP(const CNetAddr &ipIn)
 {
-    ::memcpy(ip, ipIn.ip, sizeof(ip));
+    std::memcpy(ip, ipIn.ip, sizeof(ip));
 }
 
 bool CNetAddr::SetSpecial(const std::string &strName)
@@ -617,7 +617,7 @@ bool CNetAddr::SetSpecial(const std::string &strName)
             return false;
         }
 
-        ::memcpy(ip, pchOnionCat, sizeof(pchOnionCat));
+        std::memcpy(ip, pchOnionCat, sizeof(pchOnionCat));
         for (unsigned int i=0; i < 16 - sizeof(pchOnionCat); ++i)
         {
             ip[i + sizeof(pchOnionCat)] = vchAddr[i];
@@ -631,7 +631,7 @@ bool CNetAddr::SetSpecial(const std::string &strName)
             return false;
         }
 
-        ::memcpy(ip, pchOnionCat, sizeof(pchGarliCat));
+        std::memcpy(ip, pchOnionCat, sizeof(pchGarliCat));
         for (unsigned int i=0; i<16-sizeof(pchGarliCat); ++i)
         {
             ip[i + sizeof(pchGarliCat)] = vchAddr[i];
@@ -648,14 +648,14 @@ CNetAddr::CNetAddr()
 
 CNetAddr::CNetAddr(const struct in_addr &ipv4Addr)
 {
-    ::memcpy(ip, CNetAddr::pchIPv4, 12);
-    ::memcpy(ip + 12, &ipv4Addr, 4);
+    std::memcpy(ip, CNetAddr::pchIPv4, 12);
+    std::memcpy(ip + 12, &ipv4Addr, 4);
 }
 
 #ifdef USE_IPV6
 CNetAddr::CNetAddr(const struct in6_addr &ipv6Addr)
 {
-    ::memcpy(ip, &ipv6Addr, 16);
+    std::memcpy(ip, &ipv6Addr, 16);
 }
 #endif
 
@@ -893,14 +893,14 @@ bool CNetAddr::GetInAddr(struct in_addr *pipv4Addr) const
         return false;
     }
 
-    ::memcpy(pipv4Addr, ip + 12, 4);
+    std::memcpy(pipv4Addr, ip + 12, 4);
     return true;
 }
 
 #ifdef USE_IPV6
 bool CNetAddr::GetIn6Addr(struct in6_addr *pipv6Addr) const
 {
-    ::memcpy(pipv6Addr, ip, 16);
+    std::memcpy(pipv6Addr, ip, 16);
     return true;
 }
 #endif
@@ -973,7 +973,7 @@ uint64_t CNetAddr::GetHash() const
 {
     uint256 hash = hash_basis::Hash(&ip[0], &ip[16]);
     uint64_t nRet;
-    ::memcpy(&nRet, &hash, sizeof(nRet));
+    std::memcpy(&nRet, &hash, sizeof(nRet));
     return nRet;
 }
 
@@ -1171,7 +1171,7 @@ bool CService::GetSockAddr(struct sockaddr *paddr, socklen_t *addrlen) const
 
         *addrlen = sizeof(struct sockaddr_in);
         struct sockaddr_in *paddrin = (struct sockaddr_in *)paddr;
-        ::memset(paddrin, 0, *addrlen);
+        std::memset(paddrin, 0, *addrlen);
         if (! GetInAddr(&paddrin->sin_addr)) {
             return false;
         }
@@ -1188,7 +1188,7 @@ bool CService::GetSockAddr(struct sockaddr *paddr, socklen_t *addrlen) const
 
         *addrlen = sizeof(struct sockaddr_in6);
         struct sockaddr_in6 *paddrin6 = (struct sockaddr_in6 *)paddr;
-        ::memset(paddrin6, 0, *addrlen);
+        std::memset(paddrin6, 0, *addrlen);
         if (! GetIn6Addr(&paddrin6->sin6_addr)) {
             return false;
         }
@@ -1205,7 +1205,7 @@ std::vector<unsigned char> CService::GetKey() const
 {
      std::vector<unsigned char> vKey;
      vKey.resize(18);
-     ::memcpy(&vKey[0], ip, 16);
+     std::memcpy(&vKey[0], ip, 16);
      vKey[16] = port / 0x100;
      vKey[17] = port & 0x0FF;
      return vKey;

@@ -48,7 +48,7 @@ public:
     static std::string HelpMessage();
 
     static void ExitTimeout(void *parg);
-    static void StartShutdown();
+    //static void StartShutdown();
     static bool AppInit2();
 };
 

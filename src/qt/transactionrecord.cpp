@@ -3,7 +3,7 @@
 
 #include "init.h"
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
 
 std::map<const TransactionRecord *, int> TransactionRecord::mapConfirmations;
 
@@ -43,15 +43,15 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         //
         // Credit
         //
-        BOOST_FOREACH(const CTxOut &txout, wtx.vout)
+        for(const CTxOut &txout: wtx.get_vout())
         {
             if(wallet->IsMine(txout)) {
                 TransactionRecord sub(hash, nTime);
                 sub.idx = parts.size(); // sequence number
-                sub.credit = txout.nValue;
+                sub.credit = txout.get_nValue();
 
                 CBitcoinAddress addressRet;
-                if (Script_util::ExtractAddress(*entry::pwalletMain, txout.scriptPubKey, addressRet)) {
+                if (Script_util::ExtractAddress(*entry::pwalletMain, txout.get_scriptPubKey(), addressRet)) {
                     sub.type = TransactionRecord::RecvWithAddress;
                     sub.address = addressRet.ToString();
                 } else {
@@ -84,13 +84,13 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
         }
     } else {
         bool fAllFromMe = true;
-        BOOST_FOREACH(const CTxIn &txin, wtx.vin)
+        for(const CTxIn &txin: wtx.get_vin())
         {
             fAllFromMe = fAllFromMe && wallet->IsMine(txin);
         }
 
         bool fAllToMe = true;
-        BOOST_FOREACH(const CTxOut &txout, wtx.vout)
+        for(const CTxOut &txout: wtx.get_vout())
         {
             fAllToMe = fAllToMe && wallet->IsMine(txout);
         }
@@ -108,9 +108,9 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
             //
             int64_t nTxFee = nDebit - wtx.GetValueOut();
 
-            for (unsigned int nOut = 0; nOut < wtx.vout.size(); ++nOut)
+            for (unsigned int nOut = 0; nOut < wtx.get_vout().size(); ++nOut)
             {
-                const CTxOut &txout = wtx.vout[nOut];
+                const CTxOut &txout = wtx.get_vout(nOut);
                 TransactionRecord sub(hash, nTime);
                 sub.idx = parts.size();
 
@@ -123,7 +123,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                 }
 
                 CTxDestination address;
-                if (Script_util::ExtractDestination(txout.scriptPubKey, address)) {
+                if (Script_util::ExtractDestination(txout.get_scriptPubKey(), address)) {
                     //
                     // Sent to Bitcoin Address
                     //
@@ -137,7 +137,7 @@ QList<TransactionRecord> TransactionRecord::decomposeTransaction(const CWallet *
                     sub.address = mapValue["to"];
                 }
 
-                int64_t nValue = txout.nValue;
+                int64_t nValue = txout.get_nValue();
                 /* Add fee to first output */
                 if (nTxFee > 0) {
                     nValue += nTxFee;
@@ -192,7 +192,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     // Sort order, unrecorded transactions sort to the top
     //
     status.sortKey = strprintf("%010d-%01d-%010u-%03d",
-        (pindex ? pindex->nHeight : std::numeric_limits<int>::max()),
+        (pindex ? pindex->get_nHeight() : std::numeric_limits<int>::max()),
         (wtx.IsCoinBase() ? 1 : 0),
         wtx.nTimeReceived,
         idx);
@@ -201,12 +201,12 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     status.cur_num_blocks = block_info::nBestHeight;
 
     if (! wtx.IsFinal()) {
-        if (wtx.nLockTime < block_param::LOCKTIME_THRESHOLD) {
+        if (wtx.get_nLockTime() < block_param::LOCKTIME_THRESHOLD) {
             status.status = TransactionStatus::OpenUntilBlock;
-            status.open_for = block_info::nBestHeight - wtx.nLockTime;
+            status.open_for = block_info::nBestHeight - wtx.get_nLockTime();
         } else {
             status.status = TransactionStatus::OpenUntilDate;
-            status.open_for = wtx.nLockTime;
+            status.open_for = wtx.get_nLockTime();
         }
     } else {
         if (bitsystem::GetAdjustedTime() - wtx.nTimeReceived > 2 * 60 && wtx.GetRequestCount() == 0) {

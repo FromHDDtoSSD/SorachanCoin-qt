@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright (c) 2013-2016 The Bitcoin Core developers
-# Copyright (c) 2017-2019 The SorachanCoin Developers
+# Copyright (c) 2018-2021 The SorachanCoin Developers
 # Distributed under the MIT software license, see the accompanying
 # file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -14,7 +14,7 @@ usage() {
  echo "Usage: SorachanCoin ${PROGNAME}"
  echo "Options:"
  echo "-h, --help: View usage"
- echo "--prefix: --prefix=[install path] (e.g. --prefix=/opt/SorachanCoin)"
+## echo "--prefix: --prefix=[install path] (e.g. --prefix=/opt/SorachanCoin)"
  echo "--build-unix: Build a UNIX system (e.g. FreeBSD)."
  echo "--with-no-build-library: Use the package without building the necessary libraries."
 }
@@ -42,6 +42,7 @@ LIBRARY_DIR="library"
 bdb_dir="db-4.8.30"
 boost_dir="boost_1_68_0"
 libressl_dir="libressl-2.8.2"
+blake2_dir="blake2"
 srcdir="$(dirname $(realpath $0))"
 cd "$srcdir"
 mkdir -p "$WORK_DIR"
@@ -88,6 +89,21 @@ build_libressl() {
  ${CMD_MAKE} install
 }
 
+build_blake2() {
+ blake2_wget="https://github.com/BLAKE2/libb2/archive/master.zip"
+ cd "$srcdir"/"$WORK_DIR"
+ mkdir -p "$blake2_dir"
+ cd "$blake2_dir"
+ wget "$blake2_wget"
+ unzip master.zip
+ unlink master.zip
+ cd libb2-master
+ ./autogen.sh
+ ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$blake2_dir"
+ ${CMD_MAKE}
+ ${CMD_MAKE} install
+}
+
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  cd "$srcdir"/"$LIBRARY_DIR"
  if [ ! -d ${bdb_dir} ]; then
@@ -101,6 +117,10 @@ if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  if [ ! -d ${libressl_dir} ]; then
   build_libressl
  fi
+ cd "$srcdir"/"$LIBRARY_DIR"
+ if [ ! -d ${blake2_dir} ]; then
+  build_blake2
+ fi
 fi
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE"  ]; then
  mv "$srcdir"/src/Makefile.am.library "$srcdir"/src/Makefile.am
@@ -110,7 +130,7 @@ fi
 cd "$srcdir"
 autoreconf --install
 chmod 700 configure
-./configure ${PREFIX}
+## ./configure ${PREFIX}
 if [ ${BUILD_UNIX} = "FALSE" ]; then
  ${CMD_MAKE} -C src/leveldb
  ${CMD_MAKE} -C src/leveldb memenv_test

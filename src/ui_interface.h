@@ -14,7 +14,7 @@
 
 class CBasicKeyStore;
 class CWallet;
-class uint256;
+//class uint256;
 
 //
 // General change type (added, updated, removed)
@@ -116,7 +116,7 @@ public:
     boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
 
     static int noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style);
-    static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption);
+    static bool noui_ThreadSafeAskFee(int64_t /*nFeeRequired*/, const std::string &/*strCaption*/);
 };
 
 //

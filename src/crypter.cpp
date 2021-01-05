@@ -4,6 +4,7 @@
 
 #include <openssl/aes.h>
 #include <openssl/evp.h>
+#include <cleanse/cleanse.h>
 #include <vector>
 #include <string>
 
@@ -25,8 +26,8 @@ bool CCrypter::SetKeyFromPassphrase(const SecureString &strKeyData, const std::v
     }
 
     if (i != (int)crypter_param::WALLET_CRYPTO_KEY_SIZE) {
-        OPENSSL_cleanse(&chKey, sizeof(chKey));
-        OPENSSL_cleanse(&chIV, sizeof(chIV));
+        cleanse::OPENSSL_cleanse(&chKey, sizeof(chKey));
+        cleanse::OPENSSL_cleanse(&chIV, sizeof(chIV));
         return false;
     }
 
@@ -40,8 +41,8 @@ bool CCrypter::SetKey(const CKeyingMaterial &chNewKey, const std::vector<unsigne
         return false;
     }
 
-    ::memcpy(&chKey[0], &chNewKey[0], sizeof(chKey));
-    ::memcpy(&chIV[0], &chNewIV[0], sizeof(chIV));
+    std::memcpy(&chKey[0], &chNewKey[0], sizeof(chKey));
+    std::memcpy(&chIV[0], &chNewIV[0], sizeof(chIV));
 
     fKeySet = true;
     return true;
@@ -122,7 +123,7 @@ bool crypter::EncryptSecret(CKeyingMaterial& vMasterKey, const CSecret &vchPlain
 {
     CCrypter cKeyCrypter;
     std::vector<unsigned char> chIV(crypter_param::WALLET_CRYPTO_KEY_SIZE);
-    ::memcpy(&chIV[0], &nIV, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    std::memcpy(&chIV[0], &nIV, crypter_param::WALLET_CRYPTO_KEY_SIZE);
     if(! cKeyCrypter.SetKey(vMasterKey, chIV)) {
         return false;
     }
@@ -133,7 +134,7 @@ bool crypter::DecryptSecret(const CKeyingMaterial &vMasterKey, const std::vector
 {
     CCrypter cKeyCrypter;
     std::vector<unsigned char> chIV(crypter_param::WALLET_CRYPTO_KEY_SIZE);
-    ::memcpy(&chIV[0], &nIV, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    std::memcpy(&chIV[0], &nIV, crypter_param::WALLET_CRYPTO_KEY_SIZE);
     if(! cKeyCrypter.SetKey(vMasterKey, chIV)) {
         return false;
     }

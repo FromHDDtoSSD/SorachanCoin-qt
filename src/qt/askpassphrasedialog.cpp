@@ -1,23 +1,28 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "askpassphrasedialog.h"
-#include "ui_askpassphrasedialog.h"
-#include "wallet.h"
-
-#include "guiconstants.h"
-#include "dialogwindowflags.h"
-#include "walletmodel.h"
-
+#include <qt/askpassphrasedialog.h>
+#include <ui_askpassphrasedialog.h>
+#include <wallet.h>
+#include <qt/guiconstants.h>
+#include <qt/dialogwindowflags.h>
+#include <qt/walletmodel.h>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QKeyEvent>
+#include <allocator/qtsecure.h>
 
 AskPassphraseDialog::AskPassphraseDialog(Mode mode, QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::AskPassphraseDialog),
+    ui(new(std::nothrow) Ui::AskPassphraseDialog),
     mode(mode),
     model(0),
     fCapsLock(false)
 {
+    if(! ui) throw qt_error("AskPassphraseDialog: out of memory.", this);
+
     ui->setupUi(this);
     ui->passEdit1->setMaxLength(MAX_PASSPHRASE_SIZE);
     ui->passEdit2->setMaxLength(MAX_PASSPHRASE_SIZE);
@@ -65,8 +70,7 @@ AskPassphraseDialog::AskPassphraseDialog(Mode mode, QWidget *parent) :
     connect(ui->passEdit3, SIGNAL(textChanged(QString)), this, SLOT(textChanged()));
 }
 
-AskPassphraseDialog::~AskPassphraseDialog()
-{
+AskPassphraseDialog::~AskPassphraseDialog() {
     // Attempt to overwrite text so that they do not linger around in memory
     ui->passEdit1->setText(QString(" ").repeated(ui->passEdit1->text().size()));
     ui->passEdit2->setText(QString(" ").repeated(ui->passEdit2->text().size()));
@@ -74,25 +78,27 @@ AskPassphraseDialog::~AskPassphraseDialog()
     delete ui;
 }
 
-void AskPassphraseDialog::setModel(WalletModel *modelIn)
-{
+void AskPassphraseDialog::setModel(WalletModel *modelIn) {
     model = modelIn;
 }
 
-void AskPassphraseDialog::accept()
-{
+void AskPassphraseDialog::accept() {
     SecureString oldpass, newpass1, newpass2;
-    if(! model) {
-        return;
-    }
+    if(! model) return;
 
     oldpass.reserve(MAX_PASSPHRASE_SIZE);
     newpass1.reserve(MAX_PASSPHRASE_SIZE);
     newpass2.reserve(MAX_PASSPHRASE_SIZE);
 
+    // SorachanCoin: SecureString operator () (SecureAllocator and OpenSSL_cleanse)
     oldpass(ui->passEdit1->text().toStdString(), const_cast<ushort *>(ui->passEdit1->text().utf16()));
     newpass1(ui->passEdit2->text().toStdString(), const_cast<ushort *>(ui->passEdit2->text().utf16()));
     newpass2(ui->passEdit3->text().toStdString(), const_cast<ushort *>(ui->passEdit3->text().utf16()));
+
+    // SorachanCoin SecureString check OK.
+    assert(*ui->passEdit1->text().toStdString().c_str()=='\0');
+    assert(*ui->passEdit2->text().toStdString().c_str()=='\0');
+    assert(*ui->passEdit3->text().toStdString().c_str()=='\0');
 
     ui->passEdit1->setText(QString(""));
     ui->passEdit2->setText(QString(""));
@@ -189,8 +195,7 @@ void AskPassphraseDialog::accept()
     }
 }
 
-void AskPassphraseDialog::textChanged()
-{
+void AskPassphraseDialog::textChanged() {
     // Validate input, set Ok button to enabled when acceptable
     bool acceptable = false;
     switch(mode)
@@ -210,8 +215,7 @@ void AskPassphraseDialog::textChanged()
     ui->buttonBox->button(QDialogButtonBox::Ok)->setEnabled(acceptable);
 }
 
-bool AskPassphraseDialog::event(QEvent *event)
-{
+bool AskPassphraseDialog::event(QEvent *event) {
     // Detect Caps Lock key press.
     if (event->type() == QEvent::KeyPress) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
@@ -227,8 +231,7 @@ bool AskPassphraseDialog::event(QEvent *event)
     return QWidget::event(event);
 }
 
-bool AskPassphraseDialog::eventFilter(QObject *object, QEvent *event)
-{
+bool AskPassphraseDialog::eventFilter(QObject *object, QEvent *event) {
     /* Detect Caps Lock.
      * There is no good OS-independent way to check a key state in Qt, but we
      * can detect Caps Lock by checking for the following condition:

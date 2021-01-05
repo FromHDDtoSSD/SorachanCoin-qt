@@ -184,11 +184,11 @@ int main(int argc, char *argv[])
     // as it is used to locate QSettings)
     //
     app.setOrganizationName(coin_param::strCoinName.c_str());
-    app.setOrganizationDomain((coin_param::strCoinName + ".su").c_str());
+    app.setOrganizationDomain(sts_c(coin_param::strCoinName + ".su"));
     if(map_arg::GetBoolArg("-testnet")) {// Separate UI settings for testnet
-        app.setApplicationName((coin_param::strCoinName + "-qt-testnet").c_str());
+        app.setApplicationName(sts_c(coin_param::strCoinName + "-qt-testnet"));
     } else {
-        app.setApplicationName((coin_param::strCoinName + "-qt").c_str());
+        app.setApplicationName(sts_c(coin_param::strCoinName + "-qt"));
     }
 
     // Now that QSettings are accessible, initialize translations
@@ -196,7 +196,11 @@ int main(int argc, char *argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
     // Command-line options take precedence:
-    map_arg::ParseParameters(argc, argv);
+    if(! map_arg::ParseParameters(argc, argv)) {
+        QMessageBox::critical(0, "SorachanCoin",
+            QObject::tr("Error: map_arg::ParseParameters").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
+        return 1;
+    }
 
     // User language is set up: pick a data directory
     Intro::pickDataDirectory();
@@ -210,7 +214,11 @@ int main(int argc, char *argv[])
             QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
-    map_arg::ReadConfigFile();
+    if(! map_arg::ReadConfigFile()) {
+        QMessageBox::critical(0, "SorachanCoin",
+            QObject::tr("Error: map_arg::ReadConfigFile()").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
+        return 1;
+    }
 
     // ... then GUI settings:
     OptionsModel optionsModel;
@@ -285,7 +293,7 @@ int main(int argc, char *argv[])
             }
 
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-            net_node::Shutdown(NULL);
+            boot::Shutdown(nullptr);
         } else {
             return 1;
         }

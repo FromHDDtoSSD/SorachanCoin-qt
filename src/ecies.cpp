@@ -8,9 +8,11 @@
  *
  */
 
-#include "ies.h"
+#include <ies.h>
 #include <iostream>
 #include <vector>
+#include <cstring>
+#include <cleanse/cleanse.h>
 
 #define SET_ERROR(string) \
     sprintf(error, "%s %s:%d", (string), __FILE__, __LINE__)
@@ -73,8 +75,8 @@ int cryptogram::ECDH_KDF_X9_62(unsigned char *out, size_t outlen, const unsigned
                 rv = 0;
                 break;
             }
-            ::memcpy(out, mtmp, outlen);
-            OPENSSL_cleanse(mtmp, mdlen);
+            std::memcpy(out, mtmp, outlen);
+            cleanse::OPENSSL_cleanse(mtmp, mdlen);
             break;    // OK remain (no full)
         }
     }
@@ -170,7 +172,7 @@ unsigned char *cryptogram::prepare_envelope_key(const ies_ctx_t *ctx, cryptogram
     }
 
     EC_KEY_free(ephemeral);
-    OPENSSL_cleanse(ktmp, ecdh_key_len);
+    cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
     OPENSSL_free(ktmp);
 
     return envelope_key;
@@ -180,11 +182,11 @@ err:
         EC_KEY_free(ephemeral);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, key_buf_len);
+        cleanse::OPENSSL_cleanse(envelope_key, key_buf_len);
         OPENSSL_free(envelope_key);
     }
     if (ktmp) {
-        OPENSSL_cleanse(ktmp, ecdh_key_len);
+        cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
         OPENSSL_free(ktmp);
     }
     return NULL;
@@ -196,7 +198,7 @@ int cryptogram::store_cipher_body(const ies_ctx_t *ctx, const unsigned char *env
 
     /* For now we use an empty initialization vector. */
     unsigned char iv[EVP_MAX_IV_LENGTH];
-    ::memset(iv, 0, EVP_MAX_IV_LENGTH);
+    std::memset(iv, 0, EVP_MAX_IV_LENGTH);
 
     EVP_CIPHER_CTX cipher;
     EVP_CIPHER_CTX_init(&cipher);
@@ -299,7 +301,7 @@ cryptogram_t *cryptogram::ecies_encrypt(const ies_ctx_t *ctx, const unsigned cha
         goto err;
     }
 
-    OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+    cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
     OPENSSL_free(envelope_key);
 
     return cryptogram;
@@ -309,7 +311,7 @@ err:
         cryptogram_free(cryptogram);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+        cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
         OPENSSL_free(envelope_key);
     }
     return NULL;
@@ -414,7 +416,7 @@ unsigned char *cryptogram::restore_envelope_key(const ies_ctx_t *ctx, const cryp
 
     EC_KEY_free(user_copy);
     EC_KEY_free(ephemeral);
-    OPENSSL_cleanse(ktmp, ecdh_key_len);
+    cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
     OPENSSL_free(ktmp);
 
     return envelope_key;
@@ -427,11 +429,11 @@ err:
         EC_KEY_free(user_copy);
     }
     if (envelope_key) {
-        OPENSSL_cleanse(envelope_key, key_buf_len);
+        cleanse::OPENSSL_cleanse(envelope_key, key_buf_len);
         OPENSSL_free(envelope_key);
     }
     if (ktmp) {
-        OPENSSL_cleanse(ktmp, ecdh_key_len);
+        cleanse::OPENSSL_cleanse(ktmp, ecdh_key_len);
         OPENSSL_free(ktmp);
     }
     return NULL;
@@ -485,8 +487,8 @@ unsigned char *cryptogram::decrypt_body(const ies_ctx_t *ctx, const cryptogram_t
 
     /* For now we use an empty initialization vector */
     unsigned char iv[EVP_MAX_IV_LENGTH];
-    memset(iv, 0, EVP_MAX_IV_LENGTH);
-    memset(output, 0, body_length + 1);
+    std::memset(iv, 0, EVP_MAX_IV_LENGTH);
+    std::memset(output, 0, body_length + 1);
 
     EVP_CIPHER_CTX cipher;
     EVP_CIPHER_CTX_init(&cipher);
@@ -541,7 +543,7 @@ unsigned char *cryptogram::ecies_decrypt(const ies_ctx_t *ctx, const cryptogram_
     }
 
 err:
-    OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
+    cleanse::OPENSSL_cleanse(envelope_key, envelope_key_len(ctx));
     OPENSSL_free(envelope_key);
     return output;
 }

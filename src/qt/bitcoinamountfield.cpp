@@ -1,9 +1,12 @@
-#include "bitcoinamountfield.h"
-#include "qvaluecombobox.h"
-#include "bitcoinunits.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "guiconstants.h"
-
+#include <qt/bitcoinamountfield.h>
+#include <qt/qvaluecombobox.h>
+#include <qt/bitcoinunits.h>
+#include <qt/guiconstants.h>
 #include <QLabel>
 #include <QLineEdit>
 #include <QRegExpValidator>
@@ -13,10 +16,9 @@
 #include <QComboBox>
 #include <QApplication>
 #include <qmath.h>
+#include <allocator/qtsecure.h>
 
-BitcoinAmountField::BitcoinAmountField(QWidget *parent):
-        QWidget(parent), amount(0), currentUnit(-1)
-{
+BitcoinAmountField::BitcoinAmountField(QWidget *parent): QWidget(parent), amount(nullptr), currentUnit(BitcoinUnits::undef_BTC) {
     try {
         amount = new QDoubleSpinBox(this);
         amount->setLocale(QLocale::c());
@@ -45,60 +47,48 @@ BitcoinAmountField::BitcoinAmountField(QWidget *parent):
         // Set default based on configuration
         unitChanged(unit->currentIndex());
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("BitcoinAmountField Failed to allocate memory.");
+        throw qt_error("BitcoinAmountField Failed to allocate memory.", this);
     }
 }
 
-void BitcoinAmountField::setText(const QString &text)
-{
-    if (text.isEmpty()) {
+void BitcoinAmountField::setText(const QString &text) {
+    if (text.isEmpty())
         amount->clear();
-    } else {
+    else
         amount->setValue(text.toDouble());
-    }
 }
 
-void BitcoinAmountField::clear()
-{
+void BitcoinAmountField::clear() {
     amount->clear();
     unit->setCurrentIndex(0);
 }
 
-bool BitcoinAmountField::validate()
-{
+bool BitcoinAmountField::validate() {
     bool valid = true;
-    if (amount->value() == 0.0) {
+    if (amount->value() == 0.0)
         valid = false;
-    }
-    if (valid && !BitcoinUnits::parse(currentUnit, text(), 0)) {
+    if (valid && !BitcoinUnits::parse(currentUnit, text(), 0))
         valid = false;
-    }
 
     setValid(valid);
-
     return valid;
 }
 
-void BitcoinAmountField::setValid(bool valid)
-{
-    if (valid) {
+void BitcoinAmountField::setValid(bool valid) {
+    if (valid)
         amount->setStyleSheet("");
-    } else {
+    else
         amount->setStyleSheet(STYLE_INVALID);
-    }
 }
 
-QString BitcoinAmountField::text() const
-{
-    if (amount->text().isEmpty()) {
+QString BitcoinAmountField::text() const {
+    if (amount->text().isEmpty())
         return QString();
-    } else {
+    else
         return amount->text();
-    }
 }
 
-bool BitcoinAmountField::eventFilter(QObject *object, QEvent *event)
-{
+bool BitcoinAmountField::eventFilter(QObject *object, QEvent *event) {
     if (event->type() == QEvent::FocusIn) {
         // Clear invalid flag on focus
         setValid(true);
@@ -114,14 +104,12 @@ bool BitcoinAmountField::eventFilter(QObject *object, QEvent *event)
     return QWidget::eventFilter(object, event);
 }
 
-QWidget *BitcoinAmountField::setupTabChain(QWidget *prev)
-{
+QWidget *BitcoinAmountField::setupTabChain(QWidget *prev) {
     QWidget::setTabOrder(prev, amount);
     return amount;
 }
 
-qint64 BitcoinAmountField::value(bool *valid_out) const
-{
+qint64 BitcoinAmountField::value(bool *valid_out) const {
     qint64 val_out = 0;
     bool valid = BitcoinUnits::parse(currentUnit, text(), &val_out);
     if(valid_out) {
@@ -130,18 +118,16 @@ qint64 BitcoinAmountField::value(bool *valid_out) const
     return val_out;
 }
 
-void BitcoinAmountField::setValue(qint64 value)
-{
+void BitcoinAmountField::setValue(qint64 value) {
     setText(BitcoinUnits::format(currentUnit, value));
 }
 
-void BitcoinAmountField::unitChanged(int idx)
-{
+void BitcoinAmountField::unitChanged(int idx) {
     // Use description tooltip for current unit for the combobox
     unit->setToolTip(unit->itemData(idx, Qt::ToolTipRole).toString());
 
     // Determine new unit ID
-    int newUnit = unit->itemData(idx, BitcoinUnits::UnitRole).toInt();
+    BitcoinUnits::Unit newUnit = (BitcoinUnits::Unit)(unit->itemData(idx, BitcoinUnits::UnitRole).toInt());
 
     // Parse current value and convert to new unit
     bool valid = false;
@@ -163,7 +149,6 @@ void BitcoinAmountField::unitChanged(int idx)
     setValid(true);
 }
 
-void BitcoinAmountField::setDisplayUnit(int newUnit)
-{
+void BitcoinAmountField::setDisplayUnit(BitcoinUnits::Unit newUnit) {
     unit->setValue(newUnit);
 }

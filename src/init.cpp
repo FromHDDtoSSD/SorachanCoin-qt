@@ -1,11 +1,12 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "txdb.h"
 #include "walletdb.h"
-#include "bitcoinrpc.h"
+#include <rpc/bitcoinrpc.h>
 #include "net.h"
 #include "init.h"
 #include "util.h"
@@ -13,6 +14,10 @@
 #include "ui_interface.h"
 #include "checkpoints.h"
 #include "miner.h"
+#include <boot/shutdown.h>
+#include <block/block_process.h>
+#include <block/block_check.h>
+#include <quantum/quantum.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -20,6 +25,8 @@
 #include <boost/interprocess/sync/file_lock.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 #include <openssl/crypto.h>
+#include <util/time.h>
+#include <util/logging.h>
 
 #ifndef WIN32
 #include <signal.h>
@@ -41,24 +48,14 @@ void entry::ExitTimeout(void *parg)
 #endif
 }
 
-void entry::StartShutdown()
-{
-#ifdef QT_GUI
-    // ensure we leave the Qt main loop for a clean GUI exit (Shutdown() is called in bitcoin.cpp afterwards)
-    CClientUIInterface::uiInterface.QueueShutdown();
-#else
-    // Without UI, Shutdown() can simply be started in a new thread
-    bitthread::manage::NewThread(net_node::Shutdown, NULL);
-#endif
-}
-
-void net_node::Shutdown(void *parg)
+//void net_node::Shutdown(void *parg)
+void boot::Shutdown(void *parg)
 {
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
 
     // Make this thread recognisable as the shutdown thread
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-shutoff").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-shutoff"));
 
     bool fFirstThread = false;
     {
@@ -127,21 +124,27 @@ bool entry::AppInit(int argc, char *argv[])
         //
         // If Qt is used, parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main()
         //
-        map_arg::ParseParameters(argc, argv);
+        if(! map_arg::ParseParameters(argc, argv)) {
+            fprintf(stderr, "Error: map_arg::ParseParameters");
+            net_node::Shutdown(nullptr);
+        }
         if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            net_node::Shutdown(NULL);
+            net_node::Shutdown(nullptr);
         }
-        map_arg::ReadConfigFile();
+        if(! map_arg::ReadConfigFile()) {
+            fprintf(stderr, "Error: map_arg::ReadConfigFile()");
+            net_node::Shutdown(nullptr);
+        }
 
         if (map_arg::GetMapArgsCount("-?") || map_arg::GetMapArgsCount("--help")) {
             //
             // First part of help message is specific to bitcoind / RPC client
             //
-            std::string strUsage = _((coin_param::strCoinName + " version").c_str()) + (
+            std::string strUsage = _(sts_c(coin_param::strCoinName + " version")) + (
                   " " + format_version::FormatFullVersion() + "\n\n" + _("Usage:") + "\n" +
                   "  " + coin_param::strCoinName + "d [options]                     " + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _(("Send command to -server or " + coin_param::strCoinName + "d").c_str()) + "\n" +
+                  "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _(sts_c("Send command to -server or " + coin_param::strCoinName + "d")) + "\n" +
                   "  " + coin_param::strCoinName + "d [options] help                " + _("List commands") + "\n" +
                   "  " + coin_param::strCoinName + "d [options] help <command>      " + _("Get help for a command") + "\n"
                   ).c_str();
@@ -157,7 +160,7 @@ bool entry::AppInit(int argc, char *argv[])
         //
         for (int i = 1; i < argc; ++i)
         {
-            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], (coin_param::strCoinName + ":").c_str())) {
+            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], sts_c(coin_param::strCoinName + ":"))) {
                 args_bool::fCommandLine = true;
             }
         }
@@ -238,8 +241,8 @@ std::string entry::HelpMessage()
 {
     std::string strUsage = _("Options:") + "\n" +
         "  -?                     " + _("This help message") + "\n" +
-        "  -conf=<file>           " + _(("Specify configuration file (default: " + coin_param::strCoinNameL + ".conf)").c_str()) + "\n" +
-        "  -pid=<file>            " + _(("Specify pid file (default: " + coin_param::strCoinNameL + "d.pid)").c_str()) + "\n" +
+        "  -conf=<file>           " + _(sts_c("Specify configuration file (default: " + coin_param::strCoinNameL + ".conf)")) + "\n" +
+        "  -pid=<file>            " + _(sts_c("Specify pid file (default: " + coin_param::strCoinNameL + "d.pid)")) + "\n" +
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -wallet=<file>         " + _("Specify wallet file (within data directory)") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
@@ -250,7 +253,7 @@ std::string entry::HelpMessage()
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
         "  -torname=<host.onion>  " + _("Send the specified hidden service name when connecting to Tor nodes (default: none)") + "\n"
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
-        "  -port=<port>           " + _(("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet[tcp_port::nMainnet_default]) + "or testnet: " + std::to_string(tcp_port::uTestnet[tcp_port::nTestnet_default]) + ")").c_str()) + "\n" +
+        "  -port=<port>           " + _(sts_c("Listen for connections on <port> (default: " + std::to_string(tcp_port::uMainnet[tcp_port::nMainnet_default]) + "or testnet: " + std::to_string(tcp_port::uTestnet[tcp_port::nTestnet_default]) + ")")) + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
@@ -299,7 +302,7 @@ std::string entry::HelpMessage()
 #endif
         "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n" +
         "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n" +
-        "  -rpcport=<port>        " + _(("Listen for JSON-RPC connections on <port> (default: " + std::to_string(tcp_port::uJsonRpcMain) + " or testnet: " + std::to_string(tcp_port::uJsonRpcTest) + ")").c_str()) + "\n" +
+        "  -rpcport=<port>        " + _(sts_c("Listen for JSON-RPC connections on <port> (default: " + std::to_string(tcp_port::uJsonRpcMain) + " or testnet: " + std::to_string(tcp_port::uJsonRpcTest) + ")")) + "\n" +
         "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n" +
         "  -rpcconnect=<ip>       " + _("Send commands to node running on <ip> (default: 127.0.0.1)") + "\n" +
         "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n" +
@@ -334,9 +337,21 @@ std::string entry::HelpMessage()
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
 //
+//#define INIT_DEBUG_CS
+#ifdef INIT_DEBUG_CS
+# define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
+#else
+# define I_DEBUG_CS(str)
+#endif
 bool entry::AppInit2()
 {
+    // ********************************************************* Step 0: log open
+    I_DEBUG_CS("Step 0: log open")
+    InitLogging();
+    OpenDebugFile();
+
     // ********************************************************* Step 1: setup
+    I_DEBUG_CS("Step 1: setup")
 
 #ifdef _MSC_VER
     // Turn off Microsoft heap dump noise
@@ -398,6 +413,7 @@ bool entry::AppInit2()
 #endif
 
     // ********************************************************* Step 2: parameter interactions
+    I_DEBUG_CS("Step 2: parameter interactions")
 
     args_uint::nNodeLifespan = map_arg::GetArgUInt("-addrlifespan", 7);
     args_bool::fUseFastIndex = map_arg::GetBoolArg("-fastindex", true);
@@ -466,6 +482,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
+    I_DEBUG_CS("Step 3: parameter-to-internal-flags")
 
     //
     // -par=0 means autodetect, but block_info::nScriptCheckThreads==0 means no concurrency
@@ -527,7 +544,7 @@ bool entry::AppInit2()
 
     if (map_arg::GetMapArgsCount("-paytxfee")) {
         if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-paytxfee").c_str(), block_info::nTransactionFee)) {
-            return InitError(strprintf(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
+            return InitError(strprintfc(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
         }
         if (block_info::nTransactionFee > 0.25 * util::COIN) {
             InitWarning(_("Warning: -paytxfee is set very high! This is the transaction fee you will pay if you send a transaction."));
@@ -538,32 +555,33 @@ bool entry::AppInit2()
 
     if (map_arg::GetMapArgsCount("-mininput")) {
         if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-mininput").c_str(), block_info::nMinimumInputValue)) {
-            return InitError(strprintf(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
+            return InitError(strprintfc(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
         }
     }
 
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
+    I_DEBUG_CS("Step 4: application initialization: dir lock, daemonize, pidfile, debug log")
 
     std::string strDataDir = iofs::GetDataDir().string();
     strWalletFileName = map_arg::GetArg("-wallet", "wallet.dat");
 
     // strWalletFileName must be a plain filename without a directory
     if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName)) {
-        return InitError(strprintf(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
+        return InitError(strprintfc(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
     }
 
     //
     // Lock File
     // Make sure only a single Bitcoin process is using the data directory
     //
-    boost::filesystem::path pathLockFile = iofs::GetDataDir() / ".lock";
+    fs::path pathLockFile = iofs::GetDataDir() / ".lock";
     FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) {
         fclose(file);
     }
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (! lock.try_lock()) {
-        return InitError(strprintf(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), coin_param::strCoinName.c_str()));
+        return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), coin_param::strCoinName.c_str()));
     }
 
 #if !defined(WIN32) && !defined(QT_GUI)
@@ -601,7 +619,7 @@ bool entry::AppInit2()
     std::ostringstream strErrors;
 
     if (args_bool::fDaemon) {
-        fprintf(stdout, (coin_param::strCoinName + " server starting\n").c_str());
+        fprintf(stdout, sts_c(coin_param::strCoinName + " server starting\n"));
     }
 
     if (block_info::nScriptCheckThreads) {
@@ -615,11 +633,12 @@ bool entry::AppInit2()
     int64_t nStart;
 
     // ********************************************************* Step 5: verify database integrity
+    I_DEBUG_CS("Step 5: verify database integrity")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
 
     if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
-        std::string msg = strprintf(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        std::string msg = strprintfc(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
 
@@ -633,7 +652,7 @@ bool entry::AppInit2()
     if (boost::filesystem::exists(iofs::GetDataDir() / strWalletFileName)) {
         CDBEnv::VerifyResult r = CDBEnv::bitdb.Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK) {
-            std::string msg = strprintf(_("Warning: wallet.dat corrupt, data salvaged!"
+            std::string msg = strprintfc(_("Warning: wallet.dat corrupt, data salvaged!"
                                           " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                           " your balance or transactions are incorrect you should"
                                           " restore from a backup."), strDataDir.c_str());
@@ -645,20 +664,21 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 6: network initialization
+    I_DEBUG_CS("Step 6: network initialization")
 
     int nSocksVersion = map_arg::GetArgInt("-socks", 5);
 
     if (nSocksVersion != 4 && nSocksVersion != 5) {
-        return InitError(strprintf(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
+        return InitError(strprintfc(_("Unknown -socks proxy version requested: %i"), nSocksVersion));
     }
 
     if (map_arg::GetMapArgsCount("-onlynet")) {
         std::set<enum netbase::Network> nets;
-        BOOST_FOREACH(std::string snet, map_arg::GetMapMultiArgsString("-onlynet"))
+        for(std::string snet: map_arg::GetMapMultiArgsString("-onlynet"))
         {
             enum netbase::Network net = netbase::manage::ParseNetwork(snet);
             if (net == netbase::NET_UNROUTABLE) {
-                return InitError(strprintf(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
+                return InitError(strprintfc(_("Unknown network specified in -onlynet: '%s'"), snet.c_str()));
             }
             nets.insert(net);
         }
@@ -683,7 +703,7 @@ bool entry::AppInit2()
     if (map_arg::GetMapArgsCount("-proxy")) {
         addrProxy = CService(map_arg::GetMapArgsString("-proxy"), nSocksDefault);
         if (! addrProxy.IsValid()) {
-            return InitError(strprintf(_("Invalid -proxy address: '%s'"), map_arg::GetMapArgsString("-proxy").c_str()));
+            return InitError(strprintfc(_("Invalid -proxy address: '%s'"), map_arg::GetMapArgsString("-proxy").c_str()));
         }
 
         if (! ext_ip::IsLimited(netbase::NET_IPV4)) {
@@ -712,7 +732,7 @@ bool entry::AppInit2()
         }
 
         if (! addrOnion.IsValid()) {
-            return InitError(strprintf(_("Invalid -tor address: '%s'"), map_arg::GetMapArgsString("-tor").c_str()));
+            return InitError(strprintfc(_("Invalid -tor address: '%s'"), map_arg::GetMapArgsString("-tor").c_str()));
         }
 
         netbase::manage::SetProxy(netbase::NET_TOR, addrOnion, 5);
@@ -744,11 +764,11 @@ bool entry::AppInit2()
     if (! args_bool::fNoListen) {
         std::string strError;
         if (map_arg::GetMapArgsCount("-bind")) {
-            BOOST_FOREACH(std::string strBind, map_arg::GetMapMultiArgsString("-bind"))
+            for(std::string strBind: map_arg::GetMapMultiArgsString("-bind"))
             {
                 CService addrBind;
                 if (! netbase::manage::Lookup(strBind.c_str(), addrBind, net_basis::GetListenPort(), false)) {
-                    return InitError(strprintf(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
+                    return InitError(strprintfc(_("Cannot resolve -bind address: '%s'"), strBind.c_str()));
                 }
                 fBound |= Bind(addrBind);
             }
@@ -787,11 +807,11 @@ bool entry::AppInit2()
     }
 
     if (map_arg::GetMapArgsCount("-externalip")) {
-        BOOST_FOREACH(std::string strAddr, map_arg::GetMapMultiArgsString("-externalip"))
+        for(std::string strAddr: map_arg::GetMapMultiArgsString("-externalip"))
         {
             CService addrLocal(strAddr, net_basis::GetListenPort(), netbase::fNameLookup);
             if (! addrLocal.IsValid()) {
-                return InitError(strprintf(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
+                return InitError(strprintfc(_("Cannot resolve -externalip address: '%s'"), strAddr.c_str()));
             }
             ext_ip::AddLocal(CService(strAddr, net_basis::GetListenPort(), netbase::fNameLookup), LOCAL_MANUAL);
         }
@@ -810,22 +830,23 @@ bool entry::AppInit2()
         }
     }
 
-    BOOST_FOREACH(std::string strDest, map_arg::GetMapMultiArgsString("-seednode"))
+    for(std::string strDest: map_arg::GetMapMultiArgsString("-seednode"))
     {
         shot::AddOneShot(strDest);
     }
 
     // ********************************************************* Step 7: load blockchain
+    I_DEBUG_CS("Step 7: load blockchain")
 
     if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
-        std::string msg = strprintf(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        std::string msg = strprintfc(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
 
     if (map_arg::GetBoolArg("-loadblockindextest")) {
         CTxDB txdb("r");
         txdb.LoadBlockIndex();
-        CBlock::PrintBlockTree();
+        CBlock_print::PrintBlockTree();
         return false;
     }
 
@@ -871,7 +892,7 @@ bool entry::AppInit2()
     printf(" block index %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
 
     if (map_arg::GetBoolArg("-printblockindex") || map_arg::GetBoolArg("-printblocktree")) {
-        CBlock::PrintBlockTree();
+        CBlock_print::PrintBlockTree();
         return false;
     }
 
@@ -899,6 +920,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 8: load wallet
+    I_DEBUG_CS("Step 8: load wallet")
 
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
@@ -943,7 +965,7 @@ bool entry::AppInit2()
         } else if (nLoadWalletRet == DB_TOO_NEW) {
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of coin") << "\n";
         } else if (nLoadWalletRet == DB_NEED_REWRITE) {
-            strErrors << _(("Wallet needed to be rewritten: restart " + coin_param::strCoinName + " to complete").c_str()) << "\n";
+            strErrors << _(sts_c("Wallet needed to be rewritten: restart " + coin_param::strCoinName + " to complete")) << "\n";
             printf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         } else {
@@ -1007,27 +1029,28 @@ bool entry::AppInit2()
             pindexRescan = locator.GetBlockIndex();
         }
     }
-    if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->nHeight > pindexRescan->nHeight) {
+    if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->get_nHeight() > pindexRescan->get_nHeight()) {
         CClientUIInterface::uiInterface.InitMessage(_("Rescanning..."));
-        printf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->nHeight - pindexRescan->nHeight, pindexRescan->nHeight);
+        printf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->get_nHeight() - pindexRescan->get_nHeight(), pindexRescan->get_nHeight());
         nStart = util::GetTimeMillis();
         entry::pwalletMain->ScanForWalletTransactions(pindexRescan, true);
         printf(" rescan      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
     }
 
     // ********************************************************* Step 9: import blocks
+    I_DEBUG_CS("Step 9: import blocks")
 
     if (map_arg::GetMapArgsCount("-loadblock")) {
         CClientUIInterface::uiInterface.InitMessage(_("Importing blockchain data file."));
 
-        BOOST_FOREACH(std::string strFile, map_arg::GetMapMultiArgsString("-loadblock"))
+        for(std::string strFile: map_arg::GetMapMultiArgsString("-loadblock"))
         {
             FILE *file = ::fopen(strFile.c_str(), "rb");
             if (file) {
                 block_load::LoadExternalBlockFile(file);
             }
         }
-        entry::StartShutdown();
+        boot::StartShutdown();
     }
 
     boost::filesystem::path pathBootstrap = iofs::GetDataDir() / "bootstrap.dat";
@@ -1043,6 +1066,7 @@ bool entry::AppInit2()
     }
 
     // ********************************************************* Step 10: load peers
+    I_DEBUG_CS("Step 10: load peers")
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading addresses..."));
     printf("Loading addresses...\n");
@@ -1058,6 +1082,7 @@ bool entry::AppInit2()
     printf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
 
     // ********************************************************* Step 11: start node
+    I_DEBUG_CS("Step 11: start node")
 
     if (! file_open::CheckDiskSpace()) {
         return false;
@@ -1080,14 +1105,16 @@ bool entry::AppInit2()
         bitthread::manage::NewThread(bitrpc::ThreadRPCServer, NULL);
     }
 
-    // ********************************************************* Step 13: IP collection thread
+    // ********************************************************* Step 12: IP collection thread
+    I_DEBUG_CS("Step 12: IP collection thread")
 
     ip_coll::strCollectorCommand = map_arg::GetArg("-peercollector", "");
     if (!args_bool::fTestNet && ip_coll::strCollectorCommand != "") {
         bitthread::manage::NewThread(ip_coll::ThreadIPCollector, NULL);
     }
 
-    // ********************************************************* Step 14: finished
+    // ********************************************************* Step 13: finished
+    I_DEBUG_CS("Step 13: finished")
 
     CClientUIInterface::uiInterface.InitMessage(_("Done loading"));
     printf("Done loading\n");

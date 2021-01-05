@@ -2,9 +2,9 @@
 #include "ui_coincontroldialog.h"
 
 #include "init.h"
-#include "base58.h"
+#include "address/base58.h"
 #include "bitcoinunits.h"
-#include "script.h"
+#include "script/script.h"
 #include "walletmodel.h"
 #include "addresstablemodel.h"
 #include "optionsmodel.h"
@@ -450,8 +450,8 @@ void CoinControlDialog::updateLabels(WalletModel *model, QWidget* dialog)
                 fDust = true;
             }
 
-            CTxOut txout(amount, (CScript)std::vector<unsigned char>(24, 0));
-            txDummy.vout.push_back(txout);
+            CTxOut txout(amount, (CScript)script_vector((uint32_t)24, (uint8_t)0));
+            txDummy.set_vout().push_back(txout);
         }
     }
 
@@ -471,20 +471,20 @@ void CoinControlDialog::updateLabels(WalletModel *model, QWidget* dialog)
     coinControl->ListSelected(vCoinControl);
     model->getOutputs(vCoinControl, vOutputs);
 
-    BOOST_FOREACH(const COutput &out, vOutputs)
+    for(const COutput &out: vOutputs)
     {
         // Quantity
         nQuantity++;
 
         // Amount
-        nAmount += out.tx->vout[out.i].nValue;
+        nAmount += out.tx->get_vout(out.i).get_nValue();
 
         // Priority
-        dPriorityInputs += (double)out.tx->vout[out.i].nValue * (out.nDepth+1);
+        dPriorityInputs += (double)out.tx->get_vout(out.i).get_nValue() * (out.nDepth+1);
 
         // Bytes
         CBitcoinAddress address;
-        if(Script_util::ExtractAddress(*entry::pwalletMain, out.tx->vout[out.i].scriptPubKey, address)) {
+        if(Script_util::ExtractAddress(*entry::pwalletMain, out.tx->get_vout(out.i).get_scriptPubKey(), address)) {
             if (address.IsPair()) {
                 nBytesInputs += 213;
             } else if (address.IsPubKey()) {
@@ -532,7 +532,7 @@ void CoinControlDialog::updateLabels(WalletModel *model, QWidget* dialog)
     }
 
     // actually update labels
-    int nDisplayUnit = BitcoinUnits::BTC;
+    BitcoinUnits::Unit nDisplayUnit = BitcoinUnits::BTC;
     if (model && model->getOptionsModel()) {
         nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
     }
@@ -594,7 +594,7 @@ void CoinControlDialog::updateView()
     QFlags<Qt::ItemFlag> flgCheckbox=Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable;
     QFlags<Qt::ItemFlag> flgTristate=Qt::ItemIsSelectable | Qt::ItemIsEnabled | Qt::ItemIsUserCheckable | Qt::ItemIsTristate;    
 
-    int nDisplayUnit = BitcoinUnits::BTC;
+    BitcoinUnits::Unit nDisplayUnit = BitcoinUnits::BTC;
     if (model && model->getOptionsModel()) {
         nDisplayUnit = model->getOptionsModel()->getDisplayUnit();
     }
@@ -602,8 +602,7 @@ void CoinControlDialog::updateView()
     std::map<QString, std::vector<COutput> > mapCoins;
     model->listCoins(mapCoins);
 
-    BOOST_FOREACH(PAIRTYPE(QString, std::vector<COutput>) coins, mapCoins)
-    {
+    for(std::pair<QString, std::vector<COutput> > coins: mapCoins) {
         QTreeWidgetItem *itemWalletAddress = new (std::nothrow) QTreeWidgetItem();
         if(! itemWalletAddress) {
             throw std::runtime_error("CoinControlDialog Failed to allocate memory.");
@@ -642,11 +641,10 @@ void CoinControlDialog::updateView()
         int nChildren = 0;
         int nInputSum = 0;
         uint64_t nTxWeight = 0, nTxWeightSum = 0;
-        BOOST_FOREACH(const COutput &out, coins.second)
-        {
+        for(const COutput &out: coins.second) {
             int nInputSize = 148; // 180 if uncompressed public key
-            nSum += out.tx->vout[out.i].nValue;
-            model->getStakeWeightFromValue(out.tx->GetTxTime(), out.tx->vout[out.i].nValue, nTxWeight);
+            nSum += out.tx->get_vout(out.i).get_nValue();
+            model->getStakeWeightFromValue(out.tx->GetTxTime(), out.tx->get_vout(out.i).get_nValue(), nTxWeight);
             nTxWeightSum += nTxWeight;
             nChildren++;
 
@@ -663,7 +661,7 @@ void CoinControlDialog::updateView()
             CBitcoinAddress outputAddress;
             QString sAddress = "";
 
-            if(Script_util::ExtractAddress(*entry::pwalletMain, out.tx->vout[out.i].scriptPubKey, outputAddress)) {
+            if(Script_util::ExtractAddress(*entry::pwalletMain, out.tx->get_vout(out.i).get_scriptPubKey(), outputAddress)) {
                 sAddress = CBitcoinAddress(outputAddress).ToString().c_str();
 
                 // if listMode or change => show bitcoin address. In tree mode, address is not shown again for direct wallet address outputs
@@ -697,8 +695,8 @@ void CoinControlDialog::updateView()
             }
 
             // amount
-            itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, out.tx->vout[out.i].nValue));
-            itemOutput->setText(COLUMN_AMOUNT_INT64, strPad(QString::number(out.tx->vout[out.i].nValue), 15, " ")); // padding so that sorting works correctly
+            itemOutput->setText(COLUMN_AMOUNT, BitcoinUnits::format(nDisplayUnit, out.tx->get_vout(out.i).get_nValue()));
+            itemOutput->setText(COLUMN_AMOUNT_INT64, strPad(QString::number(out.tx->get_vout(out.i).get_nValue()), 15, " ")); // padding so that sorting works correctly
 
             // date
             itemOutput->setText(COLUMN_DATE, QDateTime::fromTime_t(out.tx->GetTxTime()).toUTC().toString("yy-MM-dd hh:mm"));
@@ -713,10 +711,10 @@ void CoinControlDialog::updateView()
             itemOutput->setText(COLUMN_CONFIRMATIONS, strPad(QString::number(out.nDepth), 8, " "));
 
             // priority
-            double dPriority = ((double)out.tx->vout[out.i].nValue  / (nInputSize + 78)) * (out.nDepth+1); // 78 = 2 * 34 + 10
+            double dPriority = ((double)out.tx->get_vout(out.i).get_nValue()  / (nInputSize + 78)) * (out.nDepth+1); // 78 = 2 * 34 + 10
             itemOutput->setText(COLUMN_PRIORITY, CoinControlDialog::getPriorityLabel(dPriority));
             itemOutput->setText(COLUMN_PRIORITY_INT64, strPad(QString::number((int64_t)dPriority), 20, " "));
-            dPrioritySum += (double)out.tx->vout[out.i].nValue  * (out.nDepth+1);
+            dPrioritySum += (double)out.tx->get_vout(out.i).get_nValue()  * (out.nDepth+1);
             nInputSum    += nInputSize;
 
             // List Mode Weight

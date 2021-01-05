@@ -86,7 +86,7 @@ public:
         return QSize(DECORATION_SIZE, DECORATION_SIZE);
     }
 
-    int unit;
+    BitcoinUnits::Unit unit;
 
 };
 #include "overviewpage.moc"
@@ -143,7 +143,7 @@ OverviewPage::~OverviewPage()
 
 void OverviewPage::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance)
 {
-    int unit = model->getOptionsModel()->getDisplayUnit();
+    BitcoinUnits::Unit unit = model->getOptionsModel()->getDisplayUnit();
     currentBalanceTotal = total;
     currentBalanceWatchOnly = watchOnly;
     currentStake = stake;

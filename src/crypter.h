@@ -5,9 +5,9 @@
 #ifndef __CRYPTER_H__
 #define __CRYPTER_H__
 
-#include "allocators.h" /* for SecureString */
-#include "key.h"
-#include "serialize.h"
+#include <allocator/allocators.h> /* for SecureString */
+#include <key.h>
+#include <serialize.h>
 
 namespace crypter_param
 {
@@ -93,8 +93,8 @@ public:
     bool SetKey(const CKeyingMaterial &chNewKey, const std::vector<unsigned char> &chNewIV);
 
     void CleanKey() {
-        OPENSSL_cleanse(&chKey, sizeof(chKey));
-        OPENSSL_cleanse(&chIV, sizeof(chIV));
+        cleanse::OPENSSL_cleanse(&chKey, sizeof(chKey));
+        cleanse::OPENSSL_cleanse(&chIV, sizeof(chIV));
         fKeySet = false;
     }
 

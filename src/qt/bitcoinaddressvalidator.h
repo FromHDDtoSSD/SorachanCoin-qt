@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef BITCOINADDRESSVALIDATOR_H
 #define BITCOINADDRESSVALIDATOR_H
 
@@ -10,14 +15,14 @@ class BitcoinAddressValidator : public QValidator
 {
     Q_OBJECT
 private:
-    BitcoinAddressValidator(const BitcoinAddressValidator &); // {}
-    BitcoinAddressValidator &operator=(const BitcoinAddressValidator &); // {}
+    BitcoinAddressValidator(const BitcoinAddressValidator &)=delete;
+    BitcoinAddressValidator &operator=(const BitcoinAddressValidator &)=delete;
+    BitcoinAddressValidator(BitcoinAddressValidator &&)=delete;
+    BitcoinAddressValidator &operator=(BitcoinAddressValidator &&)=delete;
 public:
+    static constexpr int MaxAddressLength = 99;
     explicit BitcoinAddressValidator(QObject *parent = 0);
-
     State validate(QString &input, int &pos) const;
-
-    static const int MaxAddressLength = 99;
 signals:
 
 public slots:
@@ -25,4 +30,3 @@ public slots:
 };
 
 #endif // BITCOINADDRESSVALIDATOR_H
-//@

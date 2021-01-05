@@ -8,7 +8,10 @@
 #include "main.h"
 #include "ui_interface.h"
 
-#include "bitcoinrpc.h"
+#include <rpc/bitcoinrpc.h>
+#include <block/block_process.h>
+#include <miner/diff.h>
+#include <block/block_alert.h>
 
 #include <QDateTime>
 #include <QTimer>
@@ -40,15 +43,15 @@ ClientModel::~ClientModel()
 
 double ClientModel::getPoSKernelPS()
 {
-    return CRPCTable::CRPCTable_GUI::GetPoSKernelPS();
+    return QtConsoleRPC::GetPoSKernelPS();
 }
 
 double ClientModel::getDifficulty(bool fProofofStake)
 {
     if (fProofofStake) {
-        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
+        return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
     } else {
-        return CRPCTable::CRPCTable_GUI::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
+        return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
     }
 }
 
@@ -60,7 +63,7 @@ int ClientModel::getNumConnections(uint8_t flags) const
     }
 
     int nNum = 0;
-    BOOST_FOREACH(CNode* pnode, net_node::vNodes)
+    for(CNode* pnode: net_node::vNodes)
     {
         if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT)) {
             nNum++;
@@ -149,7 +152,7 @@ bool ClientModel::isTestNet() const
 
 bool ClientModel::inInitialBlockDownload() const
 {
-    return block_process::manage::IsInitialBlockDownload();
+    return block_notify::IsInitialBlockDownload();
 }
 
 int ClientModel::getNumBlocksOfPeers() const
@@ -159,7 +162,7 @@ int ClientModel::getNumBlocksOfPeers() const
 
 QString ClientModel::getStatusBarWarnings() const
 {
-    return QString::fromStdString(block_alert::manage::GetWarnings("statusbar"));
+    return QString::fromStdString(block_alert::GetWarnings("statusbar"));
 }
 
 OptionsModel *ClientModel::getOptionsModel()
@@ -203,7 +206,7 @@ static void NotifyNumConnectionsChanged(ClientModel *clientmodel, int newNumConn
 
 static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, ChangeType status)
 {
-    print::OutputDebugStringF("NotifyAlertChanged %s status=%i\n", hash.GetHex().c_str(), status);
+    printf("NotifyAlertChanged %s status=%i\n", hash.GetHex().c_str(), status);
     QMetaObject::invokeMethod(clientmodel, "updateAlert", Qt::QueuedConnection,
                               Q_ARG(QString, QString::fromStdString(hash.GetHex())),
                               Q_ARG(int, status));

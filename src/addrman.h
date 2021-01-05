@@ -5,10 +5,10 @@
 #ifndef _BITCOIN_ADDRMAN
 #define _BITCOIN_ADDRMAN 1
 
-#include "netbase.h"
-#include "protocol.h"
-#include "util.h"
-#include "sync.h"
+#include <netbase.h>
+#include <protocol.h>
+#include <util.h>
+#include <sync/sync.h>
 
 
 #include <map>
@@ -201,7 +201,7 @@ public:
 
     CAddrMan() : vRandom(0), vvTried(ADDRMAN_TRIED_BUCKET_COUNT, std::vector<int>(0)), vvNew(ADDRMAN_NEW_BUCKET_COUNT, std::set<int>()) {
         nKey.resize(32);
-        RAND_bytes(&nKey[0], 32);
+        latest_crypto::random::GetStrongRandBytes(&nKey[0], 32);
 
         nIdCount = 0;
         nTried = 0;
@@ -338,7 +338,7 @@ public:
         READWRITE(this->nTried);
 
         CAddrMan *am = const_cast<CAddrMan *>(this);
-        if (fWrite) {
+        if (ser_ctr.isWrite()) {
 
             int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT;
 

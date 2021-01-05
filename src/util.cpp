@@ -1,61 +1,42 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "util.h"
-#include "sync.h"
-#include "version.h"
-#include "ui_interface.h"
+#include <util.h>
+#include <sync/sync.h>
+#include <version.h>
+#include <ui_interface.h>
 #include <boost/algorithm/string/join.hpp>
-#include <boost/algorithm/string/case_conv.hpp> // for to_lower()
-#include <boost/algorithm/string/predicate.hpp> // for startswith() and endswith()
+#include <thread/threadsafety.h>
+#include <util/strencodings.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
 // See also: http://stackoverflow.com/questions/10020179/compilation-fail-in-boost-librairies-program-options
 //           http://clang.debian.net/status.php?version=3.0&key=CANNOT_FIND_FUNCTION
+/*
 namespace boost {
     namespace program_options {
         std::string to_internal(const std::string &);
     }
 }
+*/
 
-#include <boost/program_options/detail/config_file.hpp>
-#include <boost/program_options/parsers.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 
 #include <boost/thread.hpp>
+#include <cleanse/cleanse.h>
 #include <openssl/crypto.h>
-
-#ifdef WIN32
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#endif
-#define _WIN32_WINNT 0x0501
-#ifdef _WIN32_IE
-#undef _WIN32_IE
-#endif
-#define _WIN32_IE 0x0501
-#define WIN32_LEAN_AND_MEAN 1
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <io.h> /* for _commit */
-#include "shlobj.h"
-#elif defined(__linux__)
-# include <sys/prctl.h>
-#endif
 
 #if !defined(WIN32) && !defined(ANDROID) && !defined(__OpenBSD__)
 # include <execinfo.h>
 #endif
 
-FILE *trace::_fileout = NULL;
+FILE *trace::_fileout = nullptr;
 std::string excep::strMiscWarning;
-std::map<std::string, std::string> map_arg::mapArgs;
-std::map<std::string, std::vector<std::string> > map_arg::mapMultiArgs;
 int64_t bitsystem::nNodesOffset = INT64_MAX;
 const signed char hex::phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -84,98 +65,14 @@ const std::locale dump::formats[5] = {
     std::locale(std::locale::classic(),new boost::posix_time::time_input_facet("%Y-%m-%d"))
 };
 LockedPageManager LockedPageManager::instance;    // allocators.h (Singleton class)
-unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
-bool_arg args_bool::fUseMemoryLog(false);
-bool_arg args_bool::fConfChange(false);
-bool_arg args_bool::fUseFastIndex(false);
-bool_arg args_bool::fNoListen(false);
-bool_arg args_bool::fDebug(false);
-bool_arg args_bool::fDebugNet(false);
-bool_arg args_bool::fPrintToConsole(false);
-bool_arg args_bool::fPrintToDebugger(false);
-bool_arg args_bool::fRequestShutdown(false);
-bool_arg args_bool::fShutdown(false);
-bool_arg args_bool::fDaemon(false);
-bool_arg args_bool::fServer(false);
-bool_arg args_bool::fCommandLine(false);
-bool_arg args_bool::fTestNet(false);
-bool_arg args_bool::fLogTimestamps(false);
-bool_arg args_bool::fReopenDebugLog(false);
-unsigned int args_uint::nNodeLifespan = 0;
 CMedianFilter<int64_t> bitsystem::vTimeOffsets(200,0);
-
-//
-// Init
-//
-class CInit
-{
-private:
-    static CInit instance_of_cinit;
-
-private:
-    CInit(const CInit &); // {}
-    CInit &operator=(const CInit &); // {}
-
-    // Init OpenSSL library multithreading support
-    static CCriticalSection **ppmutexOpenSSL;
-
-    static void locking_callback(int mode, int i, const char *file, int line) {
-        if (mode & CRYPTO_LOCK) {
-            ENTER_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
-        } else {
-            LEAVE_CRITICAL_SECTION(*ppmutexOpenSSL[i]);
-        }
-    }
-
-private:
-    CInit() {
-        // Init OpenSSL library multithreading support
-        ppmutexOpenSSL = (CCriticalSection **)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(CCriticalSection *));
-        if(! ppmutexOpenSSL) {
-            throw std::runtime_error("CInit OPENSSL_malloc bad allocate.");
-        }
-
-        try {
-            for (int i = 0; i < CRYPTO_num_locks(); ++i)
-            {
-                ppmutexOpenSSL[i] = new CCriticalSection();
-            }
-            ::CRYPTO_set_locking_callback(locking_callback);
-
-#ifdef WIN32
-            // Seed random number generator with screen scrape and other hardware sources
-            //RAND_screen();
-            RAND_poll();
-#endif
-
-            // Seed random number generator with performance counter
-            seed::RandAddSeed();
-        } catch (const std::bad_alloc &) {
-            throw std::runtime_error("CInit memory bad allocate.");
-        }
-    }
-
-    ~CInit() {
-        // Shutdown OpenSSL library multithreading support
-        ::CRYPTO_set_locking_callback(NULL);
-        for (int i = 0; i < ::CRYPTO_num_locks(); ++i)
-        {
-            delete ppmutexOpenSSL[i];
-        }
-        OPENSSL_free(ppmutexOpenSSL);
-    }
-};
-CCriticalSection **CInit::ppmutexOpenSSL = NULL;
-CInit CInit::instance_of_cinit;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
 void seed::RandAddSeed()
 {
     // Seed with CPU performance counter
     int64_t nCounter = ::GetPerformanceCounter();
-    RAND_add(&nCounter, sizeof(nCounter), 1.5);
-    ::memset(&nCounter, 0, sizeof(nCounter));
+    ::RAND_add(&nCounter, sizeof(nCounter), 1.5);
+    cleanse::OPENSSL_cleanse(&nCounter, sizeof(nCounter));
 }
 
 void seed::RandAddSeedPerfmon()
@@ -195,11 +92,11 @@ void seed::RandAddSeedPerfmon()
     // Seed with the entire set of perfmon data
     unsigned char pdata[250000] = { 0 };
     unsigned long nSize = sizeof(pdata);
-    long ret = ::RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", NULL, NULL, pdata, &nSize);
+    long ret = ::RegQueryValueExA(HKEY_PERFORMANCE_DATA, "Global", nullptr, nullptr, pdata, &nSize);
     ::RegCloseKey(HKEY_PERFORMANCE_DATA);
     if (ret == ERROR_SUCCESS) {
-        RAND_add(pdata, nSize, nSize / 100.0);
-        OPENSSL_cleanse(pdata, nSize);
+        ::RAND_add(pdata, nSize, nSize / 100.0);
+        cleanse::OPENSSL_cleanse(pdata, nSize);
         printf("seed::RandAddSeed() %lu bytes\n", nSize);
     }
 #endif
@@ -218,8 +115,8 @@ void trace::LogStackTrace()
     }
 }
 
-int print::OutputDebugStringF(const char *pszFormat, ...)
-{
+/*
+int print::OutputDebugStringF(const char *pszFormat, ...) {
     int ret = 0;
     if (args_bool::fPrintToConsole) {
         // print to console
@@ -231,32 +128,30 @@ int print::OutputDebugStringF(const char *pszFormat, ...)
         // print to debug.log
 
         if (! trace::get_fileout()) {
-            boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
+            fs::path pathDebug = iofs::GetDataDir() / "debug.log";
             trace::set_fileout(fopen(pathDebug.string().c_str(), "a"));
-            if (trace::get_fileout()) { ::setbuf(trace::get_fileout(), NULL); } // unbuffered
+            if (trace::get_fileout()) { ::setbuf(trace::get_fileout(), nullptr); } // unbuffered
         }
 
         if (trace::get_fileout()) {
             static bool fStartedNewLine = true;
-            
-            //
+
             // This routine may be called by global destructors during shutdown.
             // Since the order of destruction of static/global objects is undefined,
             // allocate mutexDebugLog on the heap the first time this routine
             // is called to avoid crashes during shutdown.
-            //
-            static boost::mutex *mutexDebugLog = NULL;
-            if (mutexDebugLog == NULL) {
-                mutexDebugLog = new boost::mutex();
-            }
-            boost::mutex::scoped_lock scoped_lock(*mutexDebugLog);
+            static void *mutexDebugLog = nullptr;
+            static unsigned char mutexmem[sizeof(std::mutex)];
+            if (mutexDebugLog == nullptr)
+                mutexDebugLog = (void *)new(mutexmem) std::mutex();
+            std::lock_guard<std::mutex> _lock(*(std::mutex *)mutexDebugLog);
 
             // reopen the log file, if requested
             if (args_bool::fReopenDebugLog) {
                 args_bool::fReopenDebugLog = false;
-                boost::filesystem::path pathDebug = iofs::GetDataDir() / "debug.log";
-                if (::freopen(pathDebug.string().c_str(),"a",trace::get_fileout()) != NULL) {
-                    ::setbuf(trace::get_fileout(), NULL); // unbuffered
+                fs::path pathDebug = iofs::GetDataDir() / "debug.log";
+                if (::freopen(pathDebug.string().c_str(),"a",trace::get_fileout()) != nullptr) {
+                    ::setbuf(trace::get_fileout(), nullptr); // unbuffered
                 }
             }
 
@@ -303,7 +198,9 @@ int print::OutputDebugStringF(const char *pszFormat, ...)
 #endif
     return ret;
 }
+*/
 
+/*
 std::string print::vstrprintf(const char *format, va_list ap)
 {
     char buffer[50000];
@@ -344,7 +241,9 @@ std::string print::vstrprintf(const char *format, va_list ap)
     }
     return str;
 }
+*/
 
+/*
 std::string print::real_strprintf(const char *format, int dummy, ...)
 {
     va_list arg_ptr;
@@ -353,84 +252,20 @@ std::string print::real_strprintf(const char *format, int dummy, ...)
     va_end(arg_ptr);
     return str;
 }
+*/
 
-std::string print::real_strprintf(const std::string &format, int dummy, ...)
-{
-    va_list arg_ptr;
-    va_start(arg_ptr, dummy);
-    std::string str = print::vstrprintf(format.c_str(), arg_ptr);
-    va_end(arg_ptr);
-    return str;
-}
-
+/*
 bool print::error(const char *format, ...)
 {
     va_list arg_ptr;
     va_start(arg_ptr, format);
-    std::string str = print::vstrprintf(format, arg_ptr);
+    //std::string str = print::vstrprintf(format, arg_ptr);
+    std::string str = tfm::format(format, arg_ptr);
     va_end(arg_ptr);
     printf("ERROR: %s\n", str.c_str());
     return false;
 }
-
-void init::InterpretNegativeSetting(std::string name, std::map<std::string, std::string> &mapSettingsRet)
-{
-    // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
-    if (name.find("-no") == 0) {
-        std::string positive("-");
-        positive.append(name.begin() + 3, name.end());
-        if (mapSettingsRet.count(positive) == 0) {
-            bool value = !map_arg::GetBoolArg(name);
-            mapSettingsRet[positive] = (value ? "1" : "0");
-        }
-    }
-}
-
-void map_arg::ParseParameters(int argc, const char *const argv[])
-{
-    mapArgs.clear();
-    mapMultiArgs.clear();
-    for (int i = 1; i < argc; i++)
-    {
-        std::string str(argv[i]);
-        std::string strValue;
-        size_t is_index = str.find('=');
-        if (is_index != std::string::npos) {
-            strValue = str.substr(is_index + 1);
-            str = str.substr(0, is_index);
-        }
-#ifdef WIN32
-        boost::to_lower(str);
-        if (boost::algorithm::starts_with(str, "/")) {
-            str = "-" + str.substr(1);
-        }
-#endif
-        if (str[0] != '-') {
-            break;
-        }
-
-        mapArgs[str] = strValue;
-        mapMultiArgs[str].push_back(strValue);
-    }
-
-    // New 0.6 features:
-    BOOST_FOREACH(const PAIRTYPE(std::string,std::string) &entry, mapArgs)
-    {
-        std::string name = entry.first;
-
-        //  interpret --foo as -foo (as long as both are not set)
-        if (name.find("--") == 0) {
-            std::string singleDash(name.begin()+1, name.end());
-            if (mapArgs.count(singleDash) == 0) {
-                mapArgs[singleDash] = entry.second;
-            }
-            name = singleDash;
-        }
-
-        // interpret -nofoo as -foo=0 (and -nofoo=0 as -foo=1) as long as -foo not set
-        init::InterpretNegativeSetting(name, mapArgs);
-    }
-}
+*/
 
 std::string base64::EncodeBase64(const unsigned char *pch, size_t len)
 {
@@ -791,8 +626,7 @@ std::string dump::EncodeDumpTime(int64_t nTime) {
 std::string dump::EncodeDumpString(const std::string &str) {
     std::stringstream ret;
 
-    BOOST_FOREACH(unsigned char c, str)
-    {
+    for(unsigned char c: str) {
         if (c <= 32 || c >= 128 || c == '%') {
             ret << '%' << util::HexStr(&c, &c + 1);
         } else {
@@ -849,228 +683,66 @@ bool match::WildcardMatch(const std::string &str, const std::string &mask)
     return match::WildcardMatch(str.c_str(), mask.c_str());
 }
 
-boost::filesystem::path iofs::GetDefaultDataDir()
-{
-    //
-    // Windows < Vista: C:\Documents and Settings\Username\Application Data\SorachanCoin
-    // Windows >= Vista: C:\Users\Username\AppData\Roaming\SorachanCoin
-    // Mac: ~/Library/Application Support/SorachanCoin
-    // Unix / Linux: ~/.SorachanCoin
-    //
-#ifdef WIN32
-    //
-    // Windows
-    //
-    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / coin_param::strCoinName.c_str();
-#else
-    boost::filesystem::path pathRet;
-    char *pszHome = ::getenv("HOME");
-    if (pszHome == NULL || ::strlen(pszHome) == 0) {
-        pathRet = boost::filesystem::path("/");
-    } else {
-        pathRet = boost::filesystem::path(pszHome);
-    }
- #ifdef MAC_OSX
-    // Mac
-    pathRet /= "Library/Application Support";
-    boost::filesystem::create_directory(pathRet);
-    return pathRet / coin_param::strCoinName.c_str();
- #else
-    // Unix / Linux
-    std::string dsora = ".";
-    dsora += coin_param::strCoinName;
-    return pathRet / dsora.c_str();
- #endif
-#endif
+std::string bitstr::FormatMoney(int64_t n, bool fPlus /*= false*/) {
+    // Note: not using straight sprintf here because we do NOT want
+    // localized number formatting.
+    int64_t n_abs = (n > 0 ? n : -n);
+    int64_t quotient = n_abs / util::COIN;
+    int64_t remainder = n_abs % util::COIN;
+    std::string str = strprintf("%" PRId64 ".%06" PRId64, quotient, remainder);
+
+    // Right-trim excess zeros before the decimal point:
+    size_t nTrim = 0;
+    for (size_t i = str.size() - 1; (str[i] == '0' && isdigit(str[i - 2])); --i)
+        ++nTrim;
+    if (nTrim)
+        str.erase(str.size() - nTrim, nTrim);
+
+    if (n < 0)
+        str.insert(0u, 1, '-');
+    else if (fPlus && n > 0)
+        str.insert(0u, 1, '+');
+
+    return str;
 }
 
-const boost::filesystem::path &iofs::GetDataDir(bool fNetSpecific)
-{
-    static boost::filesystem::path pathCached[2];
-    static CCriticalSection csPathCached;
-    static bool cachedPath[2] = {false, false};
+bool bitstr::ParseMoney(const char *pszIn, int64_t &nRet) {
+    std::string strWhole;
+    int64_t nUnits = 0;
 
-    boost::filesystem::path &path = pathCached[fNetSpecific];
-
-    //
-    // This can be called during exceptions by printf, so we cache the
-    // value so we don't have to do memory allocations after that.
-    //
-    if (cachedPath[fNetSpecific]) {
-        return path;
-    }
-
-    LOCK(csPathCached);
-
-    if (map_arg::GetMapArgsCount("-datadir")) {
-        path = boost::filesystem::system_complete(map_arg::GetMapArgsString("-datadir"));
-        if (! boost::filesystem::is_directory(path)) {
-            path = "";
-            return path;
-        }
-    } else {
-        path = iofs::GetDefaultDataDir();
-    }
-
-    if (fNetSpecific && map_arg::GetBoolArg("-testnet", false)) {
-        path /= "testnet2";
-    }
-
-    boost::filesystem::create_directory(path);
-    cachedPath[fNetSpecific]=true;
-
-    return path;
-}
-
-std::string config::randomStrGen(int length)
-{
-    static std::string charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890";
-
-    std::string result;
-    result.resize(length);
-    for (int32_t i = 0; i < length; ++i)
-    {
-        result[i] = charset[::rand() % charset.length()];
-    }
-
-    return result;
-}
-
-void config::createConf()
-{
-    ::srand(static_cast<unsigned int>(::time(NULL)));
-
-    std::ofstream pConf;
-#if BOOST_FILESYSTEM_VERSION >= 3
-    pConf.open(iofs::GetConfigFile().generic_string().c_str());
-#else
-    pConf.open(iofs::GetConfigFile().string().c_str());
-#endif
-    pConf << "rpcuser=sora\nrpcpassword="
-            + config::randomStrGen(35)
-            + "\n\ndaemon=0"
-            + "\nserver=0"
-            + "\ntestnet=0"
-            + "\n\nlisten=1"
-            + "\nirc=0"
-            + "\n\nrpcallowip=127.0.0.1"
-            + "\n";
-    pConf.close();
-}
-
-boost::filesystem::path iofs::GetConfigFile()
-{
-    boost::filesystem::path pathConfigFile(map_arg::GetArg("-conf", (coin_param::strCoinName + ".conf").c_str()));
-    if (! pathConfigFile.is_complete()) {
-        pathConfigFile = iofs::GetDataDir(false) / pathConfigFile;
-    }
-    return pathConfigFile;
-}
-
-void config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet)
-{
-    boost::filesystem::ifstream streamConfig(iofs::GetConfigFile());
-    if (! streamConfig.good()) {
-        config::createConf();
-        new(&streamConfig) boost::filesystem::ifstream(iofs::GetConfigFile());
-        if(! streamConfig.good()) {
-            return;
-        }
-    }
-
-    std::set<std::string> setOptions;
-    setOptions.insert("*");
-
-    for (boost::program_options::detail::config_file_iterator it(streamConfig, setOptions), end; it != end; ++it)
-    {
-        // Don't overwrite existing settings so command line settings override bitcoin.conf
-        std::string strKey = std::string("-") + it->string_key;
-        if (mapSettingsRet.count(strKey) == 0) {
-            mapSettingsRet[strKey] = it->value[0];
-            // interpret nofoo=1 as foo=0 (and nofoo=0 as foo=1) as long as foo not set)
-            init::InterpretNegativeSetting(strKey, mapSettingsRet);
-        }
-        mapMultiSettingsRet[strKey].push_back(it->value[0]);
-    }
-}
-
-boost::filesystem::path iofs::GetPidFile()
-{
-    boost::filesystem::path pathPidFile(map_arg::GetArg("-pid", (coin_param::strCoinName + ".pid").c_str()));
-    if (! pathPidFile.is_complete()) { pathPidFile = iofs::GetDataDir() / pathPidFile; }
-    return pathPidFile;
-}
-
-#ifndef WIN32
-void iofs::CreatePidFile(const boost::filesystem::path &path, pid_t pid)
-{
-    FILE *file = ::fopen(path.string().c_str(), "w");
-    if (file) {
-        ::fprintf(file, "%d\n", pid);
-        ::fclose(file);
-    }
-}
-#endif
-
-bool iofs::RenameOver(boost::filesystem::path src, boost::filesystem::path dest)
-{
-#ifdef WIN32
-    return ::MoveFileExA(src.string().c_str(), dest.string().c_str(), MOVEFILE_REPLACE_EXISTING) != 0;
-#else
-    int rc = std::rename(src.string().c_str(), dest.string().c_str());
-    return (rc == 0);
-#endif
-}
-
-void iofs::FileCommit(FILE *fileout)
-{
-    ::fflush(fileout);        // harmless if redundantly called
-#ifdef WIN32
-    ::_commit(_fileno(fileout));
-#else
-    ::fsync(fileno(fileout));
-#endif
-}
-
-int iofs::GetFilesize(FILE *file)
-{
-    int nSavePos = ftell(file);
-    int nFilesize = -1;
-    if (::fseek(file, 0, SEEK_END) == 0) {
-        nFilesize = ftell(file);
-    }
-
-    ::fseek(file, nSavePos, SEEK_SET);
-    return nFilesize;
-}
-
-void iofs::ShrinkDebugFile()
-{
-    // Scroll debug.log if it's getting too big
-    boost::filesystem::path pathLog = iofs::GetDataDir() / "debug.log";
-
-    FILE *file = ::fopen(pathLog.string().c_str(), "r");
-    if (file && iofs::GetFilesize(file) > 10 * 1000000) {
-        // Restart the file with some of the end
-        try {
-            std::vector<char>* vBuf = new std::vector <char>(200000, 0);
-            ::fseek(file, -((long)(vBuf->size())), SEEK_END);
-            size_t nBytes = ::fread(&vBuf->operator[](0), 1, vBuf->size(), file);
-            ::fclose(file);
-
-            file = ::fopen(pathLog.string().c_str(), "w");
-            if (file) {
-                ::fwrite(&vBuf->operator[](0), 1, nBytes, file);
-                ::fclose(file);
+    const char *p = pszIn;
+    while (::isspace(*p)) ++p;
+    for (; *p; ++p) {
+        if (*p == '.') {
+            ++p;
+            int64_t nMult = util::CENT * 10;
+            while (::isdigit(*p) && (nMult > 0)) {
+                nUnits += nMult * (*p++ - '0');
+                nMult /= 10;
             }
-            delete vBuf;
-        } catch (const std::bad_alloc &e) {
-            // Bad things happen - no free memory in heap at program startup
-            ::fclose(file);
-            printf("Warning: %s in %s:%d\n iofs::ShrinkDebugFile failed - debug.log expands further", e.what(), __FILE__, __LINE__);
+            break;
         }
+        if (::isspace(*p))
+            break;
+        if (! ::isdigit(*p))
+            return false;
+        strWhole.insert(strWhole.end(), *p);
     }
+    for (; *p; ++p) {
+        if (! ::isspace(*p))
+            return false;
+    }
+    if (strWhole.size() > 10) // guard against 63 bit overflow
+        return false;
+    if (nUnits < 0 || nUnits > util::COIN)
+        return false;
+    int64_t nWhole = strenc::atoi64(strWhole);
+    int64_t nValue = nWhole * util::COIN + nUnits;
+    nRet = nValue;
+    return true;
 }
+
+
 
 void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 {
@@ -1100,8 +772,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
                 bool fMatch = false;
 
                 // If nobody has a time different than ours but within 5 minutes of ours, give a warning
-                BOOST_FOREACH(int64_t nOffset, vSorted)
-                {
+                for(int64_t nOffset: vSorted) {
                     if (nOffset != 0 && util::abs64(nOffset) < 5 * 60) {
                         fMatch = true;
                     }
@@ -1109,7 +780,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 
                 if (! fMatch) {
                     fDone = true;
-                    std::string strMessage = _(("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly.").c_str());
+                    std::string strMessage = _(sts_c("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly."));
                     excep::set_strMiscWarning( strMessage );
                     printf("*** %s\n", strMessage.c_str());
                     CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", coin_param::strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
@@ -1117,8 +788,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
             }
         }
         if (args_bool::fDebug) {
-            BOOST_FOREACH(int64_t n, vSorted)
-            {
+            for(int64_t n: vSorted) {
                 printf("%+" PRId64 "  ", n);
             }
             printf("|  ");
@@ -1128,47 +798,6 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
         }
     }
 }
-
-std::string format_version::FormatVersion(int nVersion)
-{
-    if (nVersion % 100 == 0) {
-        return strprintf("%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100);
-    } else {
-        return strprintf("%d.%d.%d.%d", nVersion/1000000, (nVersion/10000)%100, (nVersion/100)%100, nVersion%100);
-    }
-}
-
-std::string format_version::FormatFullVersion()
-{
-    return version::CLIENT_BUILD;
-}
-
-// Format the subversion field according to BIP 14 spec (https://en.bitcoin.it/wiki/BIP_0014)
-std::string format_version::FormatSubVersion(const std::string &name, int nClientVersion, const std::vector<std::string> &comments)
-{
-    std::ostringstream ss;
-    ss << "/";
-    ss << name << ":" << format_version::FormatVersion(nClientVersion);
-    if (! comments.empty()) {
-        ss << "(" << boost::algorithm::join(comments, "; ") << ")";
-    }
-
-    ss << "/";
-    return ss.str();
-}
-
-#ifdef WIN32
-boost::filesystem::path iofs::GetSpecialFolderPath(int nFolder, bool fCreate)
-{
-    char pszPath[MAX_PATH] = "";
-    if(SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate)) {
-        return boost::filesystem::path(pszPath);
-    }
-
-    printf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
-    return boost::filesystem::path("");
-}
-#endif
 
 void cmd::runCommand(std::string strCommand)
 {

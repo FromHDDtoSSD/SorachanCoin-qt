@@ -2,38 +2,38 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_NET_H
 #define BITCOIN_NET_H
 
 #include <limits>
 #include <deque>
 #ifndef Q_MOC_RUN
-#include <boost/array.hpp>
-#include <boost/foreach.hpp>
+# include <boost/array.hpp>
 #endif
-#include <openssl/rand.h>
-
+#include <random/random.h>
 #ifndef WIN32
-#include <arpa/inet.h>
+# include <arpa/inet.h>
 #endif
-
-#include "mruset.h"
-#include "netbase.h"
-#include "addrman.h"
-#include "hash.h"
+#include <mruset.h>
+#include <netbase.h>
+#include <addrman.h>
+#include <hash.h>
+#include <block/block.h>
+#include <util/strencodings.h>
 
 class CRequestTracker;
 class CNode;
-class CBlockIndex;
+//template<typename T> class CBlockIndex_impl;
+//using CBlockIndex = CBlockIndex_impl<uint256>;
 
 //
 // Port
 //
 namespace tcp_port
 {
-    const unsigned short uMainnet[2] = {21587, 6350};
-    const unsigned short uTestnet[2] = {31587, 16350};
+    const unsigned short uMainnet[] = { 21587, 6350 };
+    const unsigned short uTestnet[] = { 31587, 16350 };
     const unsigned int nPortLen = ARRAYLEN(uMainnet);
     const unsigned int nMainnet_default = 0;
     const unsigned int nTestnet_default = 0;
@@ -70,7 +70,7 @@ namespace tcp_domain
     const char *const strMain = SORACHANCOIN_MAIN_DOMAIN;
     const char *const strSub = SORACHANCOIN_SUB_DOMAIN;
 
-    const char *const dnsList[8] = {
+    const char *const dnsList[] = {
         "dns1.junkhdd.com",
         "dns2.junkhdd.com",
         "dns3.junkhdd.com",
@@ -107,9 +107,9 @@ public:
     static void AddOneShot(std::string strDest);
 
     static void semOutbound_cleanup() {
-        if(semOutbound) {
+        if (semOutbound) {
             delete semOutbound;
-            semOutbound = NULL;
+            semOutbound = nullptr;
         }
     }
 };
@@ -129,8 +129,8 @@ private:
         FD_SET(hSocket, &fdset);
         timeout.tv_sec = 0;
         timeout.tv_usec = timeout_usec;
-        int ret = (mode == 'r') ? ::select(hSocket + 1, &fdset, nullptr, nullptr, &timeout): ::select(hSocket + 1, nullptr, &fdset, nullptr, &timeout);
-        return (ret == 1) ? true: false;
+        int ret = (mode == 'r') ? ::select(hSocket + 1, &fdset, nullptr, nullptr, &timeout) : ::select(hSocket + 1, nullptr, &fdset, nullptr, &timeout);
+        return (ret == 1) ? true : false;
     }
 protected:
     static std::list<CNode *> vNodesDisconnected;
@@ -161,9 +161,9 @@ public:
     static unsigned short GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNetAddr = nullptr, const char *pszDest = nullptr);
 
     static void vNodeDisconnected_cleanup() {
-        BOOST_FOREACH(CNode *pnode, vNodesDisconnected)
+        for(CNode *pnode: vNodesDisconnected)
         {
-            if(pnode) {
+            if (pnode) {
                 delete pnode;
             }
         }
@@ -232,7 +232,6 @@ private:
     static void ThreadMessageHandler2(void *parg);
 
     static void DumpAddresses();
-    static bool StopNode();
 
     static void StartSync(const std::vector<CNode *> &__vNodes);
 
@@ -262,9 +261,9 @@ public:
     static uint64_t nLocalServices;
 
     static void nodeLocalHost_cleanup() {
-        if(pnodeLocalHost) {
+        if (pnodeLocalHost) {
             delete pnodeLocalHost;
-            pnodeLocalHost = NULL;
+            pnodeLocalHost = nullptr;
         }
     }
 
@@ -272,16 +271,17 @@ public:
         return (node == net_node::pnodeSync);
     }
     static void setnull_pnodeSync() {
-        net_node::pnodeSync = NULL;
+        net_node::pnodeSync = nullptr;
     }
 
     static uint64_t SendBufferSize() { return 1000 * map_arg::GetArg("-maxsendbuffer", 1 * 1000); }
 
     /// StartNode: CNode, UPnP, IRC, send/receive, addnode, outbound, message, dump network, StakeMiner, NTP
-    static void StartNode(void *parg);        // call to bitthread::manage::NewThread
-    static void Shutdown(void *parg);        // init.cpp
+    static void StartNode(void *parg);   // call to bitthread::manage::NewThread
+    static bool StopNode();
+    //static void Shutdown(void *parg);  // init.cpp
 
-    static bool OpenNetworkConnection(const CAddress &addrConnect, CSemaphoreGrant *grantOutbound = NULL, const char *strDest = NULL, bool fOneShot = false);
+    static bool OpenNetworkConnection(const CAddress &addrConnect, CSemaphoreGrant *grantOutbound = nullptr, const char *strDest = nullptr, bool fOneShot = false);
 
     static void AddressCurrentlyConnected(const CService &addr);
 };
@@ -300,7 +300,7 @@ public:
     static uint64_t nLocalHostNonce;
 
     static void vhListenSocket_cleanup() {
-        BOOST_FOREACH(SOCKET hListenSocket, bitsocket::vhListenSocket)
+        for(SOCKET hListenSocket: bitsocket::vhListenSocket)
         {
             if (hListenSocket != INVALID_SOCKET) {
                 if (! netbase::manage::CloseSocket(hListenSocket)) {
@@ -367,8 +367,8 @@ private:
 public:
     static void ThreadGetMyExternalIP(void *parg);
 
-    static bool AddLocal(const CService &addr, int nScore=LOCAL_NONE);
-    static bool AddLocal(const CNetAddr &addr, int nScore=LOCAL_NONE);
+    static bool AddLocal(const CService &addr, int nScore = LOCAL_NONE);
+    static bool AddLocal(const CNetAddr &addr, int nScore = LOCAL_NONE);
     static void SetReachable(enum netbase::Network net, bool fFlag = true);
     static void AdvertiseLocal(CNode *pnode);
 
@@ -380,38 +380,43 @@ public:
     static bool SeenLocal(const CService &addr);
 
     static void SetLimited(enum netbase::Network net, bool fLimited = true);
-    static bool GetLocal(CService &addr, const CNetAddr *paddrPeer = NULL);
-    static CAddress GetLocalAddress(const CNetAddr *paddrPeer = NULL);
+    static bool GetLocal(CService &addr, const CNetAddr *paddrPeer = nullptr);
+    static CAddress GetLocalAddress(const CNetAddr *paddrPeer = nullptr);
 };
 
 //
 // UPNP
 //
-namespace upnp
+class upnp : private no_instance
 {
+private:
 #ifdef USE_UPNP
-    void ThreadMapPort(void *parg);
-    void ThreadMapPort2(void *parg);
+    static void ThreadMapPort(void *parg);
+    static void ThreadMapPort2(void *parg);
 #endif
-    void MapPort();
-}
+public:
+    static void MapPort(); // upnp start
+};
 
 class CRequestTracker
 {
 private:
-    CRequestTracker(const CRequestTracker &); // {}
+    // CRequestTracker(const CRequestTracker &); // {}
+    // CRequestTracker(const CRequestTracker &&); // {}
     // CRequestTracker &operator=(const CRequestTracker &);
+    // CRequestTracker &operator=(const CRequestTracker &&);
+
 public:
     void (*fn)(void *, CDataStream &);
     void *param1;
 
-    explicit CRequestTracker(void (*fnIn)(void *, CDataStream &)=NULL, void *param1In=NULL) {
+    explicit CRequestTracker(void(*fnIn)(void *, CDataStream &) = nullptr, void *param1In = nullptr) {
         fn = fnIn;
         param1 = param1In;
     }
 
     bool IsNull() const {
-        return fn == NULL;
+        return fn == nullptr;
     }
 };
 
@@ -520,7 +525,7 @@ public:
     CCriticalSection cs_inventory;
     std::multimap<int64_t, CInv> mapAskFor;
 
-    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn=false) : vSend(SER_NETWORK, version::MIN_PROTO_VERSION), vRecv(SER_NETWORK, version::MIN_PROTO_VERSION) {
+    CNode(SOCKET hSocketIn, CAddress addrIn, std::string addrNameIn = "", bool fInboundIn = false) : vSend(0, 0), vRecv(0, 0) {
         nServices = 0;
         hSocket = hSocketIn;
         nLastSend = 0;
@@ -530,7 +535,7 @@ public:
         nLastSendEmpty = bitsystem::GetTime();
         nTimeConnected = bitsystem::GetTime();
         nHeaderStart = -1;
-        nMessageStart = std::numeric_limits<uint32_t>::max();
+        nMessageStart = (std::numeric_limits<uint32_t>::max)();
         addr = addrIn;
         addrName = addrNameIn.empty() ? addr.ToStringIPPort() : addrNameIn;
         nVersion = 0;
@@ -576,27 +581,38 @@ private:
     static CCriticalSection cs_totalBytesSent;
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
-    
+
     CNode(const CNode &); // {}
+    CNode(const CNode &&); // {}
     CNode &operator=(const CNode &); // {}
+    CNode &operator=(const CNode &&); // {}
+
+    void PushMessage_impl() {}
+
+    template<typename T, typename... Remain>
+    void PushMessage_impl(T &&a, Remain&&... remain) {
+        vSend << a;
+        PushMessage_impl(std::forward<Remain>(remain)...);
+    }
 
 public:
 
     int GetRefCount() {
-        return std::max(nRefCount, 0) + (bitsystem::GetTime() < nReleaseTime ? 1 : 0);
+        return (std::max)(nRefCount, 0) + (bitsystem::GetTime() < nReleaseTime ? 1 : 0);
     }
 
-    CNode *AddRef(int64_t nTimeout=0) {
+    CNode *AddRef(int64_t nTimeout = 0) {
         if (nTimeout != 0) {
-            nReleaseTime = std::max(nReleaseTime, bitsystem::GetTime() + nTimeout);
-        } else {
+            nReleaseTime = (std::max)(nReleaseTime, bitsystem::GetTime() + nTimeout);
+        }
+        else {
             nRefCount++;
         }
         return this;
     }
 
     void Release() {
-        nRefCount--;
+        --nRefCount;
     }
 
     void AddAddressKnown(const CAddress &addr) {
@@ -624,7 +640,7 @@ public:
     void PushInventory(const CInv &inv) {
         {
             LOCK(cs_inventory);
-            if (! setInventoryKnown.count(inv)) {
+            if (!setInventoryKnown.count(inv)) {
                 vInventoryToSend.push_back(inv);
             }
         }
@@ -637,7 +653,7 @@ public:
         //
         int64_t &nRequestTime = net_node::mapAlreadyAskedFor[inv];
         if (args_bool::fDebugNet) {
-            printf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, util::DateTimeStrFormat("%H:%M:%S", nRequestTime/1000000).c_str());
+            printf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, util::DateTimeStrFormat("%H:%M:%S", nRequestTime / 1000000).c_str());
         }
 
         // Make sure not to reuse time indexes to keep things in the same order
@@ -646,11 +662,11 @@ public:
         static int64_t nLastTime = 0;
         ++nLastTime;
 
-        nNow = std::max(nNow, nLastTime);
+        nNow = (std::max)(nNow, nLastTime);
         nLastTime = nNow;
 
         // Each retry is 2 minutes after the last
-        nRequestTime = std::max(nRequestTime + 2 * 60 * 1000000, nNow);
+        nRequestTime = (std::max)(nRequestTime + 2 * 60 * 1000000, nNow);
         mapAskFor.insert(std::make_pair(nRequestTime, inv));
     }
 
@@ -676,7 +692,7 @@ public:
 
         vSend.resize(nHeaderStart);
         nHeaderStart = -1;
-        nMessageStart = std::numeric_limits<uint32_t>::max();
+        nMessageStart = (std::numeric_limits<uint32_t>::max)();
         LEAVE_CRITICAL_SECTION(cs_vSend);
         if (args_bool::fDebug) {
             printf("(aborted)\n");
@@ -684,7 +700,7 @@ public:
     }
 
     void EndMessage() {
-        if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
+        if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(strenc::atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
             printf("dropmessages DROPPING SEND MESSAGE\n");
             AbortMessage();
             return;
@@ -698,24 +714,24 @@ public:
         // Set the size
         //
         uint32_t nSize = (uint32_t)vSend.size() - nMessageStart;
-        ::memcpy((char *)&vSend[this->nHeaderStart] + CMessageHeader::GetMessageSizeOffset(), &nSize, sizeof(nSize));
+        std::memcpy((char *)&vSend[this->nHeaderStart] + CMessageHeader::GetMessageSizeOffset(), &nSize, sizeof(nSize));
 
         //
         // Set the checksum
         //
         uint256 hash = hash_basis::Hash(vSend.begin() + nMessageStart, vSend.end());
         uint32_t nChecksum = 0;
-        ::memcpy(&nChecksum, &hash, sizeof(nChecksum));
+        std::memcpy(&nChecksum, &hash, sizeof(nChecksum));
 
         assert(nMessageStart - nHeaderStart >= CMessageHeader::GetChecksumOffset() + sizeof(nChecksum));
-        ::memcpy((char *)&vSend[nHeaderStart] + CMessageHeader::GetChecksumOffset(), &nChecksum, sizeof(nChecksum));
+        std::memcpy((char *)&vSend[nHeaderStart] + CMessageHeader::GetChecksumOffset(), &nChecksum, sizeof(nChecksum));
 
         if (args_bool::fDebug) {
             printf("(%d bytes)\n", nSize);
         }
 
         nHeaderStart = -1;
-        nMessageStart = std::numeric_limits<uint32_t>::max();
+        nMessageStart = (std::numeric_limits<uint32_t>::max)();
         LEAVE_CRITICAL_SECTION(cs_vSend);
     }
 
@@ -727,134 +743,29 @@ public:
         int nSize = (int)vSend.size() - nMessageStart;
         if (nSize > 0) {
             EndMessage();
-        } else {
+        }
+        else {
             AbortMessage();
         }
     }
 
     void PushVersion();
 
-    void PushMessage(const char *pszCommand) {
+    template<typename... Args>
+    void PushMessage(const char *pszCommand, Args&&... args) {
         try {
             BeginMessage(pszCommand);
+            PushMessage_impl(args...);
             EndMessage();
-        } catch (...) {
+        } catch(...) {
             AbortMessage();
             throw;
         }
     }
 
-    template<typename T1>
-    void PushMessage(const char *pszCommand, const T1 &a1) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4, const T5 &a5) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4, const T5 &a5, const T6 &a6) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4, const T5 &a5, const T6 &a6, const T7 &a7) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4, const T5 &a5, const T6 &a6, const T7 &a7, const T8 &a8) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    template<typename T1, typename T2, typename T3, typename T4, typename T5, typename T6, typename T7, typename T8, typename T9>
-    void PushMessage(const char *pszCommand, const T1 &a1, const T2 &a2, const T3 &a3, const T4 &a4, const T5 &a5, const T6 &a6, const T7 &a7, const T8 &a8, const T9 &a9) {
-        try {
-            BeginMessage(pszCommand);
-            vSend << a1 << a2 << a3 << a4 << a5 << a6 << a7 << a8 << a9;
-            EndMessage();
-        } catch (...) {
-            AbortMessage();
-            throw;
-        }
-    }
-
-    void PushRequest(const char *pszCommand, void (* fn)(void *, CDataStream &), void *param1) {
+    void PushRequest(const char *pszCommand, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -863,9 +774,9 @@ public:
     }
 
     template<typename T1>
-    void PushRequest(const char *pszCommand, const T1 &a1, void (* fn)(void *, CDataStream &), void *param1) {
+    void PushRequest(const char *pszCommand, const T1 &a1, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -874,9 +785,9 @@ public:
     }
 
     template<typename T1, typename T2>
-    void PushRequest(const char *pszCommand, const T1 &a1, const T2 &a2, void (* fn)(void *, CDataStream &), void *param1) {
+    void PushRequest(const char *pszCommand, const T1 &a1, const T2 &a2, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        RAND_bytes((unsigned char *)&hashReply, sizeof(hashReply));
+        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -887,7 +798,7 @@ public:
     void PushGetBlocks(CBlockIndex *pindexBegin, uint256 hashEnd);
 
     bool IsSubscribed(unsigned int nChannel);
-    void Subscribe(unsigned int nChannel, unsigned int nHops=0);
+    void Subscribe(unsigned int nChannel, unsigned int nHops = 0);
     void CancelSubscribe(unsigned int nChannel);
     void CloseSocketDisconnect();
     void Cleanup();
@@ -920,7 +831,8 @@ public:
     static uint64_t GetTotalBytesSent();
 };
 
-class CTransaction;
+template <typename T> class CTransaction_impl;
+using CTransaction = CTransaction_impl<uint256>;
 class bitrelay : private no_instance
 {
 public:
@@ -933,7 +845,7 @@ public:
         //
         {
             LOCK(net_node::cs_vNodes);
-            BOOST_FOREACH(CNode *pnode, net_node::vNodes)
+            for(CNode *pnode: net_node::vNodes)
             {
                 pnode->PushInventory(inv);
             }
@@ -950,4 +862,3 @@ namespace future_time
 }
 
 #endif
-//@

@@ -1,3 +1,7 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef ADDRESSTABLEMODEL_H
 #define ADDRESSTABLEMODEL_H
@@ -9,20 +13,20 @@ class AddressTablePriv;
 class CWallet;
 class WalletModel;
 
-//
 // Qt model of the address book in the core. This allows views to access and modify the address book.
-//
 class AddressTableModel : public QAbstractTableModel
 {
     friend class AddressTablePriv;
     Q_OBJECT
 private:
-    AddressTableModel(); // {}
-    AddressTableModel(const AddressTableModel &); // {}
-    AddressTableModel &operator=(const AddressTableModel &); // {}
+    AddressTableModel()=delete;
+    AddressTableModel(const AddressTableModel &)=delete;
+    AddressTableModel &operator=(const AddressTableModel &)=delete;
+    AddressTableModel(AddressTableModel &&)=delete;
+    AddressTableModel &operator=(AddressTableModel &&)=delete;
 
 public:
-    explicit AddressTableModel(CWallet *wallet, WalletModel *parent = NULL);
+    explicit AddressTableModel(CWallet *wallet, WalletModel *parent = nullptr);
     ~AddressTableModel();
 
     enum ColumnIndex
@@ -91,4 +95,3 @@ public slots:
 };
 
 #endif // ADDRESSTABLEMODEL_H
-//@

@@ -1,6 +1,7 @@
 #ifndef OPTIONSMODEL_H
 #define OPTIONSMODEL_H
 
+#include <qt/bitcoinunits.h>
 #include <QAbstractListModel>
 
 /** Interface from Qt to configuration data structure for Bitcoin client.
@@ -52,14 +53,14 @@ public:
     qint64 getTransactionFee();
     bool getMinimizeToTray();
     bool getMinimizeOnClose();
-    int getDisplayUnit();
+    BitcoinUnits::Unit getDisplayUnit();
     bool getDisplayAddresses();
     bool getCoinControlFeatures();
     QString getThirdPartyTxUrls() { return strThirdPartyTxUrls; }
     QString getLanguage() { return language; }
 
 private:
-    int nDisplayUnit;
+    BitcoinUnits::Unit nDisplayUnit;
     bool bDisplayAddresses;
     bool fMinimizeToTray;
     bool fMinimizeOnClose;

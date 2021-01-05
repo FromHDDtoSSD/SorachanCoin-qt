@@ -5,6 +5,7 @@
 
 #include "protocol.h"
 #include "netbase.h"
+#include <block/block_info.h>
 
 #ifndef WIN32
 #include <arpa/inet.h>
@@ -12,14 +13,14 @@
 
 CMessageHeader::CMessageHeader() : nMessageSize(std::numeric_limits<uint32_t>::max()), nChecksum(0)
 {
-    ::memcpy(mpchMessageStart, block_info::gpchMessageStart, sizeof(mpchMessageStart));
-    ::memset(pchCommand, 0, sizeof(pchCommand));
+    std::memcpy(mpchMessageStart, block_info::gpchMessageStart, sizeof(mpchMessageStart));
+    std::memset(pchCommand, 0, sizeof(pchCommand));
     pchCommand[1] = 1;
 }
 
 CMessageHeader::CMessageHeader(const char *pszCommand, unsigned int nMessageSizeIn) : nMessageSize(nMessageSizeIn), nChecksum(0)
 {
-    ::memcpy(mpchMessageStart, block_info::gpchMessageStart, sizeof(mpchMessageStart));
+    std::memcpy(mpchMessageStart, block_info::gpchMessageStart, sizeof(mpchMessageStart));
     ::strncpy(pchCommand, pszCommand, CMD_SIZE::COMMAND_SIZE);
 }
 

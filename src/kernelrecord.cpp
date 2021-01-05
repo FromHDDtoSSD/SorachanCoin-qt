@@ -2,7 +2,9 @@
 #include "kernelrecord.h"
 
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
+#include <miner/diff.h>
+#include <block/block_check.h>
 
 bool KernelRecord::showTransaction(const CWalletTx &wtx)
 {
@@ -27,22 +29,22 @@ std::vector<KernelRecord> KernelRecord::decomposeOutput(const CWallet *wallet, c
     int64_t nDayWeight = (std::min((bitsystem::GetAdjustedTime() - nTime), (int64_t)(block_check::nStakeMaxAge + block_check::nStakeMinAge)) - block_check::nStakeMinAge); // DayWeight * 86400
 
     if (KernelRecord::showTransaction(wtx)) {
-        for (unsigned int nOut = 0; nOut < wtx.vout.size(); ++nOut)
+        for (unsigned int nOut = 0; nOut < wtx.get_vout().size(); ++nOut)
         {
-            CTxOut txOut = wtx.vout[nOut];
+            CTxOut txOut = wtx.get_vout(nOut);
             if( wallet->IsMine(txOut) ) {
                 CTxDestination address;
                 std::string addrStr;
-                uint64_t coinAge = std::max( (txOut.nValue * nDayWeight) / (util::COIN * util::nOneDay), (int64_t)0 );
+                uint64_t coinAge = std::max( (txOut.get_nValue() * nDayWeight) / (util::COIN * util::nOneDay), (int64_t)0 );
 
-                if (Script_util::ExtractDestination(txOut.scriptPubKey, address)) {
+                if (Script_util::ExtractDestination(txOut.get_scriptPubKey(), address)) {
                     // Sent to Bitcoin Address
                     addrStr = CBitcoinAddress(address).ToString();
                 } else {
                     // Sent to IP, or other non-address transaction like OP_EVAL
                     addrStr = mapValue["to"];
                 }
-                parts.push_back( KernelRecord(hash, nTime, addrStr, txOut.nValue, wtx.IsSpent(nOut), coinAge) );
+                parts.push_back( KernelRecord(hash, nTime, addrStr, txOut.get_nValue(), wtx.IsSpent(nOut), coinAge) );
             }
         }
     }

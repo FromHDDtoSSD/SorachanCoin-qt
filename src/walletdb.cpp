@@ -5,7 +5,7 @@
 
 #include "walletdb.h"
 #include "wallet.h"
-#include "base58.h"
+#include "address/base58.h"
 
 #include <iostream>
 #include <fstream>
@@ -18,6 +18,8 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/algorithm/string.hpp>
+
+#include <util/time.h>
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
@@ -53,7 +55,7 @@ bool CWalletDB::WriteAccount(const std::string &strAccount, const CAccount &acco
 
 bool CWalletDB::WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry &acentry)
 {
-    return Write(boost::make_tuple(std::string("acentry"), acentry.strAccount, nAccEntryNum), acentry);
+    return Write(std::make_tuple(std::string("acentry"), acentry.strAccount, nAccEntryNum), acentry);
 }
 
 bool CWalletDB::WriteAccountingEntry(const CAccountingEntry &acentry)
@@ -67,7 +69,7 @@ int64_t CWalletDB::GetAccountCreditDebit(const std::string &strAccount)
     ListAccountCreditDebit(strAccount, entries);
 
     int64_t nCreditDebit = 0;
-    BOOST_FOREACH (const CAccountingEntry &entry, entries)
+    for(const CAccountingEntry &entry: entries)
     {
         nCreditDebit += entry.nCreditDebit;
     }
@@ -92,7 +94,7 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
         //
         CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
         if (fFlags == DB_SET_RANGE) {
-            ssKey << boost::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
+            ssKey << std::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
         }
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
@@ -153,7 +155,7 @@ DBErrors CWalletDB::ReorderTransactions(CWallet *pwallet)
 
     std::list<CAccountingEntry> acentries;
     ListAccountCreditDebit("", acentries);
-    BOOST_FOREACH(CAccountingEntry &entry, acentries)
+    for(CAccountingEntry &entry: acentries)
     {
         txByTime.insert(std::make_pair(entry.nTime, TxPair((CWalletTx *)0, &entry)));
     }
@@ -179,7 +181,7 @@ DBErrors CWalletDB::ReorderTransactions(CWallet *pwallet)
             }
         } else {
             int64_t nOrderPosOff = 0;
-            BOOST_FOREACH(const int64_t &nOffsetStart, nOrderPosOffsets)
+            for(const int64_t &nOffsetStart: nOrderPosOffsets)
             {
                 if (nOrderPos >= nOffsetStart) {
                     ++nOrderPosOff;
@@ -578,7 +580,7 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
         pwallet->nTimeFirstKey = 1; // 0 would be considered 'no value'
     }
 
-    BOOST_FOREACH(uint256 hash, wss.vWalletUpgrade)
+    for(uint256 hash: wss.vWalletUpgrade)
     {
         WriteTx(hash, pwallet->mapWallet[hash]);
     }
@@ -676,7 +678,7 @@ DBErrors CWalletDB::ZapWalletTx(CWallet *pwallet)
     }
 
     // erase each wallet TX
-    BOOST_FOREACH (uint256& hash, vTxHash)
+    for(uint256& hash: vTxHash)
     {
         if (! EraseTx(hash)) {
             return DB_CORRUPT;
@@ -691,7 +693,7 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     //
     // Make this thread recognisable as the wallet flushing thread
     //
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-wallet").c_str());
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-wallet"));
 
     const std::string &strFile = ((const std::string *)parg)[0];
 
@@ -837,7 +839,7 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
     file << strprintf("# Wallet dump created by %s %s (%s)\n", coin_param::strCoinName.c_str(), version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
     file << strprintf("# * Created on %s\n", dump::EncodeDumpTime(bitsystem::GetTime()).c_str());
     file << strprintf("# * Best block at time of backup was %i (%s),\n", block_info::nBestHeight, block_info::hashBestChain.ToString().c_str());
-    file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->nTime).c_str());
+    file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->get_nTime()).c_str());
     file << "\n";
 
     for (std::vector<std::pair<int64_t, CBitcoinAddress> >::const_iterator it = vAddresses.begin(); it != vAddresses.end(); it++)
@@ -905,7 +907,7 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocat
     }
 
     bool fGood = true;
-    int64_t nTimeBegin = block_info::pindexBest->nTime;
+    int64_t nTimeBegin = block_info::pindexBest->get_nTime();
 
     //
     // read through input file checking and importing keys into wallet.
@@ -1002,12 +1004,12 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocat
 
     // rescan block chain looking for coins from new keys
     CBlockIndex *pindex = block_info::pindexBest;
-    while (pindex && pindex->pprev && pindex->nTime > nTimeBegin - 7200)
+    while (pindex && pindex->get_pprev() && pindex->get_nTime() > nTimeBegin - 7200)
     {
-        pindex = pindex->pprev;
+        pindex = pindex->set_pprev();
     }
 
-    printf("Rescanning last %i blocks\n", block_info::pindexBest->nHeight - pindex->nHeight + 1);
+    printf("Rescanning last %i blocks\n", block_info::pindexBest->get_nHeight() - pindex->get_nHeight() + 1);
     pwallet->ScanForWalletTransactions(pindex);
     pwallet->ReacceptWalletTransactions();
     pwallet->MarkDirty();
@@ -1070,11 +1072,16 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     // Data Salvage
     //
     DbTxn *ptxn = dbenv.TxnBegin();
-    BOOST_FOREACH(CDBEnv::KeyValPair &row, salvagedData)
+    for(CDBEnv::KeyValPair &row: salvagedData)
     {
         if (fOnlyKeys) {
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+            CDataStream ssKey(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.first), SER_DISK, version::CLIENT_VERSION);
+            CDataStream ssValue(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.second), SER_DISK, version::CLIENT_VERSION);
+#else
             CDataStream ssKey(row.first, SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(row.second, SER_DISK, version::CLIENT_VERSION);
+#endif
 
             std::string strType, strErr;
             bool fReadOK = ReadKeyValue(&dummyWallet, ssKey, ssValue, wss, strType, strErr);

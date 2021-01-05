@@ -9,9 +9,9 @@
 #include <set>
 #include <string>
 
-#include "uint256.h"
-#include "util.h"
-#include "sync.h"
+#include <uint256.h>
+#include <util.h>
+#include <sync/sync.h>
 
 class CNode;
 
@@ -73,6 +73,12 @@ public:
     std::string ToString() const;
 };
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+typedef prevector<PREVECTOR_N, uint8_t> alert_vector;
+#else
+typedef std::vector<uint8_t> alert_vector;
+#endif
+
 /** An alert is a combination of a serialized CUnsignedAlert and a signature. */
 class CAlert : public CUnsignedAlert
 {
@@ -90,8 +96,8 @@ private:
 public:
     static std::map<uint256, CAlert> mapAlerts;
 
-    std::vector<unsigned char> vchMsg;
-    std::vector<unsigned char> vchSig;
+    alert_vector vchMsg;
+    alert_vector vchSig;
 
     CAlert() {
         SetNull();

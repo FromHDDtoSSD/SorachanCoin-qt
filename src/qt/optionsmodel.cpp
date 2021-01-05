@@ -65,7 +65,7 @@ void OptionsModel::Init()
     QSettings settings;
 
     // These are Qt-only settings:
-    nDisplayUnit = settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt();
+    nDisplayUnit = (BitcoinUnits::Unit)(settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt());
     bDisplayAddresses = settings.value("bDisplayAddresses", false).toBool();
     //if (! settings.contains("strThirdPartyTxUrls")) {
         if(args_bool::fTestNet) {
@@ -298,7 +298,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
             emit transactionFeeChanged(block_info::nTransactionFee);
             break;
         case DisplayUnit:
-            nDisplayUnit = value.toInt();
+            nDisplayUnit = (BitcoinUnits::Unit)value.toInt();
             settings.setValue("nDisplayUnit", nDisplayUnit);
             emit displayUnitChanged(nDisplayUnit);
             break;
@@ -356,7 +356,7 @@ bool OptionsModel::getMinimizeOnClose()
     return fMinimizeOnClose;
 }
 
-int OptionsModel::getDisplayUnit()
+BitcoinUnits::Unit OptionsModel::getDisplayUnit()
 {
     return nDisplayUnit;
 }

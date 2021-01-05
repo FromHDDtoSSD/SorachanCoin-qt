@@ -8,6 +8,9 @@
 #include "miner.h"
 #include "kernel.h"
 #include "kernel_worker.h"
+#include <net.h>
+#include <block/block_process.h>
+#include <miner/diff.h>
 
 const unsigned int miner::pSHA256InitState[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 unsigned int miner::nMaxStakeSearchInterval = 60;
@@ -21,7 +24,7 @@ int miner::FormatHashBlocks(void *pbuffer, unsigned int len)
     unsigned int blocks = 1 + ((len + 8) / 64);
     unsigned char *pend = pdata + 64 * blocks;
 
-    ::memset(pdata + len, 0, 64 * blocks - len);
+    std::memset(pdata + len, 0, 64 * blocks - len);
     pdata[len] = 0x80;
     unsigned int bits = len * 8;
 
@@ -85,7 +88,7 @@ public:
 //
 // We want to sort transactions by priority and fee, so
 //
-typedef boost::tuple<double, double, CTransaction*> TxPriority;
+typedef std::tuple<double, double, CTransaction*> TxPriority;
 class TxPriorityCompare
 {
 private:
@@ -101,15 +104,15 @@ public:
     bool operator()(const TxPriority &a, const TxPriority &b)
     {
         if (byFee) {
-            if (a.get<1>() == b.get<1>()) {
-                return a.get<0>() < b.get<0>();
+            if (std::get<1>(a) == std::get<1>(b)) {
+                return std::get<0>(a) < std::get<0>(b);
             }
-            return a.get<1>() < b.get<1>();
+            return std::get<1>(a) < std::get<1>(b);
         } else {
-            if (a.get<0>() == b.get<0>()) {
-                return a.get<1>() < b.get<1>();
+            if (std::get<0>(a) == std::get<0>(b)) {
+                return std::get<1>(a) < std::get<1>(b);
             }
-            return a.get<0>() < b.get<0>();
+            return std::get<0>(a) < std::get<0>(b);
         }
     }
 };
@@ -129,26 +132,27 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
 
     // Create coinbase tx
     CTransaction txCoinBase;
-    txCoinBase.vin.resize(1);
-    txCoinBase.vin[0].prevout.SetNull();
-    txCoinBase.vout.resize(1);
+    txCoinBase.set_vin().resize(1);
+    txCoinBase.set_vin(0).set_prevout().SetNull();
+    txCoinBase.set_vout().resize(1);
 
     if (! fProofOfStake) {
         CReserveKey reservekey(pwallet);
-        txCoinBase.vout[0].scriptPubKey.SetDestination(reservekey.GetReservedKey().GetID());
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
 
         // Add our coinbase tx as first transaction
-        pblock->vtx.push_back(txCoinBase);
+        pblock->set_vtx().push_back(txCoinBase);
     } else {
         // Coinbase output must be empty for Proof-of-Stake block
-        txCoinBase.vout[0].SetEmpty();
+        txCoinBase.set_vout(0).SetEmpty();
 
         // Syncronize timestamps
-        pblock->nTime = txCoinBase.nTime = txCoinStake->nTime;
+        pblock->set_nTime(txCoinStake->get_nTime());
+        txCoinBase.set_nTime(txCoinStake->get_nTime());
 
         // Add coinbase and coinstake transactions
-        pblock->vtx.push_back(txCoinBase);
-        pblock->vtx.push_back(*txCoinStake);
+        pblock->set_vtx().push_back(txCoinBase);
+        pblock->set_vtx().push_back(*txCoinStake);
     }
 
     // Largest block you're willing to create:
@@ -178,14 +182,14 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     }
 
     CBlockIndex *pindexPrev = block_info::pindexBest;
-    pblock->nBits = diff::spacing::GetNextTargetRequired(pindexPrev, fProofOfStake);
+    pblock->set_nBits(diff::spacing::GetNextTargetRequired(pindexPrev, fProofOfStake));
 
     //
     // Collect memory pool transactions into the block
     //
     int64_t nFees = 0;
     {
-        LOCK2(block_process::cs_main, CTxMemPool::mempool.cs);
+        LOCK2(block_process::cs_main, CTxMemPool::mempool.get_cs());
         CBlockIndex *pindexPrev = block_info::pindexBest;
 
         CTxDB txdb("r");
@@ -196,8 +200,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
 
         // This vector will be sorted into a priority queue:
         std::vector<TxPriority> vecPriority;
-        vecPriority.reserve(CTxMemPool::mempool.mapTx.size());
-        for (std::map<uint256, CTransaction>::iterator mi = CTxMemPool::mempool.mapTx.begin(); mi != CTxMemPool::mempool.mapTx.end(); ++mi)
+        vecPriority.reserve(CTxMemPool::mempool.get_mapTx().size());
+        for (std::map<uint256, CTransaction>::iterator mi = CTxMemPool::mempool.set_mapTx().begin(); mi != CTxMemPool::mempool.get_mapTx().end(); ++mi)
         {
             CTransaction& tx = (*mi).second;
             if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal()) {
@@ -208,18 +212,18 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             double dPriority = 0;
             int64_t nTotalIn = 0;
             bool fMissingInputs = false;
-            BOOST_FOREACH(const CTxIn &txin, tx.vin)
+            for(const CTxIn &txin: tx.get_vin())
             {
                 // Read prev transaction
                 CTransaction txPrev;
                 CTxIndex txindex;
-                if (! txPrev.ReadFromDisk(txdb, txin.prevout, txindex)) {
+                if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex)) {
                     //
                     // This should never happen; all transactions in the memory
                     // pool should connect to either transactions in the chain
                     // or other transactions in the memory pool.
                     //
-                    if (! CTxMemPool::mempool.mapTx.count(txin.prevout.hash)) {
+                    if (! CTxMemPool::mempool.get_mapTx().count(txin.get_prevout().get_hash())) {
                         printf("ERROR: CTxMemPool::mempool transaction missing input\n");
                         if (args_bool::fDebug) {
                             assert("CTxMemPool::mempool transaction missing input" == 0);
@@ -239,12 +243,12 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                         vOrphan.push_back(COrphan(&tx));
                         porphan = &vOrphan.back();
                     }
-                    mapDependers[txin.prevout.hash].push_back(porphan);
-                    porphan->setDependsOn.insert(txin.prevout.hash);
-                    nTotalIn += CTxMemPool::mempool.mapTx[txin.prevout.hash].vout[txin.prevout.n].nValue;
+                    mapDependers[txin.get_prevout().get_hash()].push_back(porphan);
+                    porphan->setDependsOn.insert(txin.get_prevout().get_hash());
+                    nTotalIn += CTxMemPool::mempool.get_mapTx(txin.get_prevout().get_hash()).get_vout(txin.get_prevout().get_n()).get_nValue();
                     continue;
                 }
-                int64_t nValueIn = txPrev.vout[txin.prevout.n].nValue;
+                int64_t nValueIn = txPrev.get_vout(txin.get_prevout().get_n()).get_nValue();
                 nTotalIn += nValueIn;
 
                 int nConf = txindex.GetDepthInMainChain();
@@ -255,7 +259,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             }
 
             // Priority is sum(valuein * age) / txsize
-            unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
             dPriority /= nTxSize;
 
             // This is a more accurate fee-per-kilobyte than is used by the client code, because the
@@ -290,9 +295,9 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Take highest priority transaction off the priority queue
             //
-            double dPriority = vecPriority.front().get<0>();
-            double dFeePerKb = vecPriority.front().get<1>();
-            CTransaction &tx = *(vecPriority.front().get<2>());
+            double dPriority = std::get<0>(vecPriority.front());
+            double dFeePerKb = std::get<1>(vecPriority.front());
+            CTransaction &tx = *(std::get<2>(vecPriority.front()));
 
             std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
             vecPriority.pop_back();
@@ -300,7 +305,8 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Size limits
             //
-            unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
             if (nBlockSize + nTxSize >= nBlockMaxSize) {
                 continue;
             }
@@ -316,7 +322,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             //
             // Timestamp limit
             //
-            if (tx.nTime > bitsystem::GetAdjustedTime() || (fProofOfStake && tx.nTime > txCoinStake->nTime)) {
+            if (tx.get_nTime() > bitsystem::GetAdjustedTime() || (fProofOfStake && tx.get_nTime() > txCoinStake->get_nTime())) {
                 continue;
             }
 
@@ -364,11 +370,11 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                 continue;
             }
 
-            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.vout.size());
+            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.get_vout().size());
             std::swap(mapTestPool, mapTestPoolTmp);
 
             // Added
-            pblock->vtx.push_back(tx);
+            pblock->set_vtx().push_back(tx);
             nBlockSize += nTxSize;
             ++nBlockTx;
             nBlockSigOps += nTxSigOps;
@@ -381,7 +387,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             // Add transactions that depend on this one to the priority queue
             uint256 hash = tx.GetHash();
             if (mapDependers.count(hash)) {
-                BOOST_FOREACH(COrphan* porphan, mapDependers[hash])
+                for(COrphan* porphan: mapDependers[hash])
                 {
                     if (! porphan->setDependsOn.empty()) {
                         porphan->setDependsOn.erase(hash);
@@ -400,10 +406,10 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         block_info::nLastBlockSize = nBlockSize;
 
         if (! fProofOfStake) {
-            pblock->vtx[0].vout[0].nValue = diff::reward::GetProofOfWorkReward(pblock->nBits, nFees);
+            pblock->set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees));
 
             if (args_bool::fDebug) {
-                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->vtx[0].vout[0].nValue);
+                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).get_vout(0).get_nValue());
             }
         }
 
@@ -412,13 +418,13 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         }
 
         // Fill in header
-        pblock->hashPrevBlock = pindexPrev->GetBlockHash();
+        pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
         if (! fProofOfStake) {
-            pblock->nTime  = std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime());
-            pblock->nTime  = std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime()));
+            pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->UpdateTime(pindexPrev);
         }
-        pblock->nNonce = 0;
+        pblock->set_nNonce(0);
     }
 
     return pblock.release();
@@ -431,17 +437,17 @@ void miner::IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigne
     //
     static uint256 hashPrevBlock = 0;
 
-    if (hashPrevBlock != pblock->hashPrevBlock) {
+    if (hashPrevBlock != pblock->get_hashPrevBlock()) {
         nExtraNonce = 0;
-        hashPrevBlock = pblock->hashPrevBlock;
+        hashPrevBlock = pblock->get_hashPrevBlock();
     }
     ++nExtraNonce;
 
-    unsigned int nHeight = pindexPrev->nHeight + 1;    // Height first in coinbase required for block.version=2
-    pblock->vtx[0].vin[0].scriptSig = (CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS;
-    assert(pblock->vtx[0].vin[0].scriptSig.size() <= 100);
+    unsigned int nHeight = pindexPrev->get_nHeight() + 1;    // Height first in coinbase required for block.version=2
+    pblock->set_vtx(0).set_vin(0).set_scriptSig((CScript() << nHeight << CBigNum(nExtraNonce)) + block_info::COINBASE_FLAGS);
+    assert(pblock->get_vtx(0).get_vin(0).get_scriptSig().size() <= 100);
 
-    pblock->hashMerkleRoot = pblock->BuildMerkleTree();
+    pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
 }
 
 void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char *phash1)
@@ -466,14 +472,14 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
         unsigned char pchPadding1[64];
     } tmp;
 
-    ::memset(&tmp, 0, sizeof(tmp));
+    std::memset(&tmp, 0, sizeof(tmp));
 
-    tmp.block.nVersion       = pblock->nVersion;
-    tmp.block.hashPrevBlock  = pblock->hashPrevBlock;
-    tmp.block.hashMerkleRoot = pblock->hashMerkleRoot;
-    tmp.block.nTime          = pblock->nTime;
-    tmp.block.nBits          = pblock->nBits;
-    tmp.block.nNonce         = pblock->nNonce;
+    tmp.block.nVersion       = pblock->get_nVersion();
+    tmp.block.hashPrevBlock  = pblock->get_hashPrevBlock();
+    tmp.block.hashMerkleRoot = pblock->get_hashMerkleRoot();
+    tmp.block.nTime          = pblock->get_nTime();
+    tmp.block.nBits          = pblock->get_nBits();
+    tmp.block.nNonce         = pblock->get_nNonce();
 
     FormatHashBlocks(&tmp.block, sizeof(tmp.block));
     FormatHashBlocks(&tmp.hash1, sizeof(tmp.hash1));
@@ -487,14 +493,14 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
     // Precalc the first half of the first hash, which stays constant
     SHA256Transform(pmidstate, &tmp.block, pSHA256InitState);
 
-    ::memcpy(pdata, &tmp.block, 128);
-    ::memcpy(phash1, &tmp.hash1, 64);
+    std::memcpy(pdata, &tmp.block, 128);
+    std::memcpy(phash1, &tmp.hash1, 64);
 }
 
 bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 {
     uint256 hashBlock = pblock->GetHash();
-    uint256 hashTarget = CBigNum().SetCompact(pblock->nBits).getuint256();
+    uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     if(! pblock->IsProofOfWork()) {
         return print::error("miner::CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex().c_str());
@@ -506,14 +512,14 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     //// debug print
     printf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("generated %s\n", bitstr::FormatMoney(pblock->vtx[0].vout[0].nValue).c_str());
+    printf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
 
     //
     // Found a solution
     //
     {
         LOCK(block_process::cs_main);
-        if (pblock->hashPrevBlock != block_info::hashBestChain) {
+        if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
             return print::error("miner::CheckWork() : generated block is stale");
         }
 
@@ -545,19 +551,19 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     }
 
     // verify hash target and signature of coinstake tx
-    if (! bitkernel::CheckProofOfStake(pblock->vtx[1], pblock->nBits, proofHash, hashTarget)) {
+    if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
         return print::error("miner::CheckStake() : proof-of-stake checking failed");
     }
 
     //// debug print
     printf("miner::CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("out %s\n", bitstr::FormatMoney(pblock->vtx[1].GetValueOut()).c_str());
+    printf("out %s\n", bitstr::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
 
     // Found a solution
     {
         LOCK(block_process::cs_main);
-        if (pblock->hashPrevBlock != block_info::hashBestChain) {
+        if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
             return print::error("miner::CheckStake() : generated block is stale");
         }
 
@@ -615,8 +621,8 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
             // Trying to parse scriptPubKey
             TxnOutputType::txnouttype whichType;
-            std::vector<Script_util::valtype> vSolutions;
-            if (! Script_util::Solver(pcoin->first->vout[pcoin->second].scriptPubKey, whichType, vSolutions)) {
+            Script_util::statype vSolutions;
+            if (! Script_util::Solver(pcoin->first->get_vout(pcoin->second).get_scriptPubKey(), whichType, vSolutions)) {
                 continue;
             }
 
@@ -631,12 +637,12 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             }
 
             // Read block header
-            if (! block.ReadFromDisk(txindex.pos.nFile, txindex.pos.nBlockPos, false)) {
+            if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false)) {
                 continue;
             }
 
             // Only load coins meeting min age requirement
-            if (block_check::nStakeMinAge + block.nTime > nTime - nMaxStakeSearchInterval) {
+            if (block_check::nStakeMinAge + block.get_nTime() > nTime - nMaxStakeSearchInterval) {
                 continue;
             }
 
@@ -649,10 +655,10 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
             // Build static part of kernel
             CDataStream ssKernel(SER_GETHASH, 0);
             ssKernel << nStakeModifier;
-            ssKernel << block.nTime << (txindex.pos.nTxPos - txindex.pos.nBlockPos) << pcoin->first->nTime << pcoin->second;
+            ssKernel << block.get_nTime() << (txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos()) << pcoin->first->get_nTime() << pcoin->second;
 
             // (txid, vout.n) => (kernel, (tx.nTime, nAmount))
-            inputsMap[key] = std::make_pair(std::vector<unsigned char>(ssKernel.begin(), ssKernel.end()), std::make_pair(pcoin->first->nTime, pcoin->first->vout[pcoin->second].nValue));
+            inputsMap[key] = std::make_pair(std::vector<unsigned char>(ssKernel.begin(), ssKernel.end()), std::make_pair(pcoin->first->get_nTime(), pcoin->first->get_vout(pcoin->second).get_nValue()));
         }
 
         nStakeInputsMapSize = inputsMap.size();
@@ -705,7 +711,7 @@ bool miner::ScanMap(const MidstateMap &inputsMap, uint32_t nBits, MidstateMap::k
 void miner::ThreadStakeMiner(void *parg)
 {
     bitthread::manage::SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-stakeminer").c_str());    // Make this thread recognisable as the mining thread
+    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "-stakeminer"));    // Make this thread recognisable as the mining thread
     
     // parg
     CWallet *pwallet = reinterpret_cast<CWallet *>(parg);
@@ -736,7 +742,7 @@ void miner::ThreadStakeMiner(void *parg)
                     goto _endloop;
                 }
             }
-            while (net_node::vNodes.empty() || block_process::manage::IsInitialBlockDownload())
+            while (net_node::vNodes.empty() || block_notify::IsInitialBlockDownload())
             {
                 fTrySync = true;
                 util::Sleep(1000);
@@ -778,7 +784,7 @@ void miner::ThreadStakeMiner(void *parg)
                 miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
                 // ... and sign it
-                if (! key.Sign(pblock->GetHash(), pblock->vchBlockSig)) {
+                if (! key.Sign(pblock->GetHash(), pblock->set_vchBlockSig())) {
                     std::string strMessage = _("Warning: Proof-of-Stake miner is unable to sign the block (locked wallet?). Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
                     printf("*** %s\n", strMessage.c_str());
