@@ -747,7 +747,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/script/standard.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
-    src/json/json_spirit_reader_template.cpp
+    src/json/json_spirit_reader_template.cpp \
+    src/json/json_spirit_writer.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

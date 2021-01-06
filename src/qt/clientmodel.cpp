@@ -1,20 +1,23 @@
-#include "clientmodel.h"
-#include "guiconstants.h"
-#include "optionsmodel.h"
-#include "addresstablemodel.h"
-#include "transactiontablemodel.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "alert.h"
-#include "main.h"
-#include "ui_interface.h"
-
+#include <qt/clientmodel.h>
+#include <qt/guiconstants.h>
+#include <qt/optionsmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/transactiontablemodel.h>
+#include <alert.h>
+#include <main.h>
+#include <ui_interface.h>
 #include <rpc/bitcoinrpc.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <block/block_alert.h>
-
 #include <QDateTime>
 #include <QTimer>
+#include <allocator/qtsecure.h>
 
 static const int64_t nClientStartupTime = bitsystem::GetTime();
 
@@ -32,22 +35,19 @@ ClientModel::ClientModel(OptionsModel *optionsModel, QObject *parent) :
 
         subscribeToCoreSignals();
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("ClientModel Failed to allocate memory.");
+        throw qt_error("ClientModel Failed to allocate memory.", nullptr);
     }
 }
 
-ClientModel::~ClientModel()
-{
+ClientModel::~ClientModel() {
     unsubscribeFromCoreSignals();
 }
 
-double ClientModel::getPoSKernelPS()
-{
+double ClientModel::getPoSKernelPS() {
     return QtConsoleRPC::GetPoSKernelPS();
 }
 
-double ClientModel::getDifficulty(bool fProofofStake)
-{
+double ClientModel::getDifficulty(bool fProofofStake) {
     if (fProofofStake) {
         return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true));
     } else {
@@ -55,8 +55,7 @@ double ClientModel::getDifficulty(bool fProofofStake)
     }
 }
 
-int ClientModel::getNumConnections(uint8_t flags) const
-{
+int ClientModel::getNumConnections(uint8_t flags) const {
     LOCK(net_node::cs_vNodes);
     if (flags == CONNECTIONS_ALL) {    // Shortcut if we want total
         return (int)(net_node::vNodes.size());
@@ -73,13 +72,11 @@ int ClientModel::getNumConnections(uint8_t flags) const
     return nNum;
 }
 
-int ClientModel::getNumBlocks() const
-{
+int ClientModel::getNumBlocks() const {
     return block_info::nBestHeight;
 }
 
-int ClientModel::getNumBlocksAtStartup()
-{
+int ClientModel::getNumBlocksAtStartup() {
     if (numBlocksAtStartup == -1) {
         numBlocksAtStartup = getNumBlocks();
     }
@@ -87,27 +84,23 @@ int ClientModel::getNumBlocksAtStartup()
     return numBlocksAtStartup;
 }
 
-quint64 ClientModel::getTotalBytesRecv() const
-{
+quint64 ClientModel::getTotalBytesRecv() const {
     return CNode::GetTotalBytesRecv();
 }
 
-quint64 ClientModel::getTotalBytesSent() const
-{
+quint64 ClientModel::getTotalBytesSent() const {
     return CNode::GetTotalBytesSent();
 }
 
-QDateTime ClientModel::getLastBlockDate() const
-{
+QDateTime ClientModel::getLastBlockDate() const {
     if (block_info::pindexBest) {
         return QDateTime::fromTime_t(block_info::pindexBest->GetBlockTime());
     } else {
-        return QDateTime::fromTime_t(1360105017); // Genesis block's time
+        return QDateTime::fromTime_t(1533549600); // Genesis block's time
     }
 }
 
-void ClientModel::updateTimer()
-{
+void ClientModel::updateTimer() {
     // Some quantities (such as number of blocks) change so fast that we don't want to be notified for each change.
     // Periodically check and update with a timer.
     int newNumBlocks = getNumBlocks();
@@ -123,13 +116,11 @@ void ClientModel::updateTimer()
     emit bytesChanged(getTotalBytesRecv(), getTotalBytesSent());
 }
 
-void ClientModel::updateNumConnections(int numConnections)
-{
+void ClientModel::updateNumConnections(int numConnections) {
     emit numConnectionsChanged(numConnections);
 }
 
-void ClientModel::updateAlert(const QString &hash, int status)
-{
+void ClientModel::updateAlert(const QString &hash, int status) {
     // Show error message notification for new alert
     if(status == CT_NEW) {
         uint256 hash_256;

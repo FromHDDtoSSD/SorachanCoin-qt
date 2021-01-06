@@ -1,9 +1,7 @@
 
 bin_PROGRAMS = SorachanCoind
-INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/db-4.8.30/include -I../library/blake2/inclu
-de -Ileveldb/include -Ileveldb/helpers
-SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_QUANTUM -DUSE_LEVELDB -DUSE_IPV6 -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-d
-eprecated-declarations -Wno-placement-new
+INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/db-4.8.30/include -I../library/blake2/include -Ileveldb/include -Ileveldb/helpers
+SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_QUANTUM -DUSE_LEVELDB -DUSE_IPV6 -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 SorachanCoind_LDADD = -lpthread \
  ../library/boost_1_68_0/lib/libboost_system.a \
  ../library/boost_1_68_0/lib/libboost_filesystem.a \
@@ -71,8 +69,6 @@ SorachanCoind_SOURCES = \
  merkle/merkle_tree.cpp \
  merkle/merkle_tx.cpp \
  miner/diff.cpp \
- noexcept/noexcept_detail/eh.cpp \
- noexcept/noexcept_detail/error.cpp \
  prime/autocheckpoint.cpp \
  quantum/quantum.cpp \
  random/random.cpp \

@@ -3,9 +3,10 @@
 
 // json spirit version 4.03
 
-#include "json_spirit_writer.h"
-#include "json_spirit_writer_template.h"
+#include <json/json_spirit_writer.h>
+#include <json/json_spirit_writer_template.h>
 
+/*
 void json_spirit::write( const Value& value, std::ostream& os )
 {
     write_stream( value, os, false );
@@ -93,3 +94,4 @@ std::wstring json_spirit::write_formatted( const wmValue&  value )
 }
 
 #endif
+*/

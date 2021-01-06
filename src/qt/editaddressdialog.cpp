@@ -1,18 +1,23 @@
-#include "editaddressdialog.h"
-#include "ui_editaddressdialog.h"
-#include "addresstablemodel.h"
-#include "dialogwindowflags.h"
-#include "guiutil.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <qt/editaddressdialog.h>
+#include <ui_editaddressdialog.h>
+#include <qt/addresstablemodel.h>
+#include <qt/dialogwindowflags.h>
+#include <qt/guiutil.h>
 #include <QDataWidgetMapper>
 #include <QMessageBox>
+#include <allocator/qtsecure.h>
 
 EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::EditAddressDialog), mapper(0), mode(mode), model(0)
+    ui(new(std::nothrow) Ui::EditAddressDialog), mapper(0), mode(mode), model(0)
 {
     if(! ui) {
-        throw std::runtime_error("EditAddressDialog Failed to allocate memory.");
+        throw qt_error("EditAddressDialog Failed to allocate memory.", this);
     }
     try {
 
@@ -42,7 +47,7 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
         mapper->setSubmitPolicy(QDataWidgetMapper::ManualSubmit);
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("EditAddressDialog Failed to allocate memory.");
+        throw qt_error("EditAddressDialog Failed to allocate memory.", this);
     }
 }
 

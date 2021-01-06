@@ -43,10 +43,12 @@ class BitcoinGUI : public QMainWindow
 {
     Q_OBJECT
 private:
-    BitcoinGUI(const BitcoinGUI &); // {}
-    BitcoinGUI &operator=(const BitcoinGUI &); // {}
+    BitcoinGUI(const BitcoinGUI &)=delete;
+    BitcoinGUI &operator=(BitcoinGUI &)=delete;
+    BitcoinGUI(const BitcoinGUI &&)=delete;
+    BitcoinGUI &operator=(BitcoinGUI &&)=delete;
 public:
-    explicit BitcoinGUI(QWidget *parent = 0);
+    explicit BitcoinGUI(QWidget *parent = nullptr);
     ~BitcoinGUI();
 
     /** Set the client model.
@@ -220,4 +222,3 @@ private slots:
 };
 
 #endif
-//@

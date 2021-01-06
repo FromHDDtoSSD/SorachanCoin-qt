@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef COINCONTROLDIALOG_H
 #define COINCONTROLDIALOG_H
 
@@ -25,23 +30,25 @@ signals:
     void beforeClose();
 
 private:
-    CoinControlDialog(const CoinControlDialog &); // {}
-    CoinControlDialog &operator=(const CoinControlDialog &); // {}
+    CoinControlDialog(const CoinControlDialog &)=delete;
+    CoinControlDialog &operator=(const CoinControlDialog &)=delete;
+    CoinControlDialog(CoinControlDialog &&)=delete;
+    CoinControlDialog &operator=(CoinControlDialog &&)=delete;
 public:
-    explicit CoinControlDialog(QWidget *parent = 0);
+    explicit CoinControlDialog(QWidget *parent = nullptr);
     ~CoinControlDialog();
 
     void setModel(WalletModel *model);
 
     // static because also called from sendcoinsdialog
-    static void updateLabels(WalletModel*, QWidget*);
+    static void updateLabels(WalletModel *, QWidget *);
     static QString getPriorityLabel(double);
 
     static QList<qint64> payAmounts;
     static CCoinControl *coinControl;
 
 protected:
-    void closeEvent(QCloseEvent* e);
+    void closeEvent(QCloseEvent *e);
 
 private:
     Ui::CoinControlDialog *ui;
@@ -95,7 +102,7 @@ private slots:
     void clipboardChange();
     void radioTreeMode(bool);
     void radioListMode(bool);
-    void viewItemChanged(QTreeWidgetItem*, int);
+    void viewItemChanged(QTreeWidgetItem *, int);
     void headerSectionClicked(int);
     void on_buttonBox_accepted();
     void buttonSelectAllClicked();
@@ -103,4 +110,3 @@ private slots:
 };
 
 #endif // COINCONTROLDIALOG_H
-//@

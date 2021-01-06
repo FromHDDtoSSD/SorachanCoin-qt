@@ -1,8 +1,12 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef CLIENTMODEL_H
 #define CLIENTMODEL_H
 
 #include <QObject>
-
 #include <stdint.h>
 
 class OptionsModel;
@@ -27,10 +31,12 @@ class ClientModel : public QObject
 {
     Q_OBJECT
 private:
-    ClientModel(const ClientModel &); // {}
-    ClientModel &operator=(const ClientModel &); // {}
+    ClientModel(const ClientModel &)=delete;
+    ClientModel &operator=(const ClientModel &)=delete;
+    ClientModel(ClientModel &&)=delete;
+    ClientModel &operator=(ClientModel &&)=delete;
 public:
-    explicit ClientModel(OptionsModel *optionsModel, QObject *parent = 0);
+    explicit ClientModel(OptionsModel *optionsModel, QObject *parent = nullptr);
     ~ClientModel();
 
     OptionsModel *getOptionsModel();
@@ -89,4 +95,3 @@ public slots:
 };
 
 #endif // CLIENTMODEL_H
-//@

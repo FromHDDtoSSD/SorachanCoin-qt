@@ -69,8 +69,6 @@ SorachanCoind_SOURCES = \
  merkle/merkle_tree.cpp \
  merkle/merkle_tx.cpp \
  miner/diff.cpp \
- noexcept/noexcept_detail/eh.cpp \
- noexcept/noexcept_detail/error.cpp \
  prime/autocheckpoint.cpp \
  quantum/quantum.cpp \
  random/random.cpp \

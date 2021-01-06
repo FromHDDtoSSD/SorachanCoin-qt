@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef EDITADDRESSDIALOG_H
 #define EDITADDRESSDIALOG_H
 
@@ -18,8 +23,10 @@ class EditAddressDialog : public QDialog
 {
     Q_OBJECT
 private:
-    EditAddressDialog(const EditAddressDialog &); // {}
-    EditAddressDialog &operator=(const EditAddressDialog &); // {}
+    EditAddressDialog(const EditAddressDialog &)=delete;
+    EditAddressDialog &operator=(const EditAddressDialog &)=delete;
+    EditAddressDialog(EditAddressDialog &&)=delete;
+    EditAddressDialog &operator=(EditAddressDialog &&)=delete;
 public:
     enum Mode {
         NewReceivingAddress,
@@ -28,7 +35,7 @@ public:
         EditSendingAddress
     };
 
-    explicit EditAddressDialog(Mode mode, QWidget *parent = 0);
+    explicit EditAddressDialog(Mode mode, QWidget *parent = nullptr);
     ~EditAddressDialog();
 
     void setModel(AddressTableModel *model);
@@ -52,4 +59,3 @@ private:
 };
 
 #endif // EDITADDRESSDIALOG_H
-//@
