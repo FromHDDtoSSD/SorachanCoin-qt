@@ -267,14 +267,20 @@ private:
     static std::string strRPCUserColonPass;
     static CCriticalSection cs_THREAD_RPCHANDLER;
 
-    struct arg_data : public CBitrpcData {
+    //struct arg_data : public CBitrpcData {
+    struct arg_data {
         void *parg;
-        bool fok;
-        void ok() noexcept {
-            fok = true;
+        std::string e;
+        arg_data() {
+            parg = nullptr;
+            e = "RPC Success.";
         }
-        void error(const char *in_e=nullptr) noexcept {
-            fok = false;
+        //bool fok;
+        //void ok() noexcept {
+        //    fok = true;
+        //}
+        void error(const char *in_e=nullptr) {
+            //fok = false;
             if(in_e) e = in_e;
         }
     };

@@ -607,15 +607,15 @@ void bitrpc::ThreadRPCServer(void *parg) {
     bitthread::manage::RenameThread((coin_param::strCoinName + "-rpclist").c_str());
 
     arg_data darg;
-    darg.fok = false;
+    //darg.fok = false;
     darg.parg = parg;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
     ThreadRPCServer2(&darg);
-    if(! darg.fok) {
+    //if(! darg.fok) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        printfc(std::string(darg.e.c_str()) + " ThreadRPCServer()");
-    } else
-        net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
+        printfc(std::string(darg.e.c_str()) + " : ThreadRPCServer()");
+    //} else
+        //net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 
     printf("ThreadRPCServer exited\n");
 }
@@ -650,7 +650,7 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
         darg->e = "RPCListen memory allocate failure.";
-        darg->fok = false;
+        //darg->fok = false;
         return;
     }
 
@@ -702,7 +702,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
     if (tcp_conn == nullptr) {
         darg->e = "RPCAcceptHandler AcceptedConnectionImpl, downcast Error.";
-        darg->fok = false;
+        //darg->fok = false;
         return;
     }
 
@@ -723,8 +723,8 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         delete conn;
     }
 
-    darg->parg = nullptr;
-    darg->fok = true;
+    //darg->parg = nullptr;
+    //darg->fok = true;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 #else
@@ -760,8 +760,8 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         delete conn;
     }
 
-    darg->parg = nullptr;
-    darg->fok = true;
+    //darg->parg = nullptr;
+    //darg->fok = true;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 #endif
@@ -910,7 +910,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
     }
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
     StopRequests();
-    darg->ok();
+    //darg->ok();
 }
 
 bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcData &data) {
@@ -1039,7 +1039,8 @@ void bitrpc::ThreadRPCServer3(void *parg) {
             fRun = false;
 
         bitjson::JSONRequest jreq;
-        CBitrpcData &data = static_cast<CBitrpcData &>(*darg);
+        //CBitrpcData &data = static_cast<CBitrpcData &>(*darg);
+        CBitrpcData data;
         data.param = CBitrpcData::BITRPC_PARAM_EXEC;
         data.ret = CBitrpcData::BITRPC_STATUS_ERROR;
         do {
