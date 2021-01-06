@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef GUIUTIL_H
 #define GUIUTIL_H
 
@@ -7,7 +12,6 @@
 #include <QWidget>
 #include <QEvent>
 #include <QTextEdit>
-
 #include <boost/filesystem.hpp>
 
 QT_BEGIN_NAMESPACE
@@ -67,9 +71,9 @@ namespace GUIUtil
       @param[out] selectedSuffixOut  Pointer to return the suffix (file type) that was selected (or 0).
                   Can be useful when choosing the save file format based on suffix.
      */
-    QString getSaveFileName(QWidget *parent=0, const QString &caption=QString(),
+    QString getSaveFileName(QWidget *parent=nullptr, const QString &caption=QString(),
                                    const QString &dir=QString(), const QString &filter=QString(),
-                                   QString *selectedSuffixOut=0);
+                                   QString *selectedSuffixOut=nullptr);
 
     /** Get connection type to call object slot in GUI thread with invokeMethod. The call will be blocking.
 
@@ -93,10 +97,12 @@ namespace GUIUtil
     {
         Q_OBJECT
     private:
-        ToolTipToRichTextFilter(const ToolTipToRichTextFilter &); // {}
-        ToolTipToRichTextFilter &operator=(const ToolTipToRichTextFilter &); // {}
+        ToolTipToRichTextFilter(const ToolTipToRichTextFilter &)=delete;
+        ToolTipToRichTextFilter &operator=(const ToolTipToRichTextFilter &)=delete;
+        ToolTipToRichTextFilter(ToolTipToRichTextFilter &&)=delete;
+        ToolTipToRichTextFilter &operator=(ToolTipToRichTextFilter &&)=delete;
     public:
-        explicit ToolTipToRichTextFilter(int size_threshold, QObject *parent = 0);
+        explicit ToolTipToRichTextFilter(int size_threshold, QObject *parent = nullptr);
 
     protected:
         bool eventFilter(QObject *obj, QEvent *evt);
@@ -113,10 +119,12 @@ namespace GUIUtil
     {
         Q_OBJECT
     private:
-        HelpMessageBox(const HelpMessageBox &); // {}
-        HelpMessageBox &operator=(const HelpMessageBox &); // {}
+        HelpMessageBox(const HelpMessageBox &)=delete;
+        HelpMessageBox &operator=(const HelpMessageBox &)=delete;
+        HelpMessageBox(HelpMessageBox &&)=delete;
+        HelpMessageBox &operator=(HelpMessageBox &&)=delete;
     public:
-        HelpMessageBox(QWidget *parent = 0);
+        HelpMessageBox(QWidget *parent = nullptr);
 
         /** Show message box or print help message to standard output, based on operating system. */
         void showOrPrint();
@@ -150,4 +158,3 @@ namespace GUIUtil
 } // namespace GUIUtil
 
 #endif // GUIUTIL_H
-//@

@@ -16,6 +16,9 @@
 #include <const/macro.h>
 #include <random/random.h>
 #include <cleanse/cleanse.h>
+#ifndef WIN32
+# define MAP_NOCORE 0
+#endif
 
 namespace latest_crypto {
 
@@ -36,7 +39,7 @@ void quantum_lib::manage::readwrite() const {
     if (! ::VirtualProtect(ptr, size, PAGE_READWRITE, &old))
         throw std::runtime_error("secure_list::manage failure.");
 #else
-    if (::mprotect(ptr, size, PROT_READ | PORT_WRITE) != 0)
+    if (::mprotect(ptr, size, PROT_READ | PROT_WRITE) != 0)
         throw std::runtime_error("secure_list::manage failure.");
 #endif
 }
@@ -61,8 +64,8 @@ void *quantum_lib::secure_malloc(size_t sizeIn) {
 #endif
     if (! ptr) throw std::runtime_error("secure_alloc memory allocate failure.");
 
-#if defined(WIN32)
     bool lock_ret = false;
+#if defined(WIN32)
     lock_ret = (::VirtualLock(ptr, sizeIn + alloc_info_size) != FALSE) ? true : false;
 #else
     lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true : false;
@@ -184,7 +187,7 @@ bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
     DWORD old;
     int ret = ::VirtualProtect(ptr, size, PAGE_READWRITE, &old) ? 0 : -1;
 #else
-    int ret = ::mprotect(ptr, size, PROT_READ | PORT_WRITE);
+    int ret = ::mprotect(ptr, size, PROT_READ | PROT_WRITE);
 #endif
 
     return ret != 0;

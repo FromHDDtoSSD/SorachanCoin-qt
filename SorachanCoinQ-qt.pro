@@ -718,7 +718,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/merkle/merkle_tree.cpp \
     src/miner/diff.cpp \
     src/rpc/bitcoinrpc.cpp \
-    src/rpc/rpccrypt.cpp \
+    src/rpc/rpccrypto.cpp \
     src/rpc/rpcdump.cpp \
     src/rpc/rpcnet.cpp \
     src/rpc/rpcmining.cpp \

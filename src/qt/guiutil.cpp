@@ -1,10 +1,14 @@
-#include "guiutil.h"
-#include "bitcoinaddressvalidator.h"
-#include "walletmodel.h"
-#include "bitcoinunits.h"
-#include "util.h"
-#include "init.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <qt/guiutil.h>
+#include <qt/bitcoinaddressvalidator.h>
+#include <qt/walletmodel.h>
+#include <qt/bitcoinunits.h>
+#include <util.h>
+#include <init.h>
 #include <QString>
 #include <QDateTime>
 #include <QDoubleValidator>
