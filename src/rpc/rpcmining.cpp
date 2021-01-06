@@ -210,6 +210,11 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
 }
 
 json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrpcData &data) {
+    using mapNewBlock_t = std::map<uint256, std::pair<CBlock *, CScript> >;
+    static mapNewBlock_t mapNewBlock;
+    static std::vector<CBlock *> vNewBlock;
+    static CReserveKey reservekey(entry::pwalletMain);
+
     if (data.fHelp() || params.size() > 2) {
         return data.JSONRPCSuccess(
             "getworkex [data, coinbase]\n"
@@ -222,17 +227,13 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         return data.JSONRPCError(-9, sts_c(coin_param::strCoinName + " is not connected!"));
     if (block_notify::IsInitialBlockDownload())
         return data.JSONRPCError(-10, sts_c(coin_param::strCoinName + " is downloading blocks..."));
-
-    using mapNewBlock_t = std::map<uint256, std::pair<CBlock *, CScript> >;
-    static mapNewBlock_t mapNewBlock;
-    static std::vector<CBlock *> vNewBlock;
-    static CReserveKey reservekey(entry::pwalletMain);
     if (params.size() == 0) {
         // Update block
         static unsigned int nTransactionsUpdatedLast = 0;
         static CBlockIndex *pindexPrev = nullptr;
         static int64_t nStart = 0;
         static CBlock *pblock = nullptr;
+
         if (pindexPrev != block_info::pindexBest || (block_info::nTransactionsUpdated != nTransactionsUpdatedLast && bitsystem::GetTime() - nStart > 60)) {
             if (pindexPrev != block_info::pindexBest) {
                 // Deallocate old blocks since they're obsolete now
@@ -301,7 +302,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         if (vchData.size() != 128)
             return data.JSONRPCError(-8, "Invalid parameter");
 
-        CBlock *pdata = (CBlock *)&vchData[0];
+        CBlockHeader<uint256> *pdata = (CBlockHeader<uint256> *)&vchData[0];
 
         // Byte reverse
         for (int i = 0; i < 128 / 4; ++i)
@@ -329,6 +330,11 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
 }
 
 json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcData &data) {
+    using mapNewBlock_t = std::map<uint256, std::pair<CBlock *, CScript> >;
+    static mapNewBlock_t mapNewBlock;
+    static std::vector<CBlock *> vNewBlock;
+    static CReserveKey reservekey(entry::pwalletMain);
+
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
             "getwork [data]\n"
@@ -345,17 +351,13 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, sts_c(coin_param::strCoinName + " is not connected!"));
     if (block_notify::IsInitialBlockDownload())
         return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, sts_c(coin_param::strCoinName + " is downloading blocks..."));
-
-    using mapNewBlock_t = std::map<uint256, std::pair<CBlock *, CScript> >;
-    static mapNewBlock_t mapNewBlock;
-    static std::vector<CBlock *> vNewBlock;
-    static CReserveKey reservekey(entry::pwalletMain);
     if (params.size() == 0) {
         // Update block
         static unsigned int nTransactionsUpdatedLast = 0;
         static CBlockIndex *pindexPrev = nullptr;
         static int64_t nStart = 0;
         static CBlock *pblock = nullptr;
+
         if (pindexPrev != block_info::pindexBest ||
            (block_info::nTransactionsUpdated != nTransactionsUpdatedLast && bitsystem::GetTime() - nStart > 60)) {
             if (pindexPrev != block_info::pindexBest) {
@@ -371,7 +373,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
 
             // Store the block_info::pindexBest used before miner::CreateNewBlock, to avoid races
             nTransactionsUpdatedLast = block_info::nTransactionsUpdated;
-            CBlockIndex* pindexPrevNew = block_info::pindexBest;
+            CBlockIndex *pindexPrevNew = block_info::pindexBest;
             nStart = bitsystem::GetTime();
 
             // Create new block
@@ -418,7 +420,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         if (vchData.size() != 128)
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
 
-        CBlock *pdata = (CBlock *)&vchData[0];
+        CBlockHeader<uint256> *pdata = (CBlockHeader<uint256> *)&vchData[0];
 
         // Byte reverse
         for (int i = 0; i < 128 / 4; ++i)
@@ -536,7 +538,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
             entry.push_back(json_spirit::Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
             json_spirit::Array deps;
-            for(MapPrevTx::value_type& inp: mapInputs) {
+            for(MapPrevTx::value_type &inp: mapInputs) {
                 if (setTxIndex.count(inp.first))
                     deps.push_back(setTxIndex[inp.first]);
             }
