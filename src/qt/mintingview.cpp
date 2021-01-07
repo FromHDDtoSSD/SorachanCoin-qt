@@ -1,13 +1,16 @@
-#include "mintingview.h"
-#include "mintingfilterproxy.h"
-#include "transactionrecord.h"
-#include "mintingtablemodel.h"
-#include "walletmodel.h"
-#include "guiconstants.h"
-#include "guiutil.h"
-#include "csvmodelwriter.h"
+// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2013-2015 The Novacoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-
+#include <qt/mintingview.h>
+#include <qt/mintingfilterproxy.h>
+#include <qt/transactionrecord.h>
+#include <qt/mintingtablemodel.h>
+#include <qt/walletmodel.h>
+#include <qt/guiconstants.h>
+#include <qt/guiutil.h>
+#include <qt/csvmodelwriter.h>
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QVBoxLayout>
@@ -18,6 +21,7 @@
 #include <QComboBox>
 #include <QMessageBox>
 #include <QMenu>
+#include <allocator/qtsecure.h>
 
 MintingView::MintingView(QWidget *parent) :
     QWidget(parent), model(0), mintingView(0)
@@ -120,7 +124,7 @@ MintingView::MintingView(QWidget *parent) :
         connect(view, SIGNAL(customContextMenuRequested(QPoint)), this, SLOT(contextualMenu(QPoint)));
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("MintingView Failed to allocate memory.");
+        throw qt_error("MintingView Failed to allocate memory.", this);
     }
 }
 
@@ -131,7 +135,7 @@ void MintingView::setModel(WalletModel *model)
     if(model) {
         mintingProxyModel = new (std::nothrow) MintingFilterProxy(this);
         if(! mintingProxyModel) {
-            throw std::runtime_error("MintingView Failed to allocate memory.");
+            throw qt_error("MintingView Failed to allocate memory.", this);
         }
 
         mintingProxyModel->setSourceModel(model->getMintingTableModel());

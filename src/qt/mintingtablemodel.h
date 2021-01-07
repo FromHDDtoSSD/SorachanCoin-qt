@@ -1,6 +1,10 @@
+// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2013-2015 The Novacoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef MINTINGTABLEMODEL_H
 #define MINTINGTABLEMODEL_H
-
 
 #include <QAbstractTableModel>
 #include <QStringList>
@@ -15,10 +19,12 @@ class MintingTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 private:
-    MintingTableModel(const MintingTableModel &); // {}
-    MintingTableModel &operator=(const MintingTableModel &); // {}
+    MintingTableModel(const MintingTableModel &)=delete;
+    MintingTableModel &operator=(const MintingTableModel &)=delete;
+    MintingTableModel(MintingTableModel &)=delete;
+    MintingTableModel &operator=(MintingTableModel &)=delete;
 public:
-    explicit MintingTableModel(CWallet * wallet, WalletModel *parent = 0);
+    explicit MintingTableModel(CWallet * wallet, WalletModel *parent = nullptr);
     ~MintingTableModel();
 
     enum ColumnIndex {
@@ -65,4 +71,3 @@ private slots:
 };
 
 #endif // MINTINGTABLEMODEL_H
-//@

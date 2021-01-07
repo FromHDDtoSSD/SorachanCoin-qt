@@ -1,21 +1,23 @@
-#include "mintingtablemodel.h"
-#include "mintingfilterproxy.h"
-#include "transactiontablemodel.h"
-#include "guiutil.h"
-#include "kernelrecord.h"
-#include "guiconstants.h"
-#include "transactiondesc.h"
-#include "walletmodel.h"
-#include "optionsmodel.h"
-#include "addresstablemodel.h"
-#include "bitcoinunits.h"
-#include "util.h"
-#include "kernel.h"
+// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2013-2015 The Novacoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "wallet.h"
-
+#include <qt/mintingtablemodel.h>
+#include <qt/mintingfilterproxy.h>
+#include <qt/transactiontablemodel.h>
+#include <qt/guiutil.h>
+#include <kernelrecord.h>
+#include <qt/guiconstants.h>
+#include <qt/transactiondesc.h>
+#include <qt/walletmodel.h>
+#include <qt/optionsmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/bitcoinunits.h>
+#include <util.h>
+#include <kernel.h>
+#include <wallet.h>
 #include <rpc/bitcoinrpc.h>
-
 #include <QLocale>
 #include <QList>
 #include <QColor>
@@ -23,9 +25,10 @@
 #include <QIcon>
 #include <QDateTime>
 #include <QtAlgorithms>
-
 #include <miner/diff.h>
+#include <allocator/qtsecure.h>
 
+namespace {
 static int column_alignments[] = {
     Qt::AlignLeft|Qt::AlignVCenter,
     Qt::AlignLeft|Qt::AlignVCenter,
@@ -51,12 +54,15 @@ struct TxLessThan
         return a < b.hash;
     }
 };
+} // namespace
 
 class MintingTablePriv
 {
 private:
-    MintingTablePriv(const MintingTablePriv &); // {}
-    MintingTablePriv &operator=(const MintingTablePriv &); // {}
+    MintingTablePriv(const MintingTablePriv &)=delete;
+    MintingTablePriv &operator=(const MintingTablePriv &)=delete;
+    MintingTablePriv(MintingTablePriv &&)=delete;
+    MintingTablePriv &operator=(MintingTablePriv &&)=delete;
 public:
     MintingTablePriv(CWallet *wallet, MintingTableModel *parent):
         wallet(wallet),
@@ -213,12 +219,16 @@ MintingTableModel::MintingTableModel(CWallet *wallet, WalletModel *parent):
         wallet(wallet),
         walletModel(parent),
         mintingInterval(10),
-        priv(new MintingTablePriv(wallet, this))
+        priv(new(std::nothrow) MintingTablePriv(wallet, this))
 {
+    if(! priv)
+        throw qt_error("MintingTableModel: out of memory.", nullptr);
     columns << tr("Transaction") <<  tr("Address") << tr("Balance") << tr("Age") << tr("CoinDay") << tr("MintProbability") << tr("MintReward");
     priv->refreshWallet();
 
-    QTimer *timer = new QTimer(this);
+    QTimer *timer = new(std::nothrow) QTimer(this);
+    if(! timer)
+        throw qt_error("MintingTableModel: out of memory.", nullptr);
     connect(timer, SIGNAL(timeout()), this, SLOT(update()));
     timer->start(MODEL_UPDATE_DELAY);
 }

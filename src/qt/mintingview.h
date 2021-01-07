@@ -1,12 +1,16 @@
+// Copyright (c) 2012-2013 The PPCoin developers
+// Copyright (c) 2013-2015 The Novacoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef MINTINGVIEW_H
 #define MINTINGVIEW_H
 
 #include <QWidget>
 #include <QComboBox>
-#include "mintingfilterproxy.h"
+#include <qt/mintingfilterproxy.h>
 
 class WalletModel;
-
 
 QT_BEGIN_NAMESPACE
 class QTableView;
@@ -17,10 +21,12 @@ class MintingView : public QWidget
 {
     Q_OBJECT
 private:
-    MintingView(const MintingView &); // {}
-    MintingView &operator=(const MintingView &); // {}
+    MintingView(const MintingView &)=delete;
+    MintingView &operator=(const MintingView &)=delete;
+    MintingView(MintingView &&)=delete;
+    MintingView &operator=(MintingView &&)=delete;
 public:
-    explicit MintingView(QWidget *parent = 0);
+    explicit MintingView(QWidget *parent = nullptr);
     void setModel(WalletModel *model);
 
     enum MintingEnum
@@ -56,4 +62,3 @@ public slots:
 };
 
 #endif // MINTINGVIEW_H
-//@
