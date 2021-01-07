@@ -189,8 +189,12 @@ std::string CPubKey::ToString() const {
 // This is only slightly more CPU intensive than just verifying it.
 // If this function succeeds, the recovered public key is guaranteed to be valid
 // (the signature is a valid signature of the given data for that key)
-#define DEBUG_LIBSECP256K1
+//#define DEBUG_LIBSECP256K1
 bool CPubKey::SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig) noexcept {
+    bool ret_libsecp256k1 = RecoverCompact(hash, vchSig);
+    if(ret_libsecp256k1) return true;
+
+    // if ret_libsecp256k1 == false, below: old core, OPENSSL recheck
     if (vchSig.size() != 65)
         return false;
     int nV = vchSig[0];

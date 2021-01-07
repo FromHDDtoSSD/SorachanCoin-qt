@@ -663,7 +663,9 @@ public:
 
     void set_nTime(uint32_t _InTime) {nTime = _InTime;}
     uint32_t &set_nTime() {return nTime;}
-    int &set_nVersion() {return nVersion;}
+    int &set_nVersion() {
+        return nVersion;
+    }
     std::vector<CTxIn> &set_vin() {return vin;}
     CTxIn &set_vin(int index) {return vin[index];}
     std::vector<CTxOut> &set_vout() {return vout;}
@@ -874,6 +876,8 @@ public:
             return size;
         } else {
             assert(!"Only using CTransaction_impl<T>::GetSerializeSize is (nVersion == 1)");
+            throw std::runtime_error("Only using CTransaction_impl<T>::GetSerializeSize is (nVersion == 1)");
+
             size_t size = 0;
             size += ::GetSerializeSize(this->nVersion);
             size += ::GetSerializeSize(this->vin);
@@ -882,6 +886,7 @@ public:
             return size;
         }
     }
+
     template <typename Stream>
     inline void Serialize(Stream &s) const {
         NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
@@ -892,14 +897,18 @@ public:
     }
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        if(this->nVersion == 1) {
+        if(this->nVersion == 1 || this->nVersion == 2) {
+            if(this->nVersion == 2) {
+                debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
+            }
             LREADWRITE(this->nVersion);
             LREADWRITE(this->nTime);
             LREADWRITE(this->vin);
             LREADWRITE(this->vout);
             LREADWRITE(this->nLockTime);
         } else {
-            assert(!"Only using CTransaction_impl<T>::Unserialize is (nVersion == 1)");
+            debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
+            assert(!"Only using CTransaction_impl<T>::Unserialize is (2 < nVersion)");
             LREADWRITE(this->nVersion);
             LREADWRITE(this->vin);
             LREADWRITE(this->vout);
@@ -910,6 +919,10 @@ public:
     /*
     IMPLEMENT_SERIALIZE
     (
+        if(1 < this->nVersion) {
+            debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
+            //assert(!"Only using CTransaction_impl<T>::Unserialize is (nVersion == 1)");
+        }
         READWRITE(this->nVersion);
         nVersion = this->nVersion;
         READWRITE(this->nTime);
