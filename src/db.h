@@ -200,7 +200,8 @@ protected:
         }
 
         // Clear and free memory
-        std::memset(datValue.get_data(), 0, datValue.get_size());
+        //std::memset(datValue.get_data(), 0, datValue.get_size());
+        cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         ::free(datValue.get_data());
         return (ret == 0);
     }
@@ -230,8 +231,10 @@ protected:
         int ret = pdb->put(activeTxn, &datKey, &datValue, (fOverwrite ? 0 : DB_NOOVERWRITE));
 
         // Clear memory in case it was a private key
-        std::memset(datKey.get_data(), 0, datKey.get_size());
-        std::memset(datValue.get_data(), 0, datValue.get_size());
+        //std::memset(datKey.get_data(), 0, datKey.get_size());
+        //std::memset(datValue.get_data(), 0, datValue.get_size());
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
+        cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         return (ret == 0);
     }
 
@@ -254,7 +257,8 @@ protected:
         int ret = pdb->del(activeTxn, &datKey, 0);
 
         // Clear memory
-        std::memset(datKey.get_data(), 0, datKey.get_size());
+        //std::memset(datKey.get_data(), 0, datKey.get_size());
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         return (ret == 0 || ret == DB_NOTFOUND);
     }
 
@@ -274,7 +278,8 @@ protected:
         int ret = pdb->exists(activeTxn, &datKey, 0);
 
         // Clear memory
-        std::memset(datKey.get_data(), 0, datKey.get_size());
+        //std::memset(datKey.get_data(), 0, datKey.get_size());
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         return (ret == 0);
     }
 
@@ -325,8 +330,10 @@ protected:
         ssValue.write((char *)datValue.get_data(), datValue.get_size());
 
         // Clear and free memory
-        std::memset(datKey.get_data(), 0, datKey.get_size());
-        std::memset(datValue.get_data(), 0, datValue.get_size());
+        //std::memset(datKey.get_data(), 0, datKey.get_size());
+        //std::memset(datValue.get_data(), 0, datValue.get_size());
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
+        cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         ::free(datKey.get_data());
         ::free(datValue.get_data());
         return 0;

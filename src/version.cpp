@@ -3,8 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <string>
-
-#include "version.h"
+#include <version.h>
 
     //
     // Client version number
