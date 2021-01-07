@@ -480,8 +480,10 @@ std::string lutil::CopyrightHolders(const std::string &strPrefix) {
 }
 */
 
-fs::path lutil::AbsPathForConfigVal(const fs::path &path, bool net_specific/*= true*/) {
-    return fs::absolute(path, lutil::GetDataDir(net_specific));
+fs::path lutil::AbsPathForConfigVal(const fs::path &path, bool net_specific/*= true*/, bool ftestnet/*= false*/) {
+    fs::path header = ftestnet ? fs::path("testnet2")/path: path;
+    fs::path abspath = fs::absolute(header, lutil::GetDataDir(net_specific));
+    return abspath;
 }
 
 int lutil::ScheduleBatchPriority() {

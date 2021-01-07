@@ -92,8 +92,8 @@ namespace BCLog {
         /** Returns whether logs will be written to any output */
         bool Enabled() const noexcept { return m_print_to_console || m_print_to_file; }
 
-        bool OpenDebugLog() noexcept;
-        bool ShrinkDebugFile() noexcept;
+        bool OpenDebugLog();
+        bool ShrinkDebugFile();
 
         uint32_t GetCategoryMask() const { return m_categories.load(); }
 

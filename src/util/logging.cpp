@@ -40,7 +40,7 @@ int BCLog::Logger::FileWriteStr(const std::string &str, FILE *fp) noexcept {
     return ::fwrite(str.data(), 1, str.size(), fp);
 }
 
-bool BCLog::Logger::OpenDebugLog() noexcept {
+bool BCLog::Logger::OpenDebugLog() {
     std::lock_guard<std::mutex> scoped_lock(m_file_mutex);
 
     assert(m_fileout == nullptr);
@@ -248,7 +248,7 @@ void BCLog::Logger::LogPrintStr(const std::string &str) {
     }
 }
 
-bool BCLog::Logger::ShrinkDebugFile() noexcept {
+bool BCLog::Logger::ShrinkDebugFile() {
     // Amount of debug.log to save at end when shrinking (must fit in memory)
     constexpr size_t RECENT_DEBUG_HISTORY_SIZE = 10 * 1000000;
     if(m_file_path.empty())
@@ -316,16 +316,19 @@ bool BCLog::Logger::ShrinkDebugFile() noexcept {
  */
 void InitLogging() {
     LogInstance().m_print_to_file = true; //!gArgs.IsArgNegated("-debuglogfile");
-    LogInstance().m_file_path = lutil::AbsPathForConfigVal(gArgs.GetArg("-debuglogfile", DEFAULT_DEBUGLOGFILE), false);
-
-    debugcs::instance() << "called: InitLogging() m_file_path: " << LogInstance().m_file_path.string().c_str() << debugcs::endl();
+    LogInstance().m_file_path = lutil::AbsPathForConfigVal(gArgs.GetArg("-debuglogfile", DEFAULT_DEBUGLOGFILE), false, args_bool::fTestNet);
+    if(args_bool::fTestNet)
+        debugcs::instance() << "called: InitLogging() m_file_path: " << LogInstance().m_file_path.string().c_str() << debugcs::endl();
 
     // Add newlines to the logfile to distinguish this execution from the last
     // one; called before console logging is set up, so this is only sent to
     // debug.log.
     printf("\n\n\n\n\n");
 
-    LogInstance().m_print_to_console = gArgs.GetBoolArg("-printtoconsole", !gArgs.GetBoolArg("-daemon", false));
+    if(args_bool::fTestNet)
+        LogInstance().m_print_to_console = gArgs.GetBoolArg("-printtoconsole", !gArgs.GetBoolArg("-daemon", false));
+    else
+        LogInstance().m_print_to_console = false;
     LogInstance().m_log_timestamps = gArgs.GetBoolArg("-logtimestamps", BCLog::Logger::DEFAULT_LOGTIMESTAMPS);
     LogInstance().m_log_time_micros = gArgs.GetBoolArg("-logtimemicros", BCLog::Logger::DEFAULT_LOGTIMEMICROS);
 
@@ -346,7 +349,7 @@ bool OpenDebugFile() {
         if (gArgs.GetBoolArg("-shrinkdebugfile", LogInstance().DefaultShrinkDebugFile())) {
             // Do this first since it both loads a bunch of debug.log into memory,
             // and because this needs to happen before any other debug.log printing
-            LogInstance().ShrinkDebugFile();
+            // LogInstance().ShrinkDebugFile(); // after latest core
         }
         if (! LogInstance().OpenDebugLog()) {
             //debugcs::instance() << "Could not open debug log file %s" << LogInstance().m_file_path.string().c_str() << debugcs::endl();

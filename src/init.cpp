@@ -337,7 +337,7 @@ std::string entry::HelpMessage()
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
 //
-//#define INIT_DEBUG_CS
+#define INIT_DEBUG_CS
 #ifdef INIT_DEBUG_CS
 # define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 #else
@@ -345,11 +345,6 @@ std::string entry::HelpMessage()
 #endif
 bool entry::AppInit2()
 {
-    // ********************************************************* Step 0: log open
-    I_DEBUG_CS("Step 0: log open")
-    InitLogging();
-    OpenDebugFile();
-
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
 
@@ -480,6 +475,11 @@ bool entry::AppInit2()
             printf("AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\n");
         }
     }
+
+    // ********************************************************* log open
+    I_DEBUG_CS("log open")
+    InitLogging();
+    OpenDebugFile();
 
     // ********************************************************* Step 3: parameter-to-internal-flags
     I_DEBUG_CS("Step 3: parameter-to-internal-flags")

@@ -860,7 +860,7 @@ T CBlockIndex_impl<T>::GetBlockTrust() const
 
         // Return 1/3 of score if less than 3 PoW blocks found
         if (nPoWCount < 3) {
-            printf("GetBlockTrust(Return 1/3 of score)：nPoWCount %d\n", nPoWCount);
+            printf("GetBlockTrust(Return 1/3 of score) nPoWCount %d\n", nPoWCount);
             return (bnNewTrust / 3).getuint256();
         }
 
@@ -889,7 +889,7 @@ T CBlockIndex_impl<T>::GetBlockTrust() const
 
         // Return nPoWTrust + 2/3 of previous block score if less than 7 PoS blocks found
         if (nPoSCount < 7) {
-            printf("GetBlockTrust(nPoWTrust + 2/3 of previous block)：nPosCount %d\n", nPoSCount);
+            printf("GetBlockTrust(nPoWTrust + 2/3 of previous block) nPosCount %d\n", nPoSCount);
             return (bnPoWTrust + 2 * bnLastBlockTrust / 3).getuint256();
         }
 

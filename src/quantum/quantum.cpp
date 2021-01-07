@@ -458,7 +458,7 @@ void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noex
 class Quantum_startup
 {
 private:
-    static const int _test_count = 1;
+    static constexpr int _test_count = 1;
 private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;
@@ -586,7 +586,9 @@ private:
         th1.join();
         th2.join();
 
+        //
         // tiny format test
+        //
         int64_t num = 0x1000000000000;
         std::string tny1 = strprintf("%d", num);
         std::string tny2 = strprintf("%u", num);
