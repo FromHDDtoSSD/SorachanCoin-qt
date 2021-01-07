@@ -2,14 +2,14 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "macdockiconhandler.h"
-
+#include <qt/macdockiconhandler.h>
 #include <QImageWriter>
 #include <QMenu>
 #include <QBuffer>
 #include <QWidget>
+#include <allocator/qtsecure.h>
 
-extern void qt_mac_set_dock_menu(QMenu*);
+extern void qt_mac_set_dock_menu(QMenu *);
 
 #undef slots
 #include <Cocoa/Cocoa.h>
@@ -54,19 +54,24 @@ extern void qt_mac_set_dock_menu(QMenu *);
 
 @end
 
-MacDockIconHandler::MacDockIconHandler() : QObject()
-{
+MacDockIconHandler::MacDockIconHandler() : QObject() {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
-
-    this->m_dockIconClickEventHandler = [[DockIconClickEventHandler alloc] initWithDockIconHandler:this];
-    this->m_dummyWidget = new QWidget();
-    this->m_dockMenu = new QMenu(this->m_dummyWidget);
-    this->setMainWindow(NULL);
+    if(! pool)
+        throw qt_error("MacDockIconHandler: out of memory.", this);
+    try {
+        this->m_dockIconClickEventHandler = [[DockIconClickEventHandler alloc] initWithDockIconHandler:this];
+        this->m_dummyWidget = new QWidget();
+        this->m_dockMenu = new QMenu(this->m_dummyWidget);
+        this->setMainWindow(nullptr);
 #if QT_VERSION < 0x050000
-    qt_mac_set_dock_menu(this->m_dockMenu);
+        qt_mac_set_dock_menu(this->m_dockMenu);
 #elif QT_VERSION >= 0x050200
-    this->m_dockMenu->setAsDockMenu();
+        this->m_dockMenu->setAsDockMenu();
 #endif
+    } catch (const std::bad_alloc &) {
+        throw qt_error("MacDockIconHandler: out of memory", this);
+    }
+
     [pool release];
 }
 
@@ -74,21 +79,20 @@ void MacDockIconHandler::setMainWindow(QMainWindow *window) {
     this->mainWindow = window;
 }
 
-MacDockIconHandler::~MacDockIconHandler()
-{
+MacDockIconHandler::~MacDockIconHandler() {
     [this->m_dockIconClickEventHandler release];
     delete this->m_dummyWidget;
-    this->setMainWindow(NULL);
+    this->setMainWindow(nullptr);
 }
 
-QMenu *MacDockIconHandler::dockMenu()
-{
+QMenu *MacDockIconHandler::dockMenu() {
     return this->m_dockMenu;
 }
 
-void MacDockIconHandler::setIcon(const QIcon &icon)
-{
+void MacDockIconHandler::setIcon(const QIcon &icon) {
     NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
+    if(! pool)
+        throw qt_error("MacDockIconHandler: out of memory.", this);
     NSImage *image = nil;
     if (icon.isNull())
         image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
@@ -108,7 +112,7 @@ void MacDockIconHandler::setIcon(const QIcon &icon)
             }
         }
 
-        if(!image) {
+        if(! image) {
             // if testnet image could not be created, load std. app icon
             image = [[NSImage imageNamed:@"NSApplicationIcon"] retain];
         }
@@ -119,21 +123,19 @@ void MacDockIconHandler::setIcon(const QIcon &icon)
     [pool release];
 }
 
-MacDockIconHandler *MacDockIconHandler::instance()
-{
-    static MacDockIconHandler *s_instance = NULL;
-    if (!s_instance)
-        s_instance = new MacDockIconHandler();
+MacDockIconHandler *MacDockIconHandler::instance() {
+    static MacDockIconHandler *s_instance = nullptr;
+    if (! s_instance)
+        s_instance = new(std::nothrow) MacDockIconHandler();
+    if (! s_instance)
+        throw qt_error("MacDockIconHandler instance: out of memory.", this);
     return s_instance;
 }
 
-void MacDockIconHandler::handleDockIconClickEvent()
-{
-    if (this->mainWindow)
-    {
+void MacDockIconHandler::handleDockIconClickEvent() {
+    if (this->mainWindow) {
         this->mainWindow->activateWindow();
         this->mainWindow->show();
     }
-
     emit this->dockIconClicked();
 }

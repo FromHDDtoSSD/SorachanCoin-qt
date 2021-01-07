@@ -2,7 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "macnotificationhandler.h"
+#include <qt/macnotificationhandler.h>
+#include <allocator/qtsecure.h>
 
 #undef slots
 #import <objc/runtime.h>
@@ -75,9 +76,11 @@ bool MacNotificationHandler::hasUserNotificationCenterSupport(void)
 
 MacNotificationHandler *MacNotificationHandler::instance()
 {
-    static MacNotificationHandler *s_instance = NULL;
+    static MacNotificationHandler *s_instance = nullptr;
     if (!s_instance) {
-        s_instance = new MacNotificationHandler();
+        s_instance = new(std::nothrow) MacNotificationHandler();
+        if(! s_instance)
+            throw qt_error("MacNotificationHandler: out of memory.", this);
         
         Class aPossibleClass = objc_getClass("NSBundle");
         if (aPossibleClass) {

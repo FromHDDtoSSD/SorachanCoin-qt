@@ -2,22 +2,19 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "intro.h"
-#include "ui_intro.h"
-
-#include "guiutil.h"
-
-#include "util.h"
-
+#include <qt/intro.h>
+#include <ui_intro.h>
+#include <qt/guiutil.h>
+#include <util.h>
 #include <boost/filesystem.hpp>
-
 #include <QFileDialog>
 #include <QSettings>
 #include <QMessageBox>
+#include <allocator/qtsecure.h>
 
 /* Minimum free space (in bytes) needed for data directory */
-static const uint64_t GB_BYTES = 1000000000LL;
-static const uint64_t BLOCK_CHAIN_SIZE = 1LL * GB_BYTES;
+static constexpr uint64_t GB_BYTES = 1000000000LL;
+static constexpr uint64_t BLOCK_CHAIN_SIZE = 1LL * GB_BYTES;
 
 /* Check free space asynchronously to prevent hanging the UI thread.
 
@@ -33,8 +30,10 @@ class FreespaceChecker : public QObject
 {
     Q_OBJECT
 private:
-    FreespaceChecker (const FreespaceChecker &); // {}
-    FreespaceChecker &operator=(const FreespaceChecker &); // {}
+    FreespaceChecker (const FreespaceChecker &)=delete;
+    FreespaceChecker &operator=(const FreespaceChecker &)=delete;
+    FreespaceChecker (FreespaceChecker &&)=delete;
+    FreespaceChecker &operator=(FreespaceChecker &&)=delete;
 public:
     FreespaceChecker(Intro *intro);
 
@@ -107,10 +106,13 @@ void FreespaceChecker::check()
 
 Intro::Intro(QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::Intro),
+    ui(new(std::nothrow) Ui::Intro),
     thread(0),
     signalled(false)
 {
+    if(! ui) {
+        throw qt_error("Intro: out of memory.", this);
+    }
     ui->setupUi(this);
     ui->sizeWarningLabel->setText(ui->sizeWarningLabel->text().arg(BLOCK_CHAIN_SIZE/GB_BYTES));
     startThread();
@@ -271,7 +273,7 @@ void Intro::startThread()
 
         thread->start();
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("Intro Failed to allocate memory.");
+        throw qt_error("Intro: Failed to allocate memory.", this);
     }
 }
 

@@ -13,8 +13,10 @@ class MacNotificationHandler : public QObject
 {
     Q_OBJECT
 private:
-    //MacNotificationHandler(const MacNotificationHandler &); // {}
-    MacNotificationHandler &operator=(const MacNotificationHandler &); // {}
+    MacNotificationHandler(const MacNotificationHandler &)=delete;
+    MacNotificationHandler &operator=(const MacNotificationHandler &)=delete;
+    MacNotificationHandler(MacNotificationHandler &&)=delete;
+    MacNotificationHandler &operator=(MacNotificationHandler &&)=delete;
 public:
     /** shows a 10.8+ UserNotification in the UserNotificationCenter
      */
@@ -30,4 +32,3 @@ public:
 
 
 #endif // BITCOIN_QT_MACNOTIFICATIONHANDLER_H
-//@

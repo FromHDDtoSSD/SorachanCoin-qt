@@ -23,10 +23,12 @@ class Intro : public QDialog
 {
     Q_OBJECT
 private:
-    Intro(const Intro &); // {}
-    Intro &operator=(const Intro &); // {}
+    Intro(const Intro &)=delete;
+    Intro &operator=(const Intro &)=delete;
+    Intro(Intro &&)=delete;
+    Intro &operator=(Intro &&)=delete;
 public:
-    explicit Intro(QWidget *parent = 0);
+    explicit Intro(QWidget *parent = nullptr);
     ~Intro();
 
     QString getDataDirectory();
