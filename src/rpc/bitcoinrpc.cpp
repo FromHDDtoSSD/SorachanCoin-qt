@@ -1112,6 +1112,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params, CBitrpcData &data) {
+    // secure allocator: json_spirit::Array includes.
     const CRPCCommand *pcmd = CRPCCmd::get_instance()[strMethod];
     if (! pcmd) {
         printf("ThreadRPCServer3 execute Error1\n");

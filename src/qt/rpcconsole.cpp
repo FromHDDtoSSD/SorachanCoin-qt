@@ -156,14 +156,27 @@ bool parseCommandLine(std::vector<std::string> &args, const std::string &strComm
 }
 
 void RPCExecutor::request(const QString &command) {
-    debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
+    auto cleanse_qstring = [](const QString &str) {
+        QString &era = const_cast<QString &>(str);
+        cleanse::OPENSSL_cleanse(era.data(), era.size());
+    };
+    //debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
+    // Note: QString command includes passphrase.
+
+    // [OK] test
+    //cleanse_qstring(command);
+    //debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
 
     std::vector<std::string> args;
     if(! parseCommandLine(args, command.toStdString())) {
         emit reply(RPCConsole::CMD_ERROR, QString("Parse error: unbalanced ' or \""));
+        cleanse_qstring(command);
         return;
     }
-    if(args.empty()) return;
+    if(args.empty()) {
+        cleanse_qstring(command);
+        return;
+    }
 
     std::string strPrint;
     CBitrpcData data;
@@ -179,12 +192,14 @@ void RPCExecutor::request(const QString &command) {
             strPrint = result.get_str(status);
             if(! status.fSuccess()) {
                 emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(status.e));
+                cleanse_qstring(command);
                 return;
             }
         } else {
             strPrint = write_string(result, true, status);
             if(! status.fSuccess()) {
                 emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(status.e));
+                cleanse_qstring(command);
                 return;
             }
         }
@@ -199,6 +214,7 @@ void RPCExecutor::request(const QString &command) {
             emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(data.e));
         }
     }
+    cleanse_qstring(command);
 }
 
 RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(nullptr), historyPtr(0) {
