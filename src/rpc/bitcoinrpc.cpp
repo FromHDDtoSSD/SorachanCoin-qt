@@ -672,7 +672,7 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
         darg->e = "RPCListen memory allocate failure.";
-        darg->fok = false;
+        //darg->fok = false;
         return;
     }
 
@@ -739,7 +739,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
     if (tcp_conn == nullptr) {
         darg->e = "RPCAcceptHandler AcceptedConnectionImpl, downcast Error.";
-        darg->fok = false;
+        //darg->fok = false;
         return;
     }
 
