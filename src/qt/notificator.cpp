@@ -2,8 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "notificator.h"
-
+#include <qt/notificator.h>
 #include <QApplication>
 #include <QByteArray>
 #include <QIcon>
@@ -27,10 +26,9 @@
 #include "macnotificationhandler.h"
 #endif
 
-
 #ifdef USE_DBUS
 // https://wiki.ubuntu.com/NotificationDevelopmentGuidelines recommends at least 128
-const int FREEDESKTOP_NOTIFICATION_ICON_SIZE = 128;
+constexpr int FREEDESKTOP_NOTIFICATION_ICON_SIZE = 128;
 #endif
 
 Notificator::Notificator(const QString &programName, QSystemTrayIcon *trayicon, QWidget *parent) :
@@ -90,8 +88,10 @@ Notificator::~Notificator()
 class FreedesktopImage
 {
 private:
-    FreedesktopImage(const FreedesktopImage &); // {}
-    FreedesktopImage &operator=(const FreedesktopImage &); // {}
+    FreedesktopImage(const FreedesktopImage &)=delete;
+    FreedesktopImage &operator=(const FreedesktopImage &)=delete;
+    FreedesktopImage(FreedesktopImage &&)=delete;
+    FreedesktopImage &operator=(FreedesktopImage &&)=delete;
 public:
     FreedesktopImage() {}
     FreedesktopImage(const QImage &img);
@@ -115,9 +115,9 @@ private:
 Q_DECLARE_METATYPE(FreedesktopImage);
 
 // Image configuration settings
-const int CHANNELS = 4;
-const int BYTES_PER_PIXEL = 4;
-const int BITS_PER_SAMPLE = 8;
+constexpr int CHANNELS = 4;
+constexpr int BYTES_PER_PIXEL = 4;
+constexpr int BITS_PER_SAMPLE = 8;
 
 FreedesktopImage::FreedesktopImage(const QImage &img):
     width(img.width()),

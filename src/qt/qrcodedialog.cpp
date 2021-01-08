@@ -1,25 +1,28 @@
-#include "qrcodedialog.h"
-#include "ui_qrcodedialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bitcoinunits.h"
-#include "dialogwindowflags.h"
-#include "guiconstants.h"
-#include "guiutil.h"
-#include "optionsmodel.h"
-
+#include <qt/qrcodedialog.h>
+#include <ui_qrcodedialog.h>
+#include <qt/bitcoinunits.h>
+#include <qt/dialogwindowflags.h>
+#include <qt/guiconstants.h>
+#include <qt/guiutil.h>
+#include <qt/optionsmodel.h>
 #include <QPixmap>
 #include <QUrl>
-
 #include <qrencode.h>
+#include <allocator/qtsecure.h>
 
 QRCodeDialog::QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::QRCodeDialog),
-    model(0),
+    ui(new(std::nothrow) Ui::QRCodeDialog),
+    model(nullptr),
     address(addr)
 {
     if(! ui) {
-        throw std::runtime_error("QRCodeDialog Failed to allocate memory.");
+        throw qt_error("QRCodeDialog Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);

@@ -1,13 +1,16 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef MULTISIGDIALOG_H
 #define MULTISIGDIALOG_H
 
 #include <QWidget>
-
 #include "multisigaddressentry.h"
 #include "multisiginputentry.h"
 #include "sendcoinsentry.h"
 #include "walletmodel.h"
-
 
 namespace Ui
 {
@@ -18,8 +21,10 @@ class MultisigDialog : public QWidget
 {
   Q_OBJECT;
   private:
-    MultisigDialog(const MultisigDialog &); // {}
-    MultisigDialog &operator=(const MultisigDialog &); // {}
+    MultisigDialog(const MultisigDialog &)=delete;
+    MultisigDialog &operator=(const MultisigDialog &)=delete;
+    MultisigDialog(MultisigDialog &&)=delete;
+    MultisigDialog &operator=(MultisigDialog &&)=delete;
   protected:
     void keyPressEvent(QKeyEvent *);
 
@@ -30,11 +35,11 @@ class MultisigDialog : public QWidget
     void setModel(WalletModel *model);
 
   public slots:
-    MultisigAddressEntry * addPubKey();
+    MultisigAddressEntry *addPubKey();
     void clear();
     void updateRemoveEnabled();
-    MultisigInputEntry * addInput();
-    SendCoinsEntry * addOutput();
+    MultisigInputEntry *addInput();
+    SendCoinsEntry *addOutput();
 
   private:
     Ui::MultisigDialog *ui;
@@ -62,4 +67,3 @@ class MultisigDialog : public QWidget
 };
 
 #endif // MULTISIGDIALOG_H
-//@

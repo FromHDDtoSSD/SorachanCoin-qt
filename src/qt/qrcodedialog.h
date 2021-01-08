@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef QRCODEDIALOG_H
 #define QRCODEDIALOG_H
 
@@ -13,8 +18,10 @@ class QRCodeDialog : public QDialog
 {
     Q_OBJECT
 private:
-    QRCodeDialog(const QRCodeDialog &); // {}
-    QRCodeDialog &operator=(const QRCodeDialog &); // {}
+    QRCodeDialog(const QRCodeDialog &)=delete;
+    QRCodeDialog &operator=(const QRCodeDialog &)=delete;
+    QRCodeDialog(QRCodeDialog &&)=delete;
+    QRCodeDialog &operator=(QRCodeDialog &&)=delete;
 public:
     explicit QRCodeDialog(const QString &addr, const QString &label, bool enableReq, QWidget *parent = 0);
     ~QRCodeDialog();
@@ -41,4 +48,3 @@ private:
 };
 
 #endif // QRCODEDIALOG_H
-//@

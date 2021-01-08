@@ -8,11 +8,11 @@
 #define BOOST_INTERPROCESS_HAS_KERNEL_BOOTTIME
 #endif
 
-#include "qtipcserver.h"
-#include "guiconstants.h"
-#include "ui_interface.h"
-#include "util.h"
-
+#include <qt/qtipcserver.h>
+#include <qt/guiconstants.h>
+#include <ui_interface.h>
+#include <util.h>
+#include <allocator/qtsecure.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>
@@ -24,10 +24,6 @@
 #endif
 #endif
 
-//using namespace boost;
-//using namespace boost::interprocess;
-//using namespace boost::posix_time;
-
 #if defined MAC_OSX || defined __FreeBSD__
 // URI handling not implemented on OSX yet
 
@@ -36,9 +32,9 @@ void ipcInit(int argc, char *argv[]) { }
 
 #else
 
-static void ipcThread2(void* pArg);
-
-static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
+namespace {
+void ipcThread2(void *pArg);
+bool ipcScanCmd(int argc, char *argv[], bool fRelay)
 {
     // Check for URI in argv
     bool fSent = false;
@@ -66,14 +62,7 @@ static bool ipcScanCmd(int argc, char *argv[], bool fRelay)
     return fSent;
 }
 
-void ipcScanRelay(int argc, char *argv[])
-{
-    if (ipcScanCmd(argc, argv, true)) {
-        exit(0);
-    }
-}
-
-static void ipcThread(void* pArg)
+void ipcThread(void *pArg)
 {
     // Make this thread recognisable as the GUI-IPC thread
     bitthread::manage::RenameThread("SorachanCoin-gui-ipc");
@@ -83,12 +72,12 @@ static void ipcThread(void* pArg)
     } catch (std::exception &e) {
         excep::PrintExceptionContinue(&e, "ipcThread()");
     } catch (...) {
-        excep::PrintExceptionContinue(NULL, "ipcThread()");
+        excep::PrintExceptionContinue(nullptr, "ipcThread()");
     }
     printf("ipcThread exited\n");
 }
 
-static void ipcThread2(void* pArg)
+void ipcThread2(void *pArg)
 {
     printf("ipcThread started\n");
 
@@ -97,7 +86,7 @@ static void ipcThread2(void* pArg)
     size_t nSize = 0;
     unsigned int nPriority = 0;
 
-    for ( ; ; )
+    for (;;)
     {
         boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(100);
         if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d)) {
@@ -115,18 +104,25 @@ static void ipcThread2(void* pArg)
     // Cleanup allocated memory
     delete mq;
 }
+} // namespace
 
-void ipcInit(int argc, char *argv[])
+void qti_server::ipcScanRelay(int argc, char *argv[])
 {
-    boost::interprocess::message_queue *mq = NULL;
+    if (ipcScanCmd(argc, argv, true)) {
+        exit(0);
+    }
+}
+
+void qti_server::ipcInit(int argc, char *argv[])
+{
+    boost::interprocess::message_queue *mq = nullptr;
     char buffer[MAX_URI_LENGTH + 1] = "";
     size_t nSize = 0;
     unsigned int nPriority = 0;
 
-    std::string bitcoin_queue_name = BITCOINURI_QUEUE_NAME + std::to_string(::time(NULL));
-
+    std::string bitcoin_queue_name = BITCOINURI_QUEUE_NAME + std::to_string(::time(nullptr));
     try {
-        mq = new boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
+        mq = new(std::nothrow) boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
 
         // Make sure we don't lose any bitcoin: URIs
         for (int i = 0; i < 2; i++)
@@ -143,12 +139,12 @@ void ipcInit(int argc, char *argv[])
         boost::interprocess::message_queue::remove(bitcoin_queue_name.c_str());
         delete mq;
 
-        mq = new boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
+        mq = new(std::nothrow) boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
     } catch (const boost::interprocess::interprocess_exception &ex) {
         printf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
         return;
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("ipcInit Failed to allocate memory.");
+        throw qt_error("ipcInit Failed to allocate memory.", nullptr);
     }
 
     if (! bitthread::manage::NewThread(ipcThread, mq)) {

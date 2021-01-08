@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef MONITOREDDATAMAPPER_H
 #define MONITOREDDATAMAPPER_H
 
@@ -14,10 +19,12 @@ class MonitoredDataMapper : public QDataWidgetMapper
 {
     Q_OBJECT
 private:
-    MonitoredDataMapper(const MonitoredDataMapper &); // {}
-    MonitoredDataMapper &operator=(const MonitoredDataMapper &); // {}
+    MonitoredDataMapper(const MonitoredDataMapper &)=delete;
+    MonitoredDataMapper &operator=(const MonitoredDataMapper &)=delete;
+    MonitoredDataMapper(MonitoredDataMapper &&)=delete;
+    MonitoredDataMapper &operator=(MonitoredDataMapper &&)=delete;
 public:
-    explicit MonitoredDataMapper(QObject *parent=0);
+    explicit MonitoredDataMapper(QObject *parent = nullptr);
 
     void addMapping(QWidget *widget, int section);
     void addMapping(QWidget *widget, int section, const QByteArray &propertyName);

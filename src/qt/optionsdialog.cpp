@@ -1,12 +1,15 @@
-#include "optionsdialog.h"
-#include "ui_optionsdialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "bitcoinunits.h"
-#include "monitoreddatamapper.h"
-#include "netbase.h"
-#include "optionsmodel.h"
-#include "dialogwindowflags.h"
-
+#include <qt/optionsdialog.h>
+#include <ui_optionsdialog.h>
+#include <qt/bitcoinunits.h>
+#include <qt/monitoreddatamapper.h>
+#include <netbase.h>
+#include <qt/optionsmodel.h>
+#include <qt/dialogwindowflags.h>
 #include <QDir>
 #include <QIntValidator>
 #include <QLocale>
@@ -15,6 +18,7 @@
 #include <QRegExpValidator>
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <allocator/qtsecure.h>
 
 #if QT_VERSION < 0x050000
 #include <QDesktopServices>
@@ -24,9 +28,9 @@
 
 OptionsDialog::OptionsDialog(QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::OptionsDialog),
-    model(0),
-    mapper(0),
+    ui(new(std::nothrow) Ui::OptionsDialog),
+    model(nullptr),
+    mapper(nullptr),
     fRestartWarningDisplayed_Proxy(false),
     fRestartWarningDisplayed_Tor(false),
     fRestartWarningDisplayed_Lang(false),
@@ -35,7 +39,7 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
     fTorIpValid(true)
 {
     if(! ui) {
-        throw std::runtime_error("OptionsDialog Failed to allocate memory.");
+        throw qt_error("OptionsDialog Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);
@@ -125,7 +129,7 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
         /* setup/change UI elements when Tor IP is invalid/valid */
         connect(this, SIGNAL(torIpValid(QValidatedLineEdit *, bool)), this, SLOT(handleTorIpValid(QValidatedLineEdit *, bool)));
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("OptionsDialog Failed to allocate memory.");
+        throw qt_error("OptionsDialog Failed to allocate memory.", this);
     }
 }
 

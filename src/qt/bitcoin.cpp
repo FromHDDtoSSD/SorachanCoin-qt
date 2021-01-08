@@ -168,7 +168,7 @@ int main(int argc, char *argv[])
     //
     // Do this early as we don't want to bother initializing if we are just calling IPC
     //
-    ipcScanRelay(argc, argv);
+    qti_server::ipcScanRelay(argc, argv);
 
 #if QT_VERSION < 0x050000
     // Internal string conversion is all UTF-8
@@ -282,7 +282,7 @@ int main(int argc, char *argv[])
                 }
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
-                ipcInit(argc, argv);
+                qti_server::ipcInit(argc, argv);
 
                 app.exec();
 

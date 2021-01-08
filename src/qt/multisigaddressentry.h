@@ -1,8 +1,12 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef MULTISIGADDRESSENTRY_H
 #define MULTISIGADDRESSENTRY_H
 
 #include <QFrame>
-
 
 class WalletModel;
 
@@ -16,10 +20,12 @@ class MultisigAddressEntry : public QFrame
     Q_OBJECT;
 
   private:
-    MultisigAddressEntry(const MultisigAddressEntry &); // {}
-    MultisigAddressEntry &operator=(const MultisigAddressEntry &); // {}
+    MultisigAddressEntry(const MultisigAddressEntry &)=delete;
+    MultisigAddressEntry &operator=(const MultisigAddressEntry &)=delete;
+    MultisigAddressEntry(MultisigAddressEntry &&)=delete;
+    MultisigAddressEntry &operator=(MultisigAddressEntry &&)=delete;
   public:
-    explicit MultisigAddressEntry(QWidget *parent = 0);
+    explicit MultisigAddressEntry(QWidget *parent = nullptr);
     ~MultisigAddressEntry();
     void setModel(WalletModel *model);
     bool validate();
@@ -45,4 +51,3 @@ class MultisigAddressEntry : public QFrame
 };
 
 #endif // MULTISIGADDRESSENTRY_H
-//@

@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef OPTIONSMODEL_H
 #define OPTIONSMODEL_H
 
@@ -14,10 +19,12 @@ class OptionsModel : public QAbstractListModel
 {
     Q_OBJECT
 private:
-    OptionsModel(const OptionsModel &); // {}
-    OptionsModel &operator=(const OptionsModel &); // {}
+    OptionsModel(const OptionsModel &)=delete;
+    OptionsModel &operator=(const OptionsModel &)=delete;
+    OptionsModel(OptionsModel &&)=delete;
+    OptionsModel &operator=(OptionsModel &&)=delete;
 public:
-    explicit OptionsModel(QObject *parent = 0);
+    explicit OptionsModel(QObject *parent = nullptr);
 
     enum OptionID {
         StartAtStartup,    // bool
@@ -75,4 +82,3 @@ signals:
 };
 
 #endif // OPTIONSMODEL_H
-//@

@@ -1,17 +1,22 @@
-#include "overviewpage.h"
-#include "ui_overviewpage.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include <qt/overviewpage.h>
+#include <ui_overviewpage.h>
 #include <QDesktopServices>
 #include <QUrl>
-#include "walletmodel.h"
-#include "bitcoinunits.h"
-#include "optionsmodel.h"
-#include "transactiontablemodel.h"
-#include "transactionfilterproxy.h"
-#include "guiutil.h"
-#include "guiconstants.h"
-
+#include <qt/walletmodel.h>
+#include <qt/bitcoinunits.h>
+#include <qt/optionsmodel.h>
+#include <qt/transactiontablemodel.h>
+#include <qt/transactionfilterproxy.h>
+#include <qt/guiutil.h>
+#include <qt/guiconstants.h>
 #include <QAbstractItemDelegate>
 #include <QPainter>
+#include <allocator/qtsecure.h>
 
 #define DECORATION_SIZE 64
 #define NUM_ITEMS 3
@@ -20,8 +25,10 @@ class TxViewDelegate : public QAbstractItemDelegate
 {
     Q_OBJECT
 private:
-    TxViewDelegate(const TxViewDelegate &); // {}
-    TxViewDelegate &operator=(const TxViewDelegate &); // {}
+    TxViewDelegate(const TxViewDelegate &)=delete;
+    TxViewDelegate &operator=(const TxViewDelegate &)=delete;
+    TxViewDelegate(const TxViewDelegate &&)=delete;
+    TxViewDelegate &operator=(const TxViewDelegate &&)=delete;
 public:
     TxViewDelegate(): QAbstractItemDelegate(), unit(BitcoinUnits::BTC)
     {
@@ -93,7 +100,7 @@ public:
 
 OverviewPage::OverviewPage(QWidget *parent) :
     QWidget(parent),
-    ui(new Ui::OverviewPage),
+    ui(new(std::nothrow) Ui::OverviewPage),
     currentBalanceTotal(-1),
     currentBalanceWatchOnly(0),
     currentStake(0),
@@ -103,7 +110,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
     filter(0)
 {
     if(! ui){
-        throw std::runtime_error("OverviewPage Failed to allocate memory.");
+        throw qt_error("OverviewPage Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);
@@ -238,7 +245,7 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 void OverviewPage::on_pushButton_clicked()
 {
     QString link="https://www.junkhdd.com/";
-       QDesktopServices::openUrl(QUrl(link));
+    QDesktopServices::openUrl(QUrl(link));
 }
 
 void OverviewPage::on_pushButton_2_clicked()

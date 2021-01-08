@@ -1,24 +1,29 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include <QClipboard>
 #include <QDialog>
 #include <QMessageBox>
 #include <QScrollBar>
 #include <QKeyEvent>
 #include <vector>
-
-#include "addresstablemodel.h"
-#include "address/base58.h"
-#include "key.h"
-#include "main.h"
-#include "multisigaddressentry.h"
-#include "multisiginputentry.h"
-#include "multisigdialog.h"
-#include "ui_multisigdialog.h"
+#include <qt/addresstablemodel.h>
+#include <address/base58.h>
+#include <key.h>
+#include <main.h>
+#include <qt/multisigaddressentry.h>
+#include <qt/multisiginputentry.h>
+#include <qt/multisigdialog.h>
+#include <ui_multisigdialog.h>
 #include <script/script.h>
-#include "sendcoinsentry.h"
-#include "util.h"
-#include "wallet.h"
-#include "walletmodel.h"
-#include "net.h"
+#include <qt/sendcoinsentry.h>
+#include <util.h>
+#include <wallet.h>
+#include <qt/walletmodel.h>
+#include <net.h>
+#include <allocator/qtsecure.h>
 
 #ifdef USE_LEVELDB
 #include "txdb-leveldb.h"
@@ -26,8 +31,10 @@
 #include "txdb-bdb.h"
 #endif
 
-MultisigDialog::MultisigDialog(QWidget *parent) : QWidget(parent), ui(new Ui::MultisigDialog), model(0)
+MultisigDialog::MultisigDialog(QWidget *parent) : QWidget(parent), ui(new(std::nothrow) Ui::MultisigDialog), model(nullptr)
 {
+    if(! ui)
+        throw qt_error("MultisigDialog: out of memory.", this);
     ui->setupUi(this);
 
 #ifdef Q_WS_MAC // Icons on push buttons are very uncommon on Mac
@@ -274,7 +281,7 @@ MultisigAddressEntry *MultisigDialog::addPubKey()
 {
     MultisigAddressEntry *entry = new (std::nothrow) MultisigAddressEntry(this);
     if(! entry){
-        throw std::runtime_error("MultisigAddressEntry Failed to allocate memory.");
+        throw qt_error("MultisigAddressEntry Failed to allocate memory.", this);
     }
 
     entry->setModel(model);
@@ -560,7 +567,7 @@ void MultisigDialog::on_sendTransactionButton_clicked()
         return;
     }
 
-    wallet_process::manage::SyncWithWallets(tx, NULL, true);
+    wallet_process::manage::SyncWithWallets(tx, nullptr, true);
     //(CInv(MSG_TX, txHash), tx);
     bitrelay::RelayTransaction(tx, txHash);
 }
@@ -569,7 +576,7 @@ MultisigInputEntry *MultisigDialog::addInput()
 {
     MultisigInputEntry *entry = new (std::nothrow) MultisigInputEntry(this);
     if(! entry) {
-        throw std::runtime_error("MultisigDialog Failed to allocate memory.");
+        throw qt_error("MultisigDialog Failed to allocate memory.", this);
     }
 
     entry->setModel(model);
@@ -597,7 +604,7 @@ SendCoinsEntry *MultisigDialog::addOutput()
 {
     SendCoinsEntry *entry = new (std::nothrow) SendCoinsEntry(this);
     if(! entry) {
-        throw std::runtime_error("MultisigDialog Failed to allocate memory.");
+        throw qt_error("MultisigDialog Failed to allocate memory.", this);
     }
 
     entry->setModel(model);

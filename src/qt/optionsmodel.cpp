@@ -1,10 +1,14 @@
-#include "optionsmodel.h"
-#include "bitcoinunits.h"
-#include <QSettings>
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "init.h"
-#include "walletdb.h"
-#include "guiutil.h"
+#include <qt/optionsmodel.h>
+#include <qt/bitcoinunits.h>
+#include <QSettings>
+#include <init.h>
+#include <walletdb.h>
+#include <qt/guiutil.h>
 
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
@@ -12,7 +16,8 @@ OptionsModel::OptionsModel(QObject *parent) :
     Init();
 }
 
-bool static ApplyProxySettings()
+namespace {
+bool ApplyProxySettings()
 {
     QSettings settings;
     CService addrProxy(settings.value("addrProxy", "127.0.0.1:9050").toString().toStdString());
@@ -42,7 +47,7 @@ bool static ApplyProxySettings()
     return true;
 }
 
-bool static ApplyTorSettings()
+bool ApplyTorSettings()
 {
     QSettings settings;
     CService addrTor(settings.value("addrTor", "127.0.0.1:6350").toString().toStdString());
@@ -59,6 +64,7 @@ bool static ApplyTorSettings()
 
     return true;
 }
+} // namespace
 
 void OptionsModel::Init()
 {
