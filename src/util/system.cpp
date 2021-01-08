@@ -153,7 +153,7 @@ fs::path lutil::GetDefaultDataDir() {
     // Linux/Unix: ~/.SorachanCoin
 #ifdef WIN32
     // Windows
-    return lutil::GetSpecialFolderPath(CSIDL_APPDATA) / "SorachanCoin";
+    return lutil::GetSpecialFolderPath(CSIDL_APPDATA)/"SorachanCoin";
 #else
     fs::path pathRet;
     char *pszHome = ::getenv("HOME");
@@ -212,7 +212,7 @@ const fs::path &lutil::GetDataDir(bool fNetSpecific) {
 
     if (gArgs.IsArgSet("-datadir")) {
         path = fs::system_complete(gArgs.GetArg("-datadir", ""));
-        if (!fs::is_directory(path)) {
+        if (! fs::is_directory(path)) {
             path = "";
             return path;
         }
@@ -379,8 +379,8 @@ void lutil::AllocateFileRange(FILE *file, unsigned int offset, unsigned int leng
 
 #ifdef WIN32
 fs::path lutil::GetSpecialFolderPath(int nFolder, bool fCreate) noexcept {
-    WCHAR pszPath[MAX_PATH] = L"";
-    if(::SHGetSpecialFolderPathW(nullptr, pszPath, nFolder, fCreate)) {
+    char pszPath[MAX_PATH] = {0};
+    if(::SHGetSpecialFolderPathA(nullptr, pszPath, nFolder, fCreate)) {
         return fs::path(pszPath);
     }
     LogPrintf("SHGetSpecialFolderPathW() failed, could not obtain requested path.\n");
@@ -481,9 +481,12 @@ std::string lutil::CopyrightHolders(const std::string &strPrefix) {
 */
 
 fs::path lutil::AbsPathForConfigVal(const fs::path &path, bool net_specific/*= true*/, bool ftestnet/*= false*/) {
-    fs::path header = ftestnet ? fs::path("testnet2")/path: path;
-    fs::path abspath = fs::absolute(header, lutil::GetDataDir(net_specific));
-    return abspath;
+    fs::path footer = ftestnet ? fs::path("testnet2")/path: path;
+    fs::path abspath = "";
+    if(map_arg::GetMapArgsCount("-datadir"))
+        return map_arg::GetMapArgsString("-datadir")/footer;
+    else
+        return GetDefaultDataDir()/footer;
 }
 
 int lutil::ScheduleBatchPriority() {

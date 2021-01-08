@@ -1,7 +1,11 @@
 // Copyright (c) 2017-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <file_operate/fs.h>
 #include <util.h>
 
@@ -22,6 +26,27 @@ FILE *fopen(const fs::path &p, const char *mode) {
     std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t> utf8_cvt;
     return ::_wfopen(p.wstring().c_str(), utf8_cvt.from_bytes(mode).c_str());
 #endif
+}
+
+FILE *fopen(const std::string &p, const char *mode) {
+    return ::fopen(p.c_str(), mode);
+}
+
+bool file_size(const std::string &p, size_t *size) {
+    struct stat stbuf;
+    int fd = open(p.c_str(), O_RDONLY);
+    if(fd == -1)
+        return false;
+    FILE *fp = fdopen(fd, "rb");
+    if(! fp)
+        return false;
+    if(fstat(fd, &stbuf) == -1) {
+        fclose(fp);
+        return false;
+    }
+    *size = stbuf.st_size;
+    fclose(fp);
+    return true;
 }
 
 #ifndef WIN32

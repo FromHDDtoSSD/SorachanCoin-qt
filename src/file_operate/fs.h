@@ -21,6 +21,8 @@ namespace fs = boost::filesystem;
 /** Bridge operations to C stdio */
 namespace fsbridge {
     FILE *fopen(const fs::path &p, const char *mode);
+    FILE *fopen(const std::string &p, const char *mode);
+    bool file_size(const std::string &p, size_t *size);
 
     class FileLock
     {
