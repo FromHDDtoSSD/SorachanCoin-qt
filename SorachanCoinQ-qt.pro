@@ -48,7 +48,7 @@ win32-g++-cross: QMAKE_TARGET.arch = $$TARGET_PLATFORM
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
 
 #
 # WHEN STARTUP, DEBUG_ALGO_BENCHMARK_TEST
@@ -76,7 +76,7 @@ DEBUG_ALGO_CS_OUTPUT=0
 #
 USE_DBUS=0
 BITCOIN_NEED_QT_PLUGINS=0
-WINXP_BUILD=1
+WINXP_BUILD=0
 64BIT_BUILD=0
 
 #

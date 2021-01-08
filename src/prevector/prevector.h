@@ -729,10 +729,10 @@ public:
 //
 // PREVECTOR Common N
 //
-const int PREVECTOR_DATASTREAM_N = 512;
-const int PREVECTOR_N = 512;
-const int PREVECTOR_BUFFER_N = 2048;
-const int PREVECTOR_BLOCK_N = 512;
+constexpr int PREVECTOR_DATASTREAM_N = 32;
+constexpr int PREVECTOR_N = 32;
+constexpr int PREVECTOR_BUFFER_N = 2048;
+constexpr int PREVECTOR_BLOCK_N = 32;
 
 //
 // PREVECTOR mode
@@ -742,7 +742,7 @@ const int PREVECTOR_BLOCK_N = 512;
 # define DATASTREAM_PREVECTOR_ENABLE
 # define CSCRIPT_PREVECTOR_ENABLE
 # define BUFFER_PREVECTOR_ENABLE
-# define BLOCK_PREVECTOR_ENABLE
+//# define BLOCK_PREVECTOR_ENABLE
 #endif
 
 #endif
