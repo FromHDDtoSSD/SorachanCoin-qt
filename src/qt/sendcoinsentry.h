@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef SENDCOINSENTRY_H
 #define SENDCOINSENTRY_H
 
@@ -14,10 +19,12 @@ class SendCoinsEntry : public QFrame
 {
     Q_OBJECT
 private:
-    SendCoinsEntry(const SendCoinsEntry &); // {}
-    SendCoinsEntry &operator=(const SendCoinsEntry &); // {}
+    SendCoinsEntry(const SendCoinsEntry &)=delete;
+    SendCoinsEntry &operator=(SendCoinsEntry &)=delete;
+    SendCoinsEntry(const SendCoinsEntry &&)=delete;
+    SendCoinsEntry &operator=(SendCoinsEntry &&)=delete;
 public:
-    explicit SendCoinsEntry(QWidget *parent = 0);
+    explicit SendCoinsEntry(QWidget *parent = nullptr);
     ~SendCoinsEntry();
 
     void setModel(WalletModel *model);
@@ -56,4 +63,3 @@ private:
 };
 
 #endif // SENDCOINSENTRY_H
-//@

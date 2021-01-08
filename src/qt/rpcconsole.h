@@ -21,10 +21,11 @@ class RPCConsole: public QWidget {
 private:
     RPCConsole()=delete;
     RPCConsole(const RPCConsole &)=delete;
+    RPCConsole(RPCConsole &&)=delete;
     RPCConsole &operator=(const RPCConsole &)=delete;
-    RPCConsole &operator=(const RPCConsole &&)=delete;
+    RPCConsole &operator=(RPCConsole &&)=delete;
 public:
-    explicit RPCConsole(QWidget *parent = 0);
+    explicit RPCConsole(QWidget *parent = nullptr);
     ~RPCConsole();
 
     void setClientModel(ClientModel *model);

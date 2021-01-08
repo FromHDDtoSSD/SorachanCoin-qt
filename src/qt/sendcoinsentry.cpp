@@ -1,22 +1,27 @@
-#include "sendcoinsentry.h"
-#include "ui_sendcoinsentry.h"
-#include "guiutil.h"
-#include "bitcoinunits.h"
-#include "addressbookpage.h"
-#include "walletmodel.h"
-#include "optionsmodel.h"
-#include "addresstablemodel.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <qt/sendcoinsentry.h>
+#include <ui_sendcoinsentry.h>
+#include <qt/guiutil.h>
+#include <qt/bitcoinunits.h>
+#include <qt/addressbookpage.h>
+#include <qt/walletmodel.h>
+#include <qt/optionsmodel.h>
+#include <qt/addresstablemodel.h>
 #include <QApplication>
 #include <QClipboard>
+#include <allocator/qtsecure.h>
 
 SendCoinsEntry::SendCoinsEntry(QWidget *parent) :
     QFrame(parent),
-    ui(new Ui::SendCoinsEntry),
-    model(0)
+    ui(new(std::nothrow) Ui::SendCoinsEntry),
+    model(nullptr)
 {
     if(! ui) {
-        throw std::runtime_error("SendCoinsEntry Failed to allocate memory.");
+        throw qt_error("SendCoinsEntry Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);

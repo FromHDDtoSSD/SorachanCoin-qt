@@ -1,29 +1,32 @@
-#include "secondauthdialog.h"
-#include "ui_secondauthdialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "addressbookpage.h"
-#include "address/base58.h"
-#include "guiutil.h"
-#include "dialogwindowflags.h"
-#include "init.h"
-#include "main.h"
-#include "optionsmodel.h"
-#include "walletmodel.h"
-#include "wallet.h"
-
+#include <qt/secondauthdialog.h>
+#include <ui_secondauthdialog.h>
+#include <qt/addressbookpage.h>
+#include <address/base58.h>
+#include <qt/guiutil.h>
+#include <qt/dialogwindowflags.h>
+#include <init.h>
+#include <main.h>
+#include <qt/optionsmodel.h>
+#include <qt/walletmodel.h>
+#include <wallet.h>
 #include <string>
 #include <vector>
-
 #include <QClipboard>
 #include <QKeyEvent>
+#include <allocator/qtsecure.h>
 
 SecondAuthDialog::SecondAuthDialog(QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::SecondAuthDialog),
+    ui(new(std::nothrow) Ui::SecondAuthDialog),
     model(0)
 {
     if(! ui) {
-        throw std::runtime_error("SecondAuthDialog Failed to allocate memory.");
+        throw qt_error("SecondAuthDialog Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);

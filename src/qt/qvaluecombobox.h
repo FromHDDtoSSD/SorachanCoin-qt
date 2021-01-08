@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin Developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef QVALUECOMBOBOX_H
 #define QVALUECOMBOBOX_H
 
@@ -10,10 +15,12 @@ class QValueComboBox : public QComboBox
     Q_OBJECT
     Q_PROPERTY(QVariant value READ value WRITE setValue NOTIFY valueChanged USER true)
 private:
-    QValueComboBox(const QValueComboBox &); // {}
-    QValueComboBox &operator=(const QValueComboBox &); // {}
+    QValueComboBox(const QValueComboBox &)=delete;
+    QValueComboBox &operator=(const QValueComboBox &)=delete;
+    QValueComboBox(const QValueComboBox &&)=delete;
+    QValueComboBox &operator=(const QValueComboBox &&)=delete;
 public:
-    explicit QValueComboBox(QWidget *parent = 0);
+    explicit QValueComboBox(QWidget *parent = nullptr);
 
     QVariant value() const;
     void setValue(const QVariant &value);
@@ -34,4 +41,3 @@ private slots:
 };
 
 #endif // QVALUECOMBOBOX_H
-//@

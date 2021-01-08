@@ -1,37 +1,39 @@
-#include "sendcoinsdialog.h"
-#include "ui_sendcoinsdialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "init.h"
-#include "address/base58.h"
-#include "walletmodel.h"
-#include "addresstablemodel.h"
-#include "addressbookpage.h"
-
-#include "bitcoinunits.h"
-#include "addressbookpage.h"
-#include "optionsmodel.h"
-#include "sendcoinsentry.h"
-#include "guiutil.h"
-#include "dialogwindowflags.h"
-#include "askpassphrasedialog.h"
-
-#include "coincontrol.h"
-#include "coincontroldialog.h"
-
+#include <qt/sendcoinsdialog.h>
+#include <ui_sendcoinsdialog.h>
+#include <init.h>
+#include <address/base58.h>
+#include <qt/walletmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/addressbookpage.h>
+#include <qt/bitcoinunits.h>
+#include <qt/addressbookpage.h>
+#include <qt/optionsmodel.h>
+#include <qt/sendcoinsentry.h>
+#include <qt/guiutil.h>
+#include <qt/dialogwindowflags.h>
+#include <qt/askpassphrasedialog.h>
+#include <coincontrol.h>
+#include <qt/coincontroldialog.h>
 #include <QMessageBox>
 #include <QLocale>
 #include <QTextDocument>
 #include <QScrollBar>
 #include <QClipboard>
+#include <allocator/qtsecure.h>
 
 SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::SendCoinsDialog),
-    model(0),
-    coinControl(0)
+    ui(new(std::nothrow) Ui::SendCoinsDialog),
+    model(nullptr),
+    coinControl(nullptr)
 {
     if(! ui){
-        throw std::runtime_error("SendCoinsDialog Failed to allocate memory.");
+        throw qt_error("SendCoinsDialog Failed to allocate memory.", this);
     }
 
     try {
@@ -91,7 +93,7 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
         connect(coinControl, SIGNAL(beforeClose()), this, SLOT(coinControlUpdateLabels()));
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("SendCoinsDialog Failed to allocate memory.");
+        throw qt_error("SendCoinsDialog Failed to allocate memory.", this);
     }
 }
 
@@ -277,7 +279,7 @@ SendCoinsEntry *SendCoinsDialog::addEntry()
 {
     SendCoinsEntry *entry = new (std::nothrow) SendCoinsEntry(this);
     if(! entry) {
-        throw std::runtime_error("SendCoinsEntry Failed to allocate memory.");
+        throw qt_error("SendCoinsEntry Failed to allocate memory.", this);
     }
 
     entry->setModel(model);
@@ -505,7 +507,7 @@ void SendCoinsDialog::coinControlUpdateLabels()
     CoinControlDialog::payAmounts.clear();
     for(int i = 0; i < ui->entries->count(); ++i)
     {
-        SendCoinsEntry *entry = qobject_cast<SendCoinsEntry*>(ui->entries->itemAt(i)->widget());
+        SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->entries->itemAt(i)->widget());
         if(entry) {
             CoinControlDialog::payAmounts.append(entry->getValue().amount);
         }

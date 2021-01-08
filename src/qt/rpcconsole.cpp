@@ -17,12 +17,12 @@
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
-#include <openssl/crypto.h>
 #include <db_cxx.h>
+#include <allocator/qtsecure.h>
 
-const int CONSOLE_HISTORY = 50;
-const QSize ICON_SIZE(24, 24);
-const int INITIAL_TRAFFIC_GRAPH_MINS = 30;
+constexpr int CONSOLE_HISTORY = 50;
+constexpr QSize ICON_SIZE(24, 24);
+constexpr int INITIAL_TRAFFIC_GRAPH_MINS = 30;
 const struct {
     const char *url;
     const char *source;
@@ -39,8 +39,9 @@ class RPCExecutor: public QObject
     Q_OBJECT
 private:
     RPCExecutor(const RPCExecutor &)=delete;
+    RPCExecutor(RPCExecutor &&)=delete;
     RPCExecutor &operator=(const RPCExecutor &)=delete;
-    RPCExecutor &operator=(const RPCExecutor &&)=delete;
+    RPCExecutor &operator=(RPCExecutor &&)=delete;
 public:
     RPCExecutor() {}
 public slots:
@@ -49,6 +50,7 @@ public slots:
 signals:
     void reply(int category, const QString &command);
 };
+
 #include <rpcconsole.moc>
 
 /**
@@ -217,9 +219,9 @@ void RPCExecutor::request(const QString &command) {
     cleanse_qstring(command);
 }
 
-RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(nullptr), historyPtr(0) {
-    ui = new (std::nothrow) Ui::RPCConsole;
-    if(! ui) throw std::runtime_error("RPCConsole Failed to allocate memory.");
+RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(new (std::nothrow) Ui::RPCConsole), historyPtr(0) {
+    if(! ui)
+        throw qt_error("RPCConsole Failed to allocate memory.", this);
     ui->setupUi(this);
 #ifndef Q_OS_MAC
     ui->openDebugLogfileButton->setIcon(QIcon(":/icons/export"));
@@ -403,7 +405,8 @@ void RPCConsole::browseHistory(int offset) {
 void RPCConsole::startExecutor() {
     QThread *thread = new (std::nothrow) QThread;
     RPCExecutor *executor = new (std::nothrow) RPCExecutor;
-    if(!thread || !executor) throw std::runtime_error("RPCConsole Failed to allocate memory.");
+    if(!thread || !executor)
+        throw qt_error("RPCConsole Failed to allocate memory.", this);
     executor->moveToThread(thread);
 
     // Notify executor when thread started (in executor thread)

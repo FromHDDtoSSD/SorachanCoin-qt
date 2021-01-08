@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef SECONDAUTHDIALOG_H
 #define SECONDAUTHDIALOG_H
 
@@ -15,10 +20,12 @@ class SecondAuthDialog : public QWidget
 {
     Q_OBJECT
 private:
-    SecondAuthDialog(const SecondAuthDialog &); // {}
-    SecondAuthDialog &operator=(const SecondAuthDialog &); // {}
+    SecondAuthDialog(const SecondAuthDialog &)=delete;
+    SecondAuthDialog &operator=(const SecondAuthDialog &)=delete;
+    SecondAuthDialog(SecondAuthDialog &&)=delete;
+    SecondAuthDialog &operator=(SecondAuthDialog &&)=delete;
 public:
-    explicit SecondAuthDialog(QWidget *parent = 0);
+    explicit SecondAuthDialog(QWidget *parent = nullptr);
     ~SecondAuthDialog();
 
     void setModel(WalletModel *model);
@@ -42,4 +49,3 @@ private slots:
 };
 
 #endif // SECONDAUTHDIALOG_H
-//@

@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef SENDCOINSDIALOG_H
 #define SENDCOINSDIALOG_H
 
@@ -21,10 +26,12 @@ class SendCoinsDialog : public QDialog
 {
     Q_OBJECT
 private:
-    SendCoinsDialog (const SendCoinsDialog &); // {}
-    SendCoinsDialog &operator=(const SendCoinsDialog &); // {}
+    SendCoinsDialog (const SendCoinsDialog &)=delete;
+    SendCoinsDialog &operator=(const SendCoinsDialog &)=delete;
+    SendCoinsDialog (SendCoinsDialog &&)=delete;
+    SendCoinsDialog &operator=(SendCoinsDialog &&)=delete;
 public:
-    explicit SendCoinsDialog(QWidget *parent = 0);
+    explicit SendCoinsDialog(QWidget *parent = nullptr);
     ~SendCoinsDialog();
 
     void setModel(WalletModel *model);
@@ -55,7 +62,7 @@ private:
 
 private slots:
     void on_sendButton_clicked();
-    void removeEntry(SendCoinsEntry* entry);
+    void removeEntry(SendCoinsEntry *entry);
     void updateDisplayUnit();
     void coinControlFeatureChanged(bool);
     void coinControlButtonClicked();
@@ -72,4 +79,3 @@ private slots:
 };
 
 #endif // SENDCOINSDIALOG_H
-//@
