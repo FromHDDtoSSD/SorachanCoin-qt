@@ -1646,7 +1646,8 @@ public:
             // than our cache size.
             uint256 randomHash = bitsystem::GetRandHash();
             script_vector unused;
-            std::set<sigdata_type>::iterator it = setValid.lower_bound(sigdata_type(randomHash, unused, unused));
+            CPubKey unusedpubkey;
+            std::set<sigdata_type>::iterator it = setValid.lower_bound(sigdata_type(randomHash, unused, unusedpubkey));
             if (it == setValid.end()) {
                 it = setValid.begin();
             }

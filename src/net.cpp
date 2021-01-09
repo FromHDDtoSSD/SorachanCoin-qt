@@ -356,7 +356,7 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
                 return false;
             }
             if(nBytes < 0) {
-                int nErr = ::WSAGetLastError();
+                int nErr = WSAGetLastError();
                 if(nErr == WSAEMSGSIZE) {
                     continue;
                 }
@@ -374,7 +374,7 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
                 return false;
             } else {
                 // socket error
-                int nErr = ::WSAGetLastError();
+                int nErr = WSAGetLastError();
                 printf("recv failed: %d\n", nErr);
                 return false;
             }
@@ -654,7 +654,7 @@ CNode *net_node::ConnectNode(CAddress addrConnect, const char *pszDest/*=nullptr
 #ifdef WIN32
         u_long nOne = 1;
         if(::ioctlsocket(hSocket, FIONBIO, &nOne) == SOCKET_ERROR) {
-            printf("ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", ::WSAGetLastError());
+            printf("ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
         }
 #else
         if(::fcntl(hSocket, F_SETFL, O_NONBLOCK) == SOCKET_ERROR) {
@@ -1007,7 +1007,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                 }
 
                 if(hSocket == INVALID_SOCKET) {
-                    int nErr = ::WSAGetLastError();
+                    int nErr = WSAGetLastError();
                     if(nErr != WSAEWOULDBLOCK) {
                         printf("socket error accept failed: %d\n", nErr);
                     }
@@ -1151,7 +1151,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                             pnode->RecordBytesSent(nBytes);
                         } else if(nBytes < 0) {
                             // error
-                            int nErr = ::WSAGetLastError();
+                            int nErr = WSAGetLastError();
                             if(nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
                                 printf("socket send error %d\n", nErr);
                                 pnode->CloseSocketDisconnect();
@@ -1968,7 +1968,7 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
     if(::fcntl(hListenSocket, F_SETFL, O_NONBLOCK) == SOCKET_ERROR)
 #endif
     {
-        strError = strprintf("Error: Couldn't set properties on socket for incoming connections (error %d)", ::WSAGetLastError());
+        strError = strprintf("Error: Couldn't set properties on socket for incoming connections (error %d)", WSAGetLastError());
         printf("%s\n", strError.c_str());
         return false;
     }
@@ -1992,7 +1992,7 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
 #endif
 
     if(::bind(hListenSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR) {
-        int nErr = ::WSAGetLastError();
+        int nErr = WSAGetLastError();
         if(nErr == WSAEADDRINUSE) {
             strError = strprintfc(_(sts_c("Unable to bind to %s on this computer. " + coin_param::strCoinName + " is probably already running.")), addrBind.ToString().c_str());
         } else {

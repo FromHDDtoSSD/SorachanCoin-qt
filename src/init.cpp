@@ -126,15 +126,15 @@ bool entry::AppInit(int argc, char *argv[])
         //
         if(! map_arg::ParseParameters(argc, argv)) {
             fprintf(stderr, "Error: map_arg::ParseParameters");
-            net_node::Shutdown(nullptr);
+            boot::Shutdown(nullptr);
         }
         if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
             fprintf(stderr, "Error: Specified directory does not exist\n");
-            net_node::Shutdown(nullptr);
+            boot::Shutdown(nullptr);
         }
         if(! map_arg::ReadConfigFile()) {
             fprintf(stderr, "Error: map_arg::ReadConfigFile()");
-            net_node::Shutdown(nullptr);
+            boot::Shutdown(nullptr);
         }
 
         if (map_arg::GetMapArgsCount("-?") || map_arg::GetMapArgsCount("--help")) {
@@ -178,7 +178,7 @@ bool entry::AppInit(int argc, char *argv[])
     }
     
     if (! fRet) {
-        net_node::Shutdown(NULL);
+        boot::Shutdown(nullptr);
     }
     return fRet;
 }

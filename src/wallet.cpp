@@ -796,9 +796,9 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
         //
         CScript scriptDefaultKey;
         scriptDefaultKey.SetDestination(vchDefaultKey.GetID());
-        for(const CTxOut &txout: wtx.vout)
+        for(const CTxOut &txout: wtx.get_vout())
         {
-            if (txout.scriptPubKey == scriptDefaultKey) {
+            if (txout.get_scriptPubKey() == scriptDefaultKey) {
                 CPubKey newDefaultKey;
                 if (GetKeyFromPool(newDefaultKey, false)) {
                     SetDefaultKey(newDefaultKey);

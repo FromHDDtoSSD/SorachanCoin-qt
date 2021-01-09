@@ -165,7 +165,7 @@ bool ntp::InitWithHost(const char *strHostName, SOCKET &sockfd, socklen_t &servl
 
     struct sockaddr_in servaddr;
     servaddr.sin_family = AF_INET;
-    servaddr.sin_port = ::htons(123);
+    servaddr.sin_port = htons(123);
 
     bool found = false;
     for(unsigned int i = 0; i < vIP.size(); ++i)
