@@ -1,9 +1,12 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "transactionrecord.h"
-
-#include "init.h"
-#include "wallet.h"
-#include "address/base58.h"
+#include <qt/transactionrecord.h>
+#include <init.h>
+#include <wallet.h>
+#include <address/base58.h>
 
 std::map<const TransactionRecord *, int> TransactionRecord::mapConfirmations;
 
@@ -164,7 +167,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     //
     // Find the block the tx is in
     //
-    CBlockIndex *pindex = NULL;
+    CBlockIndex *pindex = nullptr;
     std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(wtx.hashBlock);
     if (mi != block_info::mapBlockIndex.end()) {
         pindex = (*mi).second;

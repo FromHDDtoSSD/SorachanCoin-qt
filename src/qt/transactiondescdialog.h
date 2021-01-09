@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef TRANSACTIONDESCDIALOG_H
 #define TRANSACTIONDESCDIALOG_H
 
@@ -15,14 +20,16 @@ class TransactionDescDialog : public QWidget
 {
     Q_OBJECT
 private:
-    TransactionDescDialog(const TransactionDescDialog &); // {}
-    TransactionDescDialog &operator=(const TransactionDescDialog &); // {}
+    TransactionDescDialog(const TransactionDescDialog &)=delete;
+    TransactionDescDialog &operator=(const TransactionDescDialog &)=delete;
+    TransactionDescDialog(TransactionDescDialog &&)=delete;
+    TransactionDescDialog &operator=(TransactionDescDialog &&)=delete;
 protected:
     void keyPressEvent(QKeyEvent *);
     void closeEvent(QCloseEvent *e);
 
 public:
-    explicit TransactionDescDialog(const QModelIndex &idx, QWidget *parent = 0);
+    explicit TransactionDescDialog(const QModelIndex &idx, QWidget *parent = nullptr);
     ~TransactionDescDialog();
 
 private:
@@ -33,4 +40,3 @@ signals:
 };
 
 #endif // TRANSACTIONDESCDIALOG_H
-//@

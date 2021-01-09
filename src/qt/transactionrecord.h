@@ -1,10 +1,13 @@
-//
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef TRANSACTIONRECORD_H
 #define TRANSACTIONRECORD_H
 
-#include "uint256.h"
-#include "map"
-
+#include <uint256.h>
+#include <map>
 #include <QList>
 
 class CWallet;
@@ -15,8 +18,10 @@ class CWalletTx;
 class TransactionStatus
 {
 private:
-    //TransactionStatus(const TransactionStatus &); // {}
-    //TransactionStatus &operator =(const TransactionStatus &); // {}
+    //TransactionStatus(const TransactionStatus &)=delete;
+    //TransactionStatus &operator =(const TransactionStatus &)=delete;
+    //TransactionStatus(TransactionStatus &&)=delete;
+    //TransactionStatus &operator =(TransactionStatus &&)=delete;
 public:
     TransactionStatus():
             confirmed(false), sortKey(""), maturity(Mature),
@@ -66,8 +71,10 @@ public:
 class TransactionRecord
 {
 private:
-    //TransactionRecord(const TransactionRecord &); // {}
-    //TransactionRecord &operator =(const TransactionRecord &); // {}
+    //TransactionRecord(const TransactionRecord &)=delete;
+    //TransactionRecord &operator =(const TransactionRecord &)=delete;
+    //TransactionRecord(TransactionRecord &&)=delete;
+    //TransactionRecord &operator =(TransactionRecord &&)=delete;
 public:
     enum Type
     {
@@ -81,7 +88,7 @@ public:
     };
 
     /** Number of confirmation needed for transaction */
-    static const int defConfirmations = 6;
+    static constexpr int defConfirmations = 6;
     static std::map<const TransactionRecord *, int> mapConfirmations;
 
     TransactionRecord():
@@ -137,4 +144,3 @@ public:
 };
 
 #endif // TRANSACTIONRECORD_H
-//@

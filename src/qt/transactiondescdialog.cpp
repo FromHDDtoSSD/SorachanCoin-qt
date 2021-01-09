@@ -1,18 +1,22 @@
-#include "transactiondescdialog.h"
-#include "ui_transactiondescdialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "transactiontablemodel.h"
-#include "dialogwindowflags.h"
-
+#include <qt/transactiondescdialog.h>
+#include <ui_transactiondescdialog.h>
+#include <qt/transactiontablemodel.h>
+#include <qt/dialogwindowflags.h>
 #include <QModelIndex>
 #include <QKeyEvent>
+#include <allocator/qtsecure.h>
 
 TransactionDescDialog::TransactionDescDialog(const QModelIndex &idx, QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::TransactionDescDialog)
+    ui(new(std::nothrow) Ui::TransactionDescDialog)
 {
     if(! ui){
-        throw std::runtime_error("TransactionDescDialog Failed to allocate memory.");
+        throw qt_error("TransactionDescDialog Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);

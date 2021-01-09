@@ -1,29 +1,32 @@
-#include "signverifymessagedialog.h"
-#include "ui_signverifymessagedialog.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "addressbookpage.h"
-#include "address/base58.h"
-#include "guiutil.h"
-#include "dialogwindowflags.h"
-#include "init.h"
-#include "main.h"
-#include "optionsmodel.h"
-#include "walletmodel.h"
-#include "wallet.h"
-
+#include <qt/signverifymessagedialog.h>
+#include <ui_signverifymessagedialog.h>
+#include <qt/addressbookpage.h>
+#include <address/base58.h>
+#include <qt/guiutil.h>
+#include <qt/dialogwindowflags.h>
+#include <init.h>
+#include <main.h>
+#include <qt/optionsmodel.h>
+#include <qt/walletmodel.h>
+#include <wallet.h>
 #include <string>
 #include <vector>
-
 #include <QClipboard>
 #include <QKeyEvent>
+#include <allocator/qtsecure.h>
 
 SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
-    ui(new Ui::SignVerifyMessageDialog),
-    model(0)
+    ui(new(std::nothrow) Ui::SignVerifyMessageDialog),
+    model(nullptr)
 {
     if(! ui){
-        throw std::runtime_error("SignVerifyMessageDialog Failed to allocate memory.");
+        throw qt_error("SignVerifyMessageDialog Failed to allocate memory.", this);
     }
 
     ui->setupUi(this);

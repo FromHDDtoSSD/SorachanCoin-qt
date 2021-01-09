@@ -19,10 +19,12 @@ class TrafficGraphWidget : public QWidget
 {
     Q_OBJECT
 private:
-    TrafficGraphWidget(const TrafficGraphWidget &); // {}
-    TrafficGraphWidget &operator=(const TrafficGraphWidget &); // {}
+    TrafficGraphWidget(const TrafficGraphWidget &)=delete;
+    TrafficGraphWidget &operator=(const TrafficGraphWidget &)=delete;
+    TrafficGraphWidget(TrafficGraphWidget &&)=delete;
+    TrafficGraphWidget &operator=(TrafficGraphWidget &&)=delete;
 public:
-    explicit TrafficGraphWidget(QWidget *parent = 0);
+    explicit TrafficGraphWidget(QWidget *parent = nullptr);
     void setClientModel(ClientModel *model);
     int getGraphRangeMins() const;
 
@@ -48,4 +50,3 @@ private:
 };
 
 #endif // BITCOIN_QT_TRAFFICGRAPHWIDGET_H
-//@

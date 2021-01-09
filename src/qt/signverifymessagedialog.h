@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef SIGNVERIFYMESSAGEDIALOG_H
 #define SIGNVERIFYMESSAGEDIALOG_H
 
@@ -15,10 +20,12 @@ class SignVerifyMessageDialog : public QWidget
 {
     Q_OBJECT
 private:
-    SignVerifyMessageDialog(const SignVerifyMessageDialog &); // {}
-    SignVerifyMessageDialog &operator=(const SignVerifyMessageDialog &); // {}
+    SignVerifyMessageDialog(const SignVerifyMessageDialog &)=delete;
+    SignVerifyMessageDialog &operator=(const SignVerifyMessageDialog &)=delete;
+    SignVerifyMessageDialog(SignVerifyMessageDialog &&)=delete;
+    SignVerifyMessageDialog &operator=(SignVerifyMessageDialog &&)=delete;
 public:
-    explicit SignVerifyMessageDialog(QWidget *parent = 0);
+    explicit SignVerifyMessageDialog(QWidget *parent = nullptr);
     ~SignVerifyMessageDialog();
 
     void setModel(WalletModel *model);
@@ -50,4 +57,3 @@ private slots:
 };
 
 #endif // SIGNVERIFYMESSAGEDIALOG_H
-//@

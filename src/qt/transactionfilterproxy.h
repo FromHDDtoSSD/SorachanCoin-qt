@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef TRANSACTIONFILTERPROXY_H
 #define TRANSACTIONFILTERPROXY_H
 
@@ -9,17 +14,19 @@ class TransactionFilterProxy : public QSortFilterProxyModel
 {
     Q_OBJECT
 private:
-    TransactionFilterProxy(const TransactionFilterProxy &); // {}
-    TransactionFilterProxy &operator=(const TransactionFilterProxy &); // {}
+    TransactionFilterProxy(const TransactionFilterProxy &)=delete;
+    TransactionFilterProxy &operator=(const TransactionFilterProxy &)=delete;
+    TransactionFilterProxy(TransactionFilterProxy &&)=delete;
+    TransactionFilterProxy &operator=(TransactionFilterProxy &&)=delete;
 public:
-    explicit TransactionFilterProxy(QObject *parent = 0);
+    explicit TransactionFilterProxy(QObject *parent = nullptr);
 
     /** Earliest date that can be represented (far in the past) */
     static const QDateTime MIN_DATE;
     /** Last date that can be represented (far in the future) */
     static const QDateTime MAX_DATE;
     /** Type filter bit field (all types) */
-    static const quint32 ALL_TYPES = 0xFFFFFFFF;
+    static constexpr quint32 ALL_TYPES = 0xFFFFFFFF;
 
     static quint32 TYPE(int type) { return 1<<type; }
 
@@ -53,4 +60,3 @@ public slots:
 };
 
 #endif // TRANSACTIONFILTERPROXY_H
-//@

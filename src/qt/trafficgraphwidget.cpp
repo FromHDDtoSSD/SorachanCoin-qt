@@ -2,19 +2,17 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "trafficgraphwidget.h"
-#include "clientmodel.h"
-
+#include <qt/trafficgraphwidget.h>
+#include <qt/clientmodel.h>
 #include <QPainter>
 #include <QColor>
 #include <QTimer>
-
 #include <cmath>
+#include <allocator/qtsecure.h>
 
-#define DESIRED_SAMPLES         800
-
-#define XMARGIN                 10
-#define YMARGIN                 10
+constexpr int DESIRED_SAMPLES = 800;
+constexpr int XMARGIN = 10;
+constexpr int YMARGIN = 10;
 
 TrafficGraphWidget::TrafficGraphWidget(QWidget *parent) :
     QWidget(parent),
@@ -25,13 +23,13 @@ TrafficGraphWidget::TrafficGraphWidget(QWidget *parent) :
     vSamplesOut(),
     nLastBytesIn(0),
     nLastBytesOut(0),
-    clientModel(0)
+    clientModel(nullptr)
 {
     try {
         timer = new QTimer(this);
         connect(timer, SIGNAL(timeout()), SLOT(updateRates()));
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("TrafficGraphWidget Failed to allocate memory.");
+        throw qt_error("TrafficGraphWidget Failed to allocate memory.", this);
     }
 }
 
