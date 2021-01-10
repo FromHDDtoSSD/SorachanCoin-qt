@@ -551,6 +551,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked JSON" << debugcs::endl();
     }
 
+#ifdef WIN32
     static unsigned int __stdcall benchmark(void *) noexcept {
         for(int i = 0; i < _test_count; ++i)
         {
@@ -575,6 +576,7 @@ private:
         }
         return 1;
     }
+#endif
 private:
     Quantum_startup() noexcept {
 #if defined(DEBUG)
