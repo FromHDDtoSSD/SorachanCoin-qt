@@ -30,6 +30,9 @@ namespace fsbridge {
     bool file_size(const fs::path &p, size_t *size);
     bool file_size(const std::string &p, size_t *size);
     bool file_copy(const fs::path &src, const fs::path &dest);
+    bool file_rename(const fs::path &src, const fs::path &dest);
+    bool file_rename(const fs::path &src, const std::string &suffix);
+    bool file_exists(const fs::path &abspath);
 
     class FileLock
     {

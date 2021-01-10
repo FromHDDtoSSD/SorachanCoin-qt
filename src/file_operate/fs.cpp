@@ -68,6 +68,24 @@ bool file_copy(const fs::path &src, const fs::path &dest) {
 #endif
 }
 
+bool file_rename(const fs::path &src, const fs::path &dest) {
+    try {
+        fs::rename(src, dest);
+    } catch (fs::filesystem_error &) {
+        return false;
+    }
+    return true;
+}
+
+bool file_rename(const fs::path &src, const std::string &suffix) {
+    fs::path dest = fs::system_complete(src.string() + "." + suffix);
+    return file_rename(src, dest);
+}
+
+bool file_exists(const fs::path &abspath) {
+    return fs::exists(abspath);
+}
+
 #ifndef WIN32
 std::string FileLock::GetErrorReason() {
     return std::strerror(errno);

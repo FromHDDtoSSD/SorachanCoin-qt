@@ -1,19 +1,27 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <db_addr.h>
 #include <block/block_info.h>
 #include <random/random.h>
+#include <file_operate/fs.h>
 
 //
 // CAddrDB
 //
 CAddrDB::CAddrDB()
 {
-    pathAddr = iofs::GetDataDir() / "peers.dat";
+    const std::string suffix(".v1.old");
+    const fs::path addr = iofs::GetDataDir() / "peers.dat";
+    const fs::path old_addr = fs::system_complete(addr.string() + suffix);
+    if(! fsbridge::file_exists(old_addr)) {
+        fsbridge::file_rename(addr, old_addr);
+    }
+
+    pathAddr = addr;
 }
 
 bool CAddrDB::Write(const CAddrMan &addr)
