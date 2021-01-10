@@ -8,7 +8,7 @@
 #ifndef BITCOIN_IOFS_H
 #define BITCOIN_IOFS_H
 
-#include <file_operate/fs.h>
+#include <file_operate/fs.h> // compat.h
 #include <const/no_instance.h>
 
 class iofs : private no_instance

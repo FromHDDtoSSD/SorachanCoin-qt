@@ -24,7 +24,10 @@ bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime num
     if(! ::BN_set_word(height, in_height)) return false;
     int ret = ::BN_is_prime(height, BN_prime_checks, nullptr, ctx, nullptr);
     if(ret==1) return true;
-    else if(ret==-1) {std::runtime_error("CAutocheckPoint_impl::is_prime: BIGNUM memory allocate failure"); return false;}
+    else if(ret==-1) {
+        std::runtime_error("CAutocheckPoint_impl::is_prime: BIGNUM memory allocate failure");
+        return false;
+    }
     else return false;
 }
 

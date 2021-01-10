@@ -19,7 +19,7 @@
 # include <windows.h>
 #endif
 
-namespace fsbridge {
+namespace fsbridge { // port to iofs.(iofs.cpp)
 
 FILE *fopen(const fs::path &p, const char *mode) {
 #ifndef WIN32
@@ -40,18 +40,18 @@ bool file_size(const fs::path &p, size_t *size) {
 
 bool file_size(const std::string &p, size_t *size) {
     struct stat stbuf;
-    int fd = open(p.c_str(), O_RDONLY);
+    int fd = ::open(p.c_str(), O_RDONLY);
     if(fd == -1)
         return false;
-    FILE *fp = fdopen(fd, "rb");
+    FILE *fp = ::fdopen(fd, "rb");
     if(! fp)
         return false;
-    if(fstat(fd, &stbuf) == -1) {
-        fclose(fp);
+    if(::fstat(fd, &stbuf) == -1) {
+        ::fclose(fp);
         return false;
     }
     *size = stbuf.st_size;
-    fclose(fp);
+    ::fclose(fp);
     return true;
 }
 

@@ -11,6 +11,7 @@
 #if defined WIN32 && defined __GLIBCXX__
 # include <ext/stdio_filebuf.h>
 #endif
+#include <compat/compat.h>
 
 //! with an upgrade to C++17, where streams can be constructed directly from
 // `std::filesystem::path` objects.

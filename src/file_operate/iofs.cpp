@@ -5,23 +5,25 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+//! for old core. latest core using fs.cpp (fsbridge)
+
 #include <file_operate/iofs.h>
 #include <util/args.h> // map_arg, lsync
 #include <const/block_param.h>
 
 #ifdef WIN32
-#ifdef _WIN32_WINNT
-#undef _WIN32_WINNT
-#endif
-#define _WIN32_WINNT 0x0501
+//#ifdef _WIN32_WINNT
+//#undef _WIN32_WINNT
+//#endif
+//#define _WIN32_WINNT 0x0501
 #ifdef _WIN32_IE
 #undef _WIN32_IE
 #endif
 #define _WIN32_IE 0x0501
-#define WIN32_LEAN_AND_MEAN 1
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
+//#define WIN32_LEAN_AND_MEAN 1
+//#ifndef NOMINMAX
+//#define NOMINMAX
+//#endif
 #include <io.h> /* for _commit */
 #include <shlobj.h>
 #elif defined(__linux__)
