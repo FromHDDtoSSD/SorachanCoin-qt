@@ -12,7 +12,9 @@
 #ifndef WIN32
 # include <fcntl.h>
 #else
-# define NOMINMAX
+//# ifndef NOMINMAX // defined, compat.h
+//#  define NOMINMAX
+//# endif
 # include <codecvt>
 # include <windows.h>
 #endif
@@ -32,6 +34,10 @@ FILE *fopen(const std::string &p, const char *mode) {
     return ::fopen(p.c_str(), mode);
 }
 
+bool file_size(const fs::path &p, size_t *size) {
+    return file_size(p.string(), size);
+}
+
 bool file_size(const std::string &p, size_t *size) {
     struct stat stbuf;
     int fd = open(p.c_str(), O_RDONLY);
@@ -47,6 +53,19 @@ bool file_size(const std::string &p, size_t *size) {
     *size = stbuf.st_size;
     fclose(fp);
     return true;
+}
+
+bool file_copy(const fs::path &src, const fs::path &dest) {
+#ifdef WIN32
+    return ::CopyFileA(src.string().c_str(), dest.string().c_str(), TRUE)? true: false;
+#else
+    try {
+        fs::copy_file(src, dest);
+    } catch (fs::filesystem_error &) {
+        return false;
+    }
+    return true;
+#endif
 }
 
 #ifndef WIN32

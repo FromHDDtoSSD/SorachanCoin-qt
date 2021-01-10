@@ -18,11 +18,18 @@
 #include <boost/filesystem/fstream.hpp>
 namespace fs = boost::filesystem;
 
+//! if win32, include windowsAPI
+#ifdef WIN32
+# include <windows.h>
+#endif
+
 /** Bridge operations to C stdio */
 namespace fsbridge {
     FILE *fopen(const fs::path &p, const char *mode);
     FILE *fopen(const std::string &p, const char *mode);
+    bool file_size(const fs::path &p, size_t *size);
     bool file_size(const std::string &p, size_t *size);
+    bool file_copy(const fs::path &src, const fs::path &dest);
 
     class FileLock
     {
@@ -44,7 +51,8 @@ namespace fsbridge {
 #ifndef WIN32
         int fd = -1;
 #else
-        void* hFile = (void *)-1; // INVALID_HANDLE_VALUE
+        //void *hFile = (void *)-1; // INVALID_HANDLE_VALUE
+        void *hFile = INVALID_HANDLE_VALUE;
 #endif
     };
 

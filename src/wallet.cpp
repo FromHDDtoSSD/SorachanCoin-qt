@@ -2252,8 +2252,13 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                     }
 
                     // Insert change txn at random position:
+#ifdef QT_GUI
                     std::vector<CTxOut>::const_iterator position = wtxNew.get_vout().begin() + bitsystem::GetRandInt(wtxNew.get_vout().size());
                     wtxNew.set_vout().insert(position, CTxOut(nChange, scriptChange));
+#else
+                    std::vector<CTxOut>::iterator position = wtxNew.set_vout().begin() + bitsystem::GetRandInt(wtxNew.get_vout().size());
+                    wtxNew.set_vout().insert(position, CTxOut(nChange, scriptChange));
+#endif
                 } else {
                     reservekey.ReturnKey();
                 }
