@@ -25,7 +25,6 @@ SorachanCoind_SOURCES = \
  bench/be_bench.cpp \
  bench/be_hash.cpp \
  bench/be_prevector.cpp \
- bench/be_univalue.cpp \
  bip32/hdchain.cpp \
  bip32/hdwalletutil.cpp \
  block/block.cpp \
@@ -123,4 +122,5 @@ SorachanCoind_SOURCES = \
  util.cpp \
  version.cpp \
  wallet.cpp \
- walletdb.cpp
+ walletdb.cpp \
+ scrypt.cpp

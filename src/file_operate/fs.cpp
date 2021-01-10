@@ -50,7 +50,7 @@ bool file_size(const std::string &p, size_t *size) {
 }
 
 #ifndef WIN32
-std::string GetErrorReason() {
+std::string FileLock::GetErrorReason() {
     return std::strerror(errno);
 }
 
