@@ -315,20 +315,30 @@ bool BCLog::Logger::ShrinkDebugFile() {
  * careful about what global state you rely on here.
  */
 void InitLogging() {
+#ifdef QT_GUI
     LogInstance().m_print_to_file = true; //!gArgs.IsArgNegated("-debuglogfile");
     LogInstance().m_file_path = lutil::AbsPathForConfigVal(gArgs.GetArg("-debuglogfile", DEFAULT_DEBUGLOGFILE), false, args_bool::fTestNet);
     if(args_bool::fTestNet)
         debugcs::instance() << "called: InitLogging() m_file_path: " << LogInstance().m_file_path.string().c_str() << debugcs::endl();
+#else
+    LogInstance().m_print_to_file = true; //!gArgs.IsArgNegated("-debuglogfile");
+    LogInstance().m_file_path = lutil::AbsPathForConfigVal(DEFAULT_DEBUGLOGFILE, false, args_bool::fTestNet);
+#endif
 
     // Add newlines to the logfile to distinguish this execution from the last
     // one; called before console logging is set up, so this is only sent to
     // debug.log.
     printf("\n\n\n\n\n");
 
+#ifdef QT_GUI
     if(args_bool::fTestNet)
-        LogInstance().m_print_to_console = gArgs.GetBoolArg("-printtoconsole", !gArgs.GetBoolArg("-daemon", false));
+        LogInstance().m_print_to_console = false; // gArgs.GetBoolArg("-printtoconsole", !gArgs.GetBoolArg("-daemon", false));
     else
         LogInstance().m_print_to_console = false;
+#else
+    LogInstance().m_print_to_console = false;
+#endif
+
     LogInstance().m_log_timestamps = gArgs.GetBoolArg("-logtimestamps", BCLog::Logger::DEFAULT_LOGTIMESTAMPS);
     LogInstance().m_log_time_micros = gArgs.GetBoolArg("-logtimemicros", BCLog::Logger::DEFAULT_LOGTIMEMICROS);
 
