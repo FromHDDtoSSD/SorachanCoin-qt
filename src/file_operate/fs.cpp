@@ -86,6 +86,34 @@ bool file_exists(const fs::path &abspath) {
     return fs::exists(abspath);
 }
 
+bool dir_create(const fs::path &dir) {
+    return fs::create_directory(dir);
+}
+
+bool dir_is(const fs::path &dir) {
+    return fs::is_directory(dir);
+}
+
+bool dir_exists(const fs::path &dir) {
+    if(! dir_is(dir)) return false;
+    return fs::exists(dir);
+}
+
+bool dir_size(const fs::path &absdir, size_t *size, bool size_reset/*=true*/) {
+    if(size_reset) *size = 0;
+    for(const auto &ite: boost::make_iterator_range(fs::directory_iterator(absdir), {})) {
+        fs::path path = ite.path();
+        if(dir_is(path)) {
+            if(! dir_size(path, size, false)) return false;
+        } else {
+            size_t gsize = 0;
+            if(! file_size(path, &gsize)) return false;
+            *size += gsize;
+        }
+    }
+    return true;
+}
+
 #ifndef WIN32
 std::string FileLock::GetErrorReason() {
     return std::strerror(errno);

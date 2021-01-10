@@ -12,6 +12,7 @@
 # include <ext/stdio_filebuf.h>
 #endif
 #include <compat/compat.h>
+#include <const/attributes.h>
 
 //! with an upgrade to C++17, where streams can be constructed directly from
 // `std::filesystem::path` objects.
@@ -26,14 +27,23 @@ namespace fs = boost::filesystem;
 
 /** Bridge operations to C stdio */
 namespace fsbridge {
+    // FILE *
     FILE *fopen(const fs::path &p, const char *mode);
     FILE *fopen(const std::string &p, const char *mode);
+
+    // file
     bool file_size(const fs::path &p, size_t *size);
     bool file_size(const std::string &p, size_t *size);
     bool file_copy(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const std::string &suffix);
     bool file_exists(const fs::path &abspath);
+
+    // directory
+    bool dir_create(const fs::path &dir);
+    bool dir_is(const fs::path &dir);
+    bool dir_exists(const fs::path &dir);
+    NODISCARD bool dir_size(const fs::path &absdir, size_t *size, bool size_reset=true);
 
     class FileLock
     {
