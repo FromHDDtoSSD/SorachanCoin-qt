@@ -243,6 +243,7 @@ json_spirit::Value CRPCTable::getblockqhash(const json_spirit::Array &params, CB
 
     CBlockIndex *pblockindex = block_transaction::manage::FindBlockByHeight(nHeight);
     uint65536 tt = bitscrypt::scrypt_blockhash_65536((const uint8_t *)pblockindex);
+    //uint65536 tt = 0;
     return data.JSONRPCSuccess(tt.GetHex());
 }
 

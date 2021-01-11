@@ -148,7 +148,7 @@ bool quantum_lib::secure_mprotect_noaccess(const void *ptr) noexcept {
     int ret = ::mprotect(__ptr, size, PROT_NONE);
 #endif
 
-    return ret != 0;
+    return ret == 0; // later v2.6.10 enabled
 }
 
 bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
@@ -169,7 +169,7 @@ bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
     int ret = ::mprotect(__ptr, size, PROT_READ);
 #endif
 
-    return ret != 0;
+    return ret == 0; // later v2.6.10 enabled
 }
 
 bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
@@ -190,7 +190,7 @@ bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
     int ret = ::mprotect(ptr, size, PROT_READ | PROT_WRITE);
 #endif
 
-    return ret != 0;
+    return ret == 0; // later v2.6.10 enabled
 }
 
 void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
@@ -398,11 +398,11 @@ void CSignature::createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pK
         return (::memcmp(p, cmp, sizeof(cmp))==0)? true: false;
     };
     if(! is_memzero(previous)) {
-        //debugcs::instance() << "LAMPORT WRITE PBKDF2 count: 1" << debugcs::endl();
+        debugcs::instance() << "LAMPORT WRITE PBKDF2 count: 1" << debugcs::endl();
         pbkdf5::PBKDF2_HASH(previous, kSize, messageHash, hashSize, 1, data, sizeof(data));
-    } //else {
-        //debugcs::instance() << "LAMPORT WRITE FIRST" << debugcs::endl();
-    //}
+    } else {
+        debugcs::instance() << "LAMPORT WRITE FIRST" << debugcs::endl();
+    }
 }
 
 CLamport::CLamport(const CLamport &obj) : privKey(obj.privKey.get_addr(), obj.privKey.get_size()), CSignature() {

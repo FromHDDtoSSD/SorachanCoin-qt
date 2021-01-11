@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 2.5.10
+VERSION = 2.7.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -137,6 +137,7 @@ LIMIT_NOMP_MODE=0
 #
 contains (64BIT_BUILD, 1) {
     64BIT_SUFFIX=64
+    DEFINES += BUILD64BIT
 }
 contains (WINXP_BUILD, 1) {
     message(WINXP BUILD MODE LEVELDB 0)

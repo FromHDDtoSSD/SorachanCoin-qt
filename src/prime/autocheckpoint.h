@@ -11,27 +11,24 @@
 #include <map>
 #include <uint256.h>
 #include <serialize.h>
-#include <boost/filesystem.hpp>
+#include <file_operate/fs.h>
 
 template <typename T> class CBlockHeader;
 
-#ifdef WIN32
-#undef STRICT
-#undef PERMISSIVE
-#undef ADVISORY
-#endif
+//#ifdef WIN32
+//#undef STRICT
+//#undef PERMISSIVE
+//#undef ADVISORY
+//#endif
 
-/*
-** [A] [under development] Blockchain method
-*/
 namespace autocheckpoint {
     //
     // Autocheck Genesis
     //
-    const char *const pszTimeStamp = "";
-    const uint65536 hashMerkleRoot("");
-    const uint65536 hashGenesisBlock("");
-    const uint65536 hashGenesisBlockTestnet("");
+    //const char *const pszTimeStamp = "";
+    //const uint65536 hashMerkleRoot("");
+    //const uint65536 hashGenesisBlock("");
+    //const uint65536 hashGenesisBlockTestnet("");
 
     //
     // dat method
@@ -46,7 +43,7 @@ namespace autocheckpoint {
 template <typename T>
 class CAutocheckPoint_impl {
 private:
-    const static int nCheckNum = 5;
+    constexpr static int nCheckNum = 5;
     BIGNUM *height;
     BN_CTX *ctx;
     // Note: must be FLATDATA
@@ -63,17 +60,18 @@ private:
     boost::filesystem::path pathAddr;
     mutable std::map<uint32_t, AutoCheckData> mapAutocheck;
 private:
-    CAutocheckPoint_impl(CAutocheckPoint_impl &)=delete;
     CAutocheckPoint_impl(const CAutocheckPoint_impl &)=delete;
-    CAutocheckPoint_impl(const CAutocheckPoint_impl &&)=delete;
+    CAutocheckPoint_impl(CAutocheckPoint_impl &&)=delete;
+    CAutocheckPoint_impl &operator=(const CAutocheckPoint_impl &)=delete;
+    CAutocheckPoint_impl &operator=(CAutocheckPoint_impl &&)=delete;
 
     bool is_prime(int in_height) const;
     bool Buildmap() const;
     bool Write(const CBlockHeader<T> &header, uint32_t nHeight, CAutoFile &fileout, CDataStream &whash);
     uint65536 get_hash(const CDataStream &data) const;
+
     CAutocheckPoint_impl();
     ~CAutocheckPoint_impl();
-
 public:
     static CAutocheckPoint_impl &get_instance() {
         static CAutocheckPoint_impl<T> obj;
@@ -90,17 +88,18 @@ using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
 template <typename T>
 class CAutocheckPoint_impl {
 private:
-    CAutocheckPoint_impl(CAutocheckPoint_impl &)=delete;
     CAutocheckPoint_impl(const CAutocheckPoint_impl &)=delete;
-    CAutocheckPoint_impl(const CAutocheckPoint_impl &&)=delete;
+    CAutocheckPoint_impl(CAutocheckPoint_impl &&)=delete;
+    CAutocheckPoint_impl &operator=(const CAutocheckPoint_impl &)=delete;
+    CAutocheckPoint_impl &operator=(CAutocheckPoint_impl &&)=delete;
 
     bool is_prime(int in_height) const {return false;}
     bool Buildmap() {return false;}
     bool Write(const CBlockHeader<T> &header, uint32_t nHeight, CAutoFile &fileout, CDataStream &whash) {return false;}
     uint65536 get_hash(const CDataStream &data) const {return uint65536(0);}
+
     CAutocheckPoint_impl() {}
     ~CAutocheckPoint_impl() {}
-
 public:
     static CAutocheckPoint_impl &get_instance() {
         static CAutocheckPoint_impl<T> obj;

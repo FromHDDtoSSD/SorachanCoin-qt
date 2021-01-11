@@ -29,11 +29,9 @@ namespace fs = boost::filesystem;
 namespace fsbridge {
     // FILE *
     FILE *fopen(const fs::path &p, const char *mode);
-    FILE *fopen(const std::string &p, const char *mode);
 
     // file
     bool file_size(const fs::path &p, size_t *size);
-    bool file_size(const std::string &p, size_t *size);
     bool file_copy(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const std::string &suffix);

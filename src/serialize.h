@@ -31,6 +31,7 @@
 #include <allocator/allocators.h>
 #include <version.h>
 #include <const/no_instance.h>
+#include <file_operate/fs.h>
 
 class CScript;
 class CDataStream;
@@ -1662,6 +1663,16 @@ public:
         src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit((std::numeric_limits<uint64_t>::max)()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
         state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
 
+    //CBufferedFile(uint64_t nBufSize = PREVECTOR_BUFFER_N, uint64_t nRewindIn = 0) :
+    //    src(nullptr), nSrcPos(0), nReadPos(0), nReadLimit((std::numeric_limits<uint64_t>::max)()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
+    //    state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
+
+    void setfile(FILE *fileIn) {
+        if(src)
+            throw std::ios_base::failure("setfile only using if the src is nullptr");
+        src = fileIn;
+    }
+
     // check whether no error occurred
     bool good() const noexcept {
         return state == 0;
@@ -1770,7 +1781,7 @@ public:
     }
 };
 
-class CAutoFile : public CTypeVersion
+class CAutoFile final : public CTypeVersion
 {
 private:
     CAutoFile()=delete;
@@ -1782,15 +1793,45 @@ private:
     short state;
     short exceptmask;
     CBufferedFile buffer;
+
+    // if require file size,
+    // using CAutoFile(const fs::path &, char, int, int)
+    std::string path;
+    size_t size;
 public:
     CAutoFile(FILE *filenew, int nType=0, int nVersion=0) noexcept : buffer(filenew), CTypeVersion(nType, nVersion) {
         file = filenew;
         state = 0;
         exceptmask = std::ios::badbit | std::ios::failbit;
+        path = "";
+        size = 0;
+    }
+
+    CAutoFile(const fs::path &pathIn, const char *mode, int nType=0, int nVersion=0) noexcept : buffer(nullptr), CTypeVersion(nType, nVersion) {
+        path = pathIn.string();
+        file = ::fopen(path.c_str(), mode);
+        if(! file) return;
+        buffer.setfile(file);
+        state = 0;
+        exceptmask = std::ios::badbit | std::ios::failbit;
+        if(! fsbridge::file_size(path.c_str(), &size)) {
+            size = 0;
+        }
     }
 
     ~CAutoFile() {
         fclose();
+    }
+
+    const std::string &getpath() const noexcept {
+        return path;
+    }
+
+    size_t getfilesize() const {
+        if(path == "") {
+            throw std::ios_base::failure("CAutoFile: getfilesize path empty");
+        }
+        return size;
     }
 
     void fclose() noexcept {
@@ -1806,7 +1847,12 @@ public:
     FILE &operator*() noexcept { return *file; }
     FILE **operator&() noexcept { return &file; }
     FILE *operator=(FILE *pnew) noexcept { return file = pnew; }
-    bool operator!() noexcept { return (file == nullptr); }
+    bool operator!() {
+        if(path == "")
+            return (file == nullptr);
+        else
+            return !(file && 0 < size);
+    }
 
     // Stream subset
     void setstate(short bits, const char *psz) {

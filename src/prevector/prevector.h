@@ -729,20 +729,34 @@ public:
 //
 // PREVECTOR Common N
 //
+#ifdef BUILD64BIT
+constexpr int PREVECTOR_DATASTREAM_N = 256;
+constexpr int PREVECTOR_N = 256;
+constexpr int PREVECTOR_BUFFER_N = 2048;
+constexpr int PREVECTOR_BLOCK_N = 256;
+#else
 constexpr int PREVECTOR_DATASTREAM_N = 32;
 constexpr int PREVECTOR_N = 32;
 constexpr int PREVECTOR_BUFFER_N = 2048;
 constexpr int PREVECTOR_BLOCK_N = 32;
+#endif
 
 //
 // PREVECTOR mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector
 //
 #ifdef USE_PREVECTOR
-# define DATASTREAM_PREVECTOR_ENABLE
-# define CSCRIPT_PREVECTOR_ENABLE
-# define BUFFER_PREVECTOR_ENABLE
-//# define BLOCK_PREVECTOR_ENABLE
+# ifdef BUILD64BIT
+#  define DATASTREAM_PREVECTOR_ENABLE
+#  define CSCRIPT_PREVECTOR_ENABLE
+#  define BUFFER_PREVECTOR_ENABLE
+#  define BLOCK_PREVECTOR_ENABLE
+# else
+#  define DATASTREAM_PREVECTOR_ENABLE
+#  define CSCRIPT_PREVECTOR_ENABLE
+#  define BUFFER_PREVECTOR_ENABLE
+//#  define BLOCK_PREVECTOR_ENABLE
+# endif
 #endif
 
 #endif

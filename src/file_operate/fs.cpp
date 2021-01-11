@@ -30,17 +30,9 @@ FILE *fopen(const fs::path &p, const char *mode) {
 #endif
 }
 
-FILE *fopen(const std::string &p, const char *mode) {
-    return ::fopen(p.c_str(), mode);
-}
-
 bool file_size(const fs::path &p, size_t *size) {
-    return file_size(p.string(), size);
-}
-
-bool file_size(const std::string &p, size_t *size) {
     struct stat stbuf;
-    int fd = ::open(p.c_str(), O_RDONLY);
+    int fd = ::open(p.string().c_str(), O_RDONLY);
     if(fd == -1)
         return false;
     FILE *fp = ::fdopen(fd, "rb");

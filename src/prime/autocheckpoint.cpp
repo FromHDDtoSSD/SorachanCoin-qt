@@ -10,6 +10,7 @@
 #include <block/block.h>
 #include <util.h>
 #include <random/random.h>
+#include <file_operate/fs.h>
 #include <debugcs/debugcs.h>
 
 #ifdef BLOCK_PREVECTOR_ENABLE
@@ -25,7 +26,7 @@ bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime num
     int ret = ::BN_is_prime(height, BN_prime_checks, nullptr, ctx, nullptr);
     if(ret==1) return true;
     else if(ret==-1) {
-        std::runtime_error("CAutocheckPoint_impl::is_prime: BIGNUM memory allocate failure");
+        printf("CAutocheckPoint_impl::is_prime: BIGNUM memory allocate failure");
         return false;
     }
     else return false;
@@ -33,9 +34,9 @@ bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime num
 
 template <typename T>
 bool CAutocheckPoint_impl<T>::Buildmap() const {
-    CAutoFile filein = CAutoFile(::fopen(pathAddr.string().c_str(), "rb"), 0, 0);
+    CAutoFile filein = CAutoFile(pathAddr, "rb", 0, 0);
     if(! filein) return false;
-    int fileSize = iofs::GetFilesize(filein);
+    int fileSize = filein.getfilesize();
     int dataSize = fileSize - sizeof(uint65536);
     if(dataSize<=0) return true;
 
