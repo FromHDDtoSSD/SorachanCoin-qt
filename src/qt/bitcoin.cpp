@@ -1,19 +1,22 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 /*
  * W.J. van der Laan 2011-2012
  */
 
-#include "bitcoingui.h"
-#include "clientmodel.h"
-#include "walletmodel.h"
-#include "optionsmodel.h"
-#include "guiutil.h"
-#include "guiconstants.h"
-
-#include "init.h"
-#include "ui_interface.h"
-#include "qtipcserver.h"
-#include "intro.h"
-
+#include <qt/bitcoingui.h>
+#include <qt/clientmodel.h>
+#include <qt/walletmodel.h>
+#include <qt/optionsmodel.h>
+#include <qt/guiutil.h>
+#include <qt/guiconstants.h>
+#include <init.h>
+#include <ui_interface.h>
+#include <qt/qtipcserver.h>
+#include <qt/intro.h>
 #include <QApplication>
 #include <QMessageBox>
 #if QT_VERSION < 0x050000
@@ -297,10 +300,10 @@ int main(int argc, char *argv[])
         } else {
             return 1;
         }
-    } catch (std::exception& e) {
+    } catch (std::exception &e) {
         handleRunawayException(&e);
     } catch (...) {
-        handleRunawayException(NULL);
+        handleRunawayException(nullptr);
     }
     return 0;
 }
