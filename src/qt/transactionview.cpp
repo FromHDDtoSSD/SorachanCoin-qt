@@ -1,18 +1,21 @@
-#include "transactionview.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "transactionfilterproxy.h"
-#include "transactionrecord.h"
-#include "walletmodel.h"
-#include "addresstablemodel.h"
-#include "transactiontablemodel.h"
-#include "bitcoinunits.h"
-#include "csvmodelwriter.h"
-#include "transactiondescdialog.h"
-#include "editaddressdialog.h"
-#include "optionsmodel.h"
-#include "guiutil.h"
-#include "wallet.h"
-
+#include <qt/transactionview.h>
+#include <qt/transactionfilterproxy.h>
+#include <qt/transactionrecord.h>
+#include <qt/walletmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/transactiontablemodel.h>
+#include <qt/bitcoinunits.h>
+#include <qt/csvmodelwriter.h>
+#include <qt/transactiondescdialog.h>
+#include <qt/editaddressdialog.h>
+#include <qt/optionsmodel.h>
+#include <qt/guiutil.h>
+#include <wallet.h>
 #include <QScrollBar>
 #include <QComboBox>
 #include <QDoubleValidator>
@@ -33,10 +36,11 @@
 #include <QSignalMapper>
 #include <QUrl>
 #include <QEventLoop>
+#include <allocator/qtsecure.h>
 
 TransactionView::TransactionView(QWidget *parent) :
-    QWidget(parent), model(0), transactionProxyModel(0),
-    transactionView(0)
+    QWidget(parent), model(nullptr), transactionProxyModel(nullptr),
+    transactionView(nullptr)
 {
     try {
 
@@ -170,7 +174,7 @@ TransactionView::TransactionView(QWidget *parent) :
         connect(clearOrphansAction, SIGNAL(triggered()), this, SLOT(clearOrphans()));
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("TransactionView Failed to allocate memory.");
+        throw qt_error("TransactionView Failed to allocate memory.", this);
     }
 }
 
@@ -180,7 +184,7 @@ void TransactionView::setModel(WalletModel *model, bool fShoudAddThirdPartyURL)
     if(model) {
         transactionProxyModel = new (std::nothrow) TransactionFilterProxy(this);
         if(! transactionProxyModel){
-            throw std::runtime_error("TransactionView Failed to allocate memory.");
+            throw qt_error("TransactionView Failed to allocate memory.", this);
         }
 
         transactionProxyModel->setSourceModel(model->getTransactionTableModel());
@@ -502,7 +506,7 @@ QWidget *TransactionView::createDateRangeWidget()
         return dateRangeWidget;
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("TransactionView Failed to allocate memory.");
+        throw qt_error("TransactionView Failed to allocate memory.", this);
     }
 }
 

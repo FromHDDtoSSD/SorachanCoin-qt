@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef TRANSACTIONTABLEMODEL_H
 #define TRANSACTIONTABLEMODEL_H
 
@@ -15,10 +20,12 @@ class TransactionTableModel : public QAbstractTableModel
 {
     Q_OBJECT
 private:
-    TransactionTableModel(const TransactionTableModel &); // {}
-    TransactionTableModel &operator=(const TransactionTableModel &); // {}
+    TransactionTableModel(const TransactionTableModel &)=delete;
+    TransactionTableModel &operator=(const TransactionTableModel &)=delete;
+    TransactionTableModel(TransactionTableModel &&)=delete;
+    TransactionTableModel &operator=(TransactionTableModel &&)=delete;
 public:
-    explicit TransactionTableModel(CWallet *wallet, WalletModel *parent = 0);
+    explicit TransactionTableModel(CWallet *wallet, WalletModel *parent = nullptr);
     ~TransactionTableModel();
 
     enum ColumnIndex {
@@ -90,4 +97,3 @@ public slots:
 };
 
 #endif
-//@

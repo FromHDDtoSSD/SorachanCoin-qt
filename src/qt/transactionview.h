@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef TRANSACTIONVIEW_H
 #define TRANSACTIONVIEW_H
 
@@ -24,10 +29,12 @@ class TransactionView : public QWidget
 {
     Q_OBJECT
 private:
-    TransactionView(const TransactionView &); // {}
-    TransactionView &operator=(const TransactionView &); // {}
+    TransactionView(const TransactionView &)=delete;
+    TransactionView &operator=(const TransactionView &)=delete;
+    TransactionView(TransactionView &&)=delete;
+    TransactionView &operator=(TransactionView &&)=delete;
 public:
-    explicit TransactionView(QWidget *parent = 0);
+    explicit TransactionView(QWidget *parent = nullptr);
 
     void setModel(WalletModel *model, bool fShoudAddThirdPartyURL = true);
 
@@ -88,4 +95,3 @@ public slots:
 };
 
 #endif // TRANSACTIONVIEW_H
-//@

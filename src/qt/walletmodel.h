@@ -1,10 +1,14 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #ifndef WALLETMODEL_H
 #define WALLETMODEL_H
 
 #include <QObject>
 #include <vector>
 #include <map>
-
 #include <allocator/allocators.h> /* for SecureString */
 #include <uint256.h>
 
@@ -28,8 +32,10 @@ QT_END_NAMESPACE
 class SendCoinsRecipient
 {
 private:
-    //SendCoinsRecipient(const SendCoinsRecipient &); // {}
-    //SendCoinsRecipient &operator=(const SendCoinsRecipient &); // {}
+    //SendCoinsRecipient(const SendCoinsRecipient &)=delete;
+    //SendCoinsRecipient &operator=(const SendCoinsRecipient &)=delete;
+    //SendCoinsRecipient(SendCoinsRecipient &&)=delete;
+    //SendCoinsRecipient &operator=(SendCoinsRecipient &&)=delete;
 public:
     QString address;
     QString label;
@@ -41,10 +47,12 @@ class WalletModel : public QObject
 {
     Q_OBJECT
 private:
-    WalletModel(const WalletModel &); // {}
-    WalletModel &operator=(const WalletModel &); // {}
+    WalletModel(const WalletModel &)=delete;
+    WalletModel &operator=(const WalletModel &)=delete;
+    WalletModel(WalletModel &&)=delete;
+    WalletModel &operator=(WalletModel &&)=delete;
 public:
-    explicit WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent = 0);
+    explicit WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent = nullptr);
     ~WalletModel();
 
     enum StatusCode // Returned by sendCoins
@@ -122,15 +130,15 @@ public:
         bool isValid() const { return valid; }
 
         // Copy operator and constructor transfer the context
-        UnlockContext(const UnlockContext& obj) { CopyFrom(obj); }
-        UnlockContext& operator=(const UnlockContext& rhs) { CopyFrom(rhs); return *this; }
+        UnlockContext(const UnlockContext &obj) { CopyFrom(obj); }
+        UnlockContext& operator=(const UnlockContext &rhs) { CopyFrom(rhs); return *this; }
     private:
         WalletModel *wallet;
         bool valid;
         mutable bool relock; // mutable, as it can be set to false by copying
         bool mintflag;
 
-        void CopyFrom(const UnlockContext& rhs);
+        void CopyFrom(const UnlockContext &rhs);
     };
 
     UnlockContext requestUnlock();
@@ -138,7 +146,8 @@ public:
     bool getPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const;
     void getOutputs(const std::vector<COutPoint> &vOutpoints, std::vector<COutput> &vOutputs);
     void listCoins(std::map<QString, std::vector<COutput> > &mapCoins) const;
-    //bool isLockedCoin(uint256 hash, unsigned int n) const;
+
+    bool isLockedCoin(uint256 hash, unsigned int n) const;
     void lockCoin(COutPoint &output);
     void unlockCoin(COutPoint &output);
     void listLockedCoins(std::vector<COutPoint> &vOutpts);
@@ -208,4 +217,3 @@ signals:
 
 
 #endif // WALLETMODEL_H
-//@

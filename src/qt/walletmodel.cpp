@@ -1,22 +1,26 @@
-#include "walletmodel.h"
-#include "guiconstants.h"
-#include "optionsmodel.h"
-#include "addresstablemodel.h"
-#include "mintingtablemodel.h"
-#include "transactiontablemodel.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "ui_interface.h"
-#include "wallet.h"
-#include "walletdb.h" // for BackupWallet
-#include "address/base58.h"
+#include <qt/walletmodel.h>
+#include <qt/guiconstants.h>
+#include <qt/optionsmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/mintingtablemodel.h>
+#include <qt/transactiontablemodel.h>
+#include <ui_interface.h>
+#include <wallet.h>
+#include <walletdb.h> // for BackupWallet
+//#include <address/base58.h>
 #include <block/block_process.h>
-
 #include <QSet>
 #include <QTimer>
+#include <allocator/qtsecure.h>
 
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
-    QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(0),
-    transactionTableModel(0),
+    QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(nullptr),
+    transactionTableModel(nullptr),
     cachedBalance(0), cachedStake(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0),
     cachedNumTransactions(0),
     cachedEncryptionStatus(Unencrypted),
@@ -38,7 +42,7 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
         subscribeToCoreSignals();
 
     } catch (const std::bad_alloc &) {
-        throw std::runtime_error("WalletModel Failed to allocate memory.");
+        throw qt_error("WalletModel Failed to allocate memory.", nullptr);
     }
 }
 
@@ -495,25 +499,28 @@ void WalletModel::listCoins(std::map<QString, std::vector<COutput> >& mapCoins) 
     }
 }
 
-/*
 bool WalletModel::isLockedCoin(uint256 hash, unsigned int n) const
 {
+    (void)hash;
+    (void)n;
     return false;
 }
-*/
 
-void WalletModel::lockCoin(COutPoint& output)
+void WalletModel::lockCoin(COutPoint &output)
 {
+    (void)output;
     return;
 }
 
-void WalletModel::unlockCoin(COutPoint& output)
+void WalletModel::unlockCoin(COutPoint &output)
 {
+    (void)output;
     return;
 }
 
-void WalletModel::listLockedCoins(std::vector<COutPoint>& vOutpts)
+void WalletModel::listLockedCoins(std::vector<COutPoint> &vOutpts)
 {
+    (void)vOutpts;
     return;
 }
 

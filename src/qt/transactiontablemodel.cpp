@@ -1,16 +1,19 @@
-#include "transactiontablemodel.h"
-#include "guiutil.h"
-#include "transactionrecord.h"
-#include "guiconstants.h"
-#include "transactiondesc.h"
-#include "walletmodel.h"
-#include "optionsmodel.h"
-#include "addresstablemodel.h"
-#include "bitcoinunits.h"
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "wallet.h"
-#include "ui_interface.h"
-
+#include <qt/transactiontablemodel.h>
+#include <qt/guiutil.h>
+#include <qt/transactionrecord.h>
+#include <qt/guiconstants.h>
+#include <qt/transactiondesc.h>
+#include <qt/walletmodel.h>
+#include <qt/optionsmodel.h>
+#include <qt/addresstablemodel.h>
+#include <qt/bitcoinunits.h>
+#include <wallet.h>
+#include <ui_interface.h>
 #include <QLocale>
 #include <QList>
 #include <QColor>
@@ -18,6 +21,7 @@
 #include <QIcon>
 #include <QDateTime>
 #include <QtAlgorithms>
+#include <allocator/qtsecure.h>
 
 // Amount column is right-aligned it contains numbers
 static int column_alignments[] = {
@@ -49,8 +53,10 @@ struct TxLessThan
 class TransactionTablePriv
 {
 private:
-    TransactionTablePriv(const TransactionTablePriv &); // {}
-    TransactionTablePriv &operator=(const TransactionTablePriv &); // {}
+    TransactionTablePriv(const TransactionTablePriv &)=delete;
+    TransactionTablePriv &operator=(const TransactionTablePriv &)=delete;
+    TransactionTablePriv(TransactionTablePriv &&)=delete;
+    TransactionTablePriv &operator=(TransactionTablePriv &&)=delete;
 public:
     TransactionTablePriv(CWallet *wallet, TransactionTableModel *parent):
             wallet(wallet),
@@ -211,18 +217,24 @@ public:
 
 };
 
-TransactionTableModel::TransactionTableModel(CWallet* wallet, WalletModel *parent):
+TransactionTableModel::TransactionTableModel(CWallet *wallet, WalletModel *parent):
         QAbstractTableModel(parent),
         wallet(wallet),
         walletModel(parent),
-        priv(new TransactionTablePriv(wallet, this)),
+        priv(new(std::nothrow) TransactionTablePriv(wallet, this)),
         cachedNumBlocks(0)
 {
     columns << QString() << tr("Date") << tr("Type") << tr("Address") << BitcoinUnits::getAmountColumnTitle(walletModel->getOptionsModel()->getDisplayUnit());
 
+    if(! priv)
+        throw qt_error("TransactionTableModel: out of memory", nullptr);
+
     priv->refreshWallet();
 
-    QTimer *timer = new QTimer(this);
+    QTimer *timer = new(std::nothrow) QTimer(this);
+    if(! timer)
+        throw qt_error("TransactionTableModel: out of memory", nullptr);
+
     connect(timer, SIGNAL(timeout()), this, SLOT(updateConfirmations()));
     timer->start(MODEL_UPDATE_DELAY);
 
