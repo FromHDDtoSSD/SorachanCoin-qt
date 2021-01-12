@@ -149,4 +149,164 @@ void drive_handle::close() {
 #endif
 }
 
+bool drive_cmd::cmddrivename() {
+#ifdef WIN32
+    std::vector<BYTE> vchData;
+    vchData.resize(CMD_BUFFER_SIZE, 0x00);
+
+    STORAGE_PROPERTY_QUERY sPQ;
+    sPQ.PropertyId = StorageDeviceProperty;
+    sPQ.QueryType  = PropertyStandardQuery;
+    sPQ.AdditionalParameters[0] = 0x00;
+    DWORD dwRet = 0;
+    for(int i=0; i < CMD_SEND_LIMIT; ++i) {
+        if(! ::DeviceIoControl(gethandle(), IOCTL_STORAGE_QUERY_PROPERTY, &sPQ, sizeof(STORAGE_PROPERTY_QUERY), &vchData.at(0), (DWORD)vchData.size(), &dwRet, nullptr)) {
+            return false;
+        }
+        if(dwRet == vchData.size()) {
+            vchData.resize(vchData.size() + CMD_BUFFER_SIZE, '\0');
+        } else {
+            break;
+        }
+        ::Sleep(100);
+    }
+    if(dwRet == vchData.size()) {return false;} // Error
+
+    STORAGE_DEVICE_DESCRIPTOR *pDesc = reinterpret_cast<STORAGE_DEVICE_DESCRIPTOR *>(&vchData.at(0));
+    if (pDesc->ProductIdOffset) {
+        std::vector<char> vchProduct;
+        vchProduct.resize(pDesc->ProductRevisionOffset - pDesc->ProductIdOffset + 1, '\0'); // Note: +1 is \0 terminate in string.
+        for(size_t i=0; i < vchProduct.size() - 1; ++i) {
+            BYTE ch = *((BYTE *)pDesc + pDesc->ProductIdOffset + i);
+            *(&vchProduct.at(0) + i) = ch;
+        }
+
+        size_t n = 0;
+        for(; n < vchProduct.size(); ++n) {
+            if(vchProduct.at(n) == ' ' || vchProduct.at(n) == '_') {
+                if(! chartowchar(&vchProduct.at(n + 1), drive_name)) {
+                    return false;
+                }
+                vchProduct.at(n) = '\0';
+                break;
+            }
+        }
+        if(! chartowchar(&vchProduct.at(0), drive_vendor)) {
+            return false;
+        }
+    } else {
+        drive_vendor = DRIVEVENDOR_GET_FAILURE;
+        drive_name = DRIVENAME_GET_FAILURE;
+    }
+
+    // DEBUG
+    //for(size_t i=0; i < pDesc->Size - offsetof(STORAGE_DEVICE_DESCRIPTOR, RawPropertiesLength); ++i)
+    //{
+    //    debugcs::instance() << (char)((pDesc->RawDeviceProperties[i] == '\0') ? '_': pDesc->RawDeviceProperties[i]);
+    //}
+
+    return true;
+#else
+    // under development
+    return false;
+#endif
+}
+
+bool drive_cmd::cmdgeometry() { // sector_size and total_sectors
+#ifdef WIN32
+    DISK_GEOMETRY dgm = {0};
+    DWORD dwRet;
+    if (! ::DeviceIoControl(gethandle(), IOCTL_DISK_GET_DRIVE_GEOMETRY, nullptr, 0, &dgm, sizeof(DISK_GEOMETRY), &dwRet, nullptr)) {
+        return false;
+    }
+
+    sector_size    = dgm.BytesPerSector;
+    total_sectors = dgm.Cylinders.QuadPart * dgm.TracksPerCylinder * dgm.SectorsPerTrack;
+    return true;
+#else
+    // under development
+    return false;
+#endif
+}
+
+bool drive_cmd::cmddriveletter() {
+#ifdef WIN32
+    int nDeviceNum[MAX_DRIVELETTER];
+    ::FillMemory(nDeviceNum, sizeof(nDeviceNum), 0xFF); // ALL -1(NO_DRIVELETTER)
+
+    char cLetter = 'A';
+    for (int i=0; cLetter <= 'Z'; ++cLetter, ++i) {
+        STORAGE_DEVICE_NUMBER sdn = {0};
+        std::wostringstream stream;
+        stream << L"\\\\.\\" << cLetter << L":";
+        HANDLE hVolume = ::CreateFileW(stream.str().c_str(), 0, FILE_SHARE_READ, nullptr, OPEN_EXISTING, 0, nullptr);
+        if (hVolume == INVALID_HANDLE_VALUE) {
+            continue;
+        } else {
+            DWORD dwRet;
+            BOOL bRet = ::DeviceIoControl(hVolume, IOCTL_STORAGE_GET_DEVICE_NUMBER, nullptr, 0, &sdn, sizeof(sdn), &dwRet, nullptr);
+            if (bRet && sdn.DeviceType != 2) { // '2' value is a CD/DVD/BD device.
+                nDeviceNum[i] = (int)sdn.DeviceNumber;
+            }
+            ::CloseHandle(hVolume);
+        }
+    }
+    for (int i=0, k=0; i < MAX_DRIVELETTER; ++i) {
+        if (nDeviceNum[i] == getdrive()) {
+            cDriveLetter[k++] = (char)('A' + i);
+        }
+    }
+    return true;
+#else
+    // under development
+    return false;
+#endif
+}
+
+bool drive_cmd::getparam() {
+    bool ret = cmddriveletter() && cmddrivename() && cmdgeometry();
+    debugcs::instance() << getdrivevendor() << getdrivename() << getsectorsize() << gettotalsectors() << getdriveletter(0);
+    return ret;
+}
+
+void drive_cmd::setparam(const drive_cmd *instanced) {
+    if(instanced) {
+        sector_size = instanced->getsectorsize();
+        total_sectors = instanced->gettotalsectors();
+        for(int i=0; i < ARRAY_SIZE(cDriveLetter); ++i)
+            cDriveLetter[i] = instanced->getdriveletter(i);
+        drive_vendor = instanced->getdrivevendor();
+        drive_name = instanced->getdrivename();
+    }
+}
+
+DWORD drive_cmd::getsectorsize() const {
+    return sector_size;
+}
+
+sector_t drive_cmd::gettotalsectors() const {
+    return total_sectors;
+}
+
+std::vector<char> drive_cmd::getdriveletter() const {
+    std::vector<char> letter;
+    for(int i=0; i < ARRAY_SIZE(cDriveLetter); ++i) {
+        if(cDriveLetter[i] != '\0')
+            letter.push_back(cDriveLetter[i]);
+    }
+    return letter;
+}
+
+char drive_cmd::getdriveletter(int n) const {
+    return cDriveLetter[n];
+}
+
+const std::wstring &drive_cmd::getdrivevendor() const {
+    return drive_vendor;
+}
+
+const std::wstring &drive_cmd::getdrivename() const {
+    return drive_name;
+}
+
 #endif // QT_GUI
