@@ -1,12 +1,11 @@
-// Copyright (c) 2018-2020 The SorachanCoin Developers
+// Copyright (c) 2018-2021 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// SorachanCoin DriveInfo Wallet [2020-2021: only MSVC, 2022 later: MSVC, MinGW, g++]
-// https://github.com/FromHDDtoSSD/SSD_Heat_Resistant_Benchmark
-//
+#include <winapi/drivebase.h>
 
-#if (_MSC_VER) >= 1900
+//#if defined(QT_GUI) && defined(WIN32)
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 #include <windows.h>
 #include <commctrl.h>
@@ -14,112 +13,13 @@
 #include <sstream>
 #include <time.h>
 #include <shlobj.h>
-#include "common.h"
-#include "resource.h"
-#include "thread.h"
-#include "sector.h"
-#include "sync.h"
-#include "cputime.h"
-#include "debug.h"
 
-const int THREAD_TIMER_INTERVAL = 500;
-const int DISK_MAX = 128;
-const int THREAD_MAX = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
-const int WINDOW_WIDTH = 450;
-const int WINDOW_HEIGHT = 600;
-const int PROGRESS_NUM = 9;
-
-/////////////////////////////////////////////////////////////////////////
-// RESOURCE
-/////////////////////////////////////////////////////////////////////////
-
-class resource final
-{
-public:
-    enum R_LANGUAGE
-    {
-        LANG_OS,
-        LANG_ENGLISH_US,
-        LANG_JAPANESE_JAPAN,
-        LANG_MAX
-    };
-
-private:
-    resource(const resource &); // {}
-    resource &operator=(const resource &); // {}
-
-    R_LANGUAGE lang;
-    std::wstring getfind(DWORD id) const {
-        DWORD langid = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
-        switch(lang)
-        {
-        case LANG_ENGLISH_US:
-            langid = MAKELANGID(LANG_ENGLISH, SUBLANG_ENGLISH_US);
-            break;
-        case LANG_JAPANESE_JAPAN:
-            langid = MAKELANGID(LANG_JAPANESE, SUBLANG_DEFAULT);
-            break;
-        default:
-            break;
-        }
-
-        HRSRC hSrc = ::FindResourceExW(::GetModuleHandle(nullptr), RT_STRING, MAKEINTRESOURCE(id / 16 + 1), langid);
-        if(!hSrc) { return L""; }
-        HGLOBAL hRes = ::LoadResource(::GetModuleHandle(nullptr), hSrc);
-        if(!hRes) { return L""; }
-        const WORD *org = (const WORD *)::LockResource(hRes); // Note: strlen([0]) + string(after [1])
-        size_t len = (size_t)org[0];
-
-        std::vector<wchar_t> buf;
-        buf.resize(len + 1, '\0');
-        ::RtlCopyMemory(&buf.at(0), org + 1, len * sizeof(wchar_t));
-        return (LPCWSTR)&buf.at(0);
-    }
-
-public:
-    resource() : lang(LANG_OS) {};
-    ~resource() {};
-
-    std::wstring getresource(DWORD id) const {
-        if(lang == LANG_OS) {
-            std::vector<wchar_t> buf;
-            buf.resize(256, '\0');
-            ::LoadStringW(::GetModuleHandle(nullptr), id, &buf.at(0), (int)buf.size());
-            return (LPCWSTR)&buf.at(0);
-        } else {
-            return getfind(id);
-        }
-    }
-    void setlang(R_LANGUAGE type) { lang = type; }
-    R_LANGUAGE getlang() const { return lang; }
-
-    R_LANGUAGE getlocaleinfo() const {
-        if(lang != LANG_OS) { return lang; }
-
-        LCID id = ::GetUserDefaultLCID();
-        int len = ::GetLocaleInfoW(id, LOCALE_SENGLANGUAGE, nullptr, 0L);
-        if(len) {
-            std::vector<wchar_t> locale;
-            locale.resize(len, 0x00);
-            ::GetLocaleInfoW(id, LOCALE_SENGLANGUAGE, &locale.at(0), len);
-
-            if(locale[0] == L'J' && locale[1] == L'a') {
-                return LANG_JAPANESE_JAPAN;
-            } else {
-                return LANG_ENGLISH_US;
-            }
-        } else {
-            return LANG_ENGLISH_US;
-        }
-    }
-
-    static std::string getresourceA(DWORD id) { // Note: std::runtime_error only (fixed LANG_OS)
-        std::vector<char> buf;
-        buf.resize(256, '\0');
-        ::LoadStringA(::GetModuleHandle(nullptr), id, &buf.at(0), (int)buf.size());
-        return (LPCSTR)&buf.at(0);
-    }
-};
+constexpr int THREAD_TIMER_INTERVAL = 500;
+constexpr int DISK_MAX = 128;
+constexpr int THREAD_MAX = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
+constexpr int WINDOW_WIDTH = 450;
+constexpr int WINDOW_HEIGHT = 600;
+constexpr int PROGRESS_NUM = 9;
 
 /////////////////////////////////////////////////////////////////////////
 // LOG (char)
@@ -1151,11 +1051,7 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
     return ret;
 }
 
-/////////////////////////////////////////////////////////////////////////
-// WINMAIN
-/////////////////////////////////////////////////////////////////////////
-
-INT_PTR WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
     static_cast<HINSTANCE>(hPrevInstance);
     static_cast<LPSTR>(lpCmdLine);
