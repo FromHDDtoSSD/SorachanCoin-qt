@@ -15,6 +15,7 @@
 #include <sstream>
 #include <cstring>
 #include <vector>
+#include <random/random.h>
 #include <debugcs/debugcs.h>
 #ifndef WIN32 // port to lsync.h
 # include <condition_variable>
@@ -136,6 +137,77 @@ public:
         ev.wait(*mutex);
     }
 #endif
+};
+
+template <typename C, typename T>
+class randrangebuffer final
+{
+private:
+    randrangebuffer()=delete;
+    randrangebuffer(const randrangebuffer &)=delete;
+    randrangebuffer &operator=(const randrangebuffer &)=delete;
+    randrangebuffer(randrangebuffer &&)=delete;
+    randrangebuffer &operator=(randrangebuffer &&)=delete;
+
+    int (C::*__RAND_bytes)(unsigned char *&buf, int num);
+    C *self;
+    T buf;
+public:
+    T getrand(T nMax = std::numeric_limits<T>::max()) {
+        // referrence: the bitcoin util.cpp ////////////////////////////////
+        // The range of the random source must be a multiple of the modulus
+        // to give every possible output value an equal possibility.
+        ////////////////////////////////////////////////////////////////////
+        const T nRange = (std::numeric_limits<T>::max() / nMax) * nMax;
+        T nRand = 0;
+        T *pnRand = &nRand;
+        do
+        {
+            (void)((self->*(__RAND_bytes))((unsigned char *&)pnRand, sizeof(nRand)));
+        } while (*pnRand >= nRange);
+
+        buf = (*pnRand) % nMax;
+        buf = (buf != 0) ? buf: nRange;
+        return buf;
+    }
+    T getbuf() const {
+        return buf;
+    }
+
+    explicit randrangebuffer(int (C::*__RAND_bytes_func)(unsigned char *&buf, int num), C *__self) {
+        buf = std::numeric_limits<T>::max();
+        __RAND_bytes = __RAND_bytes_func;
+        self = __self;
+    }
+    ~randrangebuffer() {}
+};
+
+template <typename T>
+class mcrypto final
+{
+private:
+    mcrypto(const mcrypto &)=delete;
+    mcrypto &operator=(const mcrypto &)=delete;
+    mcrypto(mcrypto &&)=delete;
+    mcrypto &operator=(mcrypto &&)=delete;
+    randrangebuffer<mcrypto<T>, T> randrange;
+
+    int __RAND_bytes(unsigned char *&buf, int num) {
+        //return ::RAND_bytes(buf, num);
+        latest_crypto::random::GetStrongRandBytes(buf, num);
+        return 1; // 1 on success.
+    }
+public:
+    mcrypto() : randrange(&mcrypto<T>::__RAND_bytes, this) {}
+    ~mcrypto() {}
+
+    mcrypto &operator>>=(const mcrypto &obj) {
+        randrange.getrand(obj.randrange.getbuf());
+        return *this;
+    }
+    operator T() const {
+        return randrange.getbuf();
+    }
 };
 
 class drive_util
@@ -297,16 +369,17 @@ protected:
     virtual ~drive_cmd() {}
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
 class drive_stream : protected drive_cmd
 {
 private:
-    drive_stream(); // {}
-    drive_stream(const drive_stream &); // {}
-    drive_stream &operator=(const drive_stream &); // {}
+    drive_stream()=delete;
+    drive_stream(const drive_stream &)=delete;
+    drive_stream &operator=(const drive_stream &)=delete;
+    drive_stream(drive_stream &&)=delete;
+    drive_stream &operator=(drive_stream &&)=delete;
 
     mutable std::vector<BYTE> buffer;
-    mutable __int64 total_size;
+    mutable int64_t total_size;
     size_t getbuffersize() const {
         return buffer.size();
     }
@@ -326,59 +399,20 @@ protected:
     }
 
 protected:
-    bool readfile(sector_t offset, DWORD _size = 0) const {
-        LARGE_INTEGER lisec;
-        DWORD dwSize;
-        lisec.QuadPart = offset;
-        DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
-        if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
-            return false;
-        }
-        if (! ::ReadFile(gethandle(), getbuffer(), size, &dwSize, nullptr))    {
-            return false;
-        }
-        total_size += dwSize;
-        return size == dwSize;
-    }
-    bool writefile(sector_t offset, DWORD _size = 0) const {
-        LARGE_INTEGER lisec;
-        DWORD dwSize;
-        lisec.QuadPart = offset;
-        DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
-        if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
-            return false;
-        }
-        if (! ::WriteFile(gethandle(), getbuffer(), size, &dwSize, nullptr))    {
-            return false;
-        }
-        total_size += dwSize;
-        return size == dwSize;
-    }
+    bool readfile(sector_t offset, DWORD _size = 0) const;
+    bool writefile(sector_t offset, DWORD _size = 0) const;
 
 protected:
     drive_stream(int drive_target) : drive_cmd(drive_target) {bufclear();}
     virtual ~drive_stream() {}
 
-    void alloc(size_t size) const {
-        buffer.resize(size, 0x00);
-    }
-    void allocrand(size_t size) const {
-        mcrypt<BYTE> crypt;
-        BYTE value = crypt >>= crypt;
-        if(getbuffersize() == 0) {
-            buffer.resize(size, value);
-        } else {
-            ::FillMemory(getbuffer(), getbuffersize(), value);
-        }
-    }
-    __int64 gettotalsize() const {
-        return total_size;
-    }
-    void bufclear() const {
-        total_size = 0;
-        buffer.clear();
-    }
+    void alloc(size_t size) const;
+    void allocrand(size_t size) const;
+    int64_t gettotalsize() const;
+    void bufclear() const;
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // BASE CLASS

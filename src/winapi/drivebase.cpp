@@ -309,4 +309,71 @@ const std::wstring &drive_cmd::getdrivename() const {
     return drive_name;
 }
 
+bool drive_stream::readfile(sector_t offset, DWORD _size /*= 0*/) const {
+#ifdef WIN32
+    LARGE_INTEGER lisec;
+    DWORD dwSize;
+    lisec.QuadPart = offset;
+    DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
+    if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
+        return false;
+    }
+    if (! ::ReadFile(gethandle(), getbuffer(), size, &dwSize, nullptr))    {
+        return false;
+    }
+    total_size += dwSize;
+    return size == dwSize;
+#else
+    // under development
+    return false;
+#endif
+}
+
+bool drive_stream::writefile(sector_t offset, DWORD _size /*= 0*/) const {
+#ifdef WIN32
+    LARGE_INTEGER lisec;
+    DWORD dwSize;
+    lisec.QuadPart = offset;
+    DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
+    if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
+        return false;
+    }
+    if (! ::WriteFile(gethandle(), getbuffer(), size, &dwSize, nullptr))    {
+        return false;
+    }
+    total_size += dwSize;
+    return size == dwSize;
+#else
+    // under development
+    return false;
+#endif
+}
+
+void drive_stream::alloc(size_t size) const {
+    buffer.resize(size, 0x00);
+}
+
+void drive_stream::allocrand(size_t size) const {
+    mcrypto<BYTE> crypt;
+    BYTE value = crypt >>= crypt;
+    if(getbuffersize() == 0) {
+        buffer.resize(size, value);
+    } else {
+#ifdef WIN32
+        ::FillMemory(getbuffer(), getbuffersize(), value);
+#else
+        std::memset(getbuffer(), value, getbuffersize());
+#endif
+    }
+}
+
+int64_t drive_stream::gettotalsize() const {
+    return total_size;
+}
+
+void drive_stream::bufclear() const {
+    total_size = 0;
+    buffer.clear();
+}
+
 #endif // QT_GUI
