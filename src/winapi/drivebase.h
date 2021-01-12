@@ -146,7 +146,6 @@ protected:
     virtual ~drive_util() {}
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
 class drive_handle
 {
 private:
@@ -157,93 +156,39 @@ private:
     drive_handle &operator=(drive_handle &&)=delete;
 
     int nDrive;
+#ifdef WIN32
     HANDLE hDrive;
+#else
+    int hDrive;
+#endif
     bool lock;
     static sync cs;
 
     bool tempfile;
     std::wstring tempfiledir;
 
-    bool createdir(LPCWSTR path) const {
-        if(! ::CreateDirectoryW(path, nullptr)) {
-            DWORD error = ::GetLastError();
-            // debugcs::instance() << L"[CREATE DIR]" << error;
-            return (error == ERROR_ALREADY_EXISTS) ? true: false;
-        } else {
-            return true;
-        }
-    }
+    bool createdir(LPCWSTR path) const;
 
 protected:
-    bool openread(bool _lock = false) {
-        close();
-        std::wostringstream stream;
-        stream << L"\\\\.\\PHYSICALDRIVE" << nDrive;
-        DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
-        lock = _lock;
-        hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
-        return hDrive != INVALID_HANDLE_VALUE;
-    }
-    bool openwrite(bool _lock = false) {
-        close();
-        std::wostringstream stream;
-        stream << L"\\\\.\\PHYSICALDRIVE" << nDrive;
-        DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
-        lock = _lock;
-        hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
-        // debugcs::instance() << L"[openwrite GetLastError]" << ::GetLastError();
-        return hDrive != INVALID_HANDLE_VALUE;
-    }
-    bool openwritefile(char letter, LPCWSTR path, bool _lock = false) {
-        close();
-        std::wostringstream stream;
-        if(path) {
-            stream << path;
-            // if(! createdir(stream.str().c_str())) {return false;}
-        } else {
-            if(letter == '\0') {return false;}
-            stream << letter << L":\\" << TEMPFILE_DIR;
-            if(! createdir(stream.str().c_str())) {return false;}
-            tempfiledir = stream.str();
-            stream << L"\\" << TEMPFILE_NAME;
-            tempfile = true;
-        }
-        DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_WRITE_THROUGH; // Note: FILE_FLAG_NO_BUFFERING(sector) => FILE_FLAG_WRITE_THROUGH(file)
-        lock = _lock;
-        hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, lock_flag, nullptr );
-        return hDrive != INVALID_HANDLE_VALUE;
-    }
-    void close() {
-        if(hDrive) {
-            cs.enter();
-            if(tempfile) {::FlushFileBuffers(hDrive);}
-            ::CloseHandle(hDrive);
-            hDrive = nullptr;
-            cs.leave();
-        }
-        if(tempfile) {
-            // ::Sleep(50); // file mode benchmark only
-            ::SetCurrentDirectoryW(tempfiledir.c_str());
-            ::DeleteFileW(TEMPFILE_NAME);
-            std::vector<wchar_t> letter;
-            letter.resize(4, 0x00);
-            ::RtlCopyMemory(&letter.at(0), &tempfiledir.at(0), 3 * sizeof(wchar_t));
-            ::SetCurrentDirectoryW((LPCWSTR)&letter.at(0));
-            ::RemoveDirectoryW(TEMPFILE_DIR); // Note: Safe Function (empty directory ONLY)
-        }
-    }
+    bool openread(bool _lock = false);
+    bool openwrite(bool _lock = false);
+    bool openwritefile(char letter, LPCWSTR path, bool _lock = false);
+    void close();
 
 protected:
     drive_handle(int drive_target) : nDrive(drive_target), hDrive(nullptr), lock(false), tempfile(false) {}
-    virtual ~drive_handle() {
-        close();
-    }
+    virtual ~drive_handle() {close();}
 
     int getdrive() const {return nDrive;}
+#ifdef WIN32
     HANDLE gethandle() const {return hDrive;}
+#else
+    int gethandle() const {return hDrive;}
+#endif
     bool getlock() const {return lock;}
 };
 
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 class drive_cmd : protected drive_handle, protected drive_util
 {
 private:

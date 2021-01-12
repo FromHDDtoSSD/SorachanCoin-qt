@@ -78,7 +78,8 @@ bool file_exists(const fs::path &abspath) {
     return fs::exists(abspath);
 }
 
-bool dir_create(const fs::path &dir) {
+bool dir_create(const fs::path &dir, bool fexists_ok/*=true*/) {
+    if(fexists_ok && dir_exists(dir)) return true;
     return fs::create_directory(dir);
 }
 
