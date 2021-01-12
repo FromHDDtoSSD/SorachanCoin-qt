@@ -20,6 +20,7 @@
 #ifndef WIN32 // port to lsync.h
 # include <condition_variable>
 # include <mutex>
+# include <thread>
 #endif
 #define PREDICTION_UNDER_DEVELOPMENT
 
@@ -137,6 +138,109 @@ public:
         ev.wait(*mutex);
     }
 #endif
+};
+
+template <typename T>
+class cla_thread
+{
+public:
+    typedef struct _thread_data
+    {
+        void *p;
+        bool exit_flag;
+    } thread_data;
+private:
+    struct thread_param : public thread_data
+    {
+        T *self;
+        unsigned int (T::*func)(thread_data *pdata);
+    } param;
+
+#ifdef WIN32
+    HANDLE hHandle;
+#else
+    std::thread thread;
+#endif
+    cla_thread()=delete;
+    cla_thread(const cla_thread &)=delete;
+    cla_thread &operator=(const cla_thread &)=delete;
+    cla_thread(cla_thread &&)=delete;
+    cla_thread &operator=(cla_thread &&)=delete;
+
+#ifdef WIN32
+    static unsigned int __stdcall _thread(void *p) {
+        struct thread_param *tp = reinterpret_cast<struct thread_param *>(p);
+        unsigned int ret = (tp->self->*(tp->func))(static_cast<thread_data *>(tp));
+        ::_endthreadex(0);
+        return ret;
+    }
+#else
+    static unsigned int _thread(void *p) {
+        struct thread_param *tp = reinterpret_cast<struct thread_param *>(p);
+        unsigned int ret = (tp->self->*(tp->func))(static_cast<thread_data *>(tp));
+        return ret;
+    }
+#endif
+public:
+    explicit cla_thread(unsigned int (T::*_func)(thread_data *pdata)) {
+        param.p = nullptr;
+        param.exit_flag = false;
+        param.self = nullptr;
+        param.func = _func;
+        hHandle = nullptr;
+    }
+    ~cla_thread() {
+        stop();
+        waitclose();
+    }
+
+    bool start(void *_p, T *_self) {
+        waitclose();
+
+        param.p = _p;
+        param.exit_flag = false;
+        param.self = _self;
+#ifdef WIN32
+        hHandle = (HANDLE)::_beginthreadex(nullptr, 0, _thread, &param, 0, nullptr);
+        return hHandle != nullptr;
+#else
+        try {
+            std::thread tmp(_thread, &param);
+            tmp.swap(thread);
+            return true;
+        } catch (const std::system_error &) {
+            return false;
+        }
+#endif
+    }
+
+    void stop() {
+        param.exit_flag = true;
+    }
+
+    bool signal() const {
+#ifdef WIN32
+        if(hHandle)
+            return (::WaitForSingleObject(hHandle, 0) == WAIT_OBJECT_0) ? true: false;
+        else
+            return true;
+#else
+        return (thread.joinable() != true);
+#endif
+    }
+
+    void waitclose() {
+#ifdef WIN32
+        if(hHandle) {
+            ::WaitForSingleObject(hHandle, INFINITE);
+            ::CloseHandle(hHandle);
+            hHandle = nullptr;
+        }
+#else
+        if(thread.joinable())
+            thread.join();
+#endif
+    }
 };
 
 template <typename C, typename T>
@@ -412,8 +516,6 @@ protected:
     void bufclear() const;
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // BASE CLASS
 /////////////////////////////////////////////////////////////////////////
@@ -421,9 +523,11 @@ protected:
 class drive_base : protected drive_stream
 {
 private:
-    drive_base(); // {}
-    drive_base(const drive_base &); // {}
-    drive_base &operator=(const drive_base &); // {}
+    drive_base()=delete;
+    drive_base(const drive_base &)=delete;
+    drive_base &operator=(const drive_base &)=delete;
+    drive_base(drive_base &&)=delete;
+    drive_base &operator=(drive_base &&)=delete;
 
     cla_thread<drive_base> thread;
     DWORD sectors_step;
@@ -431,73 +535,8 @@ private:
     drive_base *obj;
 
     virtual bool acc_thread(const bool &exit_flag) = 0;
-    unsigned int _thread(cla_thread<drive_base>::thread_data *pdata) {
-        if(! obj) {
-            failure = true;
-            return 1;
-        }
-        if(! obj->acc_thread(pdata->exit_flag)) {
-            failure = true;
-        }
-        return 1;
-    }
-
-    bool accsectors(sector_t begin, sector_t end, const bool &exit_flag, bool readflag) const {
-        if(! gethandle()) {return false;}
-        if(exit_flag) {return true;}
-        if(! getlock()) { // Note: When locked, the 'accsectors' is file mode.
-            if(readflag) {
-                alloc(getsectorsize() * sectors_step);
-            } else {
-                allocrand(getsectorsize() * sectors_step);
-            }
-        } else {
-            if(readflag) {
-                alloc(getsectorsize() * sectors_step);
-            }
-        }
-
-        if(end == SECTORS_STEP) { // random access.
-            end = begin + sectors_step - 1;
-        }
-        if(gettotalsectors() <= end) {
-            end = gettotalsectors() - 1;
-        }
-
-        const sector_t range = end - begin + 1;
-        const sector_t count = range / sectors_step;
-        const int remain = (int)(range % sectors_step);
-        const sector_t begin_offset = begin * getsectorsize();
-
-        for(int i=0; i < count; ++i)
-        {
-            if(exit_flag) {return true;}
-            if(readflag) {
-                if (! readfile(begin_offset + (getsectorsize() * sectors_step * i))) {
-                    return false;
-                }
-            } else {
-                if (! writefile(begin_offset + (getsectorsize() * sectors_step * i))) {
-                    return false;
-                }
-            }
-        }
-
-        if(0 < remain) {
-            if(exit_flag) {return true;}
-            if(readflag) {
-                if (! readfile(begin_offset + (getsectorsize() * sectors_step * count), getsectorsize() * remain)) {
-                    return false;
-                }
-            } else {
-                if (! writefile(begin_offset + (getsectorsize() * sectors_step * count), getsectorsize() * remain)) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    }
+    unsigned int _thread(cla_thread<drive_base>::thread_data *pdata);
+    bool accsectors(sector_t begin, sector_t end, const bool &exit_flag, bool readflag) const;
 
 protected:
     // When the buffer integrity does not matter.
@@ -532,30 +571,7 @@ protected:
     //
     // READ or WRITE openhandle
     //
-    bool base_openhandle(char mode, const drive_base *instanced = nullptr, bool lock = false, LPCWSTR path = nullptr) {
-        setparam(instanced);
-        if(mode == 'r') {
-            if(! openread(lock)) {
-                return false;
-            }
-        } else if (mode == 'w') {
-            if(! openwrite(lock)) {
-                return false;
-            }
-        } else if (mode == 'f') {
-            if(! openwritefile('\0', path, lock)) {
-                return false;
-            }
-            return true; // Note: unused getparam().
-        } else if (mode == 'b') {
-            if(! openwritefile(getdriveletter(0), nullptr, false)) {
-                return false;
-            }
-        } else {
-            return false;
-        }
-        return ((instanced == nullptr) ? getparam(): true);
-    }
+    bool base_openhandle(char mode, const drive_base *instanced = nullptr, bool lock = false, LPCWSTR path = nullptr);
 
 public:
     virtual ~drive_base() {}
@@ -575,45 +591,24 @@ public:
         }
     }
     DWORD getstep() const {return sectors_step;}
-    std::wstring getdriveinfo() const {
-        std::wostringstream letter;
-        letter << L"DriveLetter: ";
-        std::vector<char> vcl = getdriveletter();
-        for(std::vector<char>::const_iterator ite = vcl.begin(); ite != vcl.end(); ++ite)
-        {
-            letter << *ite << L":\\ ";
-        }
 
-        DWORD capacity = (DWORD)(gettotalsectors() * getsectorsize() / 1024 / 1024 / 1024);
-        std::wostringstream stream;
-        stream << getdrivevendor().c_str() << L"\n" << getdrivename().c_str() << L"\n" << L"Capacity: " << capacity << L" GB" << L"\n" << letter.str().c_str();
-        return stream.str();
-    }
-    bool checkdriveletter() const {
-        return (getdriveletter(0) != '\0');
-    }
-    std::wstring getdriveinfo(int) const {
-        std::wostringstream stream;
-        stream << getdrivevendor().c_str() << L" " << getdrivename().c_str();
-        return stream.str();
-    }
-    double getspeed(double ti) const {
-        return (double)gettotalsize() / ti;
-    }
-    const std::vector<BYTE> *getbufferread() const { // Read => getbuffer
-        return getbuffer_lock();
-    }
-    std::vector<BYTE> *setbufferwrite() { // setbuffer => buffered => Write
-        return getbuffer_lock();
-    }
+    std::wstring getdriveinfo() const;
+    bool checkdriveletter() const;
+    std::wstring getdriveinfo(int) const;
+    double getspeed(double ti) const;
+    const std::vector<BYTE> *getbufferread() const; // Read => getbuffer
+    std::vector<BYTE> *setbufferwrite(); // setbuffer => buffered => Write
+
     virtual double getprog() const = 0;
     virtual void setaccpoint(sector_t _begin = 0, sector_t _end = 0) = 0;
     virtual void clearaccpoint() = 0;
     virtual bool openhandle(const drive_base *instanced = nullptr) = 0;
     virtual void set(const std::vector<sector_t> &_sectors_addr) = 0;
-    virtual void setrand(const std::vector<unsigned __int64> &_rand_addr) = 0;
+    virtual void setrand(const std::vector<uint64_t> &_rand_addr) = 0;
     virtual bool scan() = 0;
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // SCAN START METHOD

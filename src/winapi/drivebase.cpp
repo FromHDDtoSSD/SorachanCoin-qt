@@ -376,4 +376,132 @@ void drive_stream::bufclear() const {
     buffer.clear();
 }
 
+unsigned int drive_base::_thread(cla_thread<drive_base>::thread_data *pdata) {
+    if(! obj) {
+        failure = true;
+        return 1;
+    }
+    if(! obj->acc_thread(pdata->exit_flag)) {
+        failure = true;
+    }
+    return 1;
+}
+
+bool drive_base::accsectors(sector_t begin, sector_t end, const bool &exit_flag, bool readflag) const {
+    if(! gethandle()) {return false;}
+    if(exit_flag) {return true;}
+    if(! getlock()) { // Note: When locked, the 'accsectors' is file mode.
+        if(readflag) {
+            alloc(getsectorsize() * sectors_step);
+        } else {
+            allocrand(getsectorsize() * sectors_step);
+        }
+    } else {
+        if(readflag) {
+            alloc(getsectorsize() * sectors_step);
+        }
+    }
+
+    if(end == SECTORS_STEP) { // random access.
+        end = begin + sectors_step - 1;
+    }
+    if(gettotalsectors() <= end) {
+        end = gettotalsectors() - 1;
+    }
+
+    const sector_t range = end - begin + 1;
+    const sector_t count = range / sectors_step;
+    const int remain = (int)(range % sectors_step);
+    const sector_t begin_offset = begin * getsectorsize();
+
+    for(int i=0; i < count; ++i)
+    {
+        if(exit_flag) {return true;}
+        if(readflag) {
+            if (! readfile(begin_offset + (getsectorsize() * sectors_step * i))) {
+                return false;
+            }
+        } else {
+            if (! writefile(begin_offset + (getsectorsize() * sectors_step * i))) {
+                return false;
+            }
+        }
+    }
+
+    if(0 < remain) {
+        if(exit_flag) {return true;}
+        if(readflag) {
+            if (! readfile(begin_offset + (getsectorsize() * sectors_step * count), getsectorsize() * remain)) {
+                return false;
+            }
+        } else {
+            if (! writefile(begin_offset + (getsectorsize() * sectors_step * count), getsectorsize() * remain)) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+bool drive_base::base_openhandle(char mode, const drive_base *instanced /*= nullptr*/, bool lock /*= false*/, LPCWSTR path /*= nullptr*/) {
+    setparam(instanced);
+    if(mode == 'r') {
+        if(! openread(lock)) {
+            return false;
+        }
+    } else if (mode == 'w') {
+        if(! openwrite(lock)) {
+            return false;
+        }
+    } else if (mode == 'f') {
+        if(! openwritefile('\0', path, lock)) {
+            return false;
+        }
+        return true; // Note: unused getparam().
+    } else if (mode == 'b') {
+        if(! openwritefile(getdriveletter(0), nullptr, false)) {
+            return false;
+        }
+    } else {
+        return false;
+    }
+    return ((instanced == nullptr) ? getparam(): true);
+}
+
+std::wstring drive_base::getdriveinfo() const {
+    std::wostringstream letter;
+    letter << L"DriveLetter: ";
+    std::vector<char> vcl = getdriveletter();
+    for(std::vector<char>::const_iterator ite = vcl.begin(); ite != vcl.end(); ++ite)
+        letter << *ite << L":\\ ";
+
+    DWORD capacity = (DWORD)(gettotalsectors() * getsectorsize() / 1024 / 1024 / 1024);
+    std::wostringstream stream;
+    stream << getdrivevendor().c_str() << L"\n" << getdrivename().c_str() << L"\n" << L"Capacity: " << capacity << L" GB" << L"\n" << letter.str().c_str();
+    return stream.str();
+}
+
+bool drive_base::checkdriveletter() const {
+    return (getdriveletter(0) != '\0');
+}
+
+std::wstring drive_base::getdriveinfo(int) const {
+    std::wostringstream stream;
+    stream << getdrivevendor().c_str() << L" " << getdrivename().c_str();
+    return stream.str();
+}
+
+double drive_base::getspeed(double ti) const {
+    return (double)gettotalsize() / ti;
+}
+
+const std::vector<BYTE> *drive_base::getbufferread() const { // Read => getbuffer
+    return getbuffer_lock();
+}
+
+std::vector<BYTE> *drive_base::setbufferwrite() { // setbuffer => buffered => Write
+    return getbuffer_lock();
+}
+
 #endif // QT_GUI
