@@ -504,4 +504,62 @@ std::vector<BYTE> *drive_base::setbufferwrite() { // setbuffer => buffered => Wr
     return getbuffer_lock();
 }
 
+bool drive_accseq::acc_thread(const bool &exit_flag) {
+    if(seqbegin < SCAN_BEGIN_MIN_SECTOR) {seqbegin = SCAN_BEGIN_MIN_SECTOR;}
+    const sector_t range = seqend - seqbegin;
+    const sector_t unit_sectors = unit_size / getsectorsize();
+    const sector_t count = total = range / unit_sectors;
+    const int remain = (int)(range % unit_sectors);
+    if(0 < remain) {++total;}
+
+    for(int i=0; i < count; ++i)
+    {
+        if(exit_flag) {return true;}
+        if(! _rwfunc(seqbegin + (i * unit_sectors), seqbegin + ((i + 1) * unit_sectors), exit_flag)) {
+            return false;
+        }
+        ++current;
+    }
+    if(0 < remain) {
+        if(exit_flag) {return true;}
+        if(! _rwfunc(seqbegin + (count * unit_sectors), seqbegin + remain, exit_flag)) {
+            return false;
+        }
+        ++current;
+    }
+    return true;
+}
+
+bool drive_accrandom::acc_thread(const bool &exit_flag) {
+    if(sectors_addr.size() == 0) {return false;}
+    current = 0;
+    for(std::vector<sector_t>::const_iterator ite = sectors_addr.begin(); ite != sectors_addr.end(); ++ite)
+    {
+        if(exit_flag) {return true;}
+        if(SCAN_BEGIN_MIN_SECTOR <= getbegin()) {
+            if(! _rwfunc(getbegin(), SECTORS_STEP, exit_flag)) {
+                return false;
+            }
+        }
+
+        sector_t randombegin = *ite;
+        if(! getlock()) {
+            if(randombegin < SCAN_BEGIN_MIN_SECTOR) {
+                randombegin = SCAN_BEGIN_MIN_SECTOR;
+            }
+        }
+        if(! _rwfunc(randombegin, SECTORS_STEP, exit_flag)) {
+            return false;
+        }
+
+        if(SCAN_BEGIN_MIN_SECTOR <= getend()) {
+            if(! _rwfunc(getend(), SECTORS_STEP, exit_flag)) {
+                return false;
+            }
+        }
+        ++current;
+    }
+    return true;
+}
+
 #endif // QT_GUI

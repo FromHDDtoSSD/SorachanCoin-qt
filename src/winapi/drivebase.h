@@ -674,31 +674,7 @@ private:
     int current;
     sector_t total;
     virtual bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const = 0;
-    bool acc_thread(const bool &exit_flag) final override {
-        if(seqbegin < SCAN_BEGIN_MIN_SECTOR) {seqbegin = SCAN_BEGIN_MIN_SECTOR;}
-        const sector_t range = seqend - seqbegin;
-        const sector_t unit_sectors = unit_size / getsectorsize();
-        const sector_t count = total = range / unit_sectors;
-        const int remain = (int)(range % unit_sectors);
-        if(0 < remain) {++total;}
-
-        for(int i=0; i < count; ++i)
-        {
-            if(exit_flag) {return true;}
-            if(! _rwfunc(seqbegin + (i * unit_sectors), seqbegin + ((i + 1) * unit_sectors), exit_flag)) {
-                return false;
-            }
-            ++current;
-        }
-        if(0 < remain) {
-            if(exit_flag) {return true;}
-            if(! _rwfunc(seqbegin + (count * unit_sectors), seqbegin + remain, exit_flag)) {
-                return false;
-            }
-            ++current;
-        }
-        return true;
-    }
+    bool acc_thread(const bool &exit_flag) final override;
 
 protected:
     explicit drive_accseq(int drive_target) : drive_method(drive_target) {
@@ -792,8 +768,6 @@ public:
     }
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // RANDOM ACCESS
 /////////////////////////////////////////////////////////////////////////
@@ -801,46 +775,18 @@ public:
 class drive_accrandom : public drive_method
 {
 private:
-    drive_accrandom(); // {}
-    drive_accrandom(const drive_accrandom &); // {}
-    drive_accrandom &operator=(const drive_accrandom &); // {}
+    drive_accrandom()=delete;
+    drive_accrandom(const drive_accrandom &)=delete;
+    drive_accrandom &operator=(const drive_accrandom &)=delete;
+    drive_accrandom(drive_accrandom &&)=delete;
+    drive_accrandom &operator=(drive_accrandom &&)=delete;
 
     std::vector<sector_t> sectors_addr;
     int current;
     virtual bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const = 0;
 
 protected:
-    bool acc_thread(const bool &exit_flag) final override {
-        if(sectors_addr.size() == 0) {return false;}
-        current = 0;
-        for(std::vector<sector_t>::const_iterator ite = sectors_addr.begin(); ite != sectors_addr.end(); ++ite)
-        {
-            if(exit_flag) {return true;}
-            if(SCAN_BEGIN_MIN_SECTOR <= getbegin()) {
-                if(! _rwfunc(getbegin(), SECTORS_STEP, exit_flag)) {
-                    return false;
-                }
-            }
-
-            sector_t randombegin = *ite;
-            if(! getlock()) {
-                if(randombegin < SCAN_BEGIN_MIN_SECTOR) {
-                    randombegin = SCAN_BEGIN_MIN_SECTOR;
-                }
-            }
-            if(! _rwfunc(randombegin, SECTORS_STEP, exit_flag)) {
-                return false;
-            }
-
-            if(SCAN_BEGIN_MIN_SECTOR <= getend()) {
-                if(! _rwfunc(getend(), SECTORS_STEP, exit_flag)) {
-                    return false;
-                }
-            }
-            ++current;
-        }
-        return true;
-    }
+    bool acc_thread(const bool &exit_flag) final override;
 
 protected:
     explicit drive_accrandom(int drive_target) : drive_method(drive_target) {
@@ -855,11 +801,11 @@ public:
     void set(const std::vector<sector_t> &_sectors_addr) final override {
         sectors_addr = _sectors_addr;
     }
-    void setrand(const std::vector<unsigned __int64> &_rand_addr) final override {
+    void setrand(const std::vector<uint64_t> &_rand_addr) final override {
         sectors_addr.clear();
         sectors_addr.reserve(_rand_addr.size());
         sector_t total_sectors = gettotalsectors();
-        for(std::vector<unsigned __int64>::const_iterator ite = _rand_addr.begin(); ite != _rand_addr.end(); ++ite)
+        for(std::vector<uint64_t>::const_iterator ite = _rand_addr.begin(); ite != _rand_addr.end(); ++ite)
         {
             sector_t sector = (sector_t)(*ite % total_sectors);
             sectors_addr.push_back(sector);
@@ -880,9 +826,11 @@ public:
 class drive_randomread final : public drive_accrandom
 {
 private:
-    drive_randomread(); // {}
-    drive_randomread(const drive_randomread &); // {}
-    drive_randomread &operator=(const drive_randomread &); // {}
+    drive_randomread()=delete;
+    drive_randomread(const drive_randomread &)=delete;
+    drive_randomread &operator=(const drive_randomread &)=delete;
+    drive_randomread(drive_randomread &&)=delete;
+    drive_randomread &operator=(drive_randomread &&)=delete;
 
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         return readsectors(begin, end, exit_flag);
@@ -902,9 +850,11 @@ public:
 class drive_randomwrite final : public drive_accrandom
 {
 private:
-    drive_randomwrite(); // {}
-    drive_randomwrite(const drive_randomwrite &); // {}
-    drive_randomwrite &operator=(const drive_randomwrite &); // {}
+    drive_randomwrite()=delete;
+    drive_randomwrite(const drive_randomwrite &)=delete;
+    drive_randomwrite &operator=(const drive_randomwrite &)=delete;
+    drive_randomwrite(drive_randomwrite &&)=delete;
+    drive_randomwrite &operator=(drive_randomwrite &&)=delete;
 
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         bool ret = writesectors(begin, end, exit_flag);
@@ -922,6 +872,8 @@ public:
         return base_openhandle('w', instanced);
     }
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // DATA
