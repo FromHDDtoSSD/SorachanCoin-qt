@@ -122,6 +122,20 @@ json_spirit::Value CRPCTable::getinfo(const json_spirit::Array &params, CBitrpcD
     return data.JSONRPCSuccess(obj);
 }
 
+json_spirit::Value CRPCTable::getnetworkhashps(const json_spirit::Array &params, CBitrpcData &data) {
+    if (data.fHelp() || params.size() != 0) {
+        return data.JSONRPCSuccess(
+            "getnetworkhashps\n"
+            "Return a networkhashps.");
+    }
+
+    json_spirit::Object obj;
+    std::ostringstream stream;
+    stream << (double)((double)((int64_t)((double)GetPoWMHashPS()*1000*1000*10))/10);
+    obj.push_back(json_spirit::Pair("networkhashps", stream.str().c_str()));
+    return data.JSONRPCSuccess(obj);
+}
+
 json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
