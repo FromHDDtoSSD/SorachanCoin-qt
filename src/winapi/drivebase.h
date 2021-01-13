@@ -608,8 +608,6 @@ public:
     virtual bool scan() = 0;
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // SCAN START METHOD
 /////////////////////////////////////////////////////////////////////////
@@ -617,9 +615,11 @@ public:
 class drive_method : public drive_base
 {
 private:
-    drive_method(); // {}
-    drive_method(const drive_method &); // {}
-    drive_method &operator=(const drive_method &); // {}
+    drive_method()=delete;
+    drive_method(const drive_method &)=delete;
+    drive_method &operator=(const drive_method &)=delete;
+    drive_method(drive_method &&)=delete;
+    drive_method &operator=(drive_method &&)=delete;
 
     sector_t begin, end;
     virtual bool acc_thread(const bool &exit_flag) = 0;
@@ -653,6 +653,8 @@ public:
         return this->start(this);
     }
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // SEQUENTIAL ACCESS
