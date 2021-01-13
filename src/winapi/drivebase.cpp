@@ -8,6 +8,7 @@
 #ifndef WIN32
 # include <unistd.h>
 # include <sys/types.h>
+# include <stdlib.h>
 #endif
 
 sync drive_handle::cs;
@@ -25,11 +26,14 @@ bool drive_util::chartowchar(const char *source, std::wstring &dest) const {
         }
     }
 
-    dest.resize(cchWideChar, '\0');
+    dest.resize(cchWideChar, L'\0');
     return 0 < ::MultiByteToWideChar(CP_ACP, 0, source, -1, &dest.at(0), cchWideChar);
 #else
-    // under development
-    return false;
+    size_t size = ::mbstowcs(nullptr, source, 0) + 1;
+    if(size == (size_t)-1)
+        return false;
+    dest.resize(size, L'\0'); // size is no bytes.
+    return ::mbstowcs(&dest.at(0), source, size) != (size_t)-1;
 #endif
 }
 
@@ -49,8 +53,11 @@ bool drive_util::wchartochar(LPCWSTR source, std::string &dest) const {
     dest.resize(nLength, '\0');
     return 0 < ::WideCharToMultiByte(CP_ACP, 0, source, -1, &dest.at(0), nLength, nullptr, nullptr);
 #else
-    // under development
-    return false;
+    size_t size = ::wcstombs(nullptr, source, 0) + 1;
+    if(size == (size_t)-1)
+        return false;
+    dest.resize(size, '\0');
+    return ::wcstombs(&dest.at(0), source, size) != (size_t)-1;
 #endif
 }
 
@@ -82,8 +89,14 @@ bool drive_handle::openread(bool _lock /*= false*/) {
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
     return hDrive != INVALID_HANDLE_VALUE;
 #else
-    // under development
-    return false;
+    close();
+    std::string dpath = std::string("/dev/") + nDrive;
+    hDrive = ::open(dpath.c_str(), O_RDONLY | O_DIRECT);
+    if(hDrive == -1) {
+        hDrive = 0;
+        return false;
+    } else
+        return true;
 #endif
 }
 
@@ -98,13 +111,18 @@ bool drive_handle::openwrite(bool _lock /*= false*/) {
     // debugcs::instance() << L"[openwrite GetLastError]" << ::GetLastError();
     return hDrive != INVALID_HANDLE_VALUE;
 #else
-    // under development
-    return false;
+    close();
+    std::string dpath = std::string("/dev/") + nDrive;
+    hDrive = ::open(dpath.c_str(), O_WRONLY | O_DIRECT);
+    if(hDrive == -1) {
+        hDrive = 0;
+        return false;
+    } else
+        return true;
 #endif
 }
 
 bool drive_handle::openwritefile(char letter, LPCWSTR path, bool _lock /*= false*/) {
-#ifdef WIN32
     close();
     std::wostringstream stream;
     if(path) {
@@ -118,26 +136,38 @@ bool drive_handle::openwritefile(char letter, LPCWSTR path, bool _lock /*= false
         stream << L"\\" << TEMPFILE_NAME;
         tempfile = true;
     }
+#ifdef WIN32
     DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_WRITE_THROUGH; // Note: FILE_FLAG_NO_BUFFERING(sector) => FILE_FLAG_WRITE_THROUGH(file)
     lock = _lock;
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, lock_flag, nullptr );
     return hDrive != INVALID_HANDLE_VALUE;
 #else
-    // under development
-    return false;
+    std::string dpath = stream.str().c_str();
+    hDrive = ::open(dpath.c_str(), O_WRONLY);
+    if(hDrive == -1) {
+        hDrive = 0;
+        return false;
+    } else
+        return true;
 #endif
 }
 
 void drive_handle::close() {
-#ifdef WIN32
     if(hDrive) {
         cs.enter();
+#ifdef WIN32
         if(tempfile) {::FlushFileBuffers(hDrive);}
         ::CloseHandle(hDrive);
         hDrive = nullptr;
+#else
+        if(tempfile) {::ftruncate(hDrive);}
+        ::close(hDrive);
+        hDrive = 0;
+#endif
         cs.leave();
     }
     if(tempfile) {
+#ifdef WIN32
         // ::Sleep(50); // file mode benchmark only
         ::SetCurrentDirectoryW(tempfiledir.c_str());
         ::DeleteFileW(TEMPFILE_NAME);
@@ -146,11 +176,10 @@ void drive_handle::close() {
         ::RtlCopyMemory(&letter.at(0), &tempfiledir.at(0), 3 * sizeof(wchar_t));
         ::SetCurrentDirectoryW((LPCWSTR)&letter.at(0));
         ::RemoveDirectoryW(TEMPFILE_DIR); // Note: Safe Function (empty directory ONLY)
-    }
 #else
-    // under development
-    return;
+        // ::Sleep(50); // file mode benchmark only
 #endif
+    }
 }
 
 bool drive_cmd::cmddrivename() {

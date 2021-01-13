@@ -337,10 +337,11 @@ private:
     drive_handle(drive_handle &&)=delete;
     drive_handle &operator=(drive_handle &&)=delete;
 
-    int nDrive;
 #ifdef WIN32
+    int nDrive;
     HANDLE hDrive;
 #else
+    std::string nDrive; // hda, hdb, sda, sdb, nvme0 ...
     int hDrive;
 #endif
     bool lock;
@@ -358,7 +359,11 @@ protected:
     void close();
 
 protected:
-    drive_handle(int drive_target) : nDrive(drive_target), hDrive(nullptr), lock(false), tempfile(false) {}
+#ifdef WIN32
+    explicit drive_handle(int drive_target) : nDrive(drive_target), hDrive(nullptr), lock(false), tempfile(false) {}
+#else
+    explicit drive_handle(const std::string &drive_target) : nDrive(drive_target), hDrive(nullptr), lock(false), tempfile(false) {}
+#endif
     virtual ~drive_handle() {close();}
 
     int getdrive() const {return nDrive;}
