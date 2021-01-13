@@ -213,8 +213,6 @@ public:
     }
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 class sector_base
 {
 private:
@@ -240,8 +238,10 @@ public:
 class sector_randbuffer final : public sector_base
 {
 private:
-    sector_randbuffer(const sector_randbuffer &); // {}
-    sector_randbuffer &operator=(const sector_randbuffer &); // {}
+    sector_randbuffer(const sector_randbuffer &)=delete;
+    sector_randbuffer &operator=(const sector_randbuffer &)=delete;
+    sector_randbuffer(sector_randbuffer &&)=delete;
+    sector_randbuffer &operator=(sector_randbuffer &&)=delete;
 
     rand_base *target;
 public:
@@ -315,7 +315,7 @@ public:
             return 0.0;
         }
     }
-    const std::vector<unsigned __int64> *getbuf() const {
+    const std::vector<uint64_t> *getbuf() const {
         if(target) {
             return &target->getbuf();
         } else {
@@ -332,13 +332,15 @@ public:
 class sector_io final : public sector_base
 {
 private:
-    sector_io(const sector_io &); // {}
-    sector_io &operator=(const sector_io &); // {}
+    sector_io(const sector_io &)=delete;
+    sector_io &operator=(const sector_io &)=delete;
+    sector_io(sector_io &&)=delete;
+    sector_io &operator=(sector_io &&)=delete;
 
-    static const DWORD SECTORS_SIZE_SEQ = 100 * 1024 * 1024;
-    static const DWORD SECTORS_SIZE_8192KB = 8192 * 1024;
-    static const DWORD SECTORS_SIZE_512KB = 512 * 1024;
-    static const DWORD SECTORS_SIZE_4KB = 4 * 1024;
+    static constexpr DWORD SECTORS_SIZE_SEQ = 100 * 1024 * 1024;
+    static constexpr DWORD SECTORS_SIZE_8192KB = 8192 * 1024;
+    static constexpr DWORD SECTORS_SIZE_512KB = 512 * 1024;
+    static constexpr DWORD SECTORS_SIZE_4KB = 4 * 1024;
 
     drive_base *drive;
 public:
@@ -469,7 +471,7 @@ public:
         }
     }
     void setparam(const sector_randbuffer &randbuf) {
-        const std::vector<unsigned __int64> *buf = randbuf.getbuf();
+        const std::vector<uint64_t> *buf = randbuf.getbuf();
         if(buf && drive) {
             drive->setrand(*buf);
             drive->clearaccpoint();
@@ -524,7 +526,5 @@ public:
         }
     }
 };
-
-#endif // PREDICTION_UNDER_DEVELOPMENT
 
 #endif
