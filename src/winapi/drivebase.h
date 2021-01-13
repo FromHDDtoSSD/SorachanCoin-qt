@@ -873,8 +873,6 @@ public:
     }
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // DATA
 /////////////////////////////////////////////////////////////////////////
@@ -882,9 +880,11 @@ public:
 class drive_dataread final : public drive_accrandom
 {
 private:
-    drive_dataread(); // {}
-    drive_dataread(const drive_dataread &); // {}
-    drive_dataread &operator=(const drive_dataread &); // {}
+    drive_dataread()=delete;
+    drive_dataread(drive_dataread &)=delete;
+    drive_dataread &operator=(drive_dataread &)=delete;
+    drive_dataread(drive_dataread &&)=delete;
+    drive_dataread &operator=(drive_dataread &&)=delete;
 
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         return readsectors(begin, end, exit_flag);
@@ -904,22 +904,15 @@ public:
 class drive_datawritefull final : public drive_accrandom
 {
 private:
-    // drive_datawritefull(); // {}
-    drive_datawritefull(const drive_datawritefull &); // {}
-    drive_datawritefull &operator=(const drive_datawritefull &); // {}
+    // drive_datawritefull()=delete;
+    drive_datawritefull(const drive_datawritefull &)=delete;
+    drive_datawritefull &operator=(const drive_datawritefull &)=delete;
+    drive_datawritefull(drive_datawritefull &&)=delete;
+    drive_datawritefull &operator=(drive_datawritefull &&)=delete;
 
     std::wstring path;
     size_t padding;
-    bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
-        if(! writesectors(begin, end, exit_flag)) {
-            return false;
-        } else {
-            const std::vector<BYTE> *p = getbufferread();
-            LARGE_INTEGER li;
-            li.QuadPart = p->size() - padding;
-            return (::SetFilePointerEx(gethandle(), li, nullptr, FILE_BEGIN) && ::SetEndOfFile(gethandle())) ? true: false;
-        }
-    }
+    bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override;
 public:
     drive_datawritefull() : drive_accrandom(DRIVE_TARGET_UNUSED), padding(0) {}
     ~drive_datawritefull() {}
@@ -956,11 +949,13 @@ public:
 class drive_datawritelimit final : public drive_accrandom
 {
 private:
-    drive_datawritelimit(); // {}
-    drive_datawritelimit(const drive_datawritelimit &); // {}
-    drive_datawritelimit &operator=(const drive_datawritelimit &); // {}
+    drive_datawritelimit()=delete;
+    drive_datawritelimit(const drive_datawritelimit &)=delete;
+    drive_datawritelimit &operator=(const drive_datawritelimit &)=delete;
+    drive_datawritelimit(drive_datawritelimit &&)=delete;
+    drive_datawritelimit &operator=(drive_datawritelimit &&)=delete;
 
-    static const __int64 limit_size = 100 * 1024 * 1024; // begin => under 100MB
+    static constexpr int64_t limit_size = 100 * 1024 * 1024; // begin => under 100MB
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         sector_t limit_sectors = limit_size / getsectorsize();
         // OK debugcs::instance() << L"[DriveDataWriteLimit]" << begin % limit_sectors << end;
@@ -977,6 +972,5 @@ public:
         return base_openhandle('b', instanced, false);
     }
 };
-#endif // PREDICTION_UNDER_DEVELOPMENT
 
 #endif

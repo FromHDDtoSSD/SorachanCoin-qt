@@ -5,6 +5,10 @@
 #ifdef QT_GUI
 #include <winapi/drivebase.h>
 #include <file_operate/fs.h>
+#ifndef WIN32
+# include <unistd.h>
+# include <sys/types.h>
+#endif
 
 sync drive_handle::cs;
 
@@ -560,6 +564,27 @@ bool drive_accrandom::acc_thread(const bool &exit_flag) {
         ++current;
     }
     return true;
+}
+
+bool drive_datawritefull::_rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const {
+#ifdef WIN32
+    if(! writesectors(begin, end, exit_flag)) {
+        return false;
+    } else {
+        const std::vector<BYTE> *p = getbufferread();
+        LARGE_INTEGER li;
+        li.QuadPart = p->size() - padding;
+        return (::SetFilePointerEx(gethandle(), li, nullptr, FILE_BEGIN) && ::SetEndOfFile(gethandle())) ? true: false;
+    }
+#else
+    if(! writesectors(begin, end, exit_flag)) {
+        return false;
+    } else {
+        const std::vector<BYTE> *p = getbufferread();
+        off_t li = p->size() - padding;
+        return (::ftruncate(gethandle(), li)==0 && ::lseek(gethandle(), li, SEEK_SET)!=-1) ? true: false;
+    }
+#endif
 }
 
 #endif // QT_GUI
