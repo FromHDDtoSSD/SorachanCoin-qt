@@ -136,6 +136,20 @@ json_spirit::Value CRPCTable::getnetworkhashps(const json_spirit::Array &params,
     return data.JSONRPCSuccess(obj);
 }
 
+json_spirit::Value CRPCTable::getkernelps(const json_spirit::Array &params, CBitrpcData &data) {
+    if (data.fHelp() || params.size() != 0) {
+        return data.JSONRPCSuccess(
+            "getkernelps\n"
+            "Return a kernelps.");
+    }
+
+    json_spirit::Object obj;
+    std::ostringstream stream;
+    stream << (double)GetPoSKernelPS();
+    obj.push_back(json_spirit::Pair("getkernelps", stream.str().c_str()));
+    return data.JSONRPCSuccess(obj);
+}
+
 json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
