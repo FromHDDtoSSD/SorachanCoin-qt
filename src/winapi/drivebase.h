@@ -738,8 +738,6 @@ public:
     virtual bool openhandle(const drive_base *instanced = nullptr) = 0;
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /*
 ** drive_seqread, drive_seqwrite, drive_randomread, drive_randomwrite
 ** Because it is for benchmarking, buffer exclusivity is not a problem.
@@ -747,9 +745,11 @@ public:
 class drive_seqread final : public drive_accseq
 {
 private:
-    drive_seqread(); // {}
-    drive_seqread(const drive_seqread &); // {}
-    drive_seqread &operator=(const drive_seqread &); // {}
+    drive_seqread()=delete;
+    drive_seqread(const drive_seqread &)=delete;
+    drive_seqread &operator=(const drive_seqread &)=delete;
+    drive_seqread(drive_seqread &&)=delete;
+    drive_seqread &operator=(drive_seqread &&)=delete;
 
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         return readsectors(begin, end, exit_flag);
@@ -769,9 +769,11 @@ public:
 class drive_seqwrite final : public drive_accseq
 {
 private:
-    drive_seqwrite(); // {}
-    drive_seqwrite(const drive_seqwrite &); // {}
-    drive_seqwrite &operator=(const drive_seqwrite &); // {}
+    drive_seqwrite()=delete;
+    drive_seqwrite(const drive_seqwrite &)=delete;
+    drive_seqwrite &operator=(const drive_seqwrite &)=delete;
+    drive_seqwrite(drive_seqwrite &&)=delete;
+    drive_seqwrite &operator=(drive_seqwrite &&)=delete;
 
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         bool ret = writesectors(begin, end, exit_flag);
@@ -789,6 +791,8 @@ public:
         return base_openhandle('w', instanced);
     }
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // RANDOM ACCESS
