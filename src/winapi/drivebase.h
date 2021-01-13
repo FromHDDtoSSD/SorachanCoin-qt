@@ -647,14 +647,12 @@ public:
     }
     virtual double getprog() const = 0;
     virtual void set(const std::vector<sector_t> &_sectors_addr) = 0;
-    virtual void setrand(const std::vector<unsigned __int64> &_rand_addr) = 0;
+    virtual void setrand(const std::vector<uint64_t> &_rand_addr) = 0;
     virtual bool openhandle(const drive_base *instanced = nullptr) = 0;
     bool scan() final override {
         return this->start(this);
     }
 };
-
-#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // SEQUENTIAL ACCESS
@@ -663,12 +661,14 @@ public:
 class drive_accseq : public drive_method
 {
 private:
-    drive_accseq(); // {}
-    drive_accseq(const drive_accseq &); // {}
-    drive_accseq &operator=(const drive_accseq &); // {}
+    drive_accseq()=delete;
+    drive_accseq(const drive_accseq &)=delete;
+    drive_accseq &operator=(const drive_accseq &)=delete;
+    drive_accseq(drive_accseq &&)=delete;
+    drive_accseq &operator=(drive_accseq &&)=delete;
 
-    static const __int64 unit_size = (__int64)100 * 1024 * 1024; // 100MB.
-    static const __int64 inspect_size = (__int64)1 * 1024 * 1024 * 1024; // 1GB.
+    static constexpr int64_t unit_size = (__int64)100 * 1024 * 1024; // 100MB.
+    static constexpr int64_t inspect_size = (__int64)1 * 1024 * 1024 * 1024; // 1GB.
 
     sector_t seqbegin, seqend;
     int current;
@@ -719,7 +719,7 @@ public:
         //    seqend = gettotalsectors() - 1;
         //}
     }
-    void setrand(const std::vector<unsigned __int64> &_rand_addr) final override {
+    void setrand(const std::vector<uint64_t> &_rand_addr) final override {
         seqbegin = _rand_addr[0] % gettotalsectors();
         seqend = seqbegin + (inspect_size / getsectorsize());
         //if(gettotalsectors() <= seqend) {
@@ -737,6 +737,8 @@ public:
     }
     virtual bool openhandle(const drive_base *instanced = nullptr) = 0;
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /*
 ** drive_seqread, drive_seqwrite, drive_randomread, drive_randomwrite
