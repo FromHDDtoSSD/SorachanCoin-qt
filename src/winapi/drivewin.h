@@ -5,4 +5,29 @@
 //
 // include, drivebase.h
 //
+#ifndef SORACHANCOIN_DRIVEWIN_H
+#define SORACHANCOIN_DRIVEWIN_H
+
 #include <winapi/drivebase.h>
+
+class cputime
+{
+private:
+    cputime(const cputime &)=delete;
+    cputime &operator=(const cputime &)=delete;
+    cputime(cputime &&)=delete;
+    cputime &operator=(cputime &&)=delete;
+    LARGE_INTEGER qf, qc;
+public:
+    cputime() {
+        (void)::QueryPerformanceFrequency(&qf);
+    }
+    ~cputime() {}
+
+    double operator()() {
+        (void)::QueryPerformanceCounter(&qc);
+        return (double)qc.QuadPart / (double)qf.QuadPart;
+    }
+};
+
+#endif // SORACHANCOIN_DRIVEWIN_H

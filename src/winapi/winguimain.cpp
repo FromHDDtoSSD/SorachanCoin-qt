@@ -126,8 +126,6 @@ public:
     }
 };
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // STRUCTURE, LOGIC
 /////////////////////////////////////////////////////////////////////////
@@ -149,15 +147,16 @@ typedef struct _ctrl_info
     HWND hComboThread;
     HWND hComboLoop;
     HWND hComboRand;
-    resource *pres;
 } ctrl_info;
 
 class bench_info final
 {
 private:
-    bench_info(); // {}
-    bench_info(const bench_info &); // {}
-    bench_info &operator=(const bench_info &); // {}
+    bench_info()=delete;
+    bench_info(const bench_info &)=delete;
+    bench_info &operator=(const bench_info &)=delete;
+    bench_info(bench_info &&)=delete;
+    bench_info &operator=(bench_info &&)=delete;
 
     const ctrl_info *pci;
     logw *plog;
@@ -200,7 +199,7 @@ private:
 
             ::Sleep(30);
         }
-        set_progmessage(prognum, pci->pres->getresource(IDS_BENCHMARK_COMPLETED).c_str(), (int)100, true);
+        set_progmessage(prognum, IDS_BENCHMARK_COMPLETED, (int)100, true);
     }
 
     bool acc_type(cla_thread<bench_info>::thread_data *pdata, sector_io::ACC_TYPE type) const {
@@ -240,45 +239,45 @@ private:
         if(!acc_type(pdata, type)) {
             return false;
         }
-        set_progmessage(prognum, pci->pres->getresource(IDS_BENCHMARK_DOING).c_str(), (int)0, true);
+        set_progmessage(prognum, IDS_BENCHMARK_DOING, (int)0, true);
         if(!speed_thread.start(nullptr, this)) {
             return false;
         }
-        _threadproc(pdata, prognum, io_obj, sizeof(sector_io), pci->pres->getresource(IDS_BENCHMARK_DOING).c_str());
+        _threadproc(pdata, prognum, io_obj, sizeof(sector_io), IDS_BENCHMARK_DOING);
         {
             speed_thread.waitclose();
             if(pdata->exit_flag) { return true; }
             std::wostringstream stream;
-            stream << pci->pres->getresource(IDS_BENCHMARK_RESULT).c_str() << speed_result << L"MB/s  ";
+            stream << IDS_BENCHMARK_RESULT << speed_result << L"MB/s  ";
             set_progmessage(prognum, stream.str().c_str(), (int)100, true);
 
             std::wostringstream logstream;
-            logstream << L"› ";
+            logstream << L"* ";
             switch(prognum)
             {
             case PROGRESS_ID(1):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_1).c_str() << L"  ";
+                logstream << IDS_PROGRESSBAR_1 << L"  ";
                 break;
             case PROGRESS_ID(2):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_2).c_str() << L"   ";
+                logstream << IDS_PROGRESSBAR_2 << L"   ";
                 break;
             case PROGRESS_ID(3):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_3).c_str() << L"     ";
+                logstream << IDS_PROGRESSBAR_3 << L"     ";
                 break;
             case PROGRESS_ID(4):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_4).c_str() << L" ";
+                logstream << IDS_PROGRESSBAR_4 << L" ";
                 break;
             case PROGRESS_ID(5):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_5).c_str() << L"  ";
+                logstream << IDS_PROGRESSBAR_5 << L"  ";
                 break;
             case PROGRESS_ID(6):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_6).c_str() << L"    ";
+                logstream << IDS_PROGRESSBAR_6 << L"    ";
                 break;
             case PROGRESS_ID(7):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_7).c_str() << L"     ";
+                logstream << IDS_PROGRESSBAR_7 << L"     ";
                 break;
             case PROGRESS_ID(8):
-                logstream << pci->pres->getresource(IDS_PROGRESSBAR_8).c_str() << L"    ";
+                logstream << IDS_PROGRESSBAR_8 << L"    ";
                 break;
             default:
                 break;
@@ -292,40 +291,40 @@ private:
     unsigned int _thread(cla_thread<bench_info>::thread_data *pdata) {
         for(int i = 0; i < PROGRESS_NUM; ++i)
         {
-            set_progmessage(i, pci->pres->getresource(IDS_BENCHMARK_WAITING).c_str(), 0, true);
+            set_progmessage(i, IDS_BENCHMARK_WAITING, 0, true);
         }
 
         LPCWSTR sepa = L"=====================================================================";
         std::wstring rand_st, rand_type;
         if((int)::SendMessageW(pci->hComboRand, CB_GETCURSEL, 0L, 0L) == RAND_STRENGTH_LOW) {
-            rand_st = pci->pres->getresource(IDS_RAND_LOW);
+            rand_st = IDS_RAND_LOW;
         } else if((int)::SendMessageW(pci->hComboRand, CB_GETCURSEL, 0L, 0L) == RAND_STRENGTH_MID) {
-            rand_st = pci->pres->getresource(IDS_RAND_MID);
+            rand_st = IDS_RAND_MID;
         } else {
-            rand_st = pci->pres->getresource(IDS_RAND_HIGH);
+            rand_st = IDS_RAND_HIGH;
         }
         if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_MIX) {
-            rand_type = pci->pres->getresource(IDS_BENCHMARK_RAND_MIX);
+            rand_type = IDS_BENCHMARK_RAND_MIX;
         } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_MT19937) {
-            rand_type = pci->pres->getresource(IDS_BENCHMARK_RAND_MT19937);
+            rand_type = IDS_BENCHMARK_RAND_MT19937;
         } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_XORSHIFT) {
-            rand_type = pci->pres->getresource(IDS_BENCHMARK_RAND_XORSHIFT);
+            rand_type = IDS_BENCHMARK_RAND_XORSHIFT;
         } else {
-            rand_type = pci->pres->getresource(IDS_BENCHMARK_RAND_OPENSSL);
+            rand_type = IDS_BENCHMARK_RAND_OPENSSL;
         }
         for(;;)
         {
             *plog << L"\r\n" << sepa
-                << L"\r\n  " << pci->pres->getresource(IDS_APP_TITLE).c_str()
-                << L"\r\n¡ " << pci->pres->getresource(IDS_APP_COPYRIGHT).c_str()
-                << L"\r\nœ " << pci->pres->getresource(IDS_LOG_PARAM).c_str() << L" " << ((int)::SendMessageW(pci->hComboThread, CB_GETCURSEL, 0L, 0L) + 1) * sector_randbuffer::RAND_GENE_MAX << pci->pres->getresource(IDS_LOG_THREAD).c_str() << L" " << rand_st.c_str() << L" " << pci->pres->getresource(IDS_LOG_RAND).c_str() << L":" << rand_type.c_str()
+                << L"\r\n* " << IDS_APP_TITLE
+                << L"\r\n* " << IDS_APP_COPYRIGHT
+                << L"\r\n* " << IDS_LOG_PARAM << L" " << ((int)::SendMessageW(pci->hComboThread, CB_GETCURSEL, 0L, 0L) + 1) * sector_randbuffer::RAND_GENE_MAX << IDS_LOG_THREAD << L" " << rand_st.c_str() << L" " << IDS_LOG_RAND << L":" << rand_type.c_str()
                 << L"\r\n" << sepa
                 << L"\r\n\r\n";
 
             //
             // 0, RandSeedBuf
             //
-            _threadproc(pdata, 0, randbuf, sizeof(sector_randbuffer), pci->pres->getresource(IDS_BENCHMARK_GENERATING).c_str());
+            _threadproc(pdata, 0, randbuf, sizeof(sector_randbuffer), IDS_BENCHMARK_GENERATING);
             if(pdata->exit_flag) { return 1; }
 
             //
@@ -413,7 +412,7 @@ private:
             //
             *plog << L"\r\n" << sepa
                 << L"\r\n\r\n" << sepa
-                << L"\r\n" << pci->pres->getresource(IDS_LOG_DRIVEINFO).c_str()
+                << L"\r\n" << IDS_LOG_DRIVEINFO
                 << L"\r\n" << sepa
                 << L"\r\n\r\n" << driveinf->getdriveinfo().c_str()
                 << L"\r\n\r\n" << sepa << L"\r\n\r\n";
@@ -668,6 +667,8 @@ typedef struct _win_userdata
     bool restart;
     logw *plog;
 } win_userdata;
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // OPERATOR
