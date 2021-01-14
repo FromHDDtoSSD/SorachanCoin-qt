@@ -2,7 +2,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// SorachanCoin DriveInfo Wallet
-// https://github.com/FromHDDtoSSD/SSD_Heat_Resistant_Benchmark
+#ifndef SORACHANCOIN_WINGUIMAIN_H
+#define SORACHANCOIN_WINGUIMAIN_H
+#if defined(QT_GUI) && defined(WIN32)
 
+#include <winapi/drivewin.h>
+#include <winapi/sectorwin.h>
 
+#endif
+#endif // SORACHANCOIN_WINGUIMAIN_H

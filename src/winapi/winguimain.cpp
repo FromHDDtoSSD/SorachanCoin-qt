@@ -2,11 +2,12 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <winapi/drivebase.h>
+#if defined(QT_GUI) && defined(WIN32)
 
-//#if defined(QT_GUI) && defined(WIN32)
-#ifndef PREDICTION_UNDER_DEVELOPMENT
+// prediction system
+// windows GUI
 
+#include <winapi/winguimain.h>
 #include <windows.h>
 #include <commctrl.h>
 #include <string>
@@ -22,25 +23,25 @@ constexpr int WINDOW_HEIGHT = 600;
 constexpr int PROGRESS_NUM = 9;
 
 /////////////////////////////////////////////////////////////////////////
-// LOG (char)
+// prediction system LOG (char)
 /////////////////////////////////////////////////////////////////////////
 
 class logw final : protected drive_util
 {
 private:
-    logw(); // {}
-    logw(const logw &); // {}
-    logw &operator=(const logw &); // {}
+    logw(const logw &)=delete;
+    logw &operator=(const logw &)=delete;
+    logw(logw &&)=delete;
+    logw &operator=(logw &&)=delete;
 
     mutable drive_datawritefull wobj;
-    const resource *res;
     std::wstring dir;
     std::ostringstream stream;
 
     bool setbufferwrite() const {
         if(stream.str().size() == 0) { return false; }
         std::vector<BYTE> *pbuf = wobj.setbufferwrite();
-        if(!pbuf) { return false; }
+        if(! pbuf) { return false; }
         std::string str = stream.str();
         pbuf->resize(str.size(), 0x00);
         ::RtlCopyMemory(&pbuf->at(0), str.c_str(), str.size());
@@ -48,7 +49,7 @@ private:
         return true;
     }
 public:
-    logw(const resource *_res) : res(_res) {}
+    logw() {}
     ~logw() {
         clear();
     }
@@ -58,7 +59,7 @@ public:
         source << obj;
 
         std::string dest;
-        if(!drive_util::wchartochar(source.str().c_str(), dest)) { return *this; }
+        if(! drive_util::wchartochar(source.str().c_str(), dest)) { return *this; }
         stream << dest.c_str();
         return *this;
     }
@@ -72,7 +73,7 @@ public:
 
         BROWSEINFO bi = { 0 };
         LPITEMIDLIST idl;
-        std::wstring title = res->getresource(IDS_LOG_DIR_DIALOG);
+        std::wstring title = L"Prediction system Log location";
         bi.hwndOwner = nullptr;
         bi.pidlRoot = nullptr;
         bi.pszDisplayName = &vwname.at(0);
@@ -98,14 +99,14 @@ public:
         struct tm now = { 0 };
         ::localtime_s(&now, &tim);
 
-        std::wstring year = res->getresource(IDS_LOG_YEAR);
-        std::wstring mon = res->getresource(IDS_LOG_MON);
-        std::wstring day = res->getresource(IDS_LOG_DAY);
-        std::wstring hour = res->getresource(IDS_LOG_HOUR);
-        std::wstring min = res->getresource(IDS_LOG_MIN);
-        std::wstring sec = res->getresource(IDS_LOG_SEC);
+        std::wstring year = L"year";
+        std::wstring mon  = L"mon";
+        std::wstring day  = L"day";
+        std::wstring hour = L"hour";
+        std::wstring min  = L"min";
+        std::wstring sec  = L"sec";
 
-        mcrypt<unsigned long> crypt;
+        mcrypto<unsigned long> crypt;
 
         std::wostringstream path;
         path << dir.c_str() << L'\\' << now.tm_year + 1900 << year.c_str() << now.tm_mon + 1 << mon.c_str() << now.tm_mday << day.c_str() << now.tm_hour << hour.c_str() << now.tm_min << min.c_str() << now.tm_sec << sec.c_str() << L'_' << (unsigned long)(crypt >>= crypt) << L".txt";
@@ -124,6 +125,8 @@ public:
         stream.clear(std::ostringstream::goodbit);
     }
 };
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // STRUCTURE, LOGIC
@@ -1383,8 +1386,5 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
     return winmain_ret;
 }
 
-#else
-
-// under development
-
+#endif // PREDICTION_UNDER_DEVELOPMENT
 #endif
