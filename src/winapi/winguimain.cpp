@@ -8,6 +8,7 @@
 // windows GUI
 
 #include <winapi/winguimain.h>
+#include <sync/lsync.h>
 #include <windows.h>
 #include <commctrl.h>
 #include <string>
@@ -668,35 +669,36 @@ typedef struct _win_userdata
     logw *plog;
 } win_userdata;
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // OPERATOR
 /////////////////////////////////////////////////////////////////////////
 
+namespace {
 RECT &operator +=(RECT &rc, const int &d)
 {
     rc.top += d;
     rc.bottom += d;
     return rc;
 }
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////
-// FONT MENU
+// FONT
 /////////////////////////////////////////////////////////////////////////
 
 class font
 {
 private:
-    font(const font &); // {}
-    font &operator=(const font &); // {}
+    font(const font &)=delete;
+    font &operator=(const font &)=delete;
+    font(font &&)=delete;
+    font &operator=(font &&)=delete;
 
     HFONT hFont;
     font() {
         hFont = ::CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_DONTCARE, nullptr);
-        if(!hFont) {
-            std::runtime_error(resource::getresourceA(IDS_ERROR_FONT).c_str());
-        }
+        if(! hFont)
+            throw std::runtime_error(IDS_ERROR_FONT);
     }
     ~font() {
         if(hFont) {
@@ -719,112 +721,44 @@ public:
     }
 };
 
-class menu
-{
-private:
-    menu(); //{}
-    menu(const menu &); //{}
-    menu &operator=(const menu &); //{}
-
-    HMENU hMenu;
-    MENUITEMINFO getstate(DWORD id) const {
-        MENUITEMINFO mi = { 0 };
-        mi.cbSize = sizeof(MENUITEMINFO);
-        mi.fMask = MIIM_ID | MIIM_STATE;
-        ::GetMenuItemInfo(hMenu, id, FALSE, &mi);
-        return mi;
-    }
-public:
-    menu(HMENU _hMenu) : hMenu(_hMenu) {}
-    ~menu() {}
-
-    void enable(DWORD id) const {
-        if(!hMenu) { return; }
-        MENUITEMINFO mi = getstate(id);
-        mi.cbSize = sizeof(MENUITEMINFO);
-        mi.fMask = MIIM_ID | MIIM_STATE;
-        mi.fState &= ~MFS_DISABLED;
-        mi.fState |= MFS_ENABLED;
-        mi.wID = id;
-        ::SetMenuItemInfo(hMenu, id, FALSE, &mi);
-    }
-    void disable(DWORD id) const {
-        if(!hMenu) { return; }
-        MENUITEMINFO mi = getstate(id);
-        mi.cbSize = sizeof(MENUITEMINFO);
-        mi.fMask = MIIM_ID | MIIM_STATE;
-        mi.fState &= ~MFS_ENABLED;
-        mi.fState |= MFS_DISABLED;
-        mi.wID = id;
-        ::SetMenuItemInfo(hMenu, id, FALSE, &mi);
-    }
-    void check(DWORD id, bool check) const {
-        if(!hMenu) { return; }
-        MENUITEMINFO mi = getstate(id);
-        mi.cbSize = sizeof(MENUITEMINFO);
-        mi.fMask = MIIM_ID | MIIM_STATE;
-        mi.fState &= check ? ~MFS_UNCHECKED : ~MFS_CHECKED;
-        mi.fState |= check ? MFS_CHECKED : MFS_UNCHECKED;
-        mi.wID = id;
-        ::SetMenuItemInfo(hMenu, id, FALSE, &mi);
-    }
-};
-
 /////////////////////////////////////////////////////////////////////////
 // FUNCTION
 /////////////////////////////////////////////////////////////////////////
 
 namespace ProgressString
 {
-    static sync cs;
+    static LCCriticalSection cs;
     static std::wstring str[PROGRESS_NUM];
 
     inline std::wstring GetString(WORD id)
     {
+        LLOCK(cs);
         std::wostringstream stream;
-
-        cs.enter();
         stream << str[id];
-        cs.leave();
-
         return stream.str();
     }
     inline void SetString(WORD id, LPCWSTR message, int percent)
     {
+        LLOCK(cs);
         std::wostringstream stream;
-
-        cs.enter();
-        if(message) {
+        if(message)
             stream << message << percent << L" %";
-        } else {
+        else
             stream << percent << L" %";
-        }
         str[id] = stream.str();
-        cs.leave();
     }
     inline void ClearString() {
         for(int i = 0; i < ARRAY_SIZE(ProgressString::str); ++i)
-        {
             ProgressString::str[i].clear();
-        }
     }
 }
 
-inline void SetCtrlMenu(HWND hWnd, DWORD idr) {
+static void SetCtrlMenu(HWND hWnd, DWORD idr) {
     HMENU hMenu = ::LoadMenu(::GetModuleHandle(nullptr), MAKEINTRESOURCEW(idr));
     ::SetMenu(hWnd, hMenu);
-
-    menu mn(hMenu);
-    mn.check(IDM_LANG_ENGLISH, false);
-    mn.check(IDM_LANG_JAPANESE, false);
-    if(idr == IDR_MENU_ENGLISH) {
-        mn.check(IDM_LANG_ENGLISH, true);
-    } else {
-        mn.check(IDM_LANG_JAPANESE, true);
-    }
 }
 
-inline void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
+static void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hStartButton, TRUE);
     ::EnableWindow(pci->hStopButton, FALSE);
     ::EnableWindow(pci->hComboDisk, TRUE);
@@ -832,21 +766,10 @@ inline void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hComboLoop, TRUE);
     ::EnableWindow(pci->hComboRand, TRUE);
     for(int i = 0; i < PROGRESS_NUM; ++i)
-    {
         ::EnableWindow(pci->pbench_onoff[i], TRUE);
-    }
-
-    menu mn(::GetMenu(hWnd));
-    mn.enable(IDM_BENCH_LOG);
-    mn.enable(IDM_FILE_EXIT);
-    mn.enable(IDM_INFO_VERSION);
-    mn.enable(IDM_BENCH_START);
-    mn.disable(IDM_BENCH_STOP);
-    mn.enable(IDM_LANG_ENGLISH);
-    mn.enable(IDM_LANG_JAPANESE);
 }
 
-inline void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
+static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hStartButton, FALSE);
     ::EnableWindow(pci->hStopButton, TRUE);
     ::EnableWindow(pci->hComboDisk, FALSE);
@@ -854,19 +777,10 @@ inline void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hComboLoop, FALSE);
     ::EnableWindow(pci->hComboRand, FALSE);
     for(int i = 0; i < PROGRESS_NUM; ++i)
-    {
         ::EnableWindow(pci->pbench_onoff[i], FALSE);
-    }
-
-    menu mn(::GetMenu(hWnd));
-    mn.disable(IDM_BENCH_LOG);
-    mn.disable(IDM_FILE_EXIT);
-    mn.enable(IDM_INFO_VERSION);
-    mn.disable(IDM_BENCH_START);
-    mn.enable(IDM_BENCH_STOP);
-    mn.disable(IDM_LANG_ENGLISH);
-    mn.disable(IDM_LANG_JAPANESE);
 }
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK

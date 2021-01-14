@@ -587,6 +587,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/noexcept/noexcept_config/rtti.hpp \
     src/noexcept/noexcept_config/thread_local.hpp \
     src/noexcept/noexcept_config/throw_exception.hpp \
+    src/nvme/nvme.h \
+    src/nvme/nvme_internal.h \
     src/winapi/winguimain.h \
     src/winapi/drivebase.h \
     src/winapi/drivewin.h \
@@ -755,6 +757,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp \
     src/json/json_spirit_writer.cpp \
+    src/nvme/nvme.cpp \
     src/winapi/winguimain.cpp \
     src/winapi/drivebase.cpp \
     src/winapi/drivewin.cpp \
