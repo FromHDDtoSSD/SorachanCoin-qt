@@ -96,13 +96,6 @@ constexpr int RAND_STRENGTH_HIGH      = 2;
 #define PROGRESS_ID(X)                ((INT_PTR)X)
 #define BENCH_ONOFF_ID(X)             ((INT_PTR)X + 1500)
 #define WM_SET_PROGRESS               (WM_APP + 0)
-#define IDM_BENCH_LOG                 1600
-#define IDM_FILE_EXIT                 1601
-#define IDM_INFO_VERSION              1602
-#define IDM_BENCH_START               1700
-#define IDM_BENCH_STOP                1701
-#define IDM_LANG_ENGLISH              1800
-#define IDM_LANG_JAPANESE             1801
 
 #endif
 #endif // SORACHANCOIN_WINGUIMAIN_H

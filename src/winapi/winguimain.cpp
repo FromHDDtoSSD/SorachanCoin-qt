@@ -780,8 +780,6 @@ static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
         ::EnableWindow(pci->pbench_onoff[i], FALSE);
 }
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK
 /////////////////////////////////////////////////////////////////////////
@@ -789,13 +787,13 @@ static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
 LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     win_userdata *pwu = reinterpret_cast<win_userdata *>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
-    std::wstring str;
+    //std::wstring str;
 
     switch(msg)
     {
     case WM_CLOSE:
-        if(!pwu->pbi->all_signal()) {
-            ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCHMARK_NO_CLOSE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
+        if(! pwu->pbi->all_signal()) {
+            ::MessageBoxW(hWnd, IDS_BENCHMARK_NO_CLOSE, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
             return 0;
         }
         break;
@@ -807,35 +805,35 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         PAINTSTRUCT ps;
         HDC hDC = ::BeginPaint(hWnd, &ps);
         RECT rc = { 2, 70, 430, 95 };
-        font::instance()(hDC, rc, pwu->pci->pres->getresource(IDS_PROGRESSBAR_0).c_str());
+        font::instance()(hDC, rc, IDS_PROGRESSBAR_0);
         for(int i = 1; i < PROGRESS_NUM; ++i)
         {
             std::wostringstream stream;
             switch(i)
             {
             case PROGRESS_ID(1):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_1).c_str();
+                stream << IDS_PROGRESSBAR_1;
                 break;
             case PROGRESS_ID(2):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_2).c_str();
+                stream << IDS_PROGRESSBAR_2;
                 break;
             case PROGRESS_ID(3):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_3).c_str();
+                stream << IDS_PROGRESSBAR_3;
                 break;
             case PROGRESS_ID(4):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_4).c_str();
+                stream << IDS_PROGRESSBAR_4;
                 break;
             case PROGRESS_ID(5):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_5).c_str();
+                stream << IDS_PROGRESSBAR_5;
                 break;
             case PROGRESS_ID(6):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_6).c_str();
+                stream << IDS_PROGRESSBAR_6;
                 break;
             case PROGRESS_ID(7):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_7).c_str();
+                stream << IDS_PROGRESSBAR_7;
                 break;
             case PROGRESS_ID(8):
-                stream << pwu->pci->pres->getresource(IDS_PROGRESSBAR_8).c_str();
+                stream << IDS_PROGRESSBAR_8;
                 break;
             default:
                 break;
@@ -844,9 +842,9 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             font::instance()(hDC, rc, stream.str());
         }
         rc += 75;
-        font::instance()(hDC, rc, pwu->pci->pres->getresource(IDS_APP_COPYRIGHT).c_str());
+        font::instance()(hDC, rc, IDS_APP_COPYRIGHT);
         rc += 20;
-        font::instance()(hDC, rc, pwu->pci->pres->getresource(IDS_APP_OPENSSLRIGHT).c_str());
+        font::instance()(hDC, rc, IDS_APP_OPENSSLRIGHT);
         ::EndPaint(hWnd, &ps);
     }
     break;
@@ -854,72 +852,49 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         switch(LOWORD(wp))
         {
         case IDC_BUTTON_START:
-        case IDM_BENCH_START:
-            if(!pwu->pbi->all_signal()) {
-                ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCH_START_NO_CLOSE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
+            if(! pwu->pbi->all_signal()) {
+                ::MessageBoxW(hWnd, IDS_BENCH_START_NO_CLOSE, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
                 break;
             }
-            if(::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCHMARK_START).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_QUESTION).c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            if(::MessageBoxW(hWnd, IDS_BENCHMARK_START, IDS_MESSAGEBOX_QUESTION, MB_YESNO | MB_ICONQUESTION) == IDYES) {
                 if(pwu->pbi->create()) {
                     std::wostringstream stream;
-                    stream << pwu->pci->pres->getresource(IDS_BENCHMARK_INFO).c_str() << pwu->pbi->getdriveinfo().c_str() << L"\n\n" << pwu->pci->pres->getresource(IDS_BENCHMARK_OK).c_str();
-                    if(::MessageBoxW(hWnd, stream.str().c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_QUESTION).c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES) {
+                    stream << IDS_BENCHMARK_INFO << pwu->pbi->getdriveinfo().c_str() << L"\n\n" << IDS_BENCHMARK_OK;
+                    if(::MessageBoxW(hWnd, stream.str().c_str(), IDS_MESSAGEBOX_QUESTION, MB_YESNO | MB_ICONQUESTION) == IDYES) {
                         if(pwu->pbi->start() && pwu->pbi->ctrlthread_start()) {
                             SetCtrlBenchmark(hWnd, pwu->pci);
                             ::SetTimer(hWnd, IDC_THREAD_TIMER, THREAD_TIMER_INTERVAL, nullptr);
                         } else {
-                            ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_ERROR_BENCHMARK_START).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                            ::MessageBoxW(hWnd, IDS_ERROR_BENCHMARK_START, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                             pwu->pbi->all_stop();
                             pwu->pbi->all_waitclose();
                         }
                     }
                 } else {
-                    ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_ERROR_BENCHMARK_FAILURE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                    ::MessageBoxW(hWnd, IDS_ERROR_BENCHMARK_FAILURE, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                     pwu->pbi->all_stop();
                     pwu->pbi->all_waitclose();
                 }
             }
             break;
         case IDC_BUTTON_STOP:
-        case IDM_BENCH_STOP:
             if(pwu->pbi->all_signal()) {
                 break;
             }
-            if(::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCHMARK_STOP).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_QUESTION).c_str(), MB_YESNO | MB_ICONQUESTION) == IDYES) {
+            if(::MessageBoxW(hWnd, IDS_BENCHMARK_STOP, IDS_MESSAGEBOX_QUESTION, MB_YESNO | MB_ICONQUESTION) == IDYES) {
                 pwu->pbi->all_stop();
             }
             break;
-        case IDM_BENCH_LOG:
-            if(!pwu->pbi->all_signal()) {
-                ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCH_LOGSET_NO_CLOSE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
-                break;
-            }
-            pwu->plog->setdir();
-            break;
-        case IDM_FILE_EXIT:
-            ::SendMessageW(hWnd, WM_CLOSE, 0L, 0L);
-            return 0;
-        case IDM_INFO_VERSION:
-            ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_MESSAGEBOX_COPYRIGHT).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
-            break;
-        case IDM_LANG_ENGLISH:
-            if(!pwu->pbi->all_signal()) {
-                ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_LANG_NO_CLOSE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
-                return 0;
-            }
-            pwu->pci->pres->setlang(resource::LANG_ENGLISH_US);
-            pwu->restart = true;
-            ::SendMessageW(hWnd, WM_CLOSE, 0L, 0L);
-            return 0;
-        case IDM_LANG_JAPANESE:
-            if(!pwu->pbi->all_signal()) {
-                ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_LANG_NO_CLOSE).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_INFO).c_str(), MB_OK | MB_ICONINFORMATION);
-                return 0;
-            }
-            pwu->pci->pres->setlang(resource::LANG_JAPANESE_JAPAN);
-            pwu->restart = true;
-            ::SendMessageW(hWnd, WM_CLOSE, 0L, 0L);
-            return 0;
+        //case IDM_BENCH_LOG:
+        //    if(! pwu->pbi->all_signal()) {
+        //        ::MessageBoxW(hWnd, IDS_BENCH_LOGSET_NO_CLOSE, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
+        //        break;
+        //    }
+        //    pwu->plog->setdir();
+        //    break;
+        //case IDM_INFO_VERSION:
+        //    ::MessageBoxW(hWnd, IDS_MESSAGEBOX_COPYRIGHT, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
+        //    break;
         default:
             break;
         }
@@ -930,7 +905,7 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             pwu->pbi->all_waitclose();
             ::KillTimer(hWnd, IDC_THREAD_TIMER);
             if(failure) {
-                ::MessageBoxW(hWnd, pwu->pci->pres->getresource(IDS_BENCHMARK_RESULT_ERROR).c_str(), pwu->pci->pres->getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(hWnd, IDS_BENCHMARK_RESULT_ERROR, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
             }
             SetCtrlWait(hWnd, pwu->pci);
         }
@@ -941,6 +916,8 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 
     return ::DefWindowProcW(hWnd, msg, wp, lp);
 }
+
+#ifndef PREDICTION_UNDER_DEVELOPMENT
 
 LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
 {
