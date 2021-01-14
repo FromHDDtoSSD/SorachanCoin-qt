@@ -150,6 +150,90 @@ json_spirit::Value CRPCTable::getkernelps(const json_spirit::Array &params, CBit
     return data.JSONRPCSuccess(obj);
 }
 
+json_spirit::Value CRPCTable::getblockchaininfo(const json_spirit::Array &params, CBitrpcData &data) {
+    if (data.fHelp() || params.size() != 0) {
+        return data.JSONRPCSuccess(
+            "getblockchaininfo\n"
+            "Returns an object containing various state info regarding blockchain processing.");
+    }
+
+    json_spirit::Object obj, diff;
+    obj.push_back(json_spirit::Pair("chain", args_bool::fTestNet? "testnet": "main"));
+    obj.push_back(json_spirit::Pair("blocks", (int)block_info::nBestHeight));
+    obj.push_back(json_spirit::Pair("headers", (int)block_info::nBestHeight));
+    obj.push_back(json_spirit::Pair("bestblockhash", block_info::hashBestChain.ToString()));
+
+    diff.push_back(json_spirit::Pair("proof-of-work", GetDifficulty()));
+    diff.push_back(json_spirit::Pair("proof-of-stake", GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, true))));
+    diff.push_back(json_spirit::Pair("search-interval", (int)block_info::nLastCoinStakeSearchInterval));
+    obj.push_back(json_spirit::Pair("difficulty", diff));
+
+    const CBlockIndex *block = block_info::mapBlockIndex[block_info::hashBestChain];
+    obj.push_back(json_spirit::Pair("mediantime", block->GetMedianTimePast()));
+    obj.push_back(json_spirit::Pair("verificationprogress", (double)1.0)); // under development
+    obj.push_back(json_spirit::Pair("initialblockdownload", block_notify::IsInitialBlockDownload()));
+
+    obj.push_back(json_spirit::Pair("chainwork", block_info::nBestChainTrust.ToString()));
+    obj.push_back(json_spirit::Pair("size_on_disk", 0)); // under development
+    obj.push_back(json_spirit::Pair("pruned", false)); // under development
+
+    auto forks_info = [](const char *id, int version, bool freject) {
+        json_spirit::Object bip, rej;
+        rej.push_back(json_spirit::Pair("status", freject));
+        bip.push_back(json_spirit::Pair("id", id));
+        bip.push_back(json_spirit::Pair("version", version));
+        bip.push_back(json_spirit::Pair("reject", rej));
+        return bip;
+    };
+
+    json_spirit::Array softforks;
+    softforks.push_back(forks_info("bip34", 2, false)); // under development
+    softforks.push_back(forks_info("bip66", 3, true));
+    softforks.push_back(forks_info("bip65", 4, true));
+    obj.push_back(json_spirit::Pair("softforks", softforks));
+
+    auto bip9_forks_info = [](bool status, uint64_t start, uint64_t timeout, uint64_t since) {
+        json_spirit::Object bip;
+        bip.push_back(json_spirit::Pair("status", status? "active": "inactive"));
+        bip.push_back(json_spirit::Pair("startTime", start));
+        bip.push_back(json_spirit::Pair("timeout", timeout));
+        bip.push_back(json_spirit::Pair("since", since));
+        return bip;
+    };
+
+    // under development
+    json_spirit::Object bip9;
+    bip9.push_back(json_spirit::Pair("csv", bip9_forks_info(false, 0, 0, 0)));
+    bip9.push_back(json_spirit::Pair("segwit", bip9_forks_info(false, 0, 0, 0)));
+    obj.push_back(json_spirit::Pair("bip9_softforks", bip9));
+
+    // under development
+    obj.push_back(json_spirit::Pair("warning", ""));
+    return data.JSONRPCSuccess(obj);
+}
+
+json_spirit::Value CRPCTable::getnetworkinfo(const json_spirit::Array &params, CBitrpcData &data) {
+    if (data.fHelp() || params.size() != 0) {
+        return data.JSONRPCSuccess(
+            "getnetworkinfo\n"
+            "Returns an object containing various state info regarding P2P networking.");
+    }
+
+    json_spirit::Object obj;
+    return data.JSONRPCSuccess(obj);
+}
+
+json_spirit::Value CRPCTable::getwalletinfo(const json_spirit::Array &params, CBitrpcData &data) {
+    if (data.fHelp() || params.size() != 0) {
+        return data.JSONRPCSuccess(
+            "getwalletinfo\n"
+            "Returns an object containing various wallet state info.");
+    }
+
+    json_spirit::Object obj;
+    return data.JSONRPCSuccess(obj);
+}
+
 json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(

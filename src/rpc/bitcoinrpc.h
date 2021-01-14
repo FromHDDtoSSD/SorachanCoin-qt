@@ -365,7 +365,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[94]; // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[97]; // Bitcoin RPC Command
     static std::map<std::string, const CRPCCommand *> mapCommands;
 
     struct tallyitem {
@@ -488,6 +488,9 @@ private:
     static json_spirit::Value getinfo(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value getnetworkhashps(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value getkernelps(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getblockchaininfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getnetworkinfo(const json_spirit::Array &params, CBitrpcData &data);
+    static json_spirit::Value getwalletinfo(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value reservebalance(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value checkwallet(const json_spirit::Array &params, CBitrpcData &data);
     static json_spirit::Value repairwallet(const json_spirit::Array &params, CBitrpcData &data);
