@@ -241,6 +241,18 @@ static inline void nvme_err(const char *format, const char *args, ...) {
     LogPrintf(panic.c_str(), args);
 }
 
+static inline void nvme_info(const char *format, const char *args, ...) {
+    std::string panic(format);
+    panic += " :nvme_info";
+    LogPrintf(panic.c_str(), args);
+}
+
+static inline void nvme_debug(const char *format, const char *args, ...) {
+    std::string panic(format);
+    panic += " :nvme_debug";
+    LogPrintf(panic.c_str(), args);
+}
+
 static inline void nvme_log(const char *format, const char *args, ...) {
     LogPrintf(format, args);
 }

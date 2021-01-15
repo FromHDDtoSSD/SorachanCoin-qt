@@ -917,8 +917,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     return ::DefWindowProcW(hWnd, msg, wp, lp);
 }
 
-#ifndef PREDICTION_UNDER_DEVELOPMENT
-
 LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
 {
     progress_info *proginfo = reinterpret_cast<progress_info *>(::GetWindowLongPtrW(hProgress, GWLP_USERDATA));
@@ -946,41 +944,33 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
     return ret;
 }
 
-bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
 {
-    static_cast<HINSTANCE>(hPrevInstance);
-    static_cast<LPSTR>(lpCmdLine);
-    static_cast<int>(nCmdShow);
+    (void)hPrevInstance;
+    (void)lpCmdLine;
+    (void)nCmdShow;
 
-    //
-    // resource object, logw object
-    //
-    resource res;
-    logw logobj(&res);
-
-    WNDCLASSEX wc;
-    std::wstring windowclassname = res.getresource(IDS_APP_WINDOWCLASSNAME);
+    logw logobj;
+    WNDCLASSEX wc = {0};
+    std::wstring windowclassname = IDS_APP_WINDOWCLASSNAME;
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
     wc.hInstance = hInstance;
-    wc.hIcon = ::LoadIconW(hInstance, MAKEINTRESOURCE(ICO_MIMI));
-    wc.hIconSm = ::LoadIconW(hInstance, MAKEINTRESOURCE(ICO_MIMI));
     wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = windowclassname.c_str();
-    if(!::RegisterClassEx(&wc)) {
-        ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CLASSREGISTER).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+    if(! ::RegisterClassEx(&wc)) {
+        ::MessageBoxW(nullptr, IDS_ERROR_CLASSREGISTER, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
         return 0;
     }
 
     INT_PTR winmain_ret = 0;
-    for(;;) // restart loop
+    do // restart loop
     {
-
         ProgressString::ClearString();
 
         const int desktopWidth = ::GetSystemMetrics(SM_CXSCREEN);
@@ -988,7 +978,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         HWND hWnd = ::CreateWindowExW(
             0,
             windowclassname.c_str(),
-            res.getresource(IDS_APP_TITLE).c_str(),
+            IDS_APP_TITLE,
             WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX,
             (desktopWidth - WINDOW_WIDTH) / 2,
             (desktopHeight - WINDOW_HEIGHT) / 2,
@@ -1000,7 +990,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
             nullptr
         );
         if(!hWnd) {
-            ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+            ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
             return 0;
         }
 
@@ -1009,7 +999,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
             HWND hButton = ::CreateWindowExW(
                 0,
                 L"BUTTON",
-                res.getresource(IDS_START).c_str(),
+                IDS_START,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10,
                 20,
@@ -1021,7 +1011,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hButton) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return 0;
             }
             ci.hStartButton = hButton;
@@ -1031,7 +1021,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
             HWND hButton = ::CreateWindowExW(
                 0,
                 L"BUTTON",
-                res.getresource(IDS_STOP).c_str(),
+                IDS_STOP,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 60,
                 20,
@@ -1043,7 +1033,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hButton) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return 0;
             }
             ci.hStopButton = hButton;
@@ -1065,7 +1055,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return false;
             }
 
@@ -1076,7 +1066,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 if(robj.openhandle()) {
                     stream << L"[" << i << L"] " << robj.getdriveinfo(0);
                 } else {
-                    stream << res.getresource(IDS_DISK).c_str() << i << L" " << res.getresource(IDS_DISK_NONE).c_str();
+                    stream << IDS_DISK << i << L" " << IDS_DISK_NONE;
                 }
                 ::SendMessageW(hCombo, CB_ADDSTRING, 0, (LPARAM)stream.str().c_str());
             }
@@ -1101,7 +1091,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return false;
             }
 
@@ -1109,7 +1099,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
             {
                 if(i % sector_randbuffer::RAND_GENE_MAX == 0) {
                     std::wostringstream stream;
-                    stream << (k++ + 1) * sector_randbuffer::RAND_GENE_MAX << res.getresource(IDS_THREADS).c_str();
+                    stream << (k++ + 1) * sector_randbuffer::RAND_GENE_MAX << IDS_THREADS;
                     ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)stream.str().c_str());
                 }
             }
@@ -1134,12 +1124,12 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return false;
             }
 
-            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_ONCE_BENCHMARK).c_str());
-            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_LOOP_BENCHMARK).c_str());
+            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_ONCE_BENCHMARK);
+            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_LOOP_BENCHMARK);
 
             ci.hComboLoop = hCombo;
             ::SendMessageW(hCombo, CB_SETCURSEL, 0, 0);
@@ -1162,13 +1152,13 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return false;
             }
 
-            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_RAND_LOW).c_str());
-            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_RAND_MID).c_str());
-            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_RAND_HIGH).c_str());
+            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_RAND_LOW);
+            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_RAND_MID);
+            ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_RAND_HIGH);
 
             ci.hComboRand = hCombo;
             ::SendMessageW(hCombo, CB_SETCURSEL, 0, 0);
@@ -1179,7 +1169,6 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         HWND bench_onoff[PROGRESS_NUM] = { 0 };
         ci.pi = proginfo;
         ci.pbench_onoff = bench_onoff;
-        ci.pres = &res;
         for(int i = 0; i < ARRAY_SIZE(proginfo); ++i)
         {
             proginfo[i].hProgress = ::CreateWindowExW(
@@ -1197,7 +1186,7 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!proginfo[i].hProgress) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return 0;
             }
 
@@ -1225,18 +1214,18 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
                 nullptr
             );
             if(!bench_onoff[i]) {
-                ::MessageBoxW(nullptr, res.getresource(IDS_ERROR_CREATEWINDOW).c_str(), res.getresource(IDS_MESSAGEBOX_ERROR).c_str(), MB_OK | MB_ICONWARNING);
+                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
                 return 0;
             }
 
             if(i == 0) {
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_RAND_MIX).c_str());
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_RAND_MT19937).c_str());
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_RAND_XORSHIFT).c_str());
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_RAND_OPENSSL).c_str());
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_MIX);
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_MT19937);
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_XORSHIFT);
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_OPENSSL);
             } else {
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_ON).c_str());
-                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)res.getresource(IDS_BENCHMARK_OFF).c_str());
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_ON);
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_OFF);
             }
 
             if((0 <= i && i <= 3) || i == 7) {
@@ -1253,30 +1242,13 @@ bool CreatePredictionWindows(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR
         ::ShowWindow(hWnd, nCmdShow);
         ::UpdateWindow(hWnd);
 
-        resource::R_LANGUAGE menu_lang = res.getlocaleinfo();
-        if(menu_lang == resource::LANG_JAPANESE_JAPAN) {
-            SetCtrlMenu(hWnd, IDR_MENU_JAPANESE);
-        } else {
-            SetCtrlMenu(hWnd, IDR_MENU_ENGLISH);
-        }
-        SetCtrlWait(hWnd, &ci);
+        //
+        // working here
+        //
 
-        MSG msg;
-        while(::GetMessageW(&msg, nullptr, 0, 0) > 0)
-        {
-            ::TranslateMessage(&msg);
-            ::DispatchMessageW(&msg);
-        }
-
-        if(!wu.restart) {
-            winmain_ret = (INT_PTR)msg.wParam;
-            break;
-        }
-
-    } // for(;;)
+    } while(0);
 
     return winmain_ret;
 }
 
-#endif // PREDICTION_UNDER_DEVELOPMENT
-#endif
+#endif // QT_GUI && WIN32
