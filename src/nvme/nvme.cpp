@@ -302,16 +302,4 @@ int nvme::nvme_qpair_stat(struct nvme_qpair *qpair, struct nvme_qpair_stat *qpst
     return 0;
 }
 
-/*
- * Close all open controllers on exit.
- */
-void nvme::nvme_ctrlr_cleanup(void)
-{
-    struct nvme_ctrlr *ctrlr;
-    while ((ctrlr = LIST_FIRST(&ctrlr_head))) {
-        LIST_REMOVE(ctrlr, link);
-        nvme_ctrlr_detach(ctrlr);
-    }
-}
-
 #endif // LIBNVME_UNDER_DEVELOPMENT
