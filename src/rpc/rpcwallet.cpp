@@ -18,6 +18,7 @@
 #include <block/block_alert.h>
 #include <util/time.h>
 #include <util/strencodings.h> // HexStr (Witness)
+#include <util/thread.h>
 
 std::string CRPCTable::HelpRequiringPassphrase() noexcept {
     return entry::pwalletMain->IsCrypted()
@@ -1673,7 +1674,8 @@ json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params,
             "Stores the wallet decryption key in memory for <timeout> seconds.\n"
             "mintonly is optional true/false allowing only block minting.");
 
-    bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr);
+    if(! bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr))
+        return data.runtime_error("walletpassphrase ThreadTopUpKeyPool create failure.");
     int64_t *pnSleepTime = new(std::nothrow) int64_t(params[1].get_int64(status));
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     if(pnSleepTime == nullptr)

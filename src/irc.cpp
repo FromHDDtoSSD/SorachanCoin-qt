@@ -3,14 +3,15 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "irc.h"
-#include "address/base58.h"
-#include "net.h"
+#include <irc.h>
+#include <address/base58.h>
+#include <net.h>
+#include <util/thread.h>
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> irc_vector;
+using irc_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> irc_vector;
+using irc_vector = std::vector<uint8_t>;
 #endif
 
 class irc : private no_instance

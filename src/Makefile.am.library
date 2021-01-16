@@ -92,6 +92,7 @@ SorachanCoind_SOURCES = \
  util/strencodings.cpp \
  util/system.cpp \
  util/time.cpp \
+ util/thread.cpp \
  addrman.cpp \
  alert.cpp \
  checkpoints.cpp \

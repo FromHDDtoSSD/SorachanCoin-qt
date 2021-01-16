@@ -10,6 +10,7 @@
 #include <ui_interface.h>
 #include <rpc/bitcoinrpc.h>
 #include <random/random.h>
+#include <util/thread.h>
 #include <db.h>
 #include <boot/shutdown.h>
 #include <block/block_process.h>

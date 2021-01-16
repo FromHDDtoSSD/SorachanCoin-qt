@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <kernel.h>
 #include <kernel_worker.h>
+#include <util/thread.h>
 
 void KernelWorker::Do_generic()
 {

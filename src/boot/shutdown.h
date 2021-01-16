@@ -19,7 +19,8 @@ public:
         CClientUIInterface::uiInterface.QueueShutdown();
 #else
         // Without UI, Shutdown() can simply be started in a new thread
-        bitthread::manage::NewThread(Shutdown, nullptr);
+        if(! bitthread::manage::NewThread(Shutdown, nullptr))
+            bitthread::thread_error(std::string(__func__) + " :Shutdown");
 #endif
     }
 };

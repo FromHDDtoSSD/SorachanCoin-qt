@@ -13,6 +13,7 @@
 #include <ui_interface.h>
 #include <util.h>
 #include <allocator/qtsecure.h>
+#include <util/thread.h>
 #include <boost/algorithm/string/predicate.hpp>
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/interprocess/ipc/message_queue.hpp>

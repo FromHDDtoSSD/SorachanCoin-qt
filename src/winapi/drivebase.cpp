@@ -65,7 +65,7 @@ bool drive_handle::createdir(LPCWSTR path) const {
 #ifdef WIN32
     if(! ::CreateDirectoryW(path, nullptr)) {
         DWORD error = ::GetLastError();
-        // debugcs::instance() << L"[CREATE DIR]" << error;
+        debugcs::instance() << "[CREATE DIR]" << error;
         return (error == ERROR_ALREADY_EXISTS) ? true: false;
     } else {
         return true;
@@ -108,7 +108,7 @@ bool drive_handle::openwrite(bool _lock /*= false*/) {
     DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
     lock = _lock;
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
-    // debugcs::instance() << L"[openwrite GetLastError]" << ::GetLastError();
+    debugcs::instance() << "[openwrite GetLastError]" << ::GetLastError();
     return hDrive != INVALID_HANDLE_VALUE;
 #else
     close();

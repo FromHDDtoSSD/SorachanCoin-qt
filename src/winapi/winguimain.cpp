@@ -490,7 +490,7 @@ public:
             return false;
         }
         partition_none = checkpartition();
-        debugcs::instance() << L"[None Partition Flag]" << partition_none;
+        debugcs::instance() << "[None Partition Flag]" << partition_none;
         thread_num = ((int)::SendMessageW(pci->hComboThread, CB_GETCURSEL, 0L, 0L) + 1) * sector_randbuffer::RAND_GENE_MAX;
         randbuf = new(std::nothrow) sector_randbuffer[thread_num];
         io_obj = new(std::nothrow) sector_io[thread_num];

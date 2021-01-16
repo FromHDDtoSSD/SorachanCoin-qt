@@ -7,6 +7,7 @@
 #include <block/block_check.h>
 #include <net.h>
 #include <txdb.h>
+#include <util/thread.h>
 
 CCheckQueue<CScriptCheck> block_check::thread::scriptcheckqueue(128);
 unsigned int block_check::nStakeMinAge = block_check::mainnet::nStakeMinAge;

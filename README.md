@@ -9,7 +9,8 @@ SorachanCoin - a hybrid scrypt PoW + PoS based cryptocurrency.
 What is SorachanCoin?
 ===========================
 
-The purpose of this coin is to change the drive failure prediction detection function(case: S.M.A.R.T.) to "reliable".  
+The purpose of this coin is to change  
+the drive failure prediction detection feature(case: S.M.A.R.T.) to "reliable".  
   
 The drive failure prediction and detection function called "S.M.A.R.T." is many years of investigation,  
 therefore We think that it is under the control of something that is into strange thoughts.  
@@ -19,10 +20,11 @@ but actually, just a few changes to the firmware may resume reading.
   
 And ...  
   
-We will implement all the basic functions of coin (except zero-knowledge proof) and to develop innovative functions such as failure prediction.  
+We will implement all the basic functions of coin  
+and to develop innovative functions such as failure prediction.  
   
 Official site:  
-https://www.junkhdd.com/
+https://www.junkhdd.com/  
 https://jp.junkhdd.com/
 
 Discord:  

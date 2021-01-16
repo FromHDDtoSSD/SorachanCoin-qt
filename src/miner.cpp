@@ -4,13 +4,14 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "txdb.h"
-#include "miner.h"
-#include "kernel.h"
-#include "kernel_worker.h"
+#include <txdb.h>
+#include <miner.h>
+#include <kernel.h>
+#include <kernel_worker.h>
 #include <net.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
+#include <util/thread.h>
 
 const unsigned int miner::pSHA256InitState[8] = {0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19};
 unsigned int miner::nMaxStakeSearchInterval = 60;

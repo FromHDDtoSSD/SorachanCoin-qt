@@ -1,14 +1,14 @@
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
 
 #ifndef SORACHANCOIN_DEBUGCS_H
 #define SORACHANCOIN_DEBUGCS_H
 
 #include <string>
 #include <sstream>
-#include "compat/compat.h" // windows.h
+#include <sync/sync.h>
+#include <compat/compat.h>
 
 #ifdef DEBUG_ALGO_CS_OUTPUT
 # define DEBUGCS_OUTPUT(s) debugcs::instance() << (s) << debugcs::endl()
@@ -16,24 +16,43 @@
 # define DEBUGCS_OUTPUT(s)
 #endif
 
+// warning fprintf disable
+static inline void _fprintf_cs(const std::string &e) {
+    ::fprintf_s(stdout, e.c_str());
+}
+static inline void _fprintf_cs(const std::wstring &e) {
+    ::fwprintf_s(stdout, e.c_str());
+}
+
 class debugcs {
-#if defined(WIN32) && defined(DEBUG)
-    mutable CRITICAL_SECTION cs;
+#ifdef DEBUG
+    mutable CCriticalSection cs;
 #endif
 public:
     static debugcs &instance() noexcept {
         static debugcs obj;
         return obj;
     }
-    template <typename T> const debugcs &operator<<(const T &obj) const noexcept {
-#if defined(WIN32) && defined(DEBUG)
-        ::EnterCriticalSection(&cs);
+    const debugcs &operator<<(const std::wstring &obj) const noexcept {
+#ifdef DEBUG
+        LOCK(cs);
+        std::wostringstream stream;
+        stream << obj;
+        ::_fprintf_cs(stream.str());
+#else
+        (void)obj;
+#endif
+        return *this;
+    }
+    template <typename T>
+    const debugcs &operator<<(const T &obj) const noexcept {
+#ifdef DEBUG
+        LOCK(cs);
         std::ostringstream stream;
         stream << obj;
-        ::fprintf_s(stdout, stream.str().c_str());
-        ::LeaveCriticalSection(&cs);
+        ::_fprintf_cs(stream.str());
 #else
-        //static_cast<const T &>(obj);
+        (void)obj;
 #endif
         return *this;
     }
@@ -49,8 +68,6 @@ private:
 
     debugcs() noexcept {
 #if defined(WIN32) && defined(DEBUG)
-        ::InitializeCriticalSection(&cs);
-
         FILE *fp = nullptr;
         ::AllocConsole();
         ::freopen_s(&fp, "CONOUT$", "w", stdout);
@@ -60,7 +77,6 @@ private:
     ~debugcs() {
 #if defined(WIN32) && defined(DEBUG)
         ::FreeConsole();
-        ::DeleteCriticalSection(&cs);
 #endif
     }
 };

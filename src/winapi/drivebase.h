@@ -16,12 +16,15 @@
 #include <cstring>
 #include <vector>
 #include <random/random.h>
+#include <util/thread.h>
 #include <debugcs/debugcs.h>
 #ifndef WIN32 // port to lsync.h
 # include <condition_variable>
 # include <mutex>
 # include <thread>
 #endif
+
+// under development macro
 #define PREDICTION_UNDER_DEVELOPMENT
 
 #define ARRAY_SIZE(X) (sizeof(X)/(sizeof(X[0])))
@@ -138,109 +141,6 @@ public:
         ev.wait(*mutex);
     }
 #endif
-};
-
-template <typename T>
-class cla_thread
-{
-public:
-    typedef struct _thread_data
-    {
-        void *p;
-        bool exit_flag;
-    } thread_data;
-private:
-    struct thread_param : public thread_data
-    {
-        T *self;
-        unsigned int (T::*func)(thread_data *pdata);
-    } param;
-
-#ifdef WIN32
-    HANDLE hHandle;
-#else
-    std::thread thread;
-#endif
-    cla_thread()=delete;
-    cla_thread(const cla_thread &)=delete;
-    cla_thread &operator=(const cla_thread &)=delete;
-    cla_thread(cla_thread &&)=delete;
-    cla_thread &operator=(cla_thread &&)=delete;
-
-#ifdef WIN32
-    static unsigned int __stdcall _thread(void *p) {
-        struct thread_param *tp = reinterpret_cast<struct thread_param *>(p);
-        unsigned int ret = (tp->self->*(tp->func))(static_cast<thread_data *>(tp));
-        ::_endthreadex(0);
-        return ret;
-    }
-#else
-    static unsigned int _thread(void *p) {
-        struct thread_param *tp = reinterpret_cast<struct thread_param *>(p);
-        unsigned int ret = (tp->self->*(tp->func))(static_cast<thread_data *>(tp));
-        return ret;
-    }
-#endif
-public:
-    explicit cla_thread(unsigned int (T::*_func)(thread_data *pdata)) {
-        param.p = nullptr;
-        param.exit_flag = false;
-        param.self = nullptr;
-        param.func = _func;
-        hHandle = nullptr;
-    }
-    ~cla_thread() {
-        stop();
-        waitclose();
-    }
-
-    bool start(void *_p, T *_self) {
-        waitclose();
-
-        param.p = _p;
-        param.exit_flag = false;
-        param.self = _self;
-#ifdef WIN32
-        hHandle = (HANDLE)::_beginthreadex(nullptr, 0, _thread, &param, 0, nullptr);
-        return hHandle != nullptr;
-#else
-        try {
-            std::thread tmp(_thread, &param);
-            tmp.swap(thread);
-            return true;
-        } catch (const std::system_error &) {
-            return false;
-        }
-#endif
-    }
-
-    void stop() {
-        param.exit_flag = true;
-    }
-
-    bool signal() const {
-#ifdef WIN32
-        if(hHandle)
-            return (::WaitForSingleObject(hHandle, 0) == WAIT_OBJECT_0) ? true: false;
-        else
-            return true;
-#else
-        return (thread.joinable() != true);
-#endif
-    }
-
-    void waitclose() {
-#ifdef WIN32
-        if(hHandle) {
-            ::WaitForSingleObject(hHandle, INFINITE);
-            ::CloseHandle(hHandle);
-            hHandle = nullptr;
-        }
-#else
-        if(thread.joinable())
-            thread.join();
-#endif
-    }
 };
 
 template <typename C, typename T>
@@ -963,7 +863,7 @@ private:
     static constexpr int64_t limit_size = 100 * 1024 * 1024; // begin => under 100MB
     bool _rwfunc(sector_t begin, sector_t end, const bool &exit_flag) const final override {
         sector_t limit_sectors = limit_size / getsectorsize();
-        // OK debugcs::instance() << L"[DriveDataWriteLimit]" << begin % limit_sectors << end;
+        // OK debugcs::instance() << "[DriveDataWriteLimit]" << begin % limit_sectors << end;
         return writesectors(begin % limit_sectors, end, exit_flag);
     }
 public:

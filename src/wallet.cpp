@@ -21,6 +21,7 @@
 #include <net.h>
 #include <util/time.h>
 #include <random/random.h>
+#include <util/thread.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -2808,7 +2809,9 @@ DBErrors CWallet::LoadWallet(bool &fFirstRunRet)
     }
     fFirstRunRet = !vchDefaultKey.IsValid();
 
-    bitthread::manage::NewThread(wallet_dispatch::ThreadFlushWalletDB, &strWalletFile);
+    if(! bitthread::manage::NewThread(wallet_dispatch::ThreadFlushWalletDB, &strWalletFile))
+        bitthread::thread_error(std::string(__func__) + " :ThreadFlushWalletDB");
+
     return DB_LOAD_OK;
 }
 

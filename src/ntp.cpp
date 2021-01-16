@@ -1,19 +1,13 @@
-#ifdef WIN32
-# include <winsock2.h>
-#else
-# include <sys/socket.h>
-# include <sys/time.h>
-# include <netinet/in.h>
-# include <arpa/inet.h>
-# include <netdb.h>
-#endif
-#ifndef WIN32
-# include <unistd.h>
-#endif
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2018 The Bitcoin Core developers
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "netbase.h"
-#include "net.h"
-#include "ui_interface.h"
+#include <compat/compat.h>
+#include <netbase.h>
+#include <net.h>
+#include <ui_interface.h>
+#include <util/thread.h>
 
 /*
 * NTP uses two fixed point formats.  The first (ntp::l_fp) is the "long"

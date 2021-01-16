@@ -16,6 +16,7 @@
 #include <block/block_process.h>
 #include <block/block_check.h>
 #include <util/time.h>
+#include <util/thread.h>
 #ifdef WIN32
 # include <string.h>
 #endif
@@ -2086,7 +2087,8 @@ void net_node::Discover()
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     //
     if(! ext_ip::IsLimited(netbase::NET_IPV4)) {
-        bitthread::manage::NewThread(ext_ip::ThreadGetMyExternalIP, nullptr);
+        if(! bitthread::manage::NewThread(ext_ip::ThreadGetMyExternalIP, nullptr))
+            bitthread::thread_error(std::string(__func__) + " :ThreadGetMyExternalIP");
     }
 }
 
@@ -2118,7 +2120,7 @@ void net_node::StartNode(void *parg)
     if(! map_arg::GetBoolArg("-dnsseed", true)) {
         printf("DNS seeding disabled\n");
     } else {
-        if(!bitthread::manage::NewThread(dns_seed::ThreadDNSAddressSeed, nullptr)) {
+        if(! bitthread::manage::NewThread(dns_seed::ThreadDNSAddressSeed, nullptr)) {
             printf("Error: bitthread::manage::NewThread(dns_seed::ThreadDNSAddressSeed) failed\n");
         }
     }
@@ -2134,7 +2136,7 @@ void net_node::StartNode(void *parg)
     if(! map_arg::GetBoolArg("-irc", true)) {
         printf("IRC seeding disabled\n");
     } else {
-        if(!bitthread::manage::NewThread(irc_ext::ThreadIRCSeed, nullptr)) {
+        if(! bitthread::manage::NewThread(irc_ext::ThreadIRCSeed, nullptr)) {
             printf("Error: bitthread::manage::NewThread(irc::ThreadIRCSeed) failed\n");
         }
     }
@@ -2171,7 +2173,8 @@ void net_node::StartNode(void *parg)
 
     // Start periodical NTP sampling thread
     ntp_ext::SetTrustedUpstream("-ntp", tcp_domain::strLocal); // Trusted NTP server, it's localhost by default.
-    bitthread::manage::NewThread(ntp_ext::ThreadNtpSamples, nullptr);
+    if(! bitthread::manage::NewThread(ntp_ext::ThreadNtpSamples, nullptr))
+        bitthread::thread_error(std::string(__func__) + " :ThreadNtpSamples");
 }
 
 bool net_node::StopNode()

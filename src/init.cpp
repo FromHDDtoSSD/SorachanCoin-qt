@@ -4,16 +4,16 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "txdb.h"
-#include "walletdb.h"
+#include <txdb.h>
+#include <walletdb.h>
 #include <rpc/bitcoinrpc.h>
-#include "net.h"
-#include "init.h"
-#include "util.h"
-#include "ipcollector.h"
-#include "ui_interface.h"
-#include "checkpoints.h"
-#include "miner.h"
+#include <net.h>
+#include <init.h>
+#include <util.h>
+#include <ipcollector.h>
+#include <ui_interface.h>
+#include <checkpoints.h>
+#include <miner.h>
 #include <boot/shutdown.h>
 #include <block/block_process.h>
 #include <block/block_check.h>
@@ -27,9 +27,10 @@
 #include <openssl/crypto.h>
 #include <util/time.h>
 #include <util/logging.h>
+#include <util/thread.h>
 
 #ifndef WIN32
-#include <signal.h>
+# include <signal.h>
 #endif
 
 CClientUIInterface CClientUIInterface::uiInterface;
@@ -80,7 +81,8 @@ void boot::Shutdown(void *parg)
         wallet_process::manage::UnregisterWallet(entry::pwalletMain);
         delete entry::pwalletMain;
 
-        bitthread::manage::NewThread(entry::ExitTimeout, NULL);
+        if(! bitthread::manage::NewThread(entry::ExitTimeout, nullptr))
+            bitthread::thread_error(std::string(__func__) + " :ExitTimeout");
         util::Sleep(50);
         printf("%s exited\n\n", coin_param::strCoinName.c_str());
         fExit = true;
@@ -619,14 +621,14 @@ bool entry::AppInit2()
     std::ostringstream strErrors;
 
     if (args_bool::fDaemon) {
-        fprintf(stdout, sts_c(coin_param::strCoinName + " server starting\n"));
+        ::_fprintf_cs(sts_c(coin_param::strCoinName + " server starting\n"));
     }
 
     if (block_info::nScriptCheckThreads) {
         printf("Using %u threads for script verification\n", block_info::nScriptCheckThreads);
-        for (int i=0; i < block_info::nScriptCheckThreads-1; ++i)
-        {
-            bitthread::manage::NewThread(block_check::thread::ThreadScriptCheck, NULL);
+        for (int i=0; i < block_info::nScriptCheckThreads-1; ++i) {
+            if(! bitthread::manage::NewThread(block_check::thread::ThreadScriptCheck, nullptr))
+                bitthread::thread_error(std::string(__func__) + " :ThreadScriptCheck");
         }
     }
 
@@ -1097,12 +1099,13 @@ bool entry::AppInit2()
     printf("mapWallet.size() = %" PRIszu "\n",       entry::pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  entry::pwalletMain->mapAddressBook.size());
 
-    if (! bitthread::manage::NewThread(net_node::StartNode, NULL)) {
+    if (! bitthread::manage::NewThread(net_node::StartNode, nullptr)) {
         InitError(_("Error: could not start node"));
     }
 
     if (args_bool::fServer) {
-        bitthread::manage::NewThread(bitrpc::ThreadRPCServer, NULL);
+        if(! bitthread::manage::NewThread(bitrpc::ThreadRPCServer, nullptr))
+            bitthread::thread_error(std::string(__func__) + " :ThreadRPCServer");
     }
 
     // ********************************************************* Step 12: IP collection thread
@@ -1110,7 +1113,8 @@ bool entry::AppInit2()
 
     ip_coll::strCollectorCommand = map_arg::GetArg("-peercollector", "");
     if (!args_bool::fTestNet && ip_coll::strCollectorCommand != "") {
-        bitthread::manage::NewThread(ip_coll::ThreadIPCollector, NULL);
+        if(! bitthread::manage::NewThread(ip_coll::ThreadIPCollector, nullptr))
+            bitthread::thread_error(std::string(__func__) + " :ThreadIPCollector");
     }
 
     // ********************************************************* Step 13: finished

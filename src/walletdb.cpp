@@ -3,23 +3,20 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "walletdb.h"
-#include "wallet.h"
-#include "address/base58.h"
-
+#include <walletdb.h>
+#include <wallet.h>
+#include <address/base58.h>
 #include <iostream>
 #include <fstream>
-
 #include <boost/version.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/algorithm/string.hpp>
-
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/variant/get.hpp>
 #include <boost/algorithm/string.hpp>
-
 #include <util/time.h>
+#include <util/thread.h>
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
