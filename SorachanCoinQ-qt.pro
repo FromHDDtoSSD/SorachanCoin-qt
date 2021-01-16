@@ -596,6 +596,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/nvme/nvme_cpu.h \
     src/nvme/nvme_mem.h \
     src/util/thread.h \
+    src/libstr/cmstring.h \
     src/winapi/winguimain.h \
     src/winapi/drivebase.h \
     src/winapi/drivewin.h \
@@ -770,6 +771,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/nvme/nvme_cpu.cpp \
     src/nvme/nvme_mem.cpp \
     src/util/thread.cpp \
+    src/libstr/cmstring.cpp \
     src/winapi/winguimain.cpp \
     src/winapi/drivebase.cpp \
     src/winapi/drivewin.cpp \
