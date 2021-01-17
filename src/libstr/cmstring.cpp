@@ -9,13 +9,13 @@ class CMString_test {
 public:
     CMString_test() {
         CMString str = CMString(L"cats") += 4;
-        (str += "doge") + "doge";
-        (str += std::string("mike")) + std::wstring(L"neko");
-        (str += 2) + 5;
+        str += CMString("doge") + L"doge";
+        str += CMString(std::string("mike")) + std::wstring(L"neko");
+        str += CMString(2) + 5;
         str += 2.718;
         assert(str=="cats4dogedogemikeneko252.718");
-        CMString si = 4;
-        assert(si==L"4");
+        CMString si = 777;
+        assert(si==L"777");
     }
 };
 CMString_test cmstring;

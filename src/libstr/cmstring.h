@@ -28,6 +28,8 @@ public:
     }
 };
 
+using index_t = int32_t;
+
 //
 // string library (char, wchar_t, etc ...)
 //
@@ -44,7 +46,7 @@ private:
         assert(lpStr && len>0);
         if (m_dwLength<=len) {
             delete [] m_lpBuf;
-            m_dwLength = (DWORD)len+1;
+            m_dwLength = len+1;
             m_lpBuf = new(std::nothrow) wchar_t[m_dwLength];
             if(!m_lpBuf)
                 string_error_terminate("CMString mem_buffer(): MemBuffer ERROR out of memory");
@@ -59,7 +61,7 @@ private:
         assert(add>=0 && count>=0 && offset>=0);
         std::unique_ptr<WCHAR []> string(nullptr);
         if(this==&dest) {
-            DWORD alloc = this->length() + 1;
+            size_t alloc = this->length() + 1;
             std::unique_ptr<WCHAR []> tmp(new(std::nothrow) WCHAR[alloc]);
             if(!tmp.get())
                 string_error_terminate("CMString split_fast(): GetSplitFast ERROR out of memory");
@@ -327,11 +329,13 @@ public:
             }
         }
     }
-
     bool empty() const noexcept {
         return m_lpBuf==nullptr || m_lpBuf[0]==L'\0';
     }
 
+    //
+    // CMString += A
+    //
     CMString &operator+=(LPCWSTR lpStr) noexcept {
         if (lpStr==nullptr || lpStr[0]==L'\0')
             return *this;
@@ -354,6 +358,14 @@ public:
         } else (m_lpBuf!=nullptr)? (void)::wcscat_s(m_lpBuf, m_dwLength, lpStr): (void)operator=(lpStr);
         return *this;
     }
+    CMString &operator+=(const char *cStr) noexcept {
+        if (cStr==nullptr) return *this;
+        else {
+            std::wstring wstr;
+            chartowchar(cStr, wstr);
+            return operator+=(wstr.c_str());
+        }
+    }
     CMString &operator+=(wchar_t wch) noexcept {
         wchar_t str[] = {wch, L'\0'};
         return operator+=( str );
@@ -362,31 +374,45 @@ public:
         char str[] = {cch, '\0'};
         return operator+=( str );
     }
-    CMString &operator+=(int nNum) noexcept {
-        wchar_t szStr[128];
-        ::swprintf_s(szStr, 128, L"%d", nNum);
-        return operator+=(szStr);
+    CMString &operator+=(int16_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator+=(double dNum) noexcept {
+    CMString &operator+=(uint16_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+=(int32_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+=(uint32_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+=(int64_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+=(uint64_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+=(float dNum) {
         return operator+=(tfm::format(std::string("%d"), dNum));
     }
-    CMString &operator+=(int64_t uNum) noexcept {
-        wchar_t szStr[128];
-        ::swprintf_s(szStr, 128, L"%I64d", uNum);
-        return operator+=(szStr);
+    CMString &operator+=(double dNum) {
+        return operator+=(tfm::format(std::string("%d"), dNum));
     }
     CMString &operator+=(const CMString &obj) noexcept {
         return operator+=(obj.m_lpBuf);
     }
-    CMString &operator+=(const std::string &obj) noexcept {
+    CMString &operator+=(const std::string &obj) {
         operator+=(obj.c_str());
         return *this;
     }
-    CMString &operator+=(const std::wstring &obj) noexcept {
+    CMString &operator+=(const std::wstring &obj) {
         operator+=(obj.c_str());
         return *this;
     }
 
+    //
+    // CMString = A
+    //
     CMString &operator=(LPCWSTR lpStr) noexcept {
         if (lpStr==nullptr || lpStr[0]==L'\0') {
             mem_clear(0);
@@ -405,64 +431,6 @@ public:
         } else ::wcscpy_s(m_lpBuf, m_dwLength, lpStr);
         return *this;
     }
-    CMString &operator=(wchar_t wch) noexcept {
-        wchar_t str[] = {wch, L'\0'};
-        return operator=(str);
-    }
-    CMString &operator=(char cch) noexcept {
-        char str[] = {cch, '\0'};
-        return operator=(str);
-    }
-    CMString &operator=(int nNum) noexcept {
-        wchar_t szStr[128];
-        ::swprintf_s(szStr, 128, L"%d", nNum);
-        return operator=(szStr);
-    }
-    CMString &operator=(double dNum) noexcept {
-        return operator=(tfm::format(std::string("%d"), dNum));
-    }
-    CMString &operator=(int64_t uNum) noexcept {
-        wchar_t szStr[128];
-        ::swprintf_s(szStr, 128, L"%I64d", uNum);
-        return operator=(szStr);
-    }
-    CMString &operator=(const CMString &obj) noexcept {
-        return operator=(obj.m_lpBuf);
-    }
-
-    CMString &operator+(LPCWSTR lpStr) noexcept {
-        return (lpStr==m_lpBuf)? *this: operator+=(lpStr);
-    }
-    CMString &operator+(wchar_t wch) noexcept {
-        return operator+=(wch);
-    }
-    CMString &operator+(const char *cStr) noexcept {
-        return operator+=(cStr);
-    }
-    CMString &operator+(char cch) noexcept {
-        return operator+=(cch);
-    }
-    CMString &operator+(int nNum) noexcept {
-        return operator+=(nNum);
-    }
-    CMString &operator+(double dNum) noexcept {
-        return operator+=(tfm::format(std::string("%d"), dNum));
-    }
-    CMString &operator+(int64_t uNum) noexcept {
-        return operator+=(uNum);
-    }
-    CMString &operator+(const CMString &obj) noexcept {
-        return operator+=(obj.m_lpBuf);
-    }
-
-    CMString &operator+=(const char *cStr) noexcept {
-        if (cStr==nullptr) return *this;
-        else {
-            std::wstring wstr;
-            chartowchar(cStr, wstr);
-            return operator+=(wstr.c_str());
-        }
-    }
     CMString &operator=(const char *cStr) noexcept {
         if (cStr==nullptr) return *this;
         else {
@@ -471,7 +439,100 @@ public:
             return operator=(wstr.c_str());
         }
     }
+    CMString &operator=(wchar_t wch) noexcept {
+        wchar_t str[] = {wch, L'\0'};
+        return operator=(str);
+    }
+    CMString &operator=(char cch) noexcept {
+        char str[] = {cch, '\0'};
+        return operator=(str);
+    }
+    CMString &operator=(int16_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(uint16_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(int32_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(uint32_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(int64_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(uint64_t nNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator=(float dNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), dNum));
+    }
+    CMString &operator=(double dNum) noexcept {
+        return operator=(tfm::format(std::string("%d"), dNum));
+    }
+    CMString &operator=(const CMString &obj) noexcept {
+        return operator=(obj.w_str());
+    }
+    CMString &operator=(const std::string &obj) {
+        return operator=(obj.c_str());
+    }
+    CMString &operator=(const std::wstring &obj) {
+        return operator=(obj.c_str());
+    }
 
+    //
+    // CMString = A + B
+    //
+    CMString &operator+(LPCWSTR lpStr) noexcept {
+        return (lpStr==m_lpBuf)? *this: operator+=(lpStr);
+    }
+    CMString &operator+(const char *cStr) noexcept {
+        return operator+=(cStr);
+    }
+    CMString &operator+(wchar_t wch) noexcept {
+        return operator+=(wch);
+    }
+    CMString &operator+(char cch) noexcept {
+        return operator+=(cch);
+    }
+    CMString &operator+(int16_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+(uint16_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+(int32_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+(uint32_t nNum) {
+        return operator+=(tfm::format(std::string("%d"), nNum));
+    }
+    CMString &operator+(int64_t uNum) {
+        return operator+=(tfm::format(std::string("%d"), uNum));
+    }
+    CMString &operator+(uint64_t uNum) {
+        return operator+=(tfm::format(std::string("%d"), uNum));
+    }
+    CMString &operator+(float dNum) {
+        return operator+=(tfm::format(std::string("%d"), dNum));
+    }
+    CMString &operator+(double dNum) {
+        return operator+=(tfm::format(std::string("%d"), dNum));
+    }
+    CMString &operator+(const CMString &obj) noexcept {
+        return operator+=(obj.w_str());
+    }
+    CMString &operator+(const std::string &obj) {
+        return operator+=(obj.c_str());
+    }
+    CMString &operator+(const std::wstring &obj) {
+        return operator+=(obj.c_str());
+    }
+
+    //
+    // like std::string
+    //
     const char *c_str() const noexcept {
         if (m_lpBuf==nullptr) return "";
         else {
@@ -485,7 +546,6 @@ public:
             return m_cBuf;
         }
     }
-
     LPCWSTR w_str() const noexcept {
         return (LPCWSTR)*this;
     }
@@ -508,11 +568,6 @@ public:
             return ::strlen(m_cBuf)*sizeof(char);
         } else
             return length()*sizeof(WCHAR);
-    }
-
-    operator const char *() const {
-        if (m_lpBuf==nullptr) return "";
-        else return c_str();
     }
 
     bool search(char cch) const noexcept {
@@ -544,26 +599,30 @@ public:
         }
     }
 
-    wchar_t operator[](int index) noexcept {
-        return operator[]((size_t)index);
-    }
-    wchar_t operator[](int index) const noexcept {
-        return operator[]((size_t)index);
-    }
-    wchar_t operator[](size_t index) noexcept {
+    wchar_t operator[](index_t index) noexcept {
         assert(m_lpBuf && index>=0 && m_dwLength>index);
         //if(m_lpBuf==nullptr) return L'\0';
         return m_lpBuf[index];
     }
-    wchar_t operator[](size_t index) const noexcept {
+    wchar_t operator[](index_t index) const noexcept {
         assert(m_lpBuf && index>=0 && m_dwLength>index);
         if(m_lpBuf==nullptr) return L'\0';
         return m_lpBuf[index];
     }
-
     operator LPCWSTR() const noexcept {
         if (m_lpBuf==nullptr) return L"";
         else return m_lpBuf;
+    }
+
+    char c_at(index_t index) noexcept {
+        return c_str()[index];
+    }
+    char c_at(index_t index) const noexcept {
+        return c_str()[index];
+    }
+    operator const char *() const noexcept {
+        if (m_lpBuf==nullptr) return "";
+        else return c_str();
     }
 
     int format(const wchar_t *lpType, ...) noexcept {
@@ -578,6 +637,7 @@ public:
         va_end(args);
         return num;
     }
+
     void tolower() const noexcept {
         if (m_lpBuf) {
             LPWSTR p = m_lpBuf;
@@ -635,17 +695,89 @@ public:
     bool operator!=(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)!=0;}
     bool operator==(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)==0;}
     bool operator!=(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)!=0;}
+    bool operator==(int16_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(int16_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(uint16_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(uint16_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(int32_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(int32_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(uint32_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(uint32_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(int64_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(int64_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(uint64_t i) const {
+        std::string c = tfm::format("%d", i);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(uint64_t i) const {
+        return !(operator==(i));
+    }
+    bool operator==(const uint160 &obj) const noexcept {
+        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
+    }
+    bool operator!=(const uint160 &obj) const noexcept {
+        return !(operator==(obj));
+    }
+    bool operator==(const uint256 &obj) const noexcept {
+        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
+    }
+    bool operator!=(const uint256 &obj) const noexcept {
+        return !(operator==(obj));
+    }
+    bool operator==(const uint512 &obj) const noexcept {
+        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
+    }
+    bool operator!=(const uint512 &obj) const noexcept {
+        return !(operator==(obj));
+    }
+    bool operator==(const uint65536 &obj) const noexcept {
+        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
+    }
+    bool operator!=(const uint65536 &obj) const noexcept {
+        return !(operator==(obj));
+    }
+    bool operator==(const uint131072 &obj) const noexcept {
+        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
+    }
+    bool operator!=(const uint131072 &obj) const noexcept {
+        return !(operator==(obj));
+    }
 
+    //
+    // like CDataStream
+    // under development
+    //
     CMString &operator<<(const CMString &obj) noexcept {
         operator+=(obj);
         return *this;
     }
-    CMString &operator<<(const std::string &obj) noexcept {
-        operator+=(obj.c_str());
-        return *this;
-    }
-    CMString &operator<<(const std::wstring &obj) noexcept {
-        operator+=(obj.c_str());
+    CMString &operator>>(CMString &obj) noexcept {
+        obj = *this;
         return *this;
     }
 
@@ -693,10 +825,16 @@ public:
         m_lpBuf[m_mask_index] = m_mask_data;
         m_mask_data = L'\0';
     }
-    int mask_index() const noexcept {return m_mask_index;}
+    int mask_index() const noexcept {
+        return m_mask_index;
+    }
 
-    void clear() noexcept {if(m_lpBuf) m_lpBuf[0] = L'\0';}
-    void mem_clear() noexcept {mem_clear(0);}
+    void clear() noexcept {
+        if(m_lpBuf) m_lpBuf[0] = L'\0';
+    }
+    void mem_clear() noexcept {
+        mem_clear(0);
+    }
     void mem_clear(size_t first_size) noexcept {
         delete [] m_cBuf; m_cBuf=nullptr;
         delete [] m_lpBuf; m_lpBuf=nullptr;
@@ -712,7 +850,9 @@ public:
         m_mask_index = 0;
     }
 
-    CMString() noexcept {setnull();}
+    CMString() noexcept {
+        setnull();
+    }
     CMString(const wchar_t *lpStr) noexcept {
         setnull();
         operator=(lpStr);
@@ -731,44 +871,70 @@ public:
         char str[] = {c, '\0'};
         operator=(str);
     }
-    template <typename N>
-    CMString(N i) noexcept {
+    CMString(int16_t n) {
         setnull();
-        operator=(tfm::format(std::string("%d"), i));
+        operator=(tfm::format(std::string("%d"), n));
     }
-    CMString(uint160 i) noexcept {
+    CMString(uint16_t n) {
         setnull();
-        operator=(i.ToString());
+        operator=(tfm::format(std::string("%d"), n));
     }
-    CMString(uint256 i) noexcept {
+    CMString(int32_t n) {
         setnull();
-        operator=(i.ToString());
+        operator=(tfm::format(std::string("%d"), n));
     }
-    CMString(uint512 i) noexcept {
+    CMString(uint32_t n) {
         setnull();
-        operator=(i.ToString());
+        operator=(tfm::format(std::string("%d"), n));
     }
-    CMString(uint65536 i) noexcept {
+    CMString(int64_t n) {
         setnull();
-        operator=(i.ToString());
+        operator=(tfm::format(std::string("%d"), n));
     }
-    CMString(uint131072 i) noexcept {
+    CMString(uint64_t n) {
         setnull();
-        operator=(i.ToString());
+        operator=(tfm::format(std::string("%d"), n));
+    }
+    CMString(float d) {
+        setnull();
+        operator=(tfm::format(std::string("%d"), d));
+    }
+    CMString(double d) {
+        setnull();
+        operator=(tfm::format(std::string("%d"), d));
+    }
+    CMString(const uint160 &obj) {
+        setnull();
+        operator=(obj.ToString());
+    }
+    CMString(const uint256 &obj) {
+        setnull();
+        operator=(obj.ToString());
+    }
+    CMString(const uint512 &obj) {
+        setnull();
+        operator=(obj.ToString());
+    }
+    CMString(const uint65536 &obj) {
+        setnull();
+        operator=(obj.ToString());
+    }
+    CMString(const uint131072 &obj) {
+        setnull();
+        operator=(obj.ToString());
     }
     CMString(const CMString &obj) noexcept {
         setnull();
-        operator=(obj.m_lpBuf);
+        operator=(obj.w_str());
     }
-    CMString(const std::string &str) noexcept {
+    CMString(const std::string &str) {
         setnull();
         operator=(str.c_str());
     }
-    CMString(const std::wstring &str) noexcept {
+    CMString(const std::wstring &str) {
         setnull();
         operator=(str.c_str());
     }
-
     virtual ~CMString() {
         if(m_cBuf) delete [] m_cBuf;
         if(m_lpBuf) delete [] m_lpBuf;
