@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <assert.h>
 #include <uint256.h>
+#include <util/tinyformat.h> // thanks, tinyformat.
 #include <debugcs/debugcs.h>
 #ifdef WIN32
 # include <windows.h>
@@ -338,8 +339,8 @@ public:
         if (m_dwLength<=length) {
             size_t reallocLength = length + 1 + (length>>1);
             wchar_t *new_buf = new(std::nothrow) wchar_t[reallocLength];
-            if(!new_buf)
-                string_error_terminate("CMString operator+=(LPCWSTR) out of memory");
+            if(! new_buf)
+                string_error_terminate("CMString operator+=(LPCWSTR): out of memory");
             m_dwLength = reallocLength;
             if (m_lpBuf) {
                 ::wcscpy_s(new_buf, m_dwLength, m_lpBuf);
@@ -367,9 +368,7 @@ public:
         return operator+=(szStr);
     }
     CMString &operator+=(double dNum) noexcept {
-        wchar_t szStr[128];
-        ::swprintf_s(szStr, 128, L"%f", dNum);
-        return operator+=(szStr);
+        return operator+=(tfm::format(std::string("%d"), dNum));
     }
     CMString &operator+=(int64_t uNum) noexcept {
         wchar_t szStr[128];
@@ -420,9 +419,7 @@ public:
         return operator=(szStr);
     }
     CMString &operator=(double dNum) noexcept {
-        wchar_t szStr[128]={0};
-        ::swprintf_s(szStr, 128, L"%f", dNum);
-        return operator=(szStr);
+        return operator=(tfm::format(std::string("%d"), dNum));
     }
     CMString &operator=(int64_t uNum) noexcept {
         wchar_t szStr[128];
@@ -449,7 +446,7 @@ public:
         return operator+=(nNum);
     }
     CMString &operator+(double dNum) noexcept {
-        return operator+=(dNum);
+        return operator+=(tfm::format(std::string("%d"), dNum));
     }
     CMString &operator+(int64_t uNum) noexcept {
         return operator+=(uNum);
@@ -481,12 +478,18 @@ public:
             delete [] m_cBuf;
             DWORD dwLen;
             utoutf8cpy(nullptr, m_lpBuf, &dwLen);
-            m_cBuf = new char[dwLen];
-            if(!m_cBuf) string_error_terminate("CMString c_str(): out of memory");
+            m_cBuf = new(std::nothrow) char[dwLen];
+            if(! m_cBuf)
+                string_error_terminate("CMString c_str(): out of memory");
             utoutf8cpy(m_cBuf, m_lpBuf, &dwLen);
             return m_cBuf;
         }
     }
+
+    LPCWSTR w_str() const noexcept {
+        return (LPCWSTR)*this;
+    }
+
     void set_str(const char *utf8) noexcept {
         if (utf8==nullptr) return;
         DWORD dwLength = 0;
@@ -728,17 +731,30 @@ public:
         char str[] = {c, '\0'};
         operator=(str);
     }
-    CMString(int i) noexcept {
+    template <typename N>
+    CMString(N i) noexcept {
         setnull();
-        operator=(i);
+        operator=(tfm::format(std::string("%d"), i));
     }
-    CMString(double d) noexcept {
+    CMString(uint160 i) noexcept {
         setnull();
-        operator=(d);
+        operator=(i.ToString());
     }
-    CMString(int64_t i) noexcept {
+    CMString(uint256 i) noexcept {
         setnull();
-        operator=(i);
+        operator=(i.ToString());
+    }
+    CMString(uint512 i) noexcept {
+        setnull();
+        operator=(i.ToString());
+    }
+    CMString(uint65536 i) noexcept {
+        setnull();
+        operator=(i.ToString());
+    }
+    CMString(uint131072 i) noexcept {
+        setnull();
+        operator=(i.ToString());
     }
     CMString(const CMString &obj) noexcept {
         setnull();

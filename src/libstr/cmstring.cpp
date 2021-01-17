@@ -12,7 +12,10 @@ public:
         (str += "doge") + "doge";
         (str += std::string("mike")) + std::wstring(L"neko");
         (str += 2) + 5;
-        assert(str=="cats4dogedogemikeneko25");
+        str += 2.718;
+        assert(str=="cats4dogedogemikeneko252.718");
+        CMString si = 4;
+        assert(si==L"4");
     }
 };
 CMString_test cmstring;
