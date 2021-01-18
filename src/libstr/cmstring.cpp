@@ -13,6 +13,7 @@ public:
         str += CMString(std::string("mike")) + std::wstring(L"neko");
         str += CMString(2) + 5;
         str += 2.718;
+        //::fprintf_s(stdout, str);
         assert(str=="cats4dogedogemikeneko252.718");
         CMString si = 777;
         assert(si==L"777");

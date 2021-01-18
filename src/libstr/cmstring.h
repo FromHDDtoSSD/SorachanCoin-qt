@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <assert.h>
 #include <uint256.h>
+#include <serialize.h>
 #include <util/tinyformat.h> // thanks, tinyformat.
 #include <debugcs/debugcs.h>
 #ifdef WIN32
@@ -768,19 +769,6 @@ public:
         return !(operator==(obj));
     }
 
-    //
-    // like CDataStream
-    // under development
-    //
-    CMString &operator<<(const CMString &obj) noexcept {
-        operator+=(obj);
-        return *this;
-    }
-    CMString &operator>>(CMString &obj) noexcept {
-        obj = *this;
-        return *this;
-    }
-
     void split(CMString *pstr, wchar_t delim, int count, bool *p_exists) const noexcept {
         (pstr)? splitfast(*pstr, delim, 0, 0, count, p_exists): (void)0;
     }
@@ -945,6 +933,31 @@ public:
     }
     std::wstring wstr() const noexcept {
         return std::wstring((LPCWSTR)*this);
+    }
+
+    //
+    // Serialize
+    //
+    template <typename Stream>
+    inline void Serialize(Stream &s) {
+        const unsigned int len = size()+sizeof(wchar_t)+sizeof(int);
+        compact_size::manage::WriteCompactSize(s, len);
+        if(0 < len) {
+            s.write((wchar_t *)m_lpBuf, len);
+            s.write((wchar_t *)m_mask_data, sizeof(wchar_t));
+            s.write((int *)m_mask_index, sizeof(int));
+        }
+    }
+    template <typename Stream>
+    inline void Unserialize(Stream &s) {
+        const unsigned int len = compact_size::manage::ReadCompactSize(s);
+        if(0 < len) {
+            if(m_lpBuf) delete [] m_lpBuf;
+            if(m_cBuf) delete [] m_cBuf;
+            s.read(m_lpBuf, len-sizeof(wchar_t)-sizeof(int));
+            s.read(&m_mask_data, sizeof(wchar_t));
+            s.read(&m_mask_index, sizeof(int));
+        }
     }
 
 private:
