@@ -936,16 +936,16 @@ public:
     }
 
     //
-    // Serialize
+    // Serialize, Unserialize
     //
     template <typename Stream>
-    inline void Serialize(Stream &s) {
-        const unsigned int len = size()+sizeof(wchar_t)+sizeof(int);
+    inline void Serialize(Stream &s) const {
+        const unsigned int len = bytes(false)+sizeof(wchar_t)+sizeof(int);
         compact_size::manage::WriteCompactSize(s, len);
         if(0 < len) {
-            s.write((wchar_t *)m_lpBuf, len);
-            s.write((wchar_t *)m_mask_data, sizeof(wchar_t));
-            s.write((int *)m_mask_index, sizeof(int));
+            s.write((const char *)m_lpBuf, bytes(false));
+            s.write((const char *)&m_mask_data, sizeof(wchar_t));
+            s.write((const char *)&m_mask_index, sizeof(int));
         }
     }
     template <typename Stream>
@@ -954,9 +954,15 @@ public:
         if(0 < len) {
             if(m_lpBuf) delete [] m_lpBuf;
             if(m_cBuf) delete [] m_cBuf;
-            s.read(m_lpBuf, len-sizeof(wchar_t)-sizeof(int));
-            s.read(&m_mask_data, sizeof(wchar_t));
-            s.read(&m_mask_index, sizeof(int));
+            const size_t size = (len-sizeof(wchar_t)-sizeof(int))/sizeof(wchar_t) + 1; // with '\0'
+            m_lpBuf = new(std::nothrow) wchar_t[size];
+            if(! m_lpBuf)
+                string_error_terminate("CMString Unserialize(Stream): out of memory");
+            m_dwLength = size;
+            s.read((char *)m_lpBuf, (size-1)*sizeof(wchar_t));
+            m_lpBuf[size - 1] = L'\0';
+            s.read((char *)&m_mask_data, sizeof(wchar_t));
+            s.read((char *)&m_mask_index, sizeof(int));
         }
     }
 
