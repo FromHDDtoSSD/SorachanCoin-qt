@@ -17,7 +17,7 @@ CAddrDB::CAddrDB()
     const std::string suffix(".v1.old");
     const fs::path addr = iofs::GetDataDir() / "peers.dat";
     const fs::path old_addr = fs::system_complete(addr.string() + suffix);
-    if(! fsbridge::file_exists(old_addr)) {
+    if(fsbridge::file_exists(addr) && !fsbridge::file_exists(old_addr)) {
         fsbridge::file_rename(addr, old_addr);
     }
 
