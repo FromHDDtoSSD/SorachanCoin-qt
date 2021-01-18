@@ -61,6 +61,8 @@ bool file_copy(const fs::path &src, const fs::path &dest) {
 }
 
 bool file_rename(const fs::path &src, const fs::path &dest) {
+    if(! file_exists(src)) return false;
+    if(dest.string().empty()) return false;
     try {
         fs::rename(src, dest);
     } catch (fs::filesystem_error &) {
@@ -70,11 +72,14 @@ bool file_rename(const fs::path &src, const fs::path &dest) {
 }
 
 bool file_rename(const fs::path &src, const std::string &suffix) {
+    if(! file_exists(src)) return false;
+    if(suffix.empty()) return false;
     fs::path dest = fs::system_complete(src.string() + "." + suffix);
     return file_rename(src, dest);
 }
 
 bool file_exists(const fs::path &abspath) {
+    if(abspath.string().empty()) return false;
     return fs::exists(abspath);
 }
 
