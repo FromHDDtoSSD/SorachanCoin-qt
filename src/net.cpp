@@ -1357,7 +1357,7 @@ void dns_seed::ThreadDNSAddressSeed2(void *parg)
     printf("dns_seed::ThreadDNSAddressSeed started\n");
     int found = 0;
 
-    if(! args_bool::fTestNet) {
+    //if(! args_bool::fTestNet) {
         printf("Loading addresses from DNS seeds (could take a while)\n");
 
         for(unsigned int seed_idx = 0; seed_idx < ARRAYLEN(dns_seed::strDNSSeed); ++seed_idx)
@@ -1379,7 +1379,7 @@ void dns_seed::ThreadDNSAddressSeed2(void *parg)
                 net_node::addrman.Add(vAdd, CNetAddr(dns_seed::strDNSSeed[seed_idx][0], true));
             }
         }
-    }
+    //}
 
     printf("%d addresses found from DNS seeds\n", found);
 }
