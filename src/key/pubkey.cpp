@@ -8,6 +8,7 @@
 #include <key/pubkey.h>
 #include <ies.h>
 #include <crypter.h>
+#include <init.h>
 
 #ifdef VERIFY
 # include <debugcs/debugcs.h>
@@ -41,47 +42,58 @@ bool CPubKey::IsFullyValid_BIP66() const noexcept {
 }
 
 bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexcept {
-    if(Verify_BIP66(hash, vchSig))
-        return true;
+    auto bip66 = [this, &hash, &vchSig]() {
+        return Verify_BIP66(hash, vchSig);
+    };
+    auto openssl = [this, &hash, &vchSig]() {
+        DEBUGCS_CHECK("by OpenSSL");
+        if (vchSig.empty() || !IsValid())
+            return false;
 
-    DEBUGCS_CHECK("by OpenSSL");
-    if (vchSig.empty() || !IsValid())
-        return false;
+        EC_KEY *pkey = ::EC_KEY_new_by_curve_name(NID_secp256k1);
+        if(! pkey) return false;
+        ECDSA_SIG *norm_sig = ::ECDSA_SIG_new();
+        if(! norm_sig) {
+            ::EC_KEY_free(pkey);
+            return false;
+        }
 
-    EC_KEY *pkey = ::EC_KEY_new_by_curve_name(NID_secp256k1);
-    if(! pkey) return false;
-    ECDSA_SIG *norm_sig = ::ECDSA_SIG_new();
-    if(! norm_sig) {
+        bool ret = false;
+        do {
+            uint8_t *norm_der = nullptr;
+            const uint8_t *pbegin = &vch_[0];
+            const uint8_t *sigptr = &vchSig[0];
+
+            // Trying to parse public key
+            if (! ::o2i_ECPublicKey(&pkey, &pbegin, size()))
+                break;
+
+            // New versions of OpenSSL are rejecting a non-canonical DER signatures, de/re-serialize first.
+            if (::d2i_ECDSA_SIG(&norm_sig, &sigptr, vchSig.size()) == nullptr)
+                break;
+
+            int derlen = 0;
+            if ((derlen = ::i2d_ECDSA_SIG(norm_sig, &norm_der)) <= 0)
+                break;
+
+            // -1 = error, 0 = bad sig, 1 = good
+            ret = ::ECDSA_verify(0, (const unsigned char *)&hash, sizeof(hash), norm_der, derlen, pkey) == 1;
+            OPENSSL_free(norm_der);
+        } while(false);
+
+        ::ECDSA_SIG_free(norm_sig);
         ::EC_KEY_free(pkey);
+        return ret;
+    };
+
+    if(entry::b66mode == entry::Bip66_STRICT) {
+        return bip66() && openssl();
+    } else if (entry::b66mode == entry::Bip66_ADVISORY) {
+        return bip66();
+    } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
+        return openssl();
+    } else
         return false;
-    }
-
-    bool ret = false;
-    do {
-        uint8_t *norm_der = nullptr;
-        const uint8_t *pbegin = &vch_[0];
-        const uint8_t *sigptr = &vchSig[0];
-
-        // Trying to parse public key
-        if (! ::o2i_ECPublicKey(&pkey, &pbegin, size()))
-            break;
-
-        // New versions of OpenSSL are rejecting a non-canonical DER signatures, de/re-serialize first.
-        if (::d2i_ECDSA_SIG(&norm_sig, &sigptr, vchSig.size()) == nullptr)
-            break;
-
-        int derlen = 0;
-        if ((derlen = ::i2d_ECDSA_SIG(norm_sig, &norm_der)) <= 0)
-            break;
-
-        // -1 = error, 0 = bad sig, 1 = good
-        ret = ::ECDSA_verify(0, (const unsigned char *)&hash, sizeof(hash), norm_der, derlen, pkey) == 1;
-        OPENSSL_free(norm_der);
-    } while(false);
-
-    ::ECDSA_SIG_free(norm_sig);
-    ::EC_KEY_free(pkey);
-    return ret;
 }
 
 bool CPubKey::Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const noexcept {

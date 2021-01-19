@@ -17,6 +17,14 @@
 //
 class entry : private no_instance
 {
+public:
+    enum bip66Mode {
+        Bip66_STRICT = 0,
+        Bip66_ADVISORY = 1,
+        Bip66_PERMISSIVE = 2
+    };
+    static enum bip66Mode b66mode;
+
 private:
     static std::string strWalletFileName;
 

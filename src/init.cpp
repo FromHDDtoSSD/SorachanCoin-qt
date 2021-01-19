@@ -36,7 +36,7 @@
 CClientUIInterface CClientUIInterface::uiInterface;
 std::string entry::strWalletFileName;
 CWallet *entry::pwalletMain = nullptr;
-//enum Checkpoints::CPMode entry::CheckpointsMode;
+enum entry::bip66Mode entry::b66mode = entry::Bip66_ADVISORY;
 
 //
 // Shutdown
@@ -427,6 +427,15 @@ bool entry::AppInit2()
         Checkpoints::CheckpointsMode = Checkpoints::ADVISORY;
     else if(strCpMode == "permissive")
         Checkpoints::CheckpointsMode = Checkpoints::PERMISSIVE;
+
+    entry::b66mode = entry::Bip66_ADVISORY;
+    const std::string strBipMode = map_arg::GetArg("-bip66policy", "advisory");
+    if(strBipMode == "strict")
+        entry::b66mode = entry::Bip66_STRICT;
+    else if(strBipMode == "advisory")
+        entry::b66mode = entry::Bip66_ADVISORY;
+    else if(strBipMode == "permissive")
+        entry::b66mode = entry::Bip66_PERMISSIVE;
 
     args_bool::fTestNet = map_arg::GetBoolArg("-testnet");
     if (args_bool::fTestNet) {
