@@ -11,8 +11,11 @@
 #include <uint256.h>
 #include <serialize.h>
 #include <util/tinyformat.h> // thanks, tinyformat.
-#include <debugcs/debugcs.h>
+#include <debugcs/debugcs.h> // ::_fprintf_cs(e)
 #ifdef WIN32
+//# define CMSTRING_WIN32API // defined, using windowsAPI
+#endif
+#ifdef CMSTRING_WIN32API
 # include <windows.h>
 #endif
 
@@ -130,7 +133,8 @@ public:
             return (LPWSTR)addr;
         }
     }
-    static void chartowchar(const char *source, std::wstring &dest) noexcept {
+    static void chartowchar(const char *source, std::wstring &dest) {
+#ifdef CMSTRING_WIN32API
         int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
         if (cchWideChar == 0) {
             DWORD dwError = ::GetLastError();
@@ -141,6 +145,14 @@ public:
         dest.resize(cchWideChar, '\0');
         if(::MultiByteToWideChar(CP_ACP, 0, source, -1, &dest.at(0), cchWideChar)<=0)
             string_error_terminate("CMString chartowchar: ERROR MultiByteToWideChar");
+#else
+        size_t size = ::mbstowcs(nullptr, source, 0);
+        if(size == (size_t)-1)
+            string_error_terminate("CMString chartowchar: ERROR size");
+        dest.resize(size+1, L'\0'); // size is no bytes.
+        if(::mbstowcs(&dest.at(0), source, size)==(size_t)-1)
+            string_error_terminate("CMString chartowchar: ERROR mbstowcs");
+#endif
     }
     static void utoutf8cpy(char *cStr, LPCWSTR lpStr, DWORD *pdwLength) noexcept {
         if (lpStr[0]==L'\0') {
@@ -148,6 +160,7 @@ public:
             if (cStr!=nullptr) cStr[0] = '\0';
             return;
         }
+#ifdef CMSTRING_WIN32API
         int nLength = ::WideCharToMultiByte(CP_UTF8, 0, lpStr, -1, nullptr, 0, nullptr, nullptr);
         *pdwLength = (DWORD)nLength;
         if (nLength==0) {
@@ -162,6 +175,16 @@ public:
                 string_error_terminate("CMString utoutf8cpy: ERROR WideCharToMultiByte");
             return;
         }
+#else
+        size_t size = ::wcstombs(nullptr, lpStr, 0) + 1;
+        if(size==(size_t)-1)
+            string_error_terminate("CMString utoutf8cpy: ERROR size");
+        *pdwLength=size;
+        if(cStr==nullptr) return;
+        cStr[size-1]='\0';
+        if(::wcstombs(cStr, lpStr, size-1)==(size_t)-1)
+            string_error_terminate("CMString utoutf8cpy: ERROR wcstombs");
+#endif
     }
     static void utf8toucpy(wchar_t *lpStr, const char *cStrOrg, DWORD *pdwLength) noexcept {
         if (cStrOrg[0]=='\0') {
@@ -169,6 +192,7 @@ public:
             if (lpStr!=nullptr) lpStr[0]=L'\0';
             return;
         }
+#ifdef CMSTRING_WIN32API
         int cchWideChar = ::MultiByteToWideChar(CP_UTF8, 0, cStrOrg, -1, nullptr, 0);
         *pdwLength = (DWORD)cchWideChar;
         if (cchWideChar==0) {
@@ -183,6 +207,16 @@ public:
                 string_error_terminate("CMString utf8toucpy: ERROR MultiByteToWideChar");
             return;
         }
+#else
+        size_t size = ::mbstowcs(nullptr, cStrOrg, 0) + 1;
+        if(size == (size_t)-1)
+            string_error_terminate("CMString utf8toucpy: ERROR size");
+        *pdwLength=size;
+        if(lpStr==nullptr) return;
+        lpStr[size-1] = L'\0';
+        if(::mbstowcs(lpStr, cStrOrg, size)==(size_t)-1)
+            string_error_terminate("CMString utf8toucpy: ERROR mbstowcs");
+#endif
     }
 
     int replace(WCHAR chOld, WCHAR chNew) noexcept {

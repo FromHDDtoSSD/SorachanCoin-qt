@@ -5,6 +5,7 @@
 #ifdef QT_GUI
 #include <winapi/drivebase.h>
 #include <file_operate/fs.h>
+#include <libstr/cmstring.h>
 #ifndef WIN32
 # include <unistd.h>
 # include <sys/types.h>
@@ -14,51 +15,13 @@
 sync drive_handle::cs;
 
 bool drive_util::chartowchar(const char *source, std::wstring &dest) const {
-#ifdef WIN32
-    int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
-    if (cchWideChar == 0)    {
-        DWORD dwError = ::GetLastError();
-        if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION) {
-            return false;
-        } else {
-            dest = L"";
-            return true;
-        }
-    }
-
-    dest.resize(cchWideChar, L'\0');
-    return 0 < ::MultiByteToWideChar(CP_ACP, 0, source, -1, &dest.at(0), cchWideChar);
-#else
-    size_t size = ::mbstowcs(nullptr, source, 0) + 1;
-    if(size == (size_t)-1)
-        return false;
-    dest.resize(size, L'\0'); // size is no bytes.
-    return ::mbstowcs(&dest.at(0), source, size) != (size_t)-1;
-#endif
+    dest = CMString(source);
+    return true;
 }
 
 bool drive_util::wchartochar(LPCWSTR source, std::string &dest) const {
-#ifdef WIN32
-    int nLength = ::WideCharToMultiByte(CP_ACP, 0, source, -1, nullptr, 0, nullptr, nullptr);
-    if (nLength == 0) {
-        DWORD dwError = ::GetLastError();
-        if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER) {
-            return false;
-        } else {
-            dest = "";
-            return true;
-        }
-    }
-
-    dest.resize(nLength, '\0');
-    return 0 < ::WideCharToMultiByte(CP_ACP, 0, source, -1, &dest.at(0), nLength, nullptr, nullptr);
-#else
-    size_t size = ::wcstombs(nullptr, source, 0) + 1;
-    if(size == (size_t)-1)
-        return false;
-    dest.resize(size, '\0');
-    return ::wcstombs(&dest.at(0), source, size) != (size_t)-1;
-#endif
+    dest = CMString(source);
+    return true;
 }
 
 bool drive_handle::createdir(LPCWSTR path) const {
