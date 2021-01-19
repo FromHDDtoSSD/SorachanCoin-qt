@@ -31,4 +31,4 @@ public:
         }
     }
 };
-CMString_test cmstring;
+// CMString_test cmstring;

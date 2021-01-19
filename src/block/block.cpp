@@ -668,9 +668,9 @@ bool CBlock_impl<T>::AcceptBlock()
     bool cpSatisfies = Checkpoints::manage::CheckSync(hash, pindexPrev);
 
     // Check that the block satisfies synchronized checkpoint
-    if (entry::CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
+    if (Checkpoints::CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
         return print::error("CBlock::AcceptBlock() : rejected by synchronized checkpoint");
-    if (entry::CheckpointsMode == Checkpoints::ADVISORY && !cpSatisfies)
+    if (Checkpoints::CheckpointsMode == Checkpoints::ADVISORY && !cpSatisfies)
         excep::set_strMiscWarning( _("WARNING: syncronized checkpoint violation detected, but skipped!") );
 
     // Enforce rule that the coinbase starts with serialized block height

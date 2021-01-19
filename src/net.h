@@ -42,9 +42,9 @@ namespace tcp_port
     const unsigned short uJsonRpcTest = 31588;
 
     const unsigned short uStun = 17398;
-    const unsigned short uSocksDefault = 9714;
-
     const unsigned short uIrc = 6636;
+
+    const unsigned short uSocksDefault = 9714; // proxy, tor, irc ...
 }
 
 //

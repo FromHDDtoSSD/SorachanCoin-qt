@@ -71,8 +71,7 @@
 #define IDS_ERROR_CLASSREGISTER              L"Processing failed in RegisterClassEx."
 #define IDS_ERROR_BENCHMARK_START            L"Starting Benchmark is failed.\n(Benchmark init failure.)"
 #define IDS_ERROR_BENCHMARK_FAILURE          L"Starting Benchmark is failed.\n(No the Drive or A memory allocation failure.)"
-#define IDS_ERROR_FONT                       "Creating font failure."
-#define IDS_MESSAGEBOX_COPYRIGHT             L"Copyright (c) 2019-2021 The SorachanCoin Developers."
+#define IDS_ERROR_FONT                       L"Creating font failure."
 
 constexpr INT_PTR IDC_BUTTON_START    = 1000;
 constexpr INT_PTR IDC_BUTTON_STOP     = 1001;

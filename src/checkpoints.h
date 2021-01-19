@@ -192,6 +192,7 @@ namespace Checkpoints
         ADVISORY = 1,      // Advisory checkpoints policy, perform conflicts verification but don't try to resolve them
         PERMISSIVE = 2     // Permissive checkpoints policy, don't perform any checking
     };
+    extern CPMode CheckpointsMode;
 
     extern LCCriticalSection cs_hashSyncCheckpoint;
     extern uint256 hashPendingCheckpoint;// = 0;

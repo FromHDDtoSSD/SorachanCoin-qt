@@ -6,7 +6,8 @@
 #include <qt/optionsmodel.h>
 #include <qt/bitcoinunits.h>
 #include <QSettings>
-#include <init.h>
+#include <net.h>
+#include <wallet.h>
 #include <walletdb.h>
 #include <qt/guiutil.h>
 
@@ -158,7 +159,7 @@ QVariant OptionsModel::data(const QModelIndex &index, int role) const
             if (netbase::manage::GetProxy(netbase::NET_IPV4, proxy)) {
                 return QVariant(proxy.first.GetPort());
             } else {
-                return QVariant(entry::nSocksDefault);
+                return QVariant(tcp_port::uSocksDefault);
             }
         }
         case ProxySocksVersion:
@@ -178,7 +179,7 @@ QVariant OptionsModel::data(const QModelIndex &index, int role) const
             if (netbase::manage::GetProxy(netbase::NET_TOR, proxy)) {
                 return QVariant(proxy.first.GetPort());
             } else {
-                return QVariant(entry::nSocksDefault);
+                return QVariant(tcp_port::uSocksDefault);
             }
         }
         case TorOnly:
@@ -232,7 +233,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
             break;
         case ProxyIP: {
             netbase::proxyType proxy;
-            proxy.first = CService("127.0.0.1", entry::nSocksDefault);
+            proxy.first = CService("127.0.0.1", tcp_port::uSocksDefault);
             netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
 
             CNetAddr addr(value.toString().toStdString());
@@ -243,7 +244,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
         break;
         case ProxyPort: {
             netbase::proxyType proxy;
-            proxy.first = CService("127.0.0.1", entry::nSocksDefault);
+            proxy.first = CService("127.0.0.1", tcp_port::uSocksDefault);
             netbase::manage::GetProxy(netbase::NET_IPV4, proxy);
 
             proxy.first.SetPort(value.toInt());
@@ -268,7 +269,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
         break;
         case TorIP: {
             netbase::proxyType proxy;
-            proxy.first = CService("127.0.0.1", entry::nSocksDefault);
+            proxy.first = CService("127.0.0.1", tcp_port::uSocksDefault);
             netbase::manage::GetProxy(netbase::NET_TOR, proxy);
 
             CNetAddr addr(value.toString().toStdString());
@@ -279,7 +280,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
         break;
         case TorPort: {
             netbase::proxyType proxy;
-            proxy.first = CService("127.0.0.1", entry::nSocksDefault);
+            proxy.first = CService("127.0.0.1", tcp_port::uSocksDefault);
             netbase::manage::GetProxy(netbase::NET_TOR, proxy);
 
             proxy.first.SetPort((uint16_t)value.toUInt());

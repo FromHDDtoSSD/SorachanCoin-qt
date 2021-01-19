@@ -1,28 +1,23 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2020-2021 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_INIT_H
 #define BITCOIN_INIT_H
 
-#include "wallet.h"
-#include "checkpoints.h"
+#include <wallet.h>
 
 //
 // Init
 // CUI: AppInit -> AppInit2 (Force Server-mode)
-// QT : parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2
+// Qt : parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2
+// Qt + GUI : parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2 -> CreatePredictionSystem()
 //
 class entry : private no_instance
 {
-#ifdef QT_GUI
-    friend class OptionsModel;
-#endif
-    friend class net_basis;
 private:
-    static const uint16_t nSocksDefault = tcp_port::uSocksDefault;
-
     static std::string strWalletFileName;
 
     static bool InitError(const std::string &str);
@@ -34,10 +29,8 @@ private:
     static void HandleSIGHUP(int);
 #endif
 
-    static bool BindListenPort(const CService &addrBind, std::string &strError, bool check = false);
-
 public:
-    static enum Checkpoints::CPMode CheckpointsMode;
+    static bool BindListenPort(const CService &addrBind, std::string &strError, bool check = false);
     static CWallet *pwalletMain;
 
 #if !defined(QT_GUI)
@@ -46,11 +39,18 @@ public:
 #endif
 
     static std::string HelpMessage();
-
     static void ExitTimeout(void *parg);
-    //static void StartShutdown();
     static bool AppInit2();
 };
 
+//
+// Prediction System
+// Note: At first, Win32 supported
+//
+namespace predsystem {
+
+    extern bool CreatePredictionSystem() noexcept;
+
+} // namespace predsystem
+
 #endif
-//@

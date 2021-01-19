@@ -15,6 +15,9 @@
 #include <sstream>
 #include <time.h>
 #include <shlobj.h>
+#include <util/logging.h>
+#include <libstr/cmstring.h>
+#include <init.h>
 
 constexpr int THREAD_TIMER_INTERVAL = 500;
 constexpr int DISK_MAX = 128;
@@ -27,6 +30,7 @@ constexpr int PROGRESS_NUM = 9;
 // prediction system LOG (char)
 /////////////////////////////////////////////////////////////////////////
 
+namespace {
 class logw final : protected drive_util
 {
 private:
@@ -126,11 +130,13 @@ public:
         stream.clear(std::ostringstream::goodbit);
     }
 };
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////
 // STRUCTURE, LOGIC
 /////////////////////////////////////////////////////////////////////////
 
+namespace {
 typedef struct _progress_info
 {
     HWND hProgress;
@@ -669,12 +675,14 @@ typedef struct _win_userdata
     logw *plog;
 } win_userdata;
 
+} // namespace
+
 /////////////////////////////////////////////////////////////////////////
 // OPERATOR
 /////////////////////////////////////////////////////////////////////////
 
 namespace {
-RECT &operator +=(RECT &rc, const int &d)
+RECT &operator+=(RECT &rc, const int &d)
 {
     rc.top += d;
     rc.bottom += d;
@@ -686,6 +694,7 @@ RECT &operator +=(RECT &rc, const int &d)
 // FONT
 /////////////////////////////////////////////////////////////////////////
 
+namespace {
 class font
 {
 private:
@@ -698,7 +707,7 @@ private:
     font() {
         hFont = ::CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_DONTCARE, nullptr);
         if(! hFont)
-            throw std::runtime_error(IDS_ERROR_FONT);
+            throw std::runtime_error(CMString(IDS_ERROR_FONT));
     }
     ~font() {
         if(hFont) {
@@ -720,11 +729,13 @@ public:
         return *this;
     }
 };
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////
 // FUNCTION
 /////////////////////////////////////////////////////////////////////////
 
+namespace {
 namespace ProgressString
 {
     static LCCriticalSection cs;
@@ -779,12 +790,13 @@ static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
     for(int i = 0; i < PROGRESS_NUM; ++i)
         ::EnableWindow(pci->pbench_onoff[i], FALSE);
 }
+} // namespace
 
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK
 /////////////////////////////////////////////////////////////////////////
 
-LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
+static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     win_userdata *pwu = reinterpret_cast<win_userdata *>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
     //std::wstring str;
@@ -892,9 +904,6 @@ LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         //    }
         //    pwu->plog->setdir();
         //    break;
-        //case IDM_INFO_VERSION:
-        //    ::MessageBoxW(hWnd, IDS_MESSAGEBOX_COPYRIGHT, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
-        //    break;
         default:
             break;
         }
@@ -944,12 +953,11 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
     return ret;
 }
 
-bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+//
+// extern init.h : called, modeless dialog window
+//
+bool predsystem::CreatePredictionSystem() noexcept
 {
-    (void)hPrevInstance;
-    (void)lpCmdLine;
-    (void)nCmdShow;
-
     logw logobj;
     WNDCLASSEX wc = {0};
     std::wstring windowclassname = IDS_APP_WINDOWCLASSNAME;
@@ -958,13 +966,13 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
     wc.lpfnWndProc = WindowProc;
     wc.cbClsExtra = 0;
     wc.cbWndExtra = 0;
-    wc.hInstance = hInstance;
+    wc.hInstance = ::GetModuleHandleW(nullptr);
     wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = windowclassname.c_str();
     if(! ::RegisterClassEx(&wc)) {
-        ::MessageBoxW(nullptr, IDS_ERROR_CLASSREGISTER, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+        ::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
         return 0;
     }
 
@@ -986,11 +994,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
             WINDOW_HEIGHT,
             nullptr,
             nullptr,
-            hInstance,
+            ::GetModuleHandleW(nullptr),
             nullptr
         );
         if(!hWnd) {
-            ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+            ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
             return 0;
         }
 
@@ -1007,11 +1015,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 30,
                 hWnd,
                 (HMENU)IDC_BUTTON_START,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hButton) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
             ci.hStartButton = hButton;
@@ -1029,11 +1037,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 30,
                 hWnd,
                 (HMENU)IDC_BUTTON_STOP,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hButton) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
             ci.hStopButton = hButton;
@@ -1051,11 +1059,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 300,
                 hWnd,
                 (HMENU)IDC_COMBO_DRIVE,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1087,11 +1095,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 400,
                 hWnd,
                 (HMENU)IDC_COMBO_THREAD,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1120,11 +1128,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 100,
                 hWnd,
                 (HMENU)IDC_COMBO_LOOP,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1148,11 +1156,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 100,
                 hWnd,
                 (HMENU)IDC_COMBO_RAND,
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!hCombo) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1182,11 +1190,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 40,
                 hWnd,
                 (HMENU)PROGRESS_ID(i),
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!proginfo[i].hProgress) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
 
@@ -1210,11 +1218,11 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
                 120,
                 hWnd,
                 (HMENU)BENCH_ONOFF_ID(i),
-                hInstance,
+                ::GetModuleHandleW(nullptr),
                 nullptr
             );
             if(!bench_onoff[i]) {
-                ::MessageBoxW(nullptr, IDS_ERROR_CREATEWINDOW, IDS_MESSAGEBOX_ERROR, MB_OK | MB_ICONWARNING);
+                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
 
@@ -1239,7 +1247,7 @@ bool CreatePredictionSystem(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR 
         bench_info bi(&ci, &logobj);
         win_userdata wu = { &ci, &bi, false, &logobj };
         ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)&wu);
-        ::ShowWindow(hWnd, nCmdShow);
+        ::ShowWindow(hWnd, SW_SHOW);
         ::UpdateWindow(hWnd);
 
         //

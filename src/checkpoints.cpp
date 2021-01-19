@@ -17,6 +17,7 @@ LCCriticalSection Checkpoints::cs_hashSyncCheckpoint;
 uint256 Checkpoints::hashPendingCheckpoint = 0;
 CSyncCheckpoint Checkpoints::checkpointMessage;
 CSyncCheckpoint Checkpoints::checkpointMessagePending;
+enum Checkpoints::CPMode Checkpoints::CheckpointsMode = Checkpoints::STRICT;
 
 //
 // ppcoin: sync-checkpoint master key

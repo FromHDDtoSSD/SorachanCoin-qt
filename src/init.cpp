@@ -35,8 +35,8 @@
 
 CClientUIInterface CClientUIInterface::uiInterface;
 std::string entry::strWalletFileName;
-CWallet *entry::pwalletMain = NULL;
-enum Checkpoints::CPMode entry::CheckpointsMode;
+CWallet *entry::pwalletMain = nullptr;
+//enum Checkpoints::CPMode entry::CheckpointsMode;
 
 //
 // Shutdown
@@ -419,20 +419,14 @@ bool entry::AppInit2()
     // Ping and address broadcast intervals
     block_process::manage::nPingInterval = std::max<int64_t>(10 * 60, map_arg::GetArg("-keepalive", 30 * 60));
 
-    entry::CheckpointsMode = Checkpoints::STRICT;
-    std::string strCpMode = map_arg::GetArg("-cppolicy", "strict");
-
-    if(strCpMode == "strict") {
-        entry::CheckpointsMode = Checkpoints::STRICT;
-    }
-
-    if(strCpMode == "advisory") {
-        entry::CheckpointsMode = Checkpoints::ADVISORY;
-    }
-
-    if(strCpMode == "permissive") {
-        entry::CheckpointsMode = Checkpoints::PERMISSIVE;
-    }
+    Checkpoints::CheckpointsMode = Checkpoints::STRICT;
+    const std::string strCpMode = map_arg::GetArg("-cppolicy", "strict");
+    if(strCpMode == "strict")
+        Checkpoints::CheckpointsMode = Checkpoints::STRICT;
+    else if(strCpMode == "advisory")
+        Checkpoints::CheckpointsMode = Checkpoints::ADVISORY;
+    else if(strCpMode == "permissive")
+        Checkpoints::CheckpointsMode = Checkpoints::PERMISSIVE;
 
     args_bool::fTestNet = map_arg::GetBoolArg("-testnet");
     if (args_bool::fTestNet) {
@@ -703,7 +697,7 @@ bool entry::AppInit2()
     CService addrProxy;
     bool fProxy = false;
     if (map_arg::GetMapArgsCount("-proxy")) {
-        addrProxy = CService(map_arg::GetMapArgsString("-proxy"), nSocksDefault);
+        addrProxy = CService(map_arg::GetMapArgsString("-proxy"), tcp_port::uSocksDefault);
         if (! addrProxy.IsValid()) {
             return InitError(strprintfc(_("Invalid -proxy address: '%s'"), map_arg::GetMapArgsString("-proxy").c_str()));
         }
@@ -730,7 +724,7 @@ bool entry::AppInit2()
         if (! map_arg::GetMapArgsCount("-tor")) {
             addrOnion = addrProxy;
         } else {
-            addrOnion = CService(map_arg::GetMapArgsString("-tor"), nSocksDefault);
+            addrOnion = CService(map_arg::GetMapArgsString("-tor"), tcp_port::uSocksDefault);
         }
 
         if (! addrOnion.IsValid()) {

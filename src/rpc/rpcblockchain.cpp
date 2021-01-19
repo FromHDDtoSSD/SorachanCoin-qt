@@ -411,11 +411,11 @@ json_spirit::Value CRPCTable::getcheckpoint(const json_spirit::Array &params, CB
     }
 
     // Check that the block satisfies synchronized checkpoint
-    if (entry::CheckpointsMode == Checkpoints::STRICT)
+    if (Checkpoints::CheckpointsMode == Checkpoints::STRICT)
         result.push_back(json_spirit::Pair("policy", "strict"));
-    if (entry::CheckpointsMode == Checkpoints::ADVISORY)
+    if (Checkpoints::CheckpointsMode == Checkpoints::ADVISORY)
         result.push_back(json_spirit::Pair("policy", "advisory"));
-    if (entry::CheckpointsMode == Checkpoints::PERMISSIVE)
+    if (Checkpoints::CheckpointsMode == Checkpoints::PERMISSIVE)
         result.push_back(json_spirit::Pair("policy", "permissive"));
     if (map_arg::GetMapArgsCount("-checkpointkey"))
         result.push_back(json_spirit::Pair("checkpointmaster", true));
