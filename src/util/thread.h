@@ -14,6 +14,9 @@
 # include <process.h>
 #else
 # include <thread>
+# include <system_error>
+# include <sys/time.h>
+# include <sys/resource.h>
 #endif
 
 #include <const/no_instance.h>
@@ -71,7 +74,9 @@ public:
         param.nExit = 0;
         param.self = nullptr;
         param.func = _func;
+#ifdef WIN32
         hHandle = nullptr;
+#endif
     }
     ~cla_thread() {
         stop();

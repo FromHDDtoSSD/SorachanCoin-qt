@@ -8,6 +8,9 @@
 #define BITCOIN_SHUTDOWN_H
 
 #include <ui_interface.h>
+#ifndef WIN32
+# include <util/thread.h>
+#endif
 
 class boot : private no_instance
 {

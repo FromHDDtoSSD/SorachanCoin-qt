@@ -17,12 +17,21 @@
 #endif
 
 // warning fprintf disable
+#ifdef WIN32
 static inline void _fprintf_cs(const std::string &e) {
     ::fprintf_s(stdout, e.c_str());
 }
 static inline void _fprintf_cs(const std::wstring &e) {
     ::fwprintf_s(stdout, e.c_str());
 }
+#else
+static inline void _fprintf_cs(const std::string &e) {
+    ::fprintf(stdout, e.c_str());
+}
+static inline void _fprintf_cs(const std::wstring &e) {
+    ::fwprintf(stdout, e.c_str());
+}
+#endif
 
 class debugcs {
 #ifdef DEBUG
