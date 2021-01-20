@@ -19,6 +19,24 @@
 # include <windows.h>
 #endif
 
+#ifndef WIN32
+static inline errno_t memcpy_s(void *_Dst, fsize_t _DstSize, const void *_Src, fsize_t _SrcSize) {
+    assert(_DstSize>=_SrcSize);
+    ::memcpy(_Dst, _Src, _SrcSize);
+    return 0;
+}
+static inline errno_t strcpy_s(const char *_Dst, fsize_t _DstSize, const char *_Src) {
+    (void)_DstSize;
+    ::strcpy(_Dst, _Src);
+    return 0;
+}
+static inline errno_t wcscpy_s(const wchar_t *_Dst, fsize_t _DstSize, const wchar_t *_Src) {
+    (void)_DstSize;
+    ::wcscpy(_Dst, _Src);
+    return 0;
+}
+#endif
+
 class string_error : public std::runtime_error {
 public:
     explicit string_error(const char *e) : runtime_error(e) {}
@@ -660,17 +678,21 @@ public:
         else return c_str();
     }
 
-    int format(const wchar_t *lpType, ...) noexcept {
-        va_list args;
-        va_start(args, lpType);
-        int length = ::_vscwprintf(lpType, args);
-        std::unique_ptr<wchar_t []> str(new(std::nothrow) WCHAR[length+1]);
-        if(str.get())
-            string_error_terminate("CMString: Format, out of memory");
-        int num = ::vswprintf_s(str.get(), length+1, lpType, args);
-        operator=(str.get());
-        va_end(args);
-        return num;
+    template <typename... Args>
+    void format(const wchar_t *lpType, const Args&... args) {
+        operator=(tfm::format(CMString(lpType), args...));
+    }
+    template <typename... Args>
+    void format(const char *lpType, const Args&... args) {
+        operator=(tfm::format(lpType, args...));
+    }
+    template <typename... Args>
+    void formatcat(const wchar_t *lpType, const Args&... args) {
+        operator+=(tfm::format(CMString(lpType), args...));
+    }
+    template <typename... Args>
+    void formatcat(const char *lpType, const Args&... args) {
+        operator+=(tfm::format(lpType, args...));
     }
 
     void tolower() const noexcept {
