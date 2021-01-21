@@ -142,7 +142,7 @@ static std::string FormatException(const std::exception *pex, const char *pszThr
 
 void lutil::PrintExceptionContinue(const std::exception *pex, const char *pszThread) {
     std::string message = FormatException(pex, pszThread);
-    LogPrintf("\n\n************************\n%s\n", message);
+    logging::LogPrintf("\n\n************************\n%s\n", message);
     tfm::format(std::cerr, "\n\n************************\n%s\n", message.c_str());
 }
 
@@ -267,13 +267,13 @@ bool lutil::TryCreateDirectories(const fs::path &p) {
 
 bool lutil::FileCommit(FILE *file) {
     if (::fflush(file) != 0) { // harmless if redundantly called
-        LogPrintf("%s: fflush failed: %d\n", __func__, errno);
+        logging::LogPrintf("%s: fflush failed: %d\n", __func__, errno);
         return false;
     }
 # ifdef WIN32
     HANDLE hFile = (HANDLE)::_get_osfhandle(::_fileno(file));
     if (::FlushFileBuffers(hFile) == 0) {
-        LogPrintf("%s: FlushFileBuffers failed: %d\n", __func__, ::GetLastError());
+        logging::LogPrintf("%s: FlushFileBuffers failed: %d\n", __func__, ::GetLastError());
         return false;
     }
 # else
@@ -383,7 +383,7 @@ fs::path lutil::GetSpecialFolderPath(int nFolder, bool fCreate) noexcept {
     if(::SHGetSpecialFolderPathA(nullptr, pszPath, nFolder, fCreate)) {
         return fs::path(pszPath);
     }
-    LogPrintf("SHGetSpecialFolderPathW() failed, could not obtain requested path.\n");
+    logging::LogPrintf("SHGetSpecialFolderPathW() failed, could not obtain requested path.\n");
     return fs::path("");
 }
 #endif
@@ -397,7 +397,7 @@ void lutil::runCommand(const std::string &strCommand) {
     //int nErr = ::_wsystem(std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t>().from_bytes(strCommand).c_str());
 #endif
     if (nErr)
-        LogPrintf("runCommand error: system(%s) returned %d\n", strCommand, nErr);
+        logging::LogPrintf("runCommand error: system(%s) returned %d\n", strCommand, nErr);
 }
 
 void lutil::RenameThread(const char *name) {

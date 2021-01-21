@@ -66,13 +66,13 @@ public:
     static bool error(const char *fmt, const Args&... args) {
         std::ostringstream oss;
         tfm::format(oss, fmt, args...);
-        LogPrintf("ERROR: %s\n", oss.str().c_str());
+        logging::LogPrintf("ERROR: %s\n", oss.str().c_str());
         return false;
     }
 };
 
-#define printf(format, ...) LogPrintf(format, ##__VA_ARGS__)
-#define printfc(format, ...) LogPrintf((format).c_str(), ##__VA_ARGS__)
+#define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
+#define printfc(format, ...) logging::LogPrintf((format).c_str(), ##__VA_ARGS__)
 #define sts_c(imp) std::string(imp).c_str()
 
 //

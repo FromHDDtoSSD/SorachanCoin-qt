@@ -414,7 +414,7 @@ static bool InterpretNegatedOption(std::string &key, std::string &val) {
         key.erase(option_index, 2);
         if (!bool_val ) {
             // Double negatives like -nofoo=0 are supported (but discouraged)
-            LogPrintf("Warning: parsed potentially confusing double-negative %s=%s\n", key, val);
+            logging::LogPrintf("Warning: parsed potentially confusing double-negative %s=%s\n", key, val);
             val = "1";
         } else {
             return true;
@@ -811,7 +811,7 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
                 error = strprintf("Invalid configuration value %s", option.first.c_str());
                 return false;
             } else {
-                LogPrintf("Ignoring unknown configuration value %s\n", option.first);
+                logging::LogPrintf("Ignoring unknown configuration value %s\n", option.first);
             }
         }
     }
@@ -863,7 +863,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) 
                     if (! ReadConfigStream(include_config, error, ignore_invalid_keys)) {
                         return false;
                     }
-                    LogPrintf("Included configuration file %s\n", to_include.c_str());
+                    logging::LogPrintf("Included configuration file %s\n", to_include.c_str());
                 } else {
                     error = "Failed to include configuration file " + to_include;
                     return false;

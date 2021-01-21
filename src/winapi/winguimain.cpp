@@ -972,7 +972,7 @@ bool predsystem::CreatePredictionSystem() noexcept
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = windowclassname.c_str();
     if(! ::RegisterClassEx(&wc)) {
-        ::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
+        logging::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
         return 0;
     }
 
@@ -998,7 +998,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             nullptr
         );
         if(!hWnd) {
-            ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+            logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
             return 0;
         }
 
@@ -1019,7 +1019,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hButton) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
             ci.hStartButton = hButton;
@@ -1041,7 +1041,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hButton) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
             ci.hStopButton = hButton;
@@ -1063,7 +1063,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hCombo) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1099,7 +1099,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hCombo) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1132,7 +1132,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hCombo) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1160,7 +1160,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!hCombo) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return false;
             }
 
@@ -1194,7 +1194,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!proginfo[i].hProgress) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
 
@@ -1222,7 +1222,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 nullptr
             );
             if(!bench_onoff[i]) {
-                ::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return 0;
             }
 

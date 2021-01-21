@@ -5,21 +5,20 @@
 #ifdef USE_LEVELDB
 
 #include <map>
-
 #include <boost/version.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-
 #include <leveldb/env.h>
 #include <leveldb/cache.h>
 #include <leveldb/filter_policy.h>
 #include <memenv/memenv.h>
-
-#include "kernel.h"
-#include "checkpoints.h"
-#include "txdb.h"
-#include "util.h"
-#include "main.h"
+#include <kernel.h>
+#include <checkpoints.h>
+#include <txdb.h>
+#include <util.h>
+#include <main.h>
+#include <util/logging.h>
+#include <file_operate/iofs.h>
 
 leveldb::DB *CTxDB::txdb = nullptr;
 
@@ -39,27 +38,25 @@ void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = fals
     //
     // First time init.
     //
-    boost::filesystem::path directory = iofs::GetDataDir() / "txleveldb";
+    fs::path directory = iofs::GetDataDir() / "txleveldb";
 
     if (fRemoveOld) {
-        boost::filesystem::remove_all(directory); // remove directory
+        fs::remove_all(directory); // remove directory
         unsigned int nFile = 1;
-
-        for ( ; ; )
-        {
-            boost::filesystem::path strBlockFile = iofs::GetDataDir() / strprintf("blk%04u.dat", nFile);
+        for (;;) {
+            fs::path strBlockFile = iofs::GetDataDir() / strprintf("blk%04u.dat", nFile);
 
             // Break if no such file
-            if (! boost::filesystem::exists(strBlockFile)) {
+            if (! fs::exists(strBlockFile)) {
                 break;
             }
 
-            boost::filesystem::remove(strBlockFile);
+            fs::remove(strBlockFile);
             ++nFile;
         }
     }
 
-    boost::filesystem::create_directory(directory);
+    fs::create_directory(directory);
     printf("Opening LevelDB in %s\n", directory.string().c_str());
 
     leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CTxDB::txdb);

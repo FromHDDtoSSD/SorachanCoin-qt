@@ -3,20 +3,17 @@
 // Authored by Google, Inc.
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-// 
+
 #ifndef BITCOIN_LEVELDB_H
 #define BITCOIN_LEVELDB_H
 
-#include "main.h"
-
+#include <main.h>
 #include <map>
 #include <string>
 #include <vector>
-
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 
-//
 // Class that provides access to a LevelDB. Note that this class is frequently
 // instantiated on the stack and then destroyed again, so instantiation has to
 // be very cheap. Unfortunately that means, a CTxDB instance is actually just a
@@ -29,7 +26,6 @@
 // together when too many files stack up.
 //
 // Learn more: http://code.google.com/p/leveldb/
-//
 class CTxDB
 {
 public:
@@ -48,10 +44,10 @@ public:
     void Close();
 
 private:
-    CTxDB(const CTxDB &); // {}
-    CTxDB(const CTxDB &&); // {}
-    CTxDB &operator=(const CTxDB &); // {}
-    CTxDB &operator=(const CTxDB &&); // {}
+    CTxDB(const CTxDB &)=delete;
+    CTxDB(CTxDB &&)=delete;
+    CTxDB &operator=(const CTxDB &)=delete;
+    CTxDB &operator=(CTxDB &&)=delete;
 
     //
     // global pointer for LevelDB object instance

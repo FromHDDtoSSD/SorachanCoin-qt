@@ -11,7 +11,7 @@
 #include <version.h>
 
 #ifndef printf
-# define printf(format, ...) LogPrintf(format, ##__VA_ARGS__)
+# define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
 #endif
 
 BCLog::Logger &LogInstance() noexcept {

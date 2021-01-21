@@ -11,14 +11,14 @@
 void bitthread::thread_error(const std::string &e) noexcept {
     std::string err(e);
     err += " :thread_error";
-    LogPrintf(err.c_str());
+    logging::LogPrintf(err.c_str());
 }
 
 bool bitthread::manage::NewThread(void(*pfn)(void *), void *parg) noexcept {
     try {
         boost::thread(pfn, parg); // thread detaches when out of scope
     } catch (boost::thread_resource_error &e) {
-        LogPrintf("Error creating thread: %s\n", e.what());
+        logging::LogPrintf("Error creating thread: %s\n", e.what());
         return false;
     }
     return true;

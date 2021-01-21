@@ -124,6 +124,8 @@ std::vector<CLogCategoryActive> ListActiveLogCategories();
 /** Return true if str parses as a log category and set the flag */
 bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str) noexcept;
 
+namespace logging {
+
 // Be conservative when using LogPrintf/error or other things which
 // unconditionally log to debug.log! It should not be the case that an inbound
 // peer can fill up a user's disk with debug.log entries.
@@ -146,6 +148,8 @@ static inline void LogPrint(const BCLog::LogFlags &category, const Args&... args
     if (LogAcceptCategory((category)))
         LogPrintf(args...);
 }
+
+} // namespace log
 
 void InitLogging();
 bool OpenDebugFile();

@@ -34,7 +34,7 @@ static bool IsBerkeleyBtree(const fs::path &path) {
     // This check also prevents opening lock files.
     boost::system::error_code ec;
     auto size = fs::file_size(path, ec);
-    if (ec) LogPrintf("%s: %s %s\n", __func__, ec.message(), path.string());
+    if (ec) logging::LogPrintf("%s: %s %s\n", __func__, ec.message(), path.string());
     if (size < 4096) return false;
 
     fsbridge::ifstream file(path, std::ios::binary);
@@ -59,7 +59,7 @@ std::vector<fs::path> hdwalletutil::ListWalletDir() {
 
     for (auto it = fs::recursive_directory_iterator(wallet_dir, ec); it != fs::recursive_directory_iterator(); it.increment(ec)) {
         if (ec) {
-            LogPrintf("%s: %s %s\n", __func__, ec.message(), it->path().string());
+            logging::LogPrintf("%s: %s %s\n", __func__, ec.message(), it->path().string());
             continue;
         }
 

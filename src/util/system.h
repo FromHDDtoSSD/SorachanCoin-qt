@@ -66,7 +66,7 @@ bool SetupNetworking() noexcept;
 
 template<typename... Args>
 bool error(const char* fmt, const Args&... args) noexcept {
-    LogPrintf("ERROR: %s\n", tfm::format(fmt, args...));
+    logging::LogPrintf("ERROR: %s\n", tfm::format(fmt, args...));
     return false;
 }
 
@@ -123,13 +123,13 @@ template <typename Callable> void TraceThread(const char *name,  Callable func)
     RenameThread(s.c_str());
     try
     {
-        LogPrintf("%s thread start\n", name);
+        logging::LogPrintf("%s thread start\n", name);
         func();
-        LogPrintf("%s thread exit\n", name);
+        logging::LogPrintf("%s thread exit\n", name);
     }
     catch (const boost::thread_interrupted &)
     {
-        LogPrintf("%s thread interrupt\n", name);
+        logging::LogPrintf("%s thread interrupt\n", name);
         throw;
     }
     catch (const std::exception &e) {
