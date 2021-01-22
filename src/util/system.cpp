@@ -279,17 +279,17 @@ bool lutil::FileCommit(FILE *file) {
 # else
 #  if defined(__linux__) || defined(__NetBSD__)
     if (::fdatasync(::fileno(file)) != 0 && errno != EINVAL) { // Ignore EINVAL for filesystems that don't support sync
-        LogPrintf("%s: fdatasync failed: %d\n", __func__, errno);
+        logging::LogPrintf("%s: fdatasync failed: %d\n", __func__, errno);
         return false;
     }
 #  elif defined(MAC_OSX) && defined(F_FULLFSYNC)
     if (::fcntl(::fileno(file), F_FULLFSYNC, 0) == -1) { // Manpage says "value other than -1" is returned on success
-        LogPrintf("%s: fcntl F_FULLFSYNC failed: %d\n", __func__, errno);
+        logging::LogPrintf("%s: fcntl F_FULLFSYNC failed: %d\n", __func__, errno);
         return false;
     }
 #  else
     if (::fsync(::fileno(file)) != 0 && errno != EINVAL) {
-        LogPrintf("%s: fsync failed: %d\n", __func__, errno);
+        logging::LogPrintf("%s: fsync failed: %d\n", __func__, errno);
         return false;
     }
 #  endif
@@ -493,7 +493,7 @@ int lutil::ScheduleBatchPriority() {
 #ifdef SCHED_BATCH
     const static sched_param param{};
     if (int ret = pthread_setschedparam(pthread_self(), SCHED_BATCH, &param)) {
-        LogPrintf("Failed to pthread_setschedparam: %s\n", strerror(errno));
+        logging::LogPrintf("Failed to pthread_setschedparam: %s\n", strerror(errno));
         return ret;
     }
     return 0;

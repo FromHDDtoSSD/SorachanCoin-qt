@@ -232,7 +232,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 void irc::ThreadIRCSeed(void *parg)
 {
     // Make this thread recognisable as the IRC seeding thread
-    bitthread::manage::RenameThread(sts_c(coin_param::strCoinName + "coin-ircseed"));
+    bitthread::manage::RenameThread(coin_param::strCoinName + "coin-ircseed");
 
     printf("irc::ThreadIRCSeed started\n");
 
@@ -241,7 +241,7 @@ void irc::ThreadIRCSeed(void *parg)
     } catch (const std::exception &e) {
         excep::PrintExceptionContinue(&e, "irc::ThreadIRCSeed()");
     } catch (...) {
-        excep::PrintExceptionContinue(NULL, "irc::ThreadIRCSeed()");
+        excep::PrintExceptionContinue(nullptr, "irc::ThreadIRCSeed()");
     }
     printf("irc::ThreadIRCSeed exited\n");
 }
@@ -372,8 +372,8 @@ void irc::ThreadIRCSeed2(void *parg)
             // Channel number is always 0 for initial release
             //
             int channel_number = 0;
-            irc::Send(hSocket, sts_c(strprintf("JOIN #coin%02d\r", channel_number)));
-            irc::Send(hSocket, sts_c(strprintf("WHO #coin%02d\r", channel_number)));
+            irc::Send(hSocket, CMString("JOIN #coin%02d\r", channel_number));
+            irc::Send(hSocket, CMString("WHO #coin%02d\r", channel_number));
         }
 
         int64_t nStart = bitsystem::GetTime();

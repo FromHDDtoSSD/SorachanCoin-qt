@@ -10,6 +10,7 @@
 #include <file_operate/iofs.h>
 #include <util/args.h> // map_arg, lsync
 #include <const/block_param.h>
+#include <version.h>
 
 #ifdef WIN32
 # ifdef _WIN32_IE
@@ -65,7 +66,8 @@ fs::path iofs::GetDefaultDataDir() {
     // Mac: ~/Library/Application Support/SorachanCoin
     // Unix / Linux: ~/.SorachanCoin
 #ifdef WIN32
-    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / coin_param::strCoinName.c_str();
+    //debugcs::instance() << "CoinName: " << coin_param::strCoinName.c_str() << debugcs::endl();
+    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / coin_param::strCoinName.str();
 #else
     fs::path pathRet;
     char *pszHome = ::getenv("HOME");
@@ -119,14 +121,14 @@ const fs::path &iofs::GetDataDir(bool fNetSpecific) {
 }
 
 fs::path iofs::GetConfigFile() {
-    fs::path pathConfigFile(map_arg::GetArg("-conf", sts_c(coin_param::strCoinName + ".conf")));
+    fs::path pathConfigFile(map_arg::GetArg("-conf", (coin_param::strCoinName + ".conf").str()));
     if (! pathConfigFile.is_complete())
         pathConfigFile = iofs::GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 
 fs::path iofs::GetPidFile() {
-    fs::path pathPidFile(map_arg::GetArg("-pid", sts_c(coin_param::strCoinName + ".pid")));
+    fs::path pathPidFile(map_arg::GetArg("-pid", (coin_param::strCoinName + ".pid").str()));
     if (! pathPidFile.is_complete()) { pathPidFile = iofs::GetDataDir() / pathPidFile; }
     return pathPidFile;
 }

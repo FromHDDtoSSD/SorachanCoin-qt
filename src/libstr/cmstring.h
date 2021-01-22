@@ -13,7 +13,7 @@
 #include <util/tinyformat.h> // thanks, tinyformat.
 #include <debugcs/debugcs.h> // ::_fprintf_cs(e)
 #ifdef WIN32
-//# define CMSTRING_WIN32API // defined, using windowsAPI
+// # define CMSTRING_WIN32API // defined, using windowsAPI
 #endif
 #ifdef CMSTRING_WIN32API
 # include <windows.h>
@@ -50,11 +50,10 @@ public:
     }
 };
 
-using index_t = int32_t;
-
 //
 // string library (char, wchar_t, etc ...)
 //
+using index_t = int32_t;
 class CMString {
 private:
     void setnull() noexcept {
@@ -589,7 +588,7 @@ public:
     const char *c_str() const noexcept {
         if (m_lpBuf==nullptr) return "";
         else {
-            delete [] m_cBuf;
+            if(m_cBuf) delete [] m_cBuf;
             DWORD dwLen;
             utoutf8cpy(nullptr, m_lpBuf, &dwLen);
             m_cBuf = new(std::nothrow) char[dwLen];
@@ -600,7 +599,8 @@ public:
         }
     }
     LPCWSTR w_str() const noexcept {
-        return (LPCWSTR)*this;
+        if (m_lpBuf==nullptr) return L"";
+        else return m_lpBuf;
     }
 
     void set_str(const char *utf8) noexcept {
@@ -662,20 +662,12 @@ public:
         if(m_lpBuf==nullptr) return L'\0';
         return m_lpBuf[index];
     }
-    operator LPCWSTR() const noexcept {
-        if (m_lpBuf==nullptr) return L"";
-        else return m_lpBuf;
-    }
 
     char c_at(index_t index) noexcept {
         return c_str()[index];
     }
     char c_at(index_t index) const noexcept {
         return c_str()[index];
-    }
-    operator const char *() const noexcept {
-        if (m_lpBuf==nullptr) return "";
-        else return c_str();
     }
 
     template <typename... Args>
@@ -984,11 +976,47 @@ public:
         if(m_lpBuf) delete [] m_lpBuf;
     }
 
-    std::string str() const noexcept {
+    //
+    // return object
+    //
+    operator LPCWSTR() const noexcept {
+        return w_str();
+    }
+    operator const char *() const noexcept {
+        return c_str();
+    }
+    std::string str() const {
         return std::string(c_str());
     }
-    std::wstring wstr() const noexcept {
-        return std::wstring((LPCWSTR)*this);
+    std::wstring wstr() const {
+        return std::wstring(w_str());
+    }
+    // no defined operator std::string() and operator std::wstring() (because ambiguous)
+    // using .str() or .wstr()
+
+    friend class CMString operator+(const std::string &s1, const CMString &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(const std::wstring &s1, const CMString &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(const CMString &s1, const std::string &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(const CMString &s1, const std::wstring &s2) {
+        return CMString(s1)+s2;
+    }
+
+    //
+    // format constructor
+    //
+    template <typename... Args>
+    CMString(const char *str, const Args&... args) {
+        format(str, args...);
+    }
+    template <typename... Args>
+    CMString(LPCWSTR str, const Args&... args) {
+        format(str, args...);
     }
 
     //
@@ -1029,5 +1057,16 @@ private:
     wchar_t m_mask_data;
     int m_mask_index;
 };
+
+//
+// global operator
+//
+static inline bool operator==(const std::string &s1, const CMString &s2) {
+    return (s2==s1);
+}
+
+static inline bool operator==(const std::wstring &s1, const CMString &s2) {
+    return (s2==s1);
+}
 
 #endif // SORACHANCOIN_CMSTRING_H

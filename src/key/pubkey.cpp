@@ -86,6 +86,7 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexce
         return ret;
     };
 
+    debugcs::instance() << "CPubKey " << __func__ << " Bip66 mode: " << entry::b66mode << debugcs::endl();
     if(entry::b66mode == entry::Bip66_STRICT) {
         return bip66() && openssl();
     } else if (entry::b66mode == entry::Bip66_ADVISORY) {

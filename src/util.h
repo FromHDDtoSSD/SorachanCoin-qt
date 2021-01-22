@@ -72,8 +72,6 @@ public:
 };
 
 #define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
-#define printfc(format, ...) logging::LogPrintf((format).c_str(), ##__VA_ARGS__)
-#define sts_c(imp) std::string(imp).c_str()
 
 //
 // API overload

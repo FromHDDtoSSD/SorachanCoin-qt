@@ -18,6 +18,7 @@
 #include <util.h>
 #include <checkpoints.h>
 #include <address/base58.h>
+#include <libstr/cmstring.h>
 
 //
 // HTTP status codes
@@ -104,45 +105,54 @@ public:
     }
     bool fHelp() const noexcept {return (param == BITRPC_PARAM_HELP);}
     bool fSuccess() const noexcept {return (ret == BITRPC_STATUS_OK);}
+
     template <typename T>
-    json_spirit::Value JSONRPCSuccess(T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) noexcept {
+    json_spirit::Value JSONRPCSuccess(T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) {
         ret = BITRPC_STATUS_OK;
         if(__sr) sr = __sr;
         if(__eg) eg = __eg;
         return in_type;
     }
     template <typename T>
-    json_spirit::Value JSONRPCSuccess(const T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) noexcept {
+    json_spirit::Value JSONRPCSuccess(const T &in_type, const char *__sr = nullptr, const char *__eg = nullptr) {
         ret = BITRPC_STATUS_OK;
         if(__sr) sr = __sr;
         if(__eg) eg = __eg;
         return in_type;
     }
-    std::string runtime_error(const std::string &in_err) noexcept {
+
+    std::string runtime_error(const std::string &in_err) {
         ret = BITRPC_STATUS_EXCEPT;
         e = in_err;
         return e;
     }
-    std::string runtime_error(const char *in_err) noexcept {
-        ret = BITRPC_STATUS_EXCEPT;
-        if(in_err) e = in_err;
-        return e;
-    }
-    json_spirit::Value runtime_error(const std::string &in_err, int) noexcept { // int: dummy
+    //std::string runtime_error(const char *in_err) {
+    //    ret = BITRPC_STATUS_EXCEPT;
+    //    if(in_err) e = in_err;
+    //    return e;
+    //}
+    json_spirit::Value runtime_error(const std::string &in_err, int) { // int: dummy
         runtime_error(in_err);
         json_spirit::Value jv = in_err;
         return jv;
     }
-    std::string JSONRPCError(int in_code, const std::string &in_err) noexcept {
+
+    //std::string JSONRPCError(int in_code, const std::string &in_err) {
+    //    ret = BITRPC_STATUS_ERROR;
+    //    code = in_code;
+    //    e = in_err;
+    //    return e;
+    //}
+    std::string JSONRPCError(int in_code, const CMString &in_err) {
         ret = BITRPC_STATUS_ERROR;
         code = in_code;
-        e = in_err;
+        e = in_err.str();
         return e;
     }
-    std::string JSONRPCError() const noexcept {
+    std::string JSONRPCError() const {
         return e;
     }
-    std::string runtime_error() const noexcept {
+    std::string runtime_error() const {
         return e;
     }
 };

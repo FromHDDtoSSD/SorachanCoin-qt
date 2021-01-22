@@ -8,6 +8,7 @@
 #define BITCOIN_FILEOPEN_H
 
 #include <boot/shutdown.h>
+#include <version.h>
 #include <ui_interface.h>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -37,7 +38,7 @@ public:
         return file;
     }
     static bool CheckDiskSpace(uint64_t nAdditionalBytes=0) {
-        uint64_t nFreeBytesAvailable = boost::filesystem::space(iofs::GetDataDir()).available;
+        uint64_t nFreeBytesAvailable = fs::space(iofs::GetDataDir()).available;
         // Check for nMinDiskSpace bytes
         if (nFreeBytesAvailable < nMinDiskSpace + nAdditionalBytes) {
             args_bool::fShutdown = true;

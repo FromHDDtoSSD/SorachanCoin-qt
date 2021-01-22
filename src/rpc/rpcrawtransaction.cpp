@@ -179,7 +179,7 @@ json_spirit::Value CRPCTable::listunspent(const json_spirit::Array &params, CBit
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
             CBitcoinAddress address(str);
             if (! address.IsValid())
-                return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(sts_c("Invalid " + coin_param::strCoinName + " address: ")) + str);
+                return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, CMString("Invalid ") + coin_param::strCoinName + " address: " + str);
             if (setAddress.count(address))
                 return data.JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ") + str);
             setAddress.insert(address);

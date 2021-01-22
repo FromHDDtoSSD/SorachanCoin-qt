@@ -162,9 +162,9 @@ json_spirit::Value CRPCTable::help(const json_spirit::Array &params, CBitrpcData
 json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
-            std::string("stop <detach>\n"
-             "<detach> is true or false to detach the database or not for this stop only\n"
-             "Stop ") + coin_param::strCoinName + " server (and possibly override the detachdb config value).");
+            ("stop <detach>\n"
+            "<detach> is true or false to detach the database or not for this stop only\n"
+            "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value).").str());
     }
 
     // Shutdown will take long enough that the response should get back
@@ -174,7 +174,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     }
     boot::StartShutdown();
-    return data.JSONRPCSuccess(std::string(coin_param::strCoinName + " server stopping"));
+    return data.JSONRPCSuccess((coin_param::strCoinName + " server stopping").str());
 }
 
 // Call Table
@@ -619,7 +619,7 @@ void bitrpc::ThreadRPCServer(void *parg) {
     ThreadRPCServer2(&darg);
     //if(! darg.fok) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        printfc(std::string(darg.e.c_str()) + " : ThreadRPCServer()");
+        printf(CMString(darg.e.c_str()) + " : ThreadRPCServer()");
     //} else
         //net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 

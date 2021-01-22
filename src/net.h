@@ -582,15 +582,15 @@ private:
     static uint64_t nTotalBytesRecv;
     static uint64_t nTotalBytesSent;
 
-    CNode(const CNode &); // {}
-    CNode(const CNode &&); // {}
-    CNode &operator=(const CNode &); // {}
-    CNode &operator=(const CNode &&); // {}
+    CNode(const CNode &)=delete;
+    CNode(CNode &&)=delete;
+    CNode &operator=(const CNode &)=delete;
+    CNode &operator=(CNode &&)=delete;
 
     void PushMessage_impl() {}
 
     template<typename T, typename... Remain>
-    void PushMessage_impl(T &&a, Remain&&... remain) {
+    void PushMessage_impl(T &a, Remain&... remain) {
         vSend << a;
         PushMessage_impl(std::forward<Remain>(remain)...);
     }
@@ -752,7 +752,7 @@ public:
     void PushVersion();
 
     template<typename... Args>
-    void PushMessage(const char *pszCommand, Args&&... args) {
+    void PushMessage(const char *pszCommand, const Args&... args) {
         try {
             BeginMessage(pszCommand);
             PushMessage_impl(args...);

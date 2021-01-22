@@ -187,11 +187,11 @@ int main(int argc, char *argv[])
     // as it is used to locate QSettings)
     //
     app.setOrganizationName(coin_param::strCoinName.c_str());
-    app.setOrganizationDomain(sts_c(coin_param::strCoinName + ".su"));
+    app.setOrganizationDomain((coin_param::strCoinName + ".su").c_str());
     if(map_arg::GetBoolArg("-testnet")) {// Separate UI settings for testnet
-        app.setApplicationName(sts_c(coin_param::strCoinName + "-qt-testnet"));
+        app.setApplicationName((coin_param::strCoinName + "-qt-testnet").c_str());
     } else {
-        app.setApplicationName(sts_c(coin_param::strCoinName + "-qt"));
+        app.setApplicationName((coin_param::strCoinName + "-qt").c_str());
     }
 
     // Now that QSettings are accessible, initialize translations

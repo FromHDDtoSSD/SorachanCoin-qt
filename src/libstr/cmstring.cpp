@@ -4,6 +4,16 @@
 
 #include <libstr/cmstring.h>
 
+/*
+bool operator==(const std::string &s1, const CMString &s2) {
+    return (s2==s1);
+}
+
+bool operator==(const std::wstring &s1, const CMString &s2) {
+    return (s2==s1);
+}
+*/
+
 // test OK (Windows and Linux/UNIX)
 class CMString_test {
 public:

@@ -9,16 +9,17 @@
 #include <const/no_instance.h>
 #include <string>
 #include <vector>
+#include <libstr/cmstring.h>
 
 namespace coin_param
 {
     //
     // coin name
     //
-    const std::string strCoinName  = "SorachanCoin";
-    const std::string strCoinNameL = "sorachancoin";
-    const std::string strEcho      = "SorachanCoin_Echo";
-    const std::string strQuantum   = "SorachanCoin_Quantum";
+    const CMString strCoinName  = "SorachanCoin";
+    const CMString strCoinNameL = "sorachancoin";
+    const CMString strEcho      = "SorachanCoin_Echo";
+    const CMString strQuantum   = "SorachanCoin_Quantum";
 }
 
 namespace version

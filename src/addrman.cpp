@@ -274,7 +274,7 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId, int nOrigin)
 
 void CAddrMan::Good_(const CService &addr, int64_t nTime)
 {
-    // printf(sts_c("Good: addr=%s\n", addr.ToString()));
+    // printf("Good: addr=%s\n", addr.ToString());
     int nId;
     CAddrInfo *pinfo = Find(addr, &nId);
 
