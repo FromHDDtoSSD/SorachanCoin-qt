@@ -42,6 +42,11 @@ public:
     explicit string_error(const char *e) : runtime_error(e) {}
 };
 
+class string_error_stream : public std::bad_alloc {
+public:
+    explicit string_error_stream(const char *) : bad_alloc() {}
+};
+
 class string_error_terminate {
 public:
     string_error_terminate(const char *e) noexcept {
@@ -62,6 +67,11 @@ private:
         m_dwLength = 0;
         m_mask_data = L'\0';
         m_mask_index = 0;
+    }
+    void release() noexcept {
+        if(m_lpBuf) delete [] m_lpBuf;
+        if(m_cBuf) delete [] m_cBuf;
+        setnull();
     }
     void mem_buffer(const wchar_t *lpStr, size_t len) noexcept { // len: without '\0' e.g., "abcde" => len=5
         assert(lpStr && len>0);
@@ -523,9 +533,6 @@ public:
     CMString &operator=(double dNum) noexcept {
         return operator=(tfm::format(std::string("%d"), dNum));
     }
-    CMString &operator=(const CMString &obj) noexcept {
-        return operator=(obj.w_str());
-    }
     CMString &operator=(const std::string &obj) {
         return operator=(obj.c_str());
     }
@@ -744,6 +751,20 @@ public:
     bool operator!=(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)!=0;}
     bool operator==(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)==0;}
     bool operator!=(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)!=0;}
+    bool operator==(char c) const noexcept {
+        const char str[] = {c, '\0'};
+        return ::strcmp((LPCSTR)*this, str)==0;
+    }
+    bool operator!=(char c) const noexcept {
+        return !(operator==(c));
+    }
+    bool operator==(wchar_t c) const noexcept {
+        const wchar_t str[] = {c, L'\0'};
+        return ::wcscmp((LPCWSTR)*this, str)==0;
+    }
+    bool operator!=(wchar_t c) const noexcept {
+        return !(operator==(c));
+    }
     bool operator==(int16_t i) const {
         std::string c = tfm::format("%d", i);
         return ::strcmp((LPCSTR)*this, c.c_str())==0;
@@ -785,6 +806,20 @@ public:
     }
     bool operator!=(uint64_t i) const {
         return !(operator==(i));
+    }
+    bool operator==(float d) const {
+        std::string c = tfm::format("%d", d);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(float d) const {
+        return !(operator==(d));
+    }
+    bool operator==(double d) const {
+        std::string c = tfm::format("%d", d);
+        return ::strcmp((LPCSTR)*this, c.c_str())==0;
+    }
+    bool operator!=(double d) const {
+        return !(operator==(d));
     }
     bool operator==(const uint160 &obj) const noexcept {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
@@ -959,10 +994,6 @@ public:
         setnull();
         operator=(obj.ToString());
     }
-    CMString(const CMString &obj) noexcept {
-        setnull();
-        operator=(obj.w_str());
-    }
     CMString(const std::string &str) {
         setnull();
         operator=(str.c_str());
@@ -972,8 +1003,7 @@ public:
         operator=(str.c_str());
     }
     virtual ~CMString() {
-        if(m_cBuf) delete [] m_cBuf;
-        if(m_lpBuf) delete [] m_lpBuf;
+        release();
     }
 
     //
@@ -994,17 +1024,128 @@ public:
     // no defined operator std::string() and operator std::wstring() (because ambiguous)
     // using .str() or .wstr()
 
+    //
+    // const CMString + (CMString, primitive or other object)
+    //
+    friend class CMString operator+(const CMString &s1, const std::string &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(const CMString &s1, const std::wstring &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(const CMString &s1, char c2) {
+        return CMString(s1)+c2;
+    }
+    friend class CMString operator+(const CMString &s1, wchar_t c2) {
+        return CMString(s1)+c2;
+    }
+    friend class CMString operator+(const CMString &s1, int16_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, uint16_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, int32_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, uint32_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, int64_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, uint64_t i2) {
+        return CMString(s1)+i2;
+    }
+    friend class CMString operator+(const CMString &s1, const uint160 &u2) {
+        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
+    }
+    friend class CMString operator+(const CMString &s1, const uint256 &u2) {
+        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
+    }
+    friend class CMString operator+(const CMString &s1, const uint512 &u2) {
+        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
+    }
+    friend class CMString operator+(const CMString &s1, const uint65536 &u2) {
+        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
+    }
+    friend class CMString operator+(const CMString &s1, const uint131072 &u2) {
+        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
+    }
+
+    //
+    // (CMString, primitive or other object) + CMString
+    //
     friend class CMString operator+(const std::string &s1, const CMString &s2) {
         return CMString(s1)+s2;
     }
     friend class CMString operator+(const std::wstring &s1, const CMString &s2) {
         return CMString(s1)+s2;
     }
-    friend class CMString operator+(const CMString &s1, const std::string &s2) {
-        return CMString(s1)+s2;
+    friend class CMString operator+(char c1, const CMString &s2) {
+        return CMString(c1)+s2;
     }
-    friend class CMString operator+(const CMString &s1, const std::wstring &s2) {
-        return CMString(s1)+s2;
+    friend class CMString operator+(wchar_t c1, const CMString &s2) {
+        return CMString(c1)+s2;
+    }
+    friend class CMString operator+(int16_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(uint16_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(int32_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(uint32_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(int64_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(uint64_t i1, const CMString &s2) {
+        return CMString(i1)+s2;
+    }
+    friend class CMString operator+(float d1, const CMString &s2) {
+        return CMString(d1)+s2;
+    }
+    friend class CMString operator+(double d1, const CMString &s2) {
+        return CMString(d1)+s2;
+    }
+    friend class CMString operator+(const uint160 &u1, const CMString &s2) {
+        return CMString(u1)+s2;
+    }
+    friend class CMString operator+(const uint256 &u1, const CMString &s2) {
+        return CMString(u1)+s2;
+    }
+    friend class CMString operator+(const uint512 &u1, const CMString &s2) {
+        return CMString(u1)+s2;
+    }
+    friend class CMString operator+(const uint65536 &u1, const CMString &s2) {
+        return CMString(u1)+s2;
+    }
+    friend class CMString operator+(const uint131072 &u1, const CMString &s2) {
+        return CMString(u1)+s2;
+    }
+
+    //
+    // copy and move constructor
+    //
+    CMString(const CMString &obj) noexcept {
+        setnull();
+        operator=(obj);
+    }
+    CMString(CMString &&obj) noexcept {
+        setnull();
+        operator=(obj);
+    }
+    CMString &operator=(const CMString &obj) noexcept {
+        *this=(LPCWSTR)obj;
+        return *this;
+    }
+    CMString &operator=(CMString &&robj) noexcept {
+        this->swap(static_cast<CMString &&>(robj));
+        return *this;
     }
 
     //
@@ -1020,6 +1161,18 @@ public:
     }
 
     //
+    // rvalue operator
+    //
+    void swap(CMString &&robj) noexcept {
+        setnull();
+        m_lpBuf = robj.m_lpBuf;
+        m_dwLength = robj.m_dwLength;
+        m_mask_data = robj.m_mask_data;
+        m_mask_index = robj.m_mask_index;
+    }
+
+    //
+    // CDataStream
     // Serialize, Unserialize
     //
     template <typename Stream>
@@ -1041,7 +1194,7 @@ public:
             const size_t size = (len-sizeof(wchar_t)-sizeof(int))/sizeof(wchar_t) + 1; // with '\0'
             m_lpBuf = new(std::nothrow) wchar_t[size];
             if(! m_lpBuf)
-                string_error_terminate("CMString Unserialize(Stream): out of memory");
+                throw string_error_stream("CMString Unserialize(Stream): out of memory"); // catch: try { CDataStream } catch(...) {}
             m_dwLength = size;
             s.read((char *)m_lpBuf, (size-1)*sizeof(wchar_t));
             m_lpBuf[size - 1] = L'\0';
@@ -1067,6 +1220,66 @@ static inline bool operator==(const std::string &s1, const CMString &s2) {
 
 static inline bool operator==(const std::wstring &s1, const CMString &s2) {
     return (s2==s1);
+}
+
+static inline bool operator==(char c1, const CMString &s2) {
+    return (s2==c1);
+}
+
+static inline bool operator==(wchar_t c1, const CMString &s2) {
+    return (s2==c1);
+}
+
+static inline bool operator==(int16_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(uint16_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(int32_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(uint32_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(int64_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(uint64_t i1, const CMString &s2) {
+    return (s2==i1);
+}
+
+static inline bool operator==(float d1, const CMString &s2) {
+    return (s2==d1);
+}
+
+static inline bool operator==(double d1, const CMString &s2) {
+    return (s2==d1);
+}
+
+static inline bool operator==(const uint160 &u1, const CMString &s2) {
+    return (s2==u1);
+}
+
+static inline bool operator==(const uint256 &u1, const CMString &s2) {
+    return (s2==u1);
+}
+
+static inline bool operator==(const uint512 &u1, const CMString &s2) {
+    return (s2==u1);
+}
+
+static inline bool operator==(const uint65536 &u1, const CMString &s2) {
+    return (s2==u1);
+}
+
+static inline bool operator==(const uint131072 &u1, const CMString &s2) {
+    return (s2==u1);
 }
 
 #endif // SORACHANCOIN_CMSTRING_H
