@@ -144,12 +144,12 @@ bool entry::AppInit(int argc, char *argv[])
             //
             // First part of help message is specific to bitcoind / RPC client
             //
-            std::string strUsage = _(coin_param::strCoinName + " version") +
-                  CMString(" ") + format_version::FormatFullVersion() + "\n\n" + _("Usage:") + "\n" +
+            std::string strUsage = (CMString(_(coin_param::strCoinName + " version")) +
+                  " " + format_version::FormatFullVersion() + "\n\n" + _("Usage:") + "\n" +
                   "  " + coin_param::strCoinName + "d [options]                     " + "\n" +
                   "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _("Send command to -server or " + coin_param::strCoinName + "d") + "\n" +
                   "  " + coin_param::strCoinName + "d [options] help                " + _("List commands") + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] help <command>      " + _("Get help for a command") + "\n";
+                  "  " + coin_param::strCoinName + "d [options] help <command>      " + _("Get help for a command") + "\n").str();
 
             strUsage += "\n" + HelpMessage();
 
@@ -162,7 +162,7 @@ bool entry::AppInit(int argc, char *argv[])
         //
         for (int i = 1; i < argc; ++i)
         {
-            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], coin_param::strCoinName + ":")) {
+            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], coin_param::strCoinName.str() + ":")) {
                 args_bool::fCommandLine = true;
             }
         }

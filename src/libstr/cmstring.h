@@ -20,19 +20,57 @@
 #endif
 
 #ifndef WIN32
-static inline errno_t memcpy_s(void *_Dst, fsize_t _DstSize, const void *_Src, fsize_t _SrcSize) {
+# ifndef errno_t
+  using errno_t = int;
+# endif
+# ifndef WCHAR
+  using WCHAR = wchar_t;
+# endif
+# ifndef CHAR
+  using CHAR = char;
+# endif
+# ifndef LPSTR
+  using LPSTR = char *;
+# endif
+# ifndef LPWSTR
+  using LPWSTR = wchar_t *;
+# endif
+# ifndef LPCSTR
+  using LPCSTR = const char *;
+# endif
+# ifndef LPCWSTR
+  using LPCWSTR = const wchar_t *;
+# endif
+# ifndef WORD
+  using WORD = uint16_t;
+# endif
+# ifndef DWORD
+  using DWORD = uint32_t;
+# endif
+# ifndef UINT_PTR
+  using UINT_PTR = uintptr_t;
+# endif
+# ifndef INT_PTR
+  using INT_PTR = intptr_t;
+# endif
+static inline errno_t memcpy_s(void *_Dst, size_t _DstSize, const void *_Src, size_t _SrcSize) {
     assert(_DstSize>=_SrcSize);
     ::memcpy(_Dst, _Src, _SrcSize);
     return 0;
 }
-static inline errno_t strcpy_s(const char *_Dst, fsize_t _DstSize, const char *_Src) {
+static inline errno_t strcpy_s(char *_Dst, size_t _DstSize, const char *_Src) {
     (void)_DstSize;
     ::strcpy(_Dst, _Src);
     return 0;
 }
-static inline errno_t wcscpy_s(const wchar_t *_Dst, fsize_t _DstSize, const wchar_t *_Src) {
+static inline errno_t wcscpy_s(wchar_t *_Dst, size_t _DstSize, const wchar_t *_Src) {
     (void)_DstSize;
     ::wcscpy(_Dst, _Src);
+    return 0;
+}
+static inline errno_t wcscat_s(wchar_t *_Dst, size_t _DstSize, const wchar_t *_Src) {
+    (void)_DstSize;
+    ::wcscat(_Dst, _Src);
     return 0;
 }
 #endif
