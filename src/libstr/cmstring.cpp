@@ -4,16 +4,6 @@
 
 #include <libstr/cmstring.h>
 
-/*
-bool operator==(const std::string &s1, const CMString &s2) {
-    return (s2==s1);
-}
-
-bool operator==(const std::wstring &s1, const CMString &s2) {
-    return (s2==s1);
-}
-*/
-
 // test OK (Windows and Linux/UNIX)
 class CMString_test {
 public:
@@ -33,8 +23,15 @@ public:
         f1.format("%d", 666);
         fo.formatcat((f1+"%d").w_str(), 222);
 
+        CMString nfo;
+        nfo.swap(std::move(fo));
+        assert(fo==L"");
+
+        CMString nnfo(std::move(nfo));
+        assert(nfo=="");
+
         CDataStream stream;
-        stream << str << si << sv << fo;
+        stream << str << si << sv << nnfo;
 
         {
             CMString str1, str2, str3, str4;

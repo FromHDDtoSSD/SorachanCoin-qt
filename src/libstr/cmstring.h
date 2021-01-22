@@ -1174,15 +1174,10 @@ public:
         operator=(obj);
     }
     CMString(CMString &&obj) noexcept {
-        setnull();
-        operator=(obj);
+        swap(static_cast<CMString &&>(obj));
     }
     CMString &operator=(const CMString &obj) noexcept {
         *this=(LPCWSTR)obj;
-        return *this;
-    }
-    CMString &operator=(CMString &&robj) noexcept {
-        this->swap(static_cast<CMString &&>(robj));
         return *this;
     }
 
@@ -1202,11 +1197,16 @@ public:
     // rvalue operator
     //
     void swap(CMString &&robj) noexcept {
+        release();
         setnull();
-        m_lpBuf = robj.m_lpBuf;
-        m_dwLength = robj.m_dwLength;
-        m_mask_data = robj.m_mask_data;
-        m_mask_index = robj.m_mask_index;
+        std::swap(m_lpBuf, robj.m_lpBuf);
+        std::swap(m_dwLength, robj.m_dwLength);
+        std::swap(m_mask_data, robj.m_mask_data);
+        std::swap(m_mask_index, robj.m_mask_index);
+    }
+    CMString &operator=(CMString &&robj) noexcept {
+        swap(static_cast<CMString &&>(robj));
+        return *this;
     }
 
     //
