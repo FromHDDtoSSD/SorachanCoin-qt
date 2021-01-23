@@ -597,6 +597,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/nvme/nvme_mem.h \
     src/util/thread.h \
     src/libstr/cmstring.h \
+    src/libstr/cmscript.h \
+    src/libstr/movestream.h \
     src/winapi/winguimain.h \
     src/winapi/drivebase.h \
     src/winapi/drivewin.h \

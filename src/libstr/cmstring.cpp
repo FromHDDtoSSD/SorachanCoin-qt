@@ -3,6 +3,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <libstr/cmstring.h>
+#include <libstr/movestream.h>
 
 // test OK (Windows and Linux/UNIX)
 class CMString_test {
@@ -36,6 +37,20 @@ public:
         {
             CMString str1, str2, str3, str4;
             stream >> str1 >> str2 >> str3 >> str4;
+            assert(str1=="cats4dogedogemikeneko252.7183.14");
+            assert(str2==L"777");
+            assert(str3==L"sfrdt");
+            assert(str4=="456666222");
+        }
+
+        CMoveStream mstream;
+        mstream << str << si << sv << nnfo;
+
+        CMoveStream m2stream(std::move(mstream));
+        assert(mstream.empty());
+        {
+            CMString str1, str2, str3, str4;
+            m2stream >> str1 >> str2 >> str3 >> str4;
             assert(str1=="cats4dogedogemikeneko252.7183.14");
             assert(str2==L"777");
             assert(str3==L"sfrdt");
