@@ -27,7 +27,7 @@ namespace block_info
     extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
     extern CBlockIndex *pindexGenesisBlock;// = nullptr;
 
-    const std::string strMessageMagic = (coin_param::strCoinName + " Signed Message:\n").str();
+    const std::string strMessageMagic = strCoinName " Signed Message:\n";
 
     extern int64_t nTimeBestReceived;// = 0;
     extern std::set<CWallet *> setpwalletRegistered;

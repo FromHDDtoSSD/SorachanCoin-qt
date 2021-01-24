@@ -11,7 +11,6 @@
 #include <uint256.h>
 #include <serialize.h>
 #include <util/tinyformat.h> // thanks, tinyformat.
-#include <debugcs/debugcs.h> // ::_fprintf_cs(e)
 #ifdef WIN32
 // # define CMSTRING_WIN32API // defined, using windowsAPI
 #endif
@@ -85,14 +84,6 @@ public:
     explicit string_error_stream(const char *) : bad_alloc() {}
 };
 
-class string_error_terminate {
-public:
-    string_error_terminate(const char *e) noexcept {
-        ::_fprintf_cs(e);
-        std::terminate();
-    }
-};
-
 //
 // string library (char, wchar_t, etc ...)
 //
@@ -111,14 +102,14 @@ private:
         if(m_cBuf) delete [] m_cBuf;
         setnull();
     }
-    void mem_buffer(const wchar_t *lpStr, size_t len) noexcept { // len: without '\0' e.g., "abcde" => len=5
+    void mem_buffer(const wchar_t *lpStr, size_t len) { // len: without '\0' e.g., "abcde" => len=5
         assert(lpStr && len>0);
         if (m_dwLength<=len) {
             delete [] m_lpBuf;
             m_dwLength = len+1;
             m_lpBuf = new(std::nothrow) wchar_t[m_dwLength];
-            if(!m_lpBuf)
-                string_error_terminate("CMString mem_buffer(): MemBuffer ERROR out of memory");
+            if(! m_lpBuf)
+                throw string_error("CMString mem_buffer(): MemBuffer ERROR out of memory");
         }
         ::memcpy_s(m_lpBuf, sizeof(wchar_t)*m_dwLength, lpStr, sizeof(wchar_t)*len);
         m_lpBuf[len] = L'\0';
@@ -132,9 +123,9 @@ private:
         if(this==&dest) {
             size_t alloc = this->length() + 1;
             std::unique_ptr<WCHAR []> tmp(new(std::nothrow) WCHAR[alloc]);
-            if(!tmp.get())
-                string_error_terminate("CMString split_fast(): GetSplitFast ERROR out of memory");
-            string=std::move(tmp);
+            if(! tmp.get())
+                throw string_error("CMString split_fast(): GetSplitFast ERROR out of memory");
+            string.swap(tmp);
             ::wcscpy_s(string.get(), alloc, (LPCWSTR)(*this));
         }
         count = add;
@@ -204,22 +195,22 @@ public:
         if (cchWideChar == 0) {
             DWORD dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION)
-                string_error_terminate("CMString chartowchar: ERROR Buffer");
+                throw string_error("CMString chartowchar: ERROR Buffer");
             else {dest = L""; return;}
         }
         dest.resize(cchWideChar, '\0');
         if(::MultiByteToWideChar(CP_ACP, 0, source, -1, &dest.at(0), cchWideChar)<=0)
-            string_error_terminate("CMString chartowchar: ERROR MultiByteToWideChar");
+            throw string_error("CMString chartowchar: ERROR MultiByteToWideChar");
 #else
         size_t size = ::mbstowcs(nullptr, source, 0);
         if(size == (size_t)-1)
-            string_error_terminate("CMString chartowchar: ERROR size");
+            throw string_error("CMString chartowchar: ERROR size");
         dest.resize(size+1, L'\0'); // size is no bytes.
         if(::mbstowcs(&dest.at(0), source, size)==(size_t)-1)
-            string_error_terminate("CMString chartowchar: ERROR mbstowcs");
+            throw string_error("CMString chartowchar: ERROR mbstowcs");
 #endif
     }
-    static void utoutf8cpy(char *cStr, LPCWSTR lpStr, DWORD *pdwLength) noexcept {
+    static void utoutf8cpy(char *cStr, LPCWSTR lpStr, DWORD *pdwLength) {
         if (lpStr[0]==L'\0') {
             *pdwLength = 0;
             if (cStr!=nullptr) cStr[0] = '\0';
@@ -231,27 +222,27 @@ public:
         if (nLength==0) {
             DWORD dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER)
-                string_error_terminate("CMString utoutf8cpy: ERROR WideCharToMultiByte");
+                throw string_error("CMString utoutf8cpy: ERROR WideCharToMultiByte");
         }
         if (cStr==nullptr) return;
         else {
             int nMultiLength = ::WideCharToMultiByte(CP_UTF8, 0, lpStr, -1, cStr, nLength, nullptr, nullptr);
             if (nMultiLength<=0)
-                string_error_terminate("CMString utoutf8cpy: ERROR WideCharToMultiByte");
+                throw string_error("CMString utoutf8cpy: ERROR WideCharToMultiByte");
             return;
         }
 #else
-        size_t size = ::wcstombs(nullptr, lpStr, 0) + 1;
+        const size_t size = ::wcstombs(nullptr, lpStr, 0);
         if(size==(size_t)-1)
-            string_error_terminate("CMString utoutf8cpy: ERROR size");
-        *pdwLength=size;
+            throw string_error("CMString utoutf8cpy: ERROR size");
+        *pdwLength=size + 1;
         if(cStr==nullptr) return;
-        cStr[size-1]='\0';
-        if(::wcstombs(cStr, lpStr, size-1)==(size_t)-1)
-            string_error_terminate("CMString utoutf8cpy: ERROR wcstombs");
+        cStr[size]='\0';
+        if(::wcstombs(cStr, lpStr, size)==(size_t)-1)
+            throw string_error("CMString utoutf8cpy: ERROR wcstombs");
 #endif
     }
-    static void utf8toucpy(wchar_t *lpStr, const char *cStrOrg, DWORD *pdwLength) noexcept {
+    static void utf8toucpy(wchar_t *lpStr, const char *cStrOrg, DWORD *pdwLength) {
         if (cStrOrg[0]=='\0') {
             *pdwLength = 0;
             if (lpStr!=nullptr) lpStr[0]=L'\0';
@@ -263,24 +254,24 @@ public:
         if (cchWideChar==0) {
             DWORD dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION)
-                string_error_terminate("CMString utf8toucpy: ERROR MultiByteToWideChar");
+                throw string_error("CMString utf8toucpy: ERROR MultiByteToWideChar");
         }
         if (lpStr==nullptr) return;
         else {
             int nUnicodeCount = ::MultiByteToWideChar(CP_UTF8, 0, cStrOrg, -1, lpStr, cchWideChar);
             if (nUnicodeCount<=0)
-                string_error_terminate("CMString utf8toucpy: ERROR MultiByteToWideChar");
+                throw string_error("CMString utf8toucpy: ERROR MultiByteToWideChar");
             return;
         }
 #else
-        size_t size = ::mbstowcs(nullptr, cStrOrg, 0) + 1;
+        const size_t size = ::mbstowcs(nullptr, cStrOrg, 0);
         if(size == (size_t)-1)
-            string_error_terminate("CMString utf8toucpy: ERROR size");
-        *pdwLength=size;
+            throw string_error("CMString utf8toucpy: ERROR size");
+        *pdwLength=size + 1;
         if(lpStr==nullptr) return;
-        lpStr[size-1] = L'\0';
+        lpStr[size] = L'\0';
         if(::mbstowcs(lpStr, cStrOrg, size)==(size_t)-1)
-            string_error_terminate("CMString utf8toucpy: ERROR mbstowcs");
+            throw string_error("CMString utf8toucpy: ERROR mbstowcs");
 #endif
     }
 
@@ -436,7 +427,7 @@ public:
     //
     // CMString += A
     //
-    CMString &operator+=(LPCWSTR lpStr) noexcept {
+    CMString &operator+=(LPCWSTR lpStr) {
         if (lpStr==nullptr || lpStr[0]==L'\0')
             return *this;
         size_t length = (m_lpBuf!=nullptr)? ::wcslen(m_lpBuf)+::wcslen(lpStr): ::wcslen(lpStr);
@@ -444,7 +435,7 @@ public:
             size_t reallocLength = length + 1 + (length>>1);
             wchar_t *new_buf = new(std::nothrow) wchar_t[reallocLength];
             if(! new_buf)
-                string_error_terminate("CMString operator+=(LPCWSTR): out of memory");
+                throw string_error("CMString operator+=(LPCWSTR): out of memory");
             m_dwLength = reallocLength;
             if (m_lpBuf) {
                 ::wcscpy_s(new_buf, m_dwLength, m_lpBuf);
@@ -458,7 +449,7 @@ public:
         } else (m_lpBuf!=nullptr)? (void)::wcscat_s(m_lpBuf, m_dwLength, lpStr): (void)operator=(lpStr);
         return *this;
     }
-    CMString &operator+=(const char *cStr) noexcept {
+    CMString &operator+=(const char *cStr) {
         if (cStr==nullptr) return *this;
         else {
             std::wstring wstr;
@@ -466,11 +457,11 @@ public:
             return operator+=(wstr.c_str());
         }
     }
-    CMString &operator+=(wchar_t wch) noexcept {
+    CMString &operator+=(wchar_t wch) {
         wchar_t str[] = {wch, L'\0'};
         return operator+=( str );
     }
-    CMString &operator+=(char cch) noexcept {
+    CMString &operator+=(char cch) {
         char str[] = {cch, '\0'};
         return operator+=( str );
     }
@@ -498,7 +489,7 @@ public:
     CMString &operator+=(double dNum) {
         return operator+=(tfm::format(std::string("%d"), dNum));
     }
-    CMString &operator+=(const CMString &obj) noexcept {
+    CMString &operator+=(const CMString &obj) {
         return operator+=(obj.m_lpBuf);
     }
     CMString &operator+=(const std::string &obj) {
@@ -513,7 +504,7 @@ public:
     //
     // CMString = A
     //
-    CMString &operator=(LPCWSTR lpStr) noexcept {
+    CMString &operator=(LPCWSTR lpStr) {
         if (lpStr==nullptr || lpStr[0]==L'\0') {
             mem_clear(0);
             return *this;
@@ -522,8 +513,8 @@ public:
         if (m_dwLength<=size) {
             size_t reallocLength = size + 1 + (size>>1);
             wchar_t *new_buf = new(std::nothrow) wchar_t[reallocLength];
-            if(!new_buf)
-                string_error_terminate("CMString operator=(LPCWSTR): out of memory");
+            if(! new_buf)
+                throw string_error("CMString operator=(LPCWSTR): out of memory");
             m_dwLength = reallocLength;
             ::wcscpy_s(new_buf, m_dwLength, lpStr);
             delete [] m_lpBuf;
@@ -531,7 +522,7 @@ public:
         } else ::wcscpy_s(m_lpBuf, m_dwLength, lpStr);
         return *this;
     }
-    CMString &operator=(const char *cStr) noexcept {
+    CMString &operator=(const char *cStr) {
         if (cStr==nullptr) return *this;
         else {
             std::wstring wstr;
@@ -539,36 +530,36 @@ public:
             return operator=(wstr.c_str());
         }
     }
-    CMString &operator=(wchar_t wch) noexcept {
+    CMString &operator=(wchar_t wch) {
         wchar_t str[] = {wch, L'\0'};
         return operator=(str);
     }
-    CMString &operator=(char cch) noexcept {
+    CMString &operator=(char cch) {
         char str[] = {cch, '\0'};
         return operator=(str);
     }
-    CMString &operator=(int16_t nNum) noexcept {
+    CMString &operator=(int16_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(uint16_t nNum) noexcept {
+    CMString &operator=(uint16_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(int32_t nNum) noexcept {
+    CMString &operator=(int32_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(uint32_t nNum) noexcept {
+    CMString &operator=(uint32_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(int64_t nNum) noexcept {
+    CMString &operator=(int64_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(uint64_t nNum) noexcept {
+    CMString &operator=(uint64_t nNum) {
         return operator=(tfm::format(std::string("%d"), nNum));
     }
-    CMString &operator=(float dNum) noexcept {
+    CMString &operator=(float dNum) {
         return operator=(tfm::format(std::string("%d"), dNum));
     }
-    CMString &operator=(double dNum) noexcept {
+    CMString &operator=(double dNum) {
         return operator=(tfm::format(std::string("%d"), dNum));
     }
     CMString &operator=(const std::string &obj) {
@@ -581,16 +572,16 @@ public:
     //
     // CMString = A + B
     //
-    CMString &operator+(LPCWSTR lpStr) noexcept {
+    CMString &operator+(LPCWSTR lpStr) {
         return (lpStr==m_lpBuf)? *this: operator+=(lpStr);
     }
-    CMString &operator+(const char *cStr) noexcept {
+    CMString &operator+(const char *cStr) {
         return operator+=(cStr);
     }
-    CMString &operator+(wchar_t wch) noexcept {
+    CMString &operator+(wchar_t wch) {
         return operator+=(wch);
     }
-    CMString &operator+(char cch) noexcept {
+    CMString &operator+(char cch) {
         return operator+=(cch);
     }
     CMString &operator+(int16_t nNum) {
@@ -617,7 +608,7 @@ public:
     CMString &operator+(double dNum) {
         return operator+=(tfm::format(std::string("%d"), dNum));
     }
-    CMString &operator+(const CMString &obj) noexcept {
+    CMString &operator+(const CMString &obj) {
         return operator+=(obj.w_str());
     }
     CMString &operator+(const std::string &obj) {
@@ -630,7 +621,7 @@ public:
     //
     // like std::string
     //
-    const char *c_str() const noexcept {
+    const char *c_str() const {
         if (m_lpBuf==nullptr) return "";
         else {
             if(m_cBuf) delete [] m_cBuf;
@@ -638,7 +629,7 @@ public:
             utoutf8cpy(nullptr, m_lpBuf, &dwLen);
             m_cBuf = new(std::nothrow) char[dwLen];
             if(! m_cBuf)
-                string_error_terminate("CMString c_str(): out of memory");
+                throw string_error("CMString c_str(): out of memory");
             utoutf8cpy(m_cBuf, m_lpBuf, &dwLen);
             return m_cBuf;
         }
@@ -648,13 +639,13 @@ public:
         else return m_lpBuf;
     }
 
-    void set_str(const char *utf8) noexcept {
+    void set_str(const char *utf8) {
         if (utf8==nullptr) return;
         DWORD dwLength = 0;
         utf8toucpy(nullptr, utf8, &dwLength);
         std::unique_ptr<wchar_t []> str(new(std::nothrow) WCHAR[dwLength]);
-        if(!str.get())
-            string_error_terminate("SetUtf8 memory allocate failure");
+        if(! str.get())
+            throw string_error("SetUtf8 memory allocate failure");
         utf8toucpy(str.get(), utf8, &dwLength);
         *this = str.get();
     }
@@ -668,7 +659,7 @@ public:
             return length()*sizeof(WCHAR);
     }
 
-    bool search(char cch) const noexcept {
+    bool search(char cch) const {
         if (m_lpBuf==nullptr) return false;
         else {
             const char *p = c_str();
@@ -678,14 +669,14 @@ public:
             return false;
         }
     }
-    bool search(const char *cStr) const noexcept {
+    bool search(const char *cStr) const {
         if (cStr==nullptr || m_lpBuf==nullptr) return false;
         else {
             const char *p = c_str();
             return ::strstr(p, cStr)? true: false;
         }
     }
-    const char *search_at(char cch) const noexcept {
+    const char *search_at(char cch) const {
         if (m_lpBuf==nullptr) return nullptr;
         else {
             bool flag = false;
@@ -708,10 +699,10 @@ public:
         return m_lpBuf[index];
     }
 
-    char c_at(index_t index) noexcept {
+    char c_at(index_t index) {
         return c_str()[index];
     }
-    char c_at(index_t index) const noexcept {
+    char c_at(index_t index) const {
         return c_str()[index];
     }
 
@@ -751,7 +742,7 @@ public:
         }
     }
 
-    bool search(wchar_t cch) const noexcept {
+    bool search(wchar_t cch) const {
         if (m_lpBuf==nullptr) return false;
         else {
             for(size_t i=0; i<m_dwLength; ++i) {
@@ -760,11 +751,11 @@ public:
             return false;
         }
     }
-    bool search(LPCWSTR lpStr) const noexcept {
+    bool search(LPCWSTR lpStr) const {
         if (lpStr==nullptr || m_lpBuf==nullptr) return false;
         else return (::wcsstr(*this, lpStr))? true: false;
     }
-    LPCWSTR search_at(wchar_t cch) const noexcept {
+    LPCWSTR search_at(wchar_t cch) const {
         if (!m_lpBuf) return nullptr;
         else {
             bool flag = false;
@@ -779,21 +770,25 @@ public:
         }
     }
 
-    size_t size() const noexcept {return (m_lpBuf==nullptr)? 0: ::wcslen(m_lpBuf);}
-    size_t length() const noexcept {return size();}
+    size_t size() const noexcept {
+        return (m_lpBuf==nullptr)? 0: ::wcslen(m_lpBuf);
+    }
+    size_t length() const noexcept {
+        return size();
+    }
 
-    bool operator==(const CMString &obj) const noexcept {return (m_lpBuf)? ::wcscmp(*this, (LPCWSTR)obj)==0: false;}
+    bool operator==(const CMString &obj) const noexcept {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)==0;}
     bool operator<(const CMString &obj) const noexcept  {return 0<::wcscmp((LPCWSTR)obj, (LPCWSTR)*this);}
     bool operator!=(const CMString &obj) const noexcept {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)!=0;}
     bool operator==(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)==0;}
     bool operator!=(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)!=0;}
-    bool operator==(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)==0;}
-    bool operator!=(LPCSTR str) const noexcept          {return ::strcmp((LPCSTR)*this, str)!=0;}
-    bool operator==(char c) const noexcept {
+    bool operator==(LPCSTR str) const                   {return ::strcmp((LPCSTR)*this, str)==0;}
+    bool operator!=(LPCSTR str) const                   {return ::strcmp((LPCSTR)*this, str)!=0;}
+    bool operator==(char c) const {
         const char str[] = {c, '\0'};
         return ::strcmp((LPCSTR)*this, str)==0;
     }
-    bool operator!=(char c) const noexcept {
+    bool operator!=(char c) const {
         return !(operator==(c));
     }
     bool operator==(wchar_t c) const noexcept {
@@ -890,13 +885,13 @@ public:
         return !(operator==(obj));
     }
 
-    void split(CMString *pstr, wchar_t delim, int count, bool *p_exists) const noexcept {
+    void split(CMString *pstr, wchar_t delim, int count, bool *p_exists) const {
         (pstr)? splitfast(*pstr, delim, 0, 0, count, p_exists): (void)0;
     }
-    void split(CMString *pstr, wchar_t delim, int offset, int count, int next, bool *p_exists) const noexcept {
+    void split(CMString *pstr, wchar_t delim, int offset, int count, int next, bool *p_exists) const {
         (pstr)? splitfast(*pstr, delim, offset, count, next, p_exists): (void)0;
     }
-    void splitlast(CMString *pstr, wchar_t delim, bool *p_exists) const noexcept {
+    void splitlast(CMString *pstr, wchar_t delim, bool *p_exists) const {
         (pstr)? splitfast(*pstr, delim, 0, 0, lastadd_delim_count(delim)-1, p_exists): (void)0;
     }
     int delim_count(wchar_t delim) const noexcept {
@@ -941,17 +936,17 @@ public:
     void clear() noexcept {
         if(m_lpBuf) m_lpBuf[0] = L'\0';
     }
-    void mem_clear() noexcept {
+    void mem_clear() {
         mem_clear(0);
     }
-    void mem_clear(size_t first_size) noexcept {
+    void mem_clear(size_t first_size) {
         delete [] m_cBuf; m_cBuf=nullptr;
         delete [] m_lpBuf; m_lpBuf=nullptr;
         if (0<first_size) {
             m_dwLength = first_size;
             m_lpBuf = new(std::nothrow) wchar_t[m_dwLength];
-            if(!m_lpBuf)
-                string_error_terminate("CMString mem_clear(): out of memory");
+            if(! m_lpBuf)
+                throw string_error("CMString mem_clear(): out of memory");
         } else {
             m_dwLength = 0;
             m_lpBuf = nullptr;
@@ -962,20 +957,20 @@ public:
     CMString() noexcept {
         setnull();
     }
-    CMString(const wchar_t *lpStr) noexcept {
+    CMString(const wchar_t *lpStr) {
         setnull();
         operator=(lpStr);
     }
-    CMString(const char *cStr) noexcept {
+    CMString(const char *cStr) {
         setnull();
         operator=(cStr);
     }
-    CMString(wchar_t wc) noexcept {
+    CMString(wchar_t wc) {
         setnull();
         wchar_t str[] = {wc, L'\0'};
         operator=(str);
     }
-    CMString(char c) noexcept {
+    CMString(char c) {
         setnull();
         char str[] = {c, '\0'};
         operator=(str);
@@ -1050,7 +1045,7 @@ public:
     operator LPCWSTR() const noexcept {
         return w_str();
     }
-    operator const char *() const noexcept {
+    operator const char *() const {
         return c_str();
     }
     std::string str() const {
@@ -1117,7 +1112,13 @@ public:
     friend class CMString operator+(const std::string &s1, const CMString &s2) {
         return CMString(s1)+s2;
     }
+    friend class CMString operator+(const char *s1, const CMString &s2) {
+        return CMString(s1)+s2;
+    }
     friend class CMString operator+(const std::wstring &s1, const CMString &s2) {
+        return CMString(s1)+s2;
+    }
+    friend class CMString operator+(LPCWSTR s1, const CMString &s2) {
         return CMString(s1)+s2;
     }
     friend class CMString operator+(char c1, const CMString &s2) {
@@ -1169,7 +1170,7 @@ public:
     //
     // copy and move constructor
     //
-    CMString(const CMString &obj) noexcept {
+    CMString(const CMString &obj) {
         setnull();
         operator=(obj);
     }
@@ -1186,10 +1187,12 @@ public:
     //
     template <typename... Args>
     CMString(const char *str, const Args&... args) {
+        setnull();
         format(str, args...);
     }
     template <typename... Args>
     CMString(LPCWSTR str, const Args&... args) {
+        setnull();
         format(str, args...);
     }
 
@@ -1248,6 +1251,35 @@ private:
     wchar_t m_mask_data;
     int m_mask_index;
 };
+
+//
+// CMString prohibit operator (static_assert false)
+//
+/*
+NODISCARD static inline const char *operator+(CMString &&r1, const char *s2) {
+    static_assert(false, "NG: const char * = CMString() + const char *");
+    (void)r1; (void)s2;
+    return nullptr;
+}
+
+NODISCARD static inline LPCWSTR operator+(const CMString &&r1, const char *s2) {
+    static_assert(false, "NG: LPCWSTR = CMString() + const char *");
+    (void)r1; (void)s2;
+    return nullptr;
+}
+
+NODISCARD static inline const char *operator+(CMString &&r1, LPCWSTR s2) {
+    static_assert(false, "NG: const char * = CMString() + LPCWSTR");
+    (void)r1; (void)s2;
+    return nullptr;
+}
+
+NODISCARD static inline LPCWSTR operator+(const CMString &&r1, LPCWSTR s2) {
+    static_assert(false, "NG: LPCWSTR = CMString() + LPCWSTR");
+    (void)r1; (void)s2;
+    return nullptr;
+}
+*/
 
 //
 // global operator

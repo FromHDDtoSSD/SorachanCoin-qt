@@ -721,7 +721,7 @@ bool CBlock_impl<T>::GetCoinAge(uint64_t &nCoinAge) const
     if (nCoinAge == 0)    // block coin age minimum 1 coin-day
         nCoinAge = 1;
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcoinage"))
-        printf("block %s age total nCoinDays=%" PRId64 "\n", coin_param::strCoinName.c_str(), nCoinAge);
+        printf("block %s age total nCoinDays=%" PRId64 "\n", strCoinName, nCoinAge);
 
     return true;
 }

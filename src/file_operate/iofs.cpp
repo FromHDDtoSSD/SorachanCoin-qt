@@ -66,8 +66,8 @@ fs::path iofs::GetDefaultDataDir() {
     // Mac: ~/Library/Application Support/SorachanCoin
     // Unix / Linux: ~/.SorachanCoin
 #ifdef WIN32
-    //debugcs::instance() << "CoinName: " << coin_param::strCoinName.c_str() << debugcs::endl();
-    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / coin_param::strCoinName.str();
+    //debugcs::instance() << "CoinName: " << strCoinName << debugcs::endl();
+    return iofs::GetSpecialFolderPath(CSIDL_APPDATA) / strCoinName;
 #else
     fs::path pathRet;
     char *pszHome = ::getenv("HOME");
@@ -79,11 +79,11 @@ fs::path iofs::GetDefaultDataDir() {
     // Mac
     pathRet /= "Library/Application Support";
     fs::create_directory(pathRet);
-    return pathRet / coin_param::strCoinName.c_str();
+    return pathRet / strCoinName;
 # else
     // Unix / Linux
     std::string dsora = ".";
-    dsora += coin_param::strCoinName;
+    dsora += strCoinName;
     return pathRet / dsora.c_str();
 # endif
 #endif
@@ -121,14 +121,14 @@ const fs::path &iofs::GetDataDir(bool fNetSpecific) {
 }
 
 fs::path iofs::GetConfigFile() {
-    fs::path pathConfigFile(map_arg::GetArg("-conf", (coin_param::strCoinName + ".conf").str()));
+    fs::path pathConfigFile(map_arg::GetArg("-conf", (strCoinName ".conf")));
     if (! pathConfigFile.is_complete())
         pathConfigFile = iofs::GetDataDir(false) / pathConfigFile;
     return pathConfigFile;
 }
 
 fs::path iofs::GetPidFile() {
-    fs::path pathPidFile(map_arg::GetArg("-pid", (coin_param::strCoinName + ".pid").str()));
+    fs::path pathPidFile(map_arg::GetArg("-pid", (strCoinName ".pid")));
     if (! pathPidFile.is_complete()) { pathPidFile = iofs::GetDataDir() / pathPidFile; }
     return pathPidFile;
 }

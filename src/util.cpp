@@ -780,10 +780,10 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 
                 if (! fMatch) {
                     fDone = true;
-                    std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong " + coin_param::strCoinName + " will not work properly.");
+                    std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong " strCoinName " will not work properly.");
                     excep::set_strMiscWarning( strMessage );
                     printf("*** %s\n", strMessage.c_str());
-                    CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", coin_param::strCoinName.str(), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
+                    CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
                 }
             }
         }

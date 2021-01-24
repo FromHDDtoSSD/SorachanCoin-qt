@@ -11,15 +11,15 @@
 #include <vector>
 #include <libstr/cmstring.h>
 
+//
+// coin name
+//
+#define strCoinName  "SorachanCoin"
+#define strCoinNameL "sorachancoin"
 namespace coin_param
 {
-    //
-    // coin name
-    //
-    const CMString strCoinName  = "SorachanCoin";
-    const CMString strCoinNameL = "sorachancoin";
-    const CMString strEcho      = "SorachanCoin_Echo";
-    const CMString strQuantum   = "SorachanCoin_Quantum";
+    const std::string strEcho = "SorachanCoin_Echo";
+    const std::string strQuantum = "SorachanCoin_Quantum";
 }
 
 namespace version
@@ -84,7 +84,7 @@ public:
 
 // display version
 #define DISPLAY_VERSION_MAJOR        2
-#define DISPLAY_VERSION_MINOR        8
+#define DISPLAY_VERSION_MINOR        9
 #define DISPLAY_VERSION_REVISION     10
 
 #endif

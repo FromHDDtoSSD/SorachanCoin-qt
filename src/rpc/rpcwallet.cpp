@@ -238,10 +238,10 @@ json_spirit::Value CRPCTable::getwalletinfo(const json_spirit::Array &params, CB
 json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
-            ("getnewaddress [account]\n"
-            "Returns a new " + coin_param::strCoinName + " address for receiving payments.  "
+            "getnewaddress [account]\n"
+            "Returns a new " strCoinName " address for receiving payments.  "
             "If [account] is specified (recommended), it is added to the address book "
-            "so payments received with the address will be credited to [account].").str());
+            "so payments received with the address will be credited to [account].");
     }
 
     // Parse the account first so we don't generate a key if there's an error
@@ -302,8 +302,8 @@ CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strA
 json_spirit::Value CRPCTable::getaccountaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 1) {
         return data.JSONRPCSuccess(
-            ("getaccountaddress <account>\n"
-            "Returns the current " + coin_param::strCoinName + " address for receiving payments to this account.").str());
+            "getaccountaddress <account>\n"
+            "Returns the current " strCoinName " address for receiving payments to this account.");
     }
 
     // Parse the account first so we don't generate a key if there's an error
@@ -326,7 +326,7 @@ json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, CBitr
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     CBitcoinAddress address(str);
     if (! address.IsValid())
-        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " + coin_param::strCoinName + " address");
+        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address");
 
     std::string strAccount;
     if (params.size() > 1)
@@ -360,7 +360,7 @@ json_spirit::Value CRPCTable::getaccount(const json_spirit::Array &params, CBitr
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     CBitcoinAddress address(str);
     if (! address.IsValid())
-        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " + coin_param::strCoinName + " address");
+        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address");
 
     std::string strAccount;
     std::map<CBitcoinAddress, std::string>::iterator mi = entry::pwalletMain->mapAddressBook.find(address);
@@ -457,7 +457,7 @@ json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CB
     if (address.IsValid())
         scriptPubKey.SetAddress(address);
     else
-        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " + coin_param::strCoinName + " address");
+        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address");
 
     // Amount
     int64_t nAmount = AmountFromValue(params[1], data);
@@ -605,7 +605,7 @@ json_spirit::Value CRPCTable::getreceivedbyaddress(const json_spirit::Array &par
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     CBitcoinAddress address = CBitcoinAddress(str);
     if (! address.IsValid())
-        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " + coin_param::strCoinName + " address");
+        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address");
     if (! Script_util::IsMine(*entry::pwalletMain,address))
         return data.JSONRPCSuccess(0.0);
 
@@ -860,7 +860,7 @@ json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpc
     if (address.IsValid())
         scriptPubKey.SetAddress(address);
     else
-        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " + coin_param::strCoinName + " address");
+        return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address");
 
     int64_t nAmount = AmountFromValue(params[2], data);
     if(! data.fSuccess()) return data.JSONRPCError();
@@ -932,7 +932,7 @@ json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpc
     for(const json_spirit::Pair &s: sendTo) {
         CBitcoinAddress address(s.name_);
         if (! address.IsValid())
-            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string(("Invalid " + coin_param::strCoinName + " address: ").c_str()) + s.name_);
+            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, std::string("Invalid " strCoinName " address: ") + s.name_);
         if (! address.IsPair()) {
             if (setAddress.count(address))
                 return data.JSONRPCError(RPC_INVALID_PARAMETER, std::string("Invalid parameter, duplicated address: ") + s.name_);
@@ -977,10 +977,10 @@ json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpc
 json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 2 || params.size() > 3) {
         return data.JSONRPCSuccess(
-            ("addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
+            "addmultisigaddress <nrequired> <'[\"key\",\"key\"]'> [account]\n"
             "Add a nrequired-to-sign multisignature address to the wallet\"\n"
-            "each key is a " + coin_param::strCoinName + " address or hex-encoded public key\n"
-            "If [account] is specified, assign address to [account].").str());
+            "each key is a " strCoinName " address or hex-encoded public key\n"
+            "If [account] is specified, assign address to [account].");
     }
 
     json_spirit::json_flags status;
@@ -1601,14 +1601,14 @@ json_spirit::Value CRPCTable::keypoolreset(const json_spirit::Array &params, CBi
 void CRPCTable::ThreadTopUpKeyPool(void *parg) {
     (void)parg;
     // Make this thread recognisable as the key-topping-up thread
-    bitthread::manage::RenameThread(coin_param::strCoinName + "-key-top");
+    bitthread::manage::RenameThread(strCoinName "-key-top");
     entry::pwalletMain->TopUpKeyPool();
 }
 
 void CRPCTable::ThreadCleanWalletPassphrase(void *parg) {
     // Make this thread recognisable as the wallet relocking thread
     // parg: int64_t *, dynamic object
-    bitthread::manage::RenameThread(coin_param::strCoinName + "-lock-wa");
+    bitthread::manage::RenameThread(strCoinName "-lock-wa");
     int64_t nMyWakeTime = util::GetTimeMillis() + *((int64_t *)parg) * 1000;
 
     ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);
@@ -1778,7 +1778,7 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CB
     // slack space in .dat files; that is bad if the old data is
     // unencrypted private keys. So:
     boot::StartShutdown();
-    return data.JSONRPCSuccess((coin_param::strCoinName + " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.").str());
+    return data.JSONRPCSuccess(strCoinName " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.");
 }
 
 namespace {

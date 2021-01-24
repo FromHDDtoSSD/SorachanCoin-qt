@@ -712,7 +712,7 @@ bool miner::ScanMap(const MidstateMap &inputsMap, uint32_t nBits, MidstateMap::k
 void miner::ThreadStakeMiner(void *parg)
 {
     bitthread::manage::SetThreadPriority(THREAD_PRIORITY_LOWEST);
-    bitthread::manage::RenameThread(coin_param::strCoinName + "-stakeminer");    // Make this thread recognisable as the mining thread
+    bitthread::manage::RenameThread(strCoinName "-stakeminer");    // Make this thread recognisable as the mining thread
     
     // parg
     CWallet *pwallet = reinterpret_cast<CWallet *>(parg);

@@ -795,7 +795,7 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
                 // coin stake tx earns reward instead of paying fee
                 uint64_t nCoinAge;
                 if (! GetCoinAge(txdb, nCoinAge))
-                    return print::error("ConnectInputs() : %s unable to get %s age for coinstake", GetHash().ToString().substr(0,10).c_str(), coin_param::strCoinName.c_str());
+                    return print::error("ConnectInputs() : %s unable to get %s age for coinstake", GetHash().ToString().substr(0,10).c_str(), strCoinName);
 
                 int64_t nReward = GetValueOut() - nValueIn;
                 int64_t nCalculatedReward = diff::reward::GetProofOfStakeReward(nCoinAge, pindexBlock->get_nBits(), nTime) - GetMinFee(1, false, GMF_BLOCK, nTxSize) + util::CENT;

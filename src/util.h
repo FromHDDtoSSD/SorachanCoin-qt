@@ -99,7 +99,7 @@ private:
         char pszModule[MAX_PATH];
         ::GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
 #else
-        const char *pszModule = coin_param::strCoinName.c_str();
+        const char *pszModule = strCoinName;
 #endif
         if (pex) {
             return strprintf("EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);

@@ -85,7 +85,7 @@ void ip_coll::ThreadIPCollector(void *parg)
                 //
                 // Otherwise, there is a work to be done.
                 //
-                std::string strCollectorOutput = exec(CMString(strExecutableFilePath) + " norpc");
+                std::string strCollectorOutput = exec((strExecutableFilePath + " norpc").c_str());
                 std::istringstream collectorStream(strCollectorOutput);
 
                 std::string strIpAddr;

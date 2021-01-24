@@ -162,9 +162,9 @@ json_spirit::Value CRPCTable::help(const json_spirit::Array &params, CBitrpcData
 json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() > 1) {
         return data.JSONRPCSuccess(
-            ("stop <detach>\n"
+            "stop <detach>\n"
             "<detach> is true or false to detach the database or not for this stop only\n"
-            "Stop " + coin_param::strCoinName + " server (and possibly override the detachdb config value).").str());
+            "Stop " strCoinName " server (and possibly override the detachdb config value).");
     }
 
     // Shutdown will take long enough that the response should get back
@@ -174,7 +174,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     }
     boot::StartShutdown();
-    return data.JSONRPCSuccess((coin_param::strCoinName + " server stopping").str());
+    return data.JSONRPCSuccess(strCoinName " server stopping");
 }
 
 // Call Table
@@ -286,7 +286,7 @@ std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string
     std::ostringstream s;
       s << "POST / HTTP/1.1\r\n"
         << "User-Agent: "
-        << coin_param::strCoinName.c_str()
+        << strCoinName
         << "-json-rpc/" << format_version::FormatFullVersion() << "\r\n"
         << "Host: 127.0.0.1\r\n"
         << "Content-Type: application/json\r\n"
@@ -319,7 +319,7 @@ std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepali
             "<META HTTP-EQUIV='Content-Type' CONTENT='text/html; charset=ISO-8859-1'>\r\n"
             "</HEAD>\r\n"
             "<BODY><H1>401 Unauthorized.</H1></BODY>\r\n"
-            "</HTML>\r\n", bitjson::rfc1123Time().c_str(), coin_param::strCoinName.c_str(), format_version::FormatFullVersion().c_str());
+            "</HTML>\r\n", bitjson::rfc1123Time().c_str(), strCoinName, format_version::FormatFullVersion().c_str());
     }
 
     const char *cStatus = "";
@@ -343,7 +343,7 @@ std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepali
         bitjson::rfc1123Time().c_str(),
         keepalive ? "keep-alive" : "close",
         strMsg.size(),
-        coin_param::strCoinName.c_str(),
+        strCoinName,
         format_version::FormatFullVersion().c_str(),
         strMsg.c_str());
 }
@@ -610,7 +610,7 @@ private:
 
 void bitrpc::ThreadRPCServer(void *parg) {
     // Make this thread recognisable as the RPC listener
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpclist").c_str());
+    bitthread::manage::RenameThread(strCoinName "-rpclist");
 
     arg_data darg;
     //darg.fok = false;
@@ -619,7 +619,9 @@ void bitrpc::ThreadRPCServer(void *parg) {
     ThreadRPCServer2(&darg);
     //if(! darg.fok) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        printf(CMString(darg.e.c_str()) + " : ThreadRPCServer()");
+        std::string log(darg.e.c_str());
+        log += " : ThreadRPCServer()";
+        printf(log.c_str());
     //} else
         //net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 
@@ -781,7 +783,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         unsigned char rand_pwd[32];
         latest_crypto::random::GetStrongRandBytes(rand_pwd, 32);
         std::string strWhatAmI = "To use ";
-        strWhatAmI += (coin_param::strCoinName + "d").c_str();
+        strWhatAmI += (strCoinName "d");
         if (map_arg::GetMapArgsCount("-server"))
             strWhatAmI = strprintfc(_("To use the %s option"), "\"-server\"");
         else if (map_arg::GetMapArgsCount("-daemon"))
@@ -796,7 +798,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
             "If the file does not exist, create it with owner-readable-only file permissions.\n"),
             strWhatAmI.c_str(),
             iofs::GetConfigFile().string().c_str(),
-            coin_param::strCoinNameL.c_str(),
+            strCoinNameL,
             base58::manage::EncodeBase58(&rand_pwd[0], &rand_pwd[0] + 32).c_str()),
             _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
         boot::StartShutdown();
@@ -1002,7 +1004,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     // Make this thread recognisable as the RPC handler
-    bitthread::manage::RenameThread((coin_param::strCoinName + "-rpchand").c_str());
+    bitthread::manage::RenameThread(strCoinName "-rpchand");
 
     {
         LOCK(cs_THREAD_RPCHANDLER);

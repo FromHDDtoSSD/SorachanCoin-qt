@@ -661,7 +661,7 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                 if (txin.get_prevout().get_n() >= wtx.get_vout().size()) {
                     printf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
                 } else if (!wtx.IsSpent(txin.get_prevout().get_n()) && IsMine(wtx.get_vout(txin.get_prevout().get_n()))) {
-                    printf("WalletUpdateSpent found spent %s %ssora %s\n", coin_param::strCoinName.c_str(), bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("WalletUpdateSpent found spent %s %ssora %s\n", strCoinName, bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkSpent(txin.get_prevout().get_n());
                     wtx.WriteToDisk();
                     NotifyTransactionChanged(this, txin.get_prevout().get_hash(), CT_UPDATED);
@@ -1591,7 +1591,7 @@ void CWallet::ReacceptWalletTransactions()
                     }
                 }
                 if (fUpdated) {
-                    printf("ReacceptWalletTransactions found spent %s %ssora %s\n", coin_param::strCoinName.c_str(), bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
+                    printf("ReacceptWalletTransactions found spent %s %ssora %s\n", strCoinName, bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkDirty();
                     wtx.WriteToDisk();
                 }

@@ -52,12 +52,12 @@ void entry::ExitTimeout(void *parg)
 //void net_node::Shutdown(void *parg)
 void boot::Shutdown(void *parg)
 {
-    (void *)parg;
+    (void)parg;
     static CCriticalSection cs_Shutdown;
     static bool fTaken;
 
     // Make this thread recognisable as the shutdown thread
-    bitthread::manage::RenameThread(coin_param::strCoinName + "-shutoff");
+    bitthread::manage::RenameThread(strCoinName "-shutoff");
 
     bool fFirstThread = false;
     {
@@ -85,7 +85,7 @@ void boot::Shutdown(void *parg)
         if(! bitthread::manage::NewThread(entry::ExitTimeout, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ExitTimeout");
         util::Sleep(50);
-        printf("%s exited\n\n", coin_param::strCoinName.c_str());
+        printf("%s exited\n\n", strCoinName);
         fExit = true;
 #ifndef QT_GUI
         // ensure non-UI client gets exited here, but let Bitcoin-Qt reach 'return 0;' in bitcoin.cpp
@@ -144,12 +144,12 @@ bool entry::AppInit(int argc, char *argv[])
             //
             // First part of help message is specific to bitcoind / RPC client
             //
-            std::string strUsage = (CMString(_(coin_param::strCoinName + " version")) +
+            std::string strUsage = std::string(_(strCoinName " version")) +
                   " " + format_version::FormatFullVersion() + "\n\n" + _("Usage:") + "\n" +
-                  "  " + coin_param::strCoinName + "d [options]                     " + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] <command> [params]  " + _("Send command to -server or " + coin_param::strCoinName + "d") + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] help                " + _("List commands") + "\n" +
-                  "  " + coin_param::strCoinName + "d [options] help <command>      " + _("Get help for a command") + "\n").str();
+                  "  " strCoinName "d [options]                     " + "\n" +
+                  "  " strCoinName "d [options] <command> [params]  " + _("Send command to -server or " strCoinName "d") + "\n" +
+                  "  " strCoinName "d [options] help                " + _("List commands") + "\n" +
+                  "  " strCoinName "d [options] help <command>      " + _("Get help for a command") + "\n";
 
             strUsage += "\n" + HelpMessage();
 
@@ -162,7 +162,7 @@ bool entry::AppInit(int argc, char *argv[])
         //
         for (int i = 1; i < argc; ++i)
         {
-            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], coin_param::strCoinName.str() + ":")) {
+            if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], strCoinName ":")) {
                 args_bool::fCommandLine = true;
             }
         }
@@ -212,13 +212,13 @@ int main(int argc, char *argv[])
 
 bool entry::InitError(const std::string &str)
 {
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(coin_param::strCoinName.c_str()), CClientUIInterface::OK | CClientUIInterface::MODAL);
+    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::MODAL);
     return false;
 }
 
 bool entry::InitWarning(const std::string &str)
 {
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(coin_param::strCoinName.c_str()), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
     return true;
 }
 
@@ -243,8 +243,8 @@ std::string entry::HelpMessage()
 {
     std::string strUsage = _("Options:") + "\n" +
         "  -?                     " + _("This help message") + "\n" +
-        "  -conf=<file>           " + _("Specify configuration file (default: " + coin_param::strCoinNameL + ".conf)") + "\n" +
-        "  -pid=<file>            " + _("Specify pid file (default: " + coin_param::strCoinNameL + "d.pid)") + "\n" +
+        "  -conf=<file>           " + _("Specify configuration file (default: " strCoinNameL ".conf)") + "\n" +
+        "  -pid=<file>            " + _("Specify pid file (default: " strCoinNameL "d.pid)") + "\n" +
         "  -datadir=<dir>         " + _("Specify data directory") + "\n" +
         "  -wallet=<file>         " + _("Specify wallet file (within data directory)") + "\n" +
         "  -dbcache=<n>           " + _("Set database cache size in megabytes (default: 25)") + "\n" +
@@ -255,7 +255,7 @@ std::string entry::HelpMessage()
         "  -tor=<ip:port>         " + _("Use proxy to reach tor hidden services (default: same as -proxy)") + "\n"
         "  -torname=<host.onion>  " + _("Send the specified hidden service name when connecting to Tor nodes (default: none)") + "\n"
         "  -dns                   " + _("Allow DNS lookups for -addnode, -seednode and -connect") + "\n" +
-        "  -port=<port>           " + _(CMString("Listen for connections on <port> (default: ") + tcp_port::uMainnet[tcp_port::nMainnet_default] + "or testnet: " + tcp_port::uTestnet[tcp_port::nTestnet_default] + ")") + "\n" +
+        "  -port=<port>           " + _("Listen for connections on <port> (default: 21587 or testnet: 31587)") + "\n" +
         "  -maxconnections=<n>    " + _("Maintain at most <n> connections to peers (default: 125)") + "\n" +
         "  -addnode=<ip>          " + _("Add a node to connect to and attempt to keep the connection open") + "\n" +
         "  -connect=<ip>          " + _("Connect only to the specified node(s)") + "\n" +
@@ -304,7 +304,7 @@ std::string entry::HelpMessage()
 #endif
         "  -rpcuser=<user>        " + _("Username for JSON-RPC connections") + "\n" +
         "  -rpcpassword=<pw>      " + _("Password for JSON-RPC connections") + "\n" +
-        "  -rpcport=<port>        " + _(CMString("Listen for JSON-RPC connections on <port> (default: ") + tcp_port::uJsonRpcMain + " or testnet: " + tcp_port::uJsonRpcTest + ")") + "\n" +
+        "  -rpcport=<port>        " + _("Listen for JSON-RPC connections on <port> (default: 21588 or testnet: 31588)") + "\n" +
         "  -rpcallowip=<ip>       " + _("Allow JSON-RPC connections from specified IP address") + "\n" +
         "  -rpcconnect=<ip>       " + _("Send commands to node running on <ip> (default: 127.0.0.1)") + "\n" +
         "  -blocknotify=<cmd>     " + _("Execute command when the best block changes (%s in cmd is replaced by block hash)") + "\n" +
@@ -589,7 +589,7 @@ bool entry::AppInit2()
     }
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (! lock.try_lock()) {
-        return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), coin_param::strCoinName.c_str()));
+        return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), strCoinName));
     }
 
 #if !defined(WIN32) && !defined(QT_GUI)
@@ -617,7 +617,7 @@ bool entry::AppInit2()
     }
 
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("%s version %s (%s)\n", coin_param::strCoinName.c_str(), format_version::FormatFullVersion().c_str(), version::CLIENT_DATE.c_str());
+    printf("%s version %s (%s)\n", strCoinName, format_version::FormatFullVersion().c_str(), version::CLIENT_DATE.c_str());
     printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (! args_bool::fLogTimestamps) {
         printf("Startup time: %s\n", util::DateTimeStrFormat("%x %H:%M:%S", bitsystem::GetTime()).c_str());
@@ -627,7 +627,7 @@ bool entry::AppInit2()
     std::ostringstream strErrors;
 
     if (args_bool::fDaemon) {
-        ::_fprintf_cs((coin_param::strCoinName + " server starting\n").str());
+        ::_fprintf_cs(strCoinName " server starting\n");
     }
 
     //I_DEBUG_CS("Step 4d: Script check ...");
@@ -665,7 +665,7 @@ bool entry::AppInit2()
                                           " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                           " your balance or transactions are incorrect you should"
                                           " restore from a backup."), strDataDir.c_str());
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(coin_param::strCoinName.c_str()), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         }
         if (r == CDBEnv::RECOVER_FAIL) {
             return InitError(_("wallet.dat corrupt, salvage failed"));
@@ -970,11 +970,11 @@ bool entry::AppInit2()
             strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
         } else if (nLoadWalletRet == DB_NONCRITICAL_ERROR) {
             std::string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect."));
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(coin_param::strCoinName.c_str()), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         } else if (nLoadWalletRet == DB_TOO_NEW) {
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of coin") << "\n";
         } else if (nLoadWalletRet == DB_NEED_REWRITE) {
-            strErrors << _("Wallet needed to be rewritten: restart " + coin_param::strCoinName + " to complete") << "\n";
+            strErrors << _("Wallet needed to be rewritten: restart " strCoinName " to complete") << "\n";
             printf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         } else {

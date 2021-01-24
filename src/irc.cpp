@@ -232,7 +232,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 void irc::ThreadIRCSeed(void *parg)
 {
     // Make this thread recognisable as the IRC seeding thread
-    bitthread::manage::RenameThread(coin_param::strCoinName + "coin-ircseed");
+    bitthread::manage::RenameThread(strCoinName "coin-ircseed");
 
     printf("irc::ThreadIRCSeed started\n");
 
@@ -372,8 +372,8 @@ void irc::ThreadIRCSeed2(void *parg)
             // Channel number is always 0 for initial release
             //
             int channel_number = 0;
-            irc::Send(hSocket, CMString("JOIN #coin%02d\r", channel_number));
-            irc::Send(hSocket, CMString("WHO #coin%02d\r", channel_number));
+            irc::Send(hSocket, tfm::format("JOIN #coin%02d\r", channel_number).c_str());
+            irc::Send(hSocket, tfm::format("WHO #coin%02d\r", channel_number).c_str());
         }
 
         int64_t nStart = bitsystem::GetTime();

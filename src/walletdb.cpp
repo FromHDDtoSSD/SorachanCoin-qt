@@ -690,7 +690,7 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     //
     // Make this thread recognisable as the wallet flushing thread
     //
-    bitthread::manage::RenameThread(coin_param::strCoinName + "-wallet");
+    bitthread::manage::RenameThread(strCoinName "-wallet");
 
     const std::string &strFile = ((const std::string *)parg)[0];
 
@@ -833,7 +833,7 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
     //
     // produce output
     //
-    file << strprintf("# Wallet dump created by %s %s (%s)\n", coin_param::strCoinName.c_str(), version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
+    file << strprintf("# Wallet dump created by %s %s (%s)\n", strCoinName, version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
     file << strprintf("# * Created on %s\n", dump::EncodeDumpTime(bitsystem::GetTime()).c_str());
     file << strprintf("# * Best block at time of backup was %i (%s),\n", block_info::nBestHeight, block_info::hashBestChain.ToString().c_str());
     file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->get_nTime()).c_str());

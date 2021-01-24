@@ -4,6 +4,7 @@
 
 #include <libstr/cmstring.h>
 #include <libstr/movestream.h>
+#include <random/random.h>
 
 // test OK (Windows and Linux/UNIX)
 class CMString_test {
@@ -56,6 +57,16 @@ public:
             assert(str3==L"sfrdt");
             assert(str4=="456666222");
         }
+
+        const CMString ts("format_test %02d", 5);
+        assert(ts=="format_test 05");
+
+        for(int i=0; i<10000; ++i) {
+            unsigned char buf[13]={0};
+            latest_crypto::random::GetStrongRandBytes(buf, 12);
+            CMString strg(CMString(std::string("fes").c_str()) + (char *)buf);
+            assert(strg==("fes"+CMString((char *)buf)));
+        }
     }
 };
-CMString_test cmstring;
+//CMString_test cmstring;

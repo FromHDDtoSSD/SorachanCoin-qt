@@ -224,9 +224,9 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
 
     LOCK(CRPCTable::cs_getwork);
     if (net_node::vNodes.empty())
-        return data.JSONRPCError(-9, coin_param::strCoinName + " is not connected!");
+        return data.JSONRPCError(-9, strCoinName " is not connected!");
     if (block_notify::IsInitialBlockDownload())
-        return data.JSONRPCError(-10, coin_param::strCoinName + " is downloading blocks...");
+        return data.JSONRPCError(-10, strCoinName " is downloading blocks...");
     if (params.size() == 0) {
         // Update block
         static unsigned int nTransactionsUpdatedLast = 0;
@@ -348,9 +348,9 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
 
     LOCK(CRPCTable::cs_getwork);
     if (net_node::vNodes.empty())
-        return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, coin_param::strCoinName + " is not connected!");
+        return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
     if (block_notify::IsInitialBlockDownload())
-        return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, coin_param::strCoinName + " is downloading blocks...");
+        return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
     if (params.size() == 0) {
         // Update block
         static unsigned int nTransactionsUpdatedLast = 0;
@@ -478,9 +478,9 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     if (strMode != "template")
         return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
     if (net_node::vNodes.empty())
-        return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, coin_param::strCoinName + " is not connected!");
+        return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
     if (block_notify::IsInitialBlockDownload())
-        return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, coin_param::strCoinName + " is downloading blocks...");
+        return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
 
     //static CReserveKey reservekey(entry::pwalletMain);
 
