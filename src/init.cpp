@@ -28,6 +28,7 @@
 #include <util/time.h>
 #include <util/logging.h>
 #include <util/thread.h>
+#include <libstr/cmstring.h>
 
 #ifndef WIN32
 # include <signal.h>

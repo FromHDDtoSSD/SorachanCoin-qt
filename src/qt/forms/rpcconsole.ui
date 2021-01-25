@@ -20,8 +20,11 @@ color: rgb(0, 170, 255);</string>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
      <property name="currentIndex">
-      <number>0</number>
+      <number>3</number>
      </property>
      <widget class="QWidget" name="tab_info">
       <attribute name="title">
@@ -925,6 +928,31 @@ color: rgb(0, 170, 255);</string>
         </layout>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="tab_peers">
+      <attribute name="title">
+       <string>Peers</string>
+      </attribute>
+      <widget class="QListView" name="peerslist">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>351</width>
+         <height>401</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QListWidget" name="bansList">
+       <property name="geometry">
+        <rect>
+         <x>370</x>
+         <y>10</y>
+         <width>231</width>
+         <height>401</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
     </widget>
    </item>

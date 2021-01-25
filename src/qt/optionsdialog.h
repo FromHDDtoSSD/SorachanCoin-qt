@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2019-2021 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -20,8 +21,10 @@ class OptionsDialog : public QWidget
 {
     Q_OBJECT
 private:
-    OptionsDialog(const OptionsDialog &); // {}
-    OptionsDialog &operator=(const OptionsDialog &); // {}
+    OptionsDialog(const OptionsDialog &)=delete;
+    OptionsDialog &operator=(const OptionsDialog &)=delete;
+    OptionsDialog(OptionsDialog &&)=delete;
+    OptionsDialog &operator=(OptionsDialog &&)=delete;
 public:
     explicit OptionsDialog(QWidget *parent = 0);
     ~OptionsDialog();
@@ -75,4 +78,3 @@ private:
 };
 
 #endif // OPTIONSDIALOG_H
-//@

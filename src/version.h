@@ -9,7 +9,6 @@
 #include <const/no_instance.h>
 #include <string>
 #include <vector>
-#include <libstr/cmstring.h>
 
 //
 // coin name

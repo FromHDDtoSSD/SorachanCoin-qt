@@ -20,11 +20,14 @@ color: rgb(0, 170, 255);</string>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
     <widget class="QTabWidget" name="tabWidget">
+     <property name="locale">
+      <locale language="English" country="UnitedStates"/>
+     </property>
      <property name="tabPosition">
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>4</number>
      </property>
      <widget class="QWidget" name="tabMain">
       <attribute name="title">
@@ -514,6 +517,21 @@ color: rgb(0, 170, 255);</string>
         </spacer>
        </item>
       </layout>
+     </widget>
+     <widget class="QWidget" name="tabPeers">
+      <attribute name="title">
+       <string>Peers</string>
+      </attribute>
+      <widget class="QListView" name="peersView">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>291</width>
+         <height>181</height>
+        </rect>
+       </property>
+      </widget>
      </widget>
     </widget>
    </item>

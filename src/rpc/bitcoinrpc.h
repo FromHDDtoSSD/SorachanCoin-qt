@@ -18,7 +18,6 @@
 #include <util.h>
 #include <checkpoints.h>
 #include <address/base58.h>
-#include <libstr/cmstring.h>
 
 //
 // HTTP status codes
@@ -137,18 +136,20 @@ public:
         return jv;
     }
 
-    //std::string JSONRPCError(int in_code, const std::string &in_err) {
-    //    ret = BITRPC_STATUS_ERROR;
-    //    code = in_code;
-    //    e = in_err;
-    //    return e;
-    //}
+    std::string JSONRPCError(int in_code, const std::string &in_err) {
+        ret = BITRPC_STATUS_ERROR;
+        code = in_code;
+        e = in_err;
+        return e;
+    }
+    /*
     std::string JSONRPCError(int in_code, const CMString &in_err) {
         ret = BITRPC_STATUS_ERROR;
         code = in_code;
         e = in_err.str();
         return e;
     }
+    */
     std::string JSONRPCError() const {
         return e;
     }

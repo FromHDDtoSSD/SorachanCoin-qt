@@ -9,7 +9,7 @@
 //
 // CMString test OK (Windows and Linux/UNIX)
 //
-//void CMString_test() {}
+#if defined(WIN32) && defined(DEBUG)
 void CMString_test() {
         CMString str = CMString(L"cats") += 456;
         str += CMString("doge") + L"doge";
@@ -92,3 +92,6 @@ void CMString_test() {
             assert(strg==("fes"+CMString((char *)buf)));
         }
 }
+#else
+void CMString_test() {}
+#endif
