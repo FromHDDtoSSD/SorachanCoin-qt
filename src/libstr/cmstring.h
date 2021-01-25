@@ -96,6 +96,7 @@ private:
         m_dwLength = 0;
         m_mask_data = L'\0';
         m_mask_index = 0;
+        m_fcbufchange = false;
     }
     void release() noexcept {
         if(m_lpBuf) delete [] m_lpBuf;
@@ -113,10 +114,11 @@ private:
         }
         ::memcpy_s(m_lpBuf, sizeof(wchar_t)*m_dwLength, lpStr, sizeof(wchar_t)*len);
         m_lpBuf[len] = L'\0';
+        m_fcbufchange = true;
     }
-    void splitfast(CMString &dest, wchar_t deli, int offset, int count, int next, bool *p_exist) const {
-        if (m_lpBuf==nullptr || p_exist==nullptr) return;
-        *p_exist = false;
+    void splitfast(CMString &dest, wchar_t deli, int offset, int count, int next, bool *p_exists) const {
+        if (m_lpBuf==nullptr || p_exists==nullptr) return;
+        *p_exists = false;
         int add = next - count;
         assert(add>=0 && count>=0 && offset>=0);
         std::unique_ptr<WCHAR []> string(nullptr);
@@ -152,20 +154,20 @@ private:
             }
             if (lpStr[0]==L'\0') {
                 (string.get()==nullptr)? dest.clear(): (void)0;
-                *p_exist = false;
+                *p_exists = false;
                 return;
             } else if (len==0) {
                 dest = L'\0';
-                *p_exist = true;
+                *p_exists = true;
                 return;
             } else {
                 dest.mem_buffer(lpStr, len);
-                *p_exist = true;
+                *p_exists = true;
                 return;
             }
         } else {
             (string.get()==nullptr)? dest.clear(): (void)0;
-            *p_exist = false;
+            *p_exists = false;
             return;
         }
     }
@@ -189,7 +191,12 @@ public:
             return (LPWSTR)addr;
         }
     }
-    static void chartowchar(const char *source, std::wstring &dest) {
+    static void chartowchar(const char *source, std::wstring &dest) { // std::wstring UTF8 copy (all UTF8)
+        DWORD dwLen=0;
+        utf8toucpy(nullptr, source, &dwLen); // with '\0'
+        dest.resize(dwLen, L'\0');
+        utf8toucpy(&dest.at(0), source, &dwLen);
+        /*
 #ifdef CMSTRING_WIN32API
         int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
         if (cchWideChar == 0) {
@@ -209,6 +216,7 @@ public:
         if(::mbstowcs(&dest.at(0), source, size)==(size_t)-1)
             throw string_error("CMString chartowchar: ERROR mbstowcs");
 #endif
+        */
     }
     static void utoutf8cpy(char *cStr, LPCWSTR lpStr, DWORD *pdwLength) {
         if (lpStr[0]==L'\0') {
@@ -393,6 +401,9 @@ public:
             return obj;
         }
     }
+    CMString tokenize(const char *pszTokens, int &iStart) const noexcept {
+        return tokenize(CMString(pszTokens).w_str(), iStart);
+    }
     CMString right(int nCount) const {
         CMString obj;
         obj.clear();
@@ -447,6 +458,7 @@ public:
                 m_lpBuf=new_buf;
             }
         } else (m_lpBuf!=nullptr)? (void)::wcscat_s(m_lpBuf, m_dwLength, lpStr): (void)operator=(lpStr);
+        m_fcbufchange = true;
         return *this;
     }
     CMString &operator+=(const char *cStr) {
@@ -520,6 +532,7 @@ public:
             delete [] m_lpBuf;
             m_lpBuf = new_buf;
         } else ::wcscpy_s(m_lpBuf, m_dwLength, lpStr);
+        m_fcbufchange = true;
         return *this;
     }
     CMString &operator=(const char *cStr) {
@@ -622,6 +635,10 @@ public:
     // like std::string
     //
     const char *c_str() const {
+        if(! m_fcbufchange) {
+            return m_cBuf ? m_cBuf: "";
+        }
+
         if (m_lpBuf==nullptr) return "";
         else {
             if(m_cBuf) delete [] m_cBuf;
@@ -631,6 +648,7 @@ public:
             if(! m_cBuf)
                 throw string_error("CMString c_str(): out of memory");
             utoutf8cpy(m_cBuf, m_lpBuf, &dwLen);
+            m_fcbufchange = false;
             return m_cBuf;
         }
     }
@@ -711,7 +729,7 @@ public:
         operator=(tfm::format(CMString(lpType), args...));
     }
     template <typename... Args>
-    void format(const char *lpType, const Args&... args) {
+    void format(const std::string lpType, const Args&... args) {
         operator=(tfm::format(lpType, args...));
     }
     template <typename... Args>
@@ -917,7 +935,7 @@ public:
         }
     }
 
-    void mask_set(size_t index, wchar_t wch) noexcept {
+    void mask_set(index_t index, wchar_t wch) noexcept {
         assert(size()>index && index>=0 && m_mask_data==L'\0');
         if (m_lpBuf==nullptr) return;
         m_mask_data = m_lpBuf[index];
@@ -929,7 +947,7 @@ public:
         m_lpBuf[m_mask_index] = m_mask_data;
         m_mask_data = L'\0';
     }
-    int mask_index() const noexcept {
+    index_t mask_index() const noexcept {
         return m_mask_index;
     }
 
@@ -940,8 +958,7 @@ public:
         mem_clear(0);
     }
     void mem_clear(size_t first_size) {
-        delete [] m_cBuf; m_cBuf=nullptr;
-        delete [] m_lpBuf; m_lpBuf=nullptr;
+        release();
         if (0<first_size) {
             m_dwLength = first_size;
             m_lpBuf = new(std::nothrow) wchar_t[m_dwLength];
@@ -1177,7 +1194,7 @@ public:
     CMString(CMString &&obj) noexcept {
         swap(static_cast<CMString &&>(obj));
     }
-    CMString &operator=(const CMString &obj) noexcept {
+    CMString &operator=(const CMString &obj) {
         *this=(LPCWSTR)obj;
         return *this;
     }
@@ -1218,21 +1235,20 @@ public:
     //
     template <typename Stream>
     inline void Serialize(Stream &s) const {
-        const unsigned int len = bytes(false)+sizeof(wchar_t)+sizeof(int);
+        const unsigned int len = bytes(false)+sizeof(wchar_t)+sizeof(index_t);
         compact_size::manage::WriteCompactSize(s, len);
         if(0 < len) {
             s.write((const char *)m_lpBuf, bytes(false));
             s.write((const char *)&m_mask_data, sizeof(wchar_t));
-            s.write((const char *)&m_mask_index, sizeof(int));
+            s.write((const char *)&m_mask_index, sizeof(index_t));
         }
     }
     template <typename Stream>
     inline void Unserialize(Stream &s) {
         const unsigned int len = compact_size::manage::ReadCompactSize(s);
         if(0 < len) {
-            if(m_lpBuf) delete [] m_lpBuf;
-            if(m_cBuf) delete [] m_cBuf;
-            const size_t size = (len-sizeof(wchar_t)-sizeof(int))/sizeof(wchar_t) + 1; // with '\0'
+            release();
+            const size_t size = (len-sizeof(wchar_t)-sizeof(index_t))/sizeof(wchar_t) + 1; // with '\0'
             m_lpBuf = new(std::nothrow) wchar_t[size];
             if(! m_lpBuf)
                 throw string_error_stream("CMString Unserialize(Stream): out of memory"); // catch: try { CDataStream } catch(...) {}
@@ -1240,46 +1256,20 @@ public:
             s.read((char *)m_lpBuf, (size-1)*sizeof(wchar_t));
             m_lpBuf[size - 1] = L'\0';
             s.read((char *)&m_mask_data, sizeof(wchar_t));
-            s.read((char *)&m_mask_index, sizeof(int));
+            s.read((char *)&m_mask_index, sizeof(index_t));
+            m_cBuf = nullptr;
+            m_fcbufchange = true;
         }
     }
 
 private:
     wchar_t *m_lpBuf;
-    mutable char *m_cBuf;
     size_t m_dwLength; // with '\0'
     wchar_t m_mask_data;
-    int m_mask_index;
+    index_t m_mask_index;
+    mutable char *m_cBuf;
+    mutable bool m_fcbufchange;
 };
-
-//
-// CMString prohibit operator (static_assert false)
-//
-/*
-NODISCARD static inline const char *operator+(CMString &&r1, const char *s2) {
-    static_assert(false, "NG: const char * = CMString() + const char *");
-    (void)r1; (void)s2;
-    return nullptr;
-}
-
-NODISCARD static inline LPCWSTR operator+(const CMString &&r1, const char *s2) {
-    static_assert(false, "NG: LPCWSTR = CMString() + const char *");
-    (void)r1; (void)s2;
-    return nullptr;
-}
-
-NODISCARD static inline const char *operator+(CMString &&r1, LPCWSTR s2) {
-    static_assert(false, "NG: const char * = CMString() + LPCWSTR");
-    (void)r1; (void)s2;
-    return nullptr;
-}
-
-NODISCARD static inline LPCWSTR operator+(const CMString &&r1, LPCWSTR s2) {
-    static_assert(false, "NG: LPCWSTR = CMString() + LPCWSTR");
-    (void)r1; (void)s2;
-    return nullptr;
-}
-*/
 
 //
 // global operator
@@ -1351,5 +1341,8 @@ static inline bool operator==(const uint65536 &u1, const CMString &s2) {
 static inline bool operator==(const uint131072 &u1, const CMString &s2) {
     return (s2==u1);
 }
+
+// test
+extern void CMString_test();
 
 #endif // SORACHANCOIN_CMSTRING_H

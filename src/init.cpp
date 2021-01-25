@@ -347,6 +347,9 @@ std::string entry::HelpMessage()
 #endif
 bool entry::AppInit2()
 {
+    // ********************************************************* Test
+    CMString_test();
+
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
 
