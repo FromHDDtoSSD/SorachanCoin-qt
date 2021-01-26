@@ -938,18 +938,18 @@ color: rgb(0, 170, 255);</string>
         <rect>
          <x>10</x>
          <y>10</y>
-         <width>351</width>
-         <height>401</height>
+         <width>391</width>
+         <height>361</height>
         </rect>
        </property>
       </widget>
-      <widget class="QListWidget" name="bansList">
+      <widget class="QListWidget" name="bansListView">
        <property name="geometry">
         <rect>
-         <x>370</x>
+         <x>410</x>
          <y>10</y>
-         <width>231</width>
-         <height>401</height>
+         <width>261</width>
+         <height>361</height>
         </rect>
        </property>
       </widget>

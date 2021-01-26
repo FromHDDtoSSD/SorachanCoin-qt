@@ -19,6 +19,7 @@
 #include <QRegExpValidator>
 #include <QKeyEvent>
 #include <QFileDialog>
+#include <init.h>
 #include <allocator/qtsecure.h>
 
 #if QT_VERSION < 0x050000
@@ -91,26 +92,36 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
         /** check if the locale name consists of 2 parts (language_country) */
         if(langStr.contains("_")) {
 #if QT_VERSION >= 0x040800
-        /** display language strings as "native language - native country (locale name)", e.g. "Deutsch - Deutschland (de)" */
-        ui->lang->addItem(locale.nativeLanguageName() + QString(" - ") + locale.nativeCountryName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
+            /** display language strings as "native language - native country (locale name)", e.g. "Deutsch - Deutschland (de)" */
+            ui->lang->addItem(locale.nativeLanguageName() + QString(" - ") + locale.nativeCountryName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
 #else
-        /** display language strings as "language - country (locale name)", e.g. "German - Germany (de)" */
-        ui->lang->addItem(QLocale::languageToString(locale.language()) + QString(" - ") + QLocale::countryToString(locale.country()) + QString(" (") + langStr + QString(")"), QVariant(langStr));
+            /** display language strings as "language - country (locale name)", e.g. "German - Germany (de)" */
+            ui->lang->addItem(QLocale::languageToString(locale.language()) + QString(" - ") + QLocale::countryToString(locale.country()) + QString(" (") + langStr + QString(")"), QVariant(langStr));
 #endif
         } else {
 #if QT_VERSION >= 0x040800
-        /** display language strings as "native language (locale name)", e.g. "Deutsch (de)" */
-        ui->lang->addItem(locale.nativeLanguageName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
+            /** display language strings as "native language (locale name)", e.g. "Deutsch (de)" */
+            ui->lang->addItem(locale.nativeLanguageName() + QString(" (") + langStr + QString(")"), QVariant(langStr));
 #else
-        /** display language strings as "language (locale name)", e.g. "German (de)" */
-        ui->lang->addItem(QLocale::languageToString(locale.language()) + QString(" (") + langStr + QString(")"), QVariant(langStr));
+            /** display language strings as "language (locale name)", e.g. "German (de)" */
+            ui->lang->addItem(QLocale::languageToString(locale.language()) + QString(" (") + langStr + QString(")"), QVariant(langStr));
 #endif
         }
     }
 
 #if QT_VERSION >= 0x040700
-    ui->thirdPartyTxUrls->setPlaceholderText("https://www.junkhdd.com/tx/%s");
+    ui->thirdPartyTxUrls->setPlaceholderText("https://sora.junkhdd.com:7350");
 #endif
+
+    /* Security init */
+    if(entry::b66mode==entry::Bip66_STRICT)
+        ui->bip66CheckBox->setChecked(true);
+    ui->fullSecureAllocatorCheckBox->setChecked(false);
+    ui->connectBalanceCheckBox->setChecked(false);
+
+    /* S.M.A.R.T. init */
+    ui->smartCheckBox->setChecked(false);
+    ui->benchmarkCheckBox->setChecked(false);
 
     try {
 
@@ -195,6 +206,15 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->displayAddresses, OptionsModel::DisplayAddresses);
     mapper->addMapping(ui->coinControlFeatures, OptionsModel::CoinControlFeatures);
     mapper->addMapping(ui->thirdPartyTxUrls, OptionsModel::ThirdPartyTxUrls);
+
+    /* Security */
+    mapper->addMapping(ui->bip66CheckBox, OptionsModel::Bip66Use);
+    mapper->addMapping(ui->fullSecureAllocatorCheckBox, OptionsModel::FullSecureString);
+    mapper->addMapping(ui->connectBalanceCheckBox, OptionsModel::ConnectBalanceUse);
+
+    /* S.M.A.R.T. */
+    mapper->addMapping(ui->smartCheckBox, OptionsModel::PredictionSMARTUse);
+    mapper->addMapping(ui->benchmarkCheckBox, OptionsModel::PredictionSMARTUse);
 }
 
 void OptionsDialog::enableApplyButton()

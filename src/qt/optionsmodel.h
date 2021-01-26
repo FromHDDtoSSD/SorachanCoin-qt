@@ -47,6 +47,11 @@ public:
         Language,          // QString
         CoinControlFeatures, // bool
         ExternalSeeder,    // QString
+        Bip66Use,          // entry::b66mode
+        FullSecureString,  // bool
+        ConnectBalanceUse, // bool
+        PredictionSMARTUse, // bool
+        PredictionBenchUse, // bool
         OptionIDRowCount,
     };
 

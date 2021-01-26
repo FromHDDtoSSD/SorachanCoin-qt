@@ -518,18 +518,98 @@ color: rgb(0, 170, 255);</string>
        </item>
       </layout>
      </widget>
-     <widget class="QWidget" name="tabPeers">
+     <widget class="QWidget" name="tabSecurity">
       <attribute name="title">
-       <string>Peers</string>
+       <string>Security</string>
       </attribute>
-      <widget class="QListView" name="peersView">
+      <widget class="QListView" name="bipListView">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>100</y>
+         <width>401</width>
+         <height>181</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="bip66CheckBox">
        <property name="geometry">
         <rect>
          <x>10</x>
          <y>10</y>
-         <width>291</width>
-         <height>181</height>
+         <width>391</width>
+         <height>16</height>
         </rect>
+       </property>
+       <property name="text">
+        <string>Enable strict verify as Bip66</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="fullSecureAllocatorCheckBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>40</y>
+         <width>401</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Using a Secure Allocator for most of the string to process</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="connectBalanceCheckBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>401</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Enable load balance to connect for destination</string>
+       </property>
+      </widget>
+     </widget>
+     <widget class="QWidget" name="tabSMART">
+      <attribute name="title">
+       <string>S.M.A.R.T.</string>
+      </attribute>
+      <widget class="QListWidget" name="smartListView">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>70</y>
+         <width>551</width>
+         <height>192</height>
+        </rect>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="smartCheckBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>10</y>
+         <width>551</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Enable drive failure prediction by S.M.A.R.T.</string>
+       </property>
+      </widget>
+      <widget class="QCheckBox" name="benchmarkCheckBox">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>40</y>
+         <width>551</width>
+         <height>16</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>Enable drive failure prediction by Benchmark</string>
        </property>
       </widget>
      </widget>
@@ -538,20 +618,10 @@ color: rgb(0, 170, 255);</string>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_Buttons">
      <item>
-      <spacer name="horizontalSpacer_1">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>48</height>
-        </size>
-       </property>
-      </spacer>
-     </item>
-     <item>
       <widget class="QLabel" name="statusLabel">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
        <property name="font">
         <font>
          <weight>75</weight>
@@ -568,19 +638,6 @@ color: rgb(0, 170, 255);</string>
         <bool>true</bool>
        </property>
       </widget>
-     </item>
-     <item>
-      <spacer name="horizontalSpacer_2">
-       <property name="orientation">
-        <enum>Qt::Horizontal</enum>
-       </property>
-       <property name="sizeHint" stdset="0">
-        <size>
-         <width>40</width>
-         <height>48</height>
-        </size>
-       </property>
-      </spacer>
      </item>
      <item>
       <widget class="QPushButton" name="okButton">
