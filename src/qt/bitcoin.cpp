@@ -17,6 +17,7 @@
 #include <ui_interface.h>
 #include <qt/qtipcserver.h>
 #include <qt/intro.h>
+#include <QCoreApplication>
 #include <QApplication>
 #include <QMessageBox>
 #if QT_VERSION < 0x050000
@@ -27,6 +28,8 @@
 #include <QSplashScreen>
 #include <QLibraryInfo>
 #include <QSettings>
+#include <QLabel>
+#include <QTimer>
 
 #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
 #define _BITCOIN_QT_PLUGINS_INCLUDED
@@ -54,9 +57,8 @@ static void initTranslations(QTranslator &qtTranslatorBase, QTranslator &qtTrans
 
     // 2) Language from QSettings
     QString lang_territory_qsettings = settings.value("language", "").toString();
-    if(! lang_territory_qsettings.isEmpty()) {
+    if(! lang_territory_qsettings.isEmpty())
         lang_territory = lang_territory_qsettings;
-    }
 
     // 3) -lang command line argument
     lang_territory = QString::fromStdString(map_arg::GetArg("-lang", lang_territory.toStdString()));
@@ -69,24 +71,20 @@ static void initTranslations(QTranslator &qtTranslatorBase, QTranslator &qtTrans
     // - First load the translator for the base language, without territory
     // - Then load the more specific locale translator
     // Load e.g. qt_de.qm
-    if (qtTranslatorBase.load("qt_" + lang, QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+    if (qtTranslatorBase.load("qt_" + lang, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
         QApplication::installTranslator(&qtTranslatorBase);
-    }
 
     // Load e.g. qt_de_DE.qm
-    if (qtTranslator.load("qt_" + lang_territory, QLibraryInfo::location(QLibraryInfo::TranslationsPath))) {
+    if (qtTranslator.load("qt_" + lang_territory, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
         QApplication::installTranslator(&qtTranslator);
-    }
 
     // Load e.g. bitcoin_de.qm (shortcut "de" needs to be defined in bitcoin.qrc)
-    if (translatorBase.load(lang, ":/translations/")) {
+    if (translatorBase.load(lang, ":/translations/"))
         QApplication::installTranslator(&translatorBase);
-    }
 
     // Load e.g. bitcoin_de_DE.qm (shortcut "de_DE" needs to be defined in bitcoin.qrc)
-    if (translator.load(lang_territory, ":/translations/")) {
+    if (translator.load(lang_territory, ":/translations/"))
         QApplication::installTranslator(&translator);
-    }
 }
 
 static void ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style)
@@ -94,9 +92,7 @@ static void ThreadSafeMessageBox(const std::string &message, const std::string &
     // Message from network thread
     if(guiref) {
         bool modal = (style & CClientUIInterface::MODAL);
-        //
         // in case of modal message, use blocking connection to wait for user to click OK
-        //
         QMetaObject::invokeMethod(guiref, "error",
                                   modal ? GUIUtil::blockingGUIThreadConnection() : Qt::QueuedConnection,
                                   Q_ARG(QString, QString::fromStdString(caption)),
@@ -110,29 +106,24 @@ static void ThreadSafeMessageBox(const std::string &message, const std::string &
 
 static bool ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption)
 {
-    if(! guiref) {
+    (void)strCaption;
+    if(! guiref)
         return false;
-    }
-    if(nFeeRequired < block_param::MIN_TX_FEE || nFeeRequired <= block_info::nTransactionFee || args_bool::fDaemon) {
+    if(nFeeRequired < block_param::MIN_TX_FEE || nFeeRequired <= block_info::nTransactionFee || args_bool::fDaemon)
         return true;
-    }
+
     bool payFee = false;
-
     QMetaObject::invokeMethod(guiref, "askFee", GUIUtil::blockingGUIThreadConnection(),
-                               Q_ARG(qint64, nFeeRequired),
-                               Q_ARG(bool*, &payFee));
-
+                              Q_ARG(qint64, nFeeRequired),
+                              Q_ARG(bool*, &payFee));
     return payFee;
 }
 
-static void ThreadSafeHandleURI(const std::string& strURI)
+static void ThreadSafeHandleURI(const std::string &strURI)
 {
-    if(! guiref) {
-        return;
-    }
-
+    if(! guiref) return;
     QMetaObject::invokeMethod(guiref, "handleURI", GUIUtil::blockingGUIThreadConnection(),
-                               Q_ARG(QString, QString::fromStdString(strURI)));
+                              Q_ARG(QString, QString::fromStdString(strURI)));
 }
 
 static void InitMessage(const std::string &message)
@@ -161,16 +152,42 @@ static std::string Translate(const char *psz)
 static void handleRunawayException(const std::exception *e)
 {
     excep::PrintExceptionContinue(e, "Runaway exception");
-    QMessageBox::critical(0, "Runaway exception", BitcoinGUI::tr("A fatal error occurred. SorachanCoin can no longer continue safely and will quit.") + QString("\n\n") + QString::fromStdString(excep::get_strMiscWarning()));
+    QMessageBox::critical(0, "Runaway exception", BitcoinGUI::tr("A fatal error occurred. " strCoinName " can no longer continue safely and will quit.") + QString("\n\n") + QString::fromStdString(excep::get_strMiscWarning()));
     exit(1);
 }
+
+class shutdownRun : public QObject {
+    Q_OBJECT
+public slots:
+    void run() {
+        QCoreApplication::exit(0);
+    }
+};
+class shutdownWindow
+{
+public:
+    explicit shutdownWindow(QApplication *app) : window(), label(QString(_("Don't shut down your computer meanwhile this window is displayed.").c_str()), &window) {
+        window.resize(700, 60);
+        window.setWindowTitle(QString(_(strCoinName " shutdown ...").c_str()));
+        window.show();
+        label.show();
+        shutdownRun obj;
+        QTimer::singleShot(0, &obj, SLOT(run()));
+        app->exec();
+    }
+    ~shutdownWindow() {
+        window.close();
+    }
+private:
+    QWidget window;
+    QLabel label;
+};
+#include "bitcoin.moc"
 
 #ifndef BITCOIN_QT_TEST
 int main(int argc, char *argv[])
 {
-    //
     // Do this early as we don't want to bother initializing if we are just calling IPC
-    //
     qti_server::ipcScanRelay(argc, argv);
 
 #if QT_VERSION < 0x050000
@@ -182,17 +199,14 @@ int main(int argc, char *argv[])
     Q_INIT_RESOURCE(bitcoin);
     QApplication app(argc, argv);
 
-    //
     // Application identification (must be set before OptionsModel is initialized,
     // as it is used to locate QSettings)
-    //
     app.setOrganizationName(strCoinName);
     app.setOrganizationDomain(strCoinName ".su");
-    if(map_arg::GetBoolArg("-testnet")) {// Separate UI settings for testnet
-        app.setApplicationName(strCoinName "-qt-testnet");
-    } else {
-        app.setApplicationName(strCoinName "-qt");
-    }
+    if(map_arg::GetBoolArg("-testnet")) // Separate UI settings for testnet
+        app.setApplicationName(strCoinName "-Core-testnet");
+    else
+        app.setApplicationName(strCoinName "-Core");
 
     // Now that QSettings are accessible, initialize translations
     QTranslator qtTranslatorBase, qtTranslator, translatorBase, translator;
@@ -200,7 +214,7 @@ int main(int argc, char *argv[])
 
     // Command-line options take precedence:
     if(! map_arg::ParseParameters(argc, argv)) {
-        QMessageBox::critical(0, "SorachanCoin",
+        QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: map_arg::ParseParameters").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
@@ -211,14 +225,14 @@ int main(int argc, char *argv[])
     // Install global event filter that makes sure that long tooltips can be word-wrapped
     app.installEventFilter(new GUIUtil::ToolTipToRichTextFilter(TOOLTIP_WRAP_THRESHOLD, &app));
 
-    // ... then bitcoin.conf:
-    if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
-        QMessageBox::critical(0, "SorachanCoin",
+    // ... then SorachanCoin.conf:
+    if (! fs::is_directory(iofs::GetDataDir(false))) {
+        QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: Specified data directory \"%1\" does not exist.").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
     if(! map_arg::ReadConfigFile()) {
-        QMessageBox::critical(0, "SorachanCoin",
+        QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: map_arg::ReadConfigFile()").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
@@ -261,28 +275,22 @@ int main(int argc, char *argv[])
         BitcoinGUI window;
         guiref = &window;
         if(entry::AppInit2()) {
-            {
-                //
+            do {
                 // Put this in a block, so that the Model objects are cleaned up before
                 // calling Shutdown().
-                //
-
-                if (splashref) {
+                if (splashref)
                     splash.finish(&window);
-                }
 
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(entry::pwalletMain, &optionsModel);
-
                 window.setClientModel(&clientModel);
                 window.setWalletModel(&walletModel);
 
                 // If -min option passed, start window minimized.
-                if(map_arg::GetBoolArg("-min")) {
+                if(map_arg::GetBoolArg("-min"))
                     window.showMinimized();
-                } else {
+                else
                     window.show();
-                }
 
                 // Place this here as guiref has to be defined if we don't want to lose URIs
                 qti_server::ipcInit(argc, argv);
@@ -293,7 +301,9 @@ int main(int argc, char *argv[])
                 window.setClientModel(0);
                 window.setWalletModel(0);
                 guiref = 0;
-            }
+            } while(false);
+
+            shutdownWindow sdw(&app);
 
             // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
             boot::Shutdown(nullptr);
