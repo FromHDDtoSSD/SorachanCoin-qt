@@ -33,10 +33,6 @@ private:
 
 signals:
     void viewModified();
-
 };
 
-
-
 #endif // MONITOREDDATAMAPPER_H
-//@

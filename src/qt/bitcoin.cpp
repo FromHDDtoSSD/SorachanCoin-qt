@@ -156,6 +156,8 @@ static void handleRunawayException(const std::exception *e)
     exit(1);
 }
 
+/* Shutdown window
+*/
 class shutdownRun : public QObject {
     Q_OBJECT
 public slots:
@@ -166,21 +168,22 @@ public slots:
 class shutdownWindow
 {
 public:
-    explicit shutdownWindow(QApplication *app) : window(), label(QString(_("Don't shut down your computer meanwhile this window is displayed.").c_str()), &window) {
-        window.resize(700, 60);
-        window.setWindowTitle(QString(_(strCoinName " shutdown ...").c_str()));
-        window.show();
+    explicit shutdownWindow(QApplication *app) : shutWindow(new QWidget) {
+        QLabel label(QString(_("Don't shut down your computer meanwhile this window is displayed.").c_str()), shutWindow);
+        shutWindow->resize(600, 40);
+        shutWindow->setWindowTitle(QString(_(strCoinName " shutdown ...").c_str()));
+        shutWindow->show();
         label.show();
         shutdownRun obj;
-        QTimer::singleShot(0, &obj, SLOT(run()));
+        QTimer::singleShot(1, &obj, SLOT(run()));
         app->exec();
     }
     ~shutdownWindow() {
-        window.close();
+        shutWindow->close();
+        delete shutWindow;
     }
 private:
-    QWidget window;
-    QLabel label;
+    QWidget *shutWindow;
 };
 #include "bitcoin.moc"
 

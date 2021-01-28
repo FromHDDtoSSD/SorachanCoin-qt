@@ -10,9 +10,11 @@
 #include <cmath>
 #include <allocator/qtsecure.h>
 
+namespace {
 constexpr int DESIRED_SAMPLES = 800;
 constexpr int XMARGIN = 10;
 constexpr int YMARGIN = 10;
+} // namespace
 
 TrafficGraphWidget::TrafficGraphWidget(QWidget *parent) :
     QWidget(parent),

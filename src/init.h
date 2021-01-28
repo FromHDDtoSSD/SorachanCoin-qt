@@ -10,10 +10,28 @@
 #include <wallet.h>
 
 //
-// Init
-// CUI: AppInit -> AppInit2 (Force Server-mode)
-// Qt : parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2
-// Qt + GUI : parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2 -> CreatePredictionSystem()
+// SorachanCoin About Init
+//
+// Note: A drive Benchmark require to unload the blockchain and
+// switch from Qt to the native API due to maximize execution speed.
+//
+// CUI (daemon SorachanCoind):
+// AppInit -> AppInit2 (Force Server-mode)
+//
+// Qt (Wallet mode or drive failure prediction mode):
+// parameters/SorachanCoin.conf are parsed in qt/bitcoin.cpp's main() -> AppInit2
+//
+// Qt + BenchmarkGUI (Benchmark mode, switch from Qt to the native API):
+// parameters/bitcoin.conf are parsed in qt/bitcoin.cpp's main() ->
+// entry::AppInit2 ->
+// SIGNAL(becnmark_start) ->
+// entry::shutdown ->
+// CreatePredictionSystem_benchmark() ->
+// DDK load ->
+// doing benchmark ->
+// DestroyWindow() ->
+// entry::AppInit2 ->
+// It will record the benchmark results on this blockchain.
 //
 class entry : private no_instance
 {
@@ -54,10 +72,30 @@ public:
 //
 // Prediction System
 // Note: At first, Win32 supported
+// Note: load independent the MessageLoop below.
 //
 namespace predsystem {
 
-    extern bool CreatePredictionSystem() noexcept;
+    enum ret_code {
+        success = 0,
+        error_createwindow,
+        error_initddk,
+        error_createobject,
+        error_outofmemory,
+    };
+
+    struct result {
+        intptr_t window_ret;
+        ret_code ret;
+        std::string e;
+        std::vector<uint8_t> vch;
+        result() {
+            window_ret = 0;
+            ret = success;
+        }
+    };
+
+    extern result CreateBenchmark() noexcept;
 
 } // namespace predsystem
 

@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 2.9.10
+VERSION = 3.0.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -412,6 +412,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/mintingfilterproxy.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
+    src/qt/peerswidget.h \
     src/kernelrecord.h \
     src/alert.h \
     src/addrman.h \
@@ -622,6 +623,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/mintingfilterproxy.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
+    src/qt/peerswidget.cpp \
     src/kernelrecord.cpp \
     src/alert.cpp \
     src/version.cpp \

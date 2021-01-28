@@ -5,7 +5,7 @@
 #if defined(QT_GUI) && defined(WIN32)
 
 // prediction system
-// windows GUI
+// windows GUI (win32API and nativeAPI)
 
 #include <winapi/winguimain.h>
 #include <sync/lsync.h>
@@ -22,8 +22,8 @@
 constexpr int THREAD_TIMER_INTERVAL = 500;
 constexpr int DISK_MAX = 128;
 constexpr int THREAD_MAX = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
-constexpr int WINDOW_WIDTH = 450;
-constexpr int WINDOW_HEIGHT = 600;
+constexpr int WINDOW_WIDTH = 700;
+constexpr int WINDOW_HEIGHT = 550;
 constexpr int PROGRESS_NUM = 9;
 
 /////////////////////////////////////////////////////////////////////////
@@ -816,7 +816,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     {
         PAINTSTRUCT ps;
         HDC hDC = ::BeginPaint(hWnd, &ps);
-        RECT rc = { 2, 70, 430, 95 };
+        RECT rc = { 2, 60, 430, 95 };
         font::instance()(hDC, rc, IDS_PROGRESSBAR_0);
         for(int i = 1; i < PROGRESS_NUM; ++i)
         {
@@ -853,10 +853,6 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             rc += 45;
             font::instance()(hDC, rc, stream.str());
         }
-        rc += 75;
-        font::instance()(hDC, rc, IDS_APP_COPYRIGHT);
-        rc += 20;
-        font::instance()(hDC, rc, IDS_APP_OPENSSLRIGHT);
         ::EndPaint(hWnd, &ps);
     }
     break;
@@ -956,11 +952,30 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
 //
 // extern init.h : called, modeless dialog window
 //
-bool predsystem::CreatePredictionSystem() noexcept
+predsystem::result predsystem::CreateBenchmark() noexcept
 {
+    result ret;
+    auto unregister_wc = []{::UnregisterClassW(IDS_APP_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr));};
+    auto err = [&]{unregister_wc(); ret.ret=ret_code::error_createwindow; return ret;};
+
+    class icon_manage {
+    public:
+        icon_manage() {
+            wchar_t soraPath[MAX_PATH];
+            ::GetModuleFileNameW(nullptr, soraPath, MAX_PATH);
+            hIcon = ::ExtractIconW(::GetModuleHandleW(nullptr), soraPath, 0);
+        }
+        ~icon_manage() {
+            ::DestroyIcon(hIcon);
+        }
+        HICON get() const {return hIcon;}
+    private:
+        HICON hIcon;
+    };
+
+    icon_manage icom;
     logw logobj;
     WNDCLASSEX wc = {0};
-    std::wstring windowclassname = IDS_APP_WINDOWCLASSNAME;
     wc.cbSize = sizeof(WNDCLASSEX);
     wc.style = CS_HREDRAW | CS_VREDRAW;
     wc.lpfnWndProc = WindowProc;
@@ -969,15 +984,16 @@ bool predsystem::CreatePredictionSystem() noexcept
     wc.hInstance = ::GetModuleHandleW(nullptr);
     wc.hCursor = ::LoadCursorW(nullptr, IDC_ARROW);
     wc.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wc.hIcon = wc.hIconSm = icom.get();
     wc.lpszMenuName = nullptr;
-    wc.lpszClassName = windowclassname.c_str();
+    wc.lpszClassName = IDS_APP_WINDOWCLASSNAME;
     if(! ::RegisterClassEx(&wc)) {
         logging::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
-        return 0;
+        return err();
     }
 
     INT_PTR winmain_ret = 0;
-    do // restart loop
+    do
     {
         ProgressString::ClearString();
 
@@ -985,7 +1001,7 @@ bool predsystem::CreatePredictionSystem() noexcept
         const int desktopHeight = ::GetSystemMetrics(SM_CYSCREEN);
         HWND hWnd = ::CreateWindowExW(
             0,
-            windowclassname.c_str(),
+            IDS_APP_WINDOWCLASSNAME,
             IDS_APP_TITLE,
             WS_OVERLAPPEDWINDOW & ~WS_THICKFRAME & ~WS_MAXIMIZEBOX,
             (desktopWidth - WINDOW_WIDTH) / 2,
@@ -999,7 +1015,7 @@ bool predsystem::CreatePredictionSystem() noexcept
         );
         if(!hWnd) {
             logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-            return 0;
+            return err();
         }
 
         ctrl_info ci;
@@ -1011,7 +1027,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 10,
                 20,
-                50,
+                100,
                 30,
                 hWnd,
                 (HMENU)IDC_BUTTON_START,
@@ -1020,7 +1036,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hButton) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return 0;
+                return err();
             }
             ci.hStartButton = hButton;
             ::ShowWindow(hButton, SW_SHOW);
@@ -1031,9 +1047,9 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"BUTTON",
                 IDS_STOP,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
-                60,
+                120,
                 20,
-                50,
+                100,
                 30,
                 hWnd,
                 (HMENU)IDC_BUTTON_STOP,
@@ -1042,7 +1058,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hButton) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return 0;
+                return err();
             }
             ci.hStopButton = hButton;
             ::ShowWindow(hButton, SW_SHOW);
@@ -1053,9 +1069,9 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"COMBOBOX",
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_VSCROLL | CBS_HASSTRINGS | CBS_AUTOHSCROLL | CBS_DROPDOWNLIST,
-                115,
-                20,
-                205,
+                240,
+                15,
+                300,
                 300,
                 hWnd,
                 (HMENU)IDC_COMBO_DRIVE,
@@ -1064,7 +1080,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hCombo) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return false;
+                return err();
             }
 
             for(int i = 0; i < DISK_MAX; ++i)
@@ -1089,9 +1105,9 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"COMBOBOX",
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_VSCROLL | CBS_HASSTRINGS | CBS_AUTOHSCROLL | CBS_DROPDOWNLIST,
-                320,
-                20,
-                120,
+                550,
+                15,
+                140,
                 400,
                 hWnd,
                 (HMENU)IDC_COMBO_THREAD,
@@ -1100,7 +1116,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hCombo) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return false;
+                return err();
             }
 
             for(int i = 0, k = 0; i < THREAD_MAX; ++i)
@@ -1122,10 +1138,10 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"COMBOBOX",
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_VSCROLL | CBS_HASSTRINGS | CBS_AUTOHSCROLL | CBS_DROPDOWNLIST,
-                280,
+                440,
                 470,
-                160,
-                100,
+                250,
+                150,
                 hWnd,
                 (HMENU)IDC_COMBO_LOOP,
                 ::GetModuleHandleW(nullptr),
@@ -1133,7 +1149,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hCombo) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return false;
+                return err();
             }
 
             ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_ONCE_BENCHMARK);
@@ -1150,10 +1166,10 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"COMBOBOX",
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_VSCROLL | CBS_HASSTRINGS | CBS_AUTOHSCROLL | CBS_DROPDOWNLIST,
-                110,
+                210,
                 470,
-                170,
-                100,
+                220,
+                150,
                 hWnd,
                 (HMENU)IDC_COMBO_RAND,
                 ::GetModuleHandleW(nullptr),
@@ -1161,7 +1177,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!hCombo) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return false;
+                return err();
             }
 
             ::SendMessageW(hCombo, CB_ADDSTRING, 0L, (LPARAM)IDS_RAND_LOW);
@@ -1186,7 +1202,7 @@ bool predsystem::CreatePredictionSystem() noexcept
                 WS_CHILD | WS_BORDER,
                 140,
                 60 + i * 45,
-                290,
+                550,
                 40,
                 hWnd,
                 (HMENU)PROGRESS_ID(i),
@@ -1195,7 +1211,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!proginfo[i].hProgress) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return 0;
+                return err();
             }
 
             proginfo[i].id = (WORD)PROGRESS_ID(i);
@@ -1213,9 +1229,9 @@ bool predsystem::CreatePredictionSystem() noexcept
                 L"",
                 WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_TABSTOP | WS_VSCROLL | CBS_HASSTRINGS | CBS_AUTOHSCROLL | CBS_DROPDOWNLIST,
                 10,
-                90 + i * 45,
+                80 + i * 45,
                 90,
-                120,
+                130,
                 hWnd,
                 (HMENU)BENCH_ONOFF_ID(i),
                 ::GetModuleHandleW(nullptr),
@@ -1223,7 +1239,7 @@ bool predsystem::CreatePredictionSystem() noexcept
             );
             if(!bench_onoff[i]) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
-                return 0;
+                return err();
             }
 
             if(i == 0) {
@@ -1250,13 +1266,17 @@ bool predsystem::CreatePredictionSystem() noexcept
         ::ShowWindow(hWnd, SW_SHOW);
         ::UpdateWindow(hWnd);
 
-        //
-        // working here
-        //
+        MSG msg;
+        while (::GetMessageW(&msg, nullptr, 0, 0) > 0)
+        {
+            ::TranslateMessage(&msg);
+            ::DispatchMessageW(&msg);
+        }
+    } while(0); // no loop
 
-    } while(0);
-
-    return winmain_ret;
+    ret.window_ret = winmain_ret;
+    unregister_wc();
+    return ret;
 }
 
 #endif // QT_GUI && WIN32

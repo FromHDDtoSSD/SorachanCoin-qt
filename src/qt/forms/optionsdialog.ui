@@ -27,7 +27,7 @@ color: rgb(0, 170, 255);</string>
       <enum>QTabWidget::North</enum>
      </property>
      <property name="currentIndex">
-      <number>4</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tabMain">
       <attribute name="title">
@@ -522,96 +522,56 @@ color: rgb(0, 170, 255);</string>
       <attribute name="title">
        <string>Security</string>
       </attribute>
-      <widget class="QListView" name="bipListView">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>100</y>
-         <width>401</width>
-         <height>181</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="bip66CheckBox">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>391</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Enable strict verify as Bip66</string>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="fullSecureAllocatorCheckBox">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>401</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Using a Secure Allocator for most of the string to process</string>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="connectBalanceCheckBox">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>401</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Enable load balance to connect for destination</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QCheckBox" name="bip66CheckBox">
+         <property name="text">
+          <string>Enable strict verify as Bip66</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="fullSecureAllocatorCheckBox">
+         <property name="text">
+          <string>Using a Secure Allocator for most of the string to process</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="connectBalanceCheckBox">
+         <property name="text">
+          <string>Enable load balance to connect for destination</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListView" name="bipListView"/>
+       </item>
+      </layout>
      </widget>
      <widget class="QWidget" name="tabSMART">
       <attribute name="title">
        <string>S.M.A.R.T.</string>
       </attribute>
-      <widget class="QListWidget" name="smartListView">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>70</y>
-         <width>551</width>
-         <height>192</height>
-        </rect>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="smartCheckBox">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>10</y>
-         <width>551</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Enable drive failure prediction by S.M.A.R.T.</string>
-       </property>
-      </widget>
-      <widget class="QCheckBox" name="benchmarkCheckBox">
-       <property name="geometry">
-        <rect>
-         <x>10</x>
-         <y>40</y>
-         <width>551</width>
-         <height>16</height>
-        </rect>
-       </property>
-       <property name="text">
-        <string>Enable drive failure prediction by Benchmark</string>
-       </property>
-      </widget>
+      <layout class="QVBoxLayout" name="verticalLayout_3">
+       <item>
+        <widget class="QCheckBox" name="smartCheckBox">
+         <property name="text">
+          <string>Enable drive failure prediction by S.M.A.R.T.</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="benchmarkCheckBox">
+         <property name="text">
+          <string>Enable drive failure prediction by Benchmark</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QListWidget" name="smartListView"/>
+       </item>
+      </layout>
      </widget>
     </widget>
    </item>
@@ -627,6 +587,9 @@ color: rgb(0, 170, 255);</string>
          <weight>75</weight>
          <bold>true</bold>
         </font>
+       </property>
+       <property name="locale">
+        <locale language="English" country="UnitedStates"/>
        </property>
        <property name="text">
         <string/>

@@ -2191,25 +2191,18 @@ bool net_node::StopNode()
     }
     if(shot::semOutbound) {
         for(int i = 0; i<MAX_OUTBOUND_CONNECTIONS; ++i)
-        {
             shot::semOutbound->post();
-        }
     }
 
-    for( ; ; )
-    {
+    for(;;) {
         int nThreadsRunning = 0;
         for(int n = 0; n < THREAD_MAX; ++n)
-        {
             nThreadsRunning += net_node::vnThreadsRunning[n];
-        }
 
-        if(nThreadsRunning == 0) {
+        if(nThreadsRunning == 0)
             break;
-        }
-        if(bitsystem::GetTime() - nStart > 20) {
+        if(bitsystem::GetTime() - nStart > 20)
             break;
-        }
         util::Sleep(20);
     }
 
@@ -2227,9 +2220,7 @@ bool net_node::StopNode()
     if(net_node::vnThreadsRunning[THREAD_MINTER] > 0) { printf("ThreadStakeMinter still running\n"); }
     if(net_node::vnThreadsRunning[THREAD_SCRIPTCHECK] > 0) { printf("block_check::thread::ThreadScriptCheck still running\n"); }
     while(net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || net_node::vnThreadsRunning[THREAD_RPCHANDLER] > 0 || net_node::vnThreadsRunning[THREAD_SCRIPTCHECK] > 0)
-    {
         util::Sleep(20);
-    }
     util::Sleep(50);
     net_node::DumpAddresses();
 

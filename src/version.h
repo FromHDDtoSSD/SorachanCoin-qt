@@ -82,8 +82,8 @@ public:
 };
 
 // display version
-#define DISPLAY_VERSION_MAJOR        2
-#define DISPLAY_VERSION_MINOR        9
+#define DISPLAY_VERSION_MAJOR        3
+#define DISPLAY_VERSION_MINOR        0
 #define DISPLAY_VERSION_REVISION     10
 
 #endif

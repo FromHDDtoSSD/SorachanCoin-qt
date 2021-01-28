@@ -20,6 +20,7 @@
 #include <db_cxx.h>
 #include <allocator/qtsecure.h>
 
+namespace {
 constexpr int CONSOLE_HISTORY = 50;
 constexpr QSize ICON_SIZE(24, 24);
 constexpr int INITIAL_TRAFFIC_GRAPH_MINS = 30;
@@ -33,6 +34,7 @@ const struct {
     {"misc", ":/icons/tx_inout"},
     {nullptr, nullptr}
 };
+} // namespace
 
 class RPCExecutor: public QObject
 {

@@ -85,8 +85,7 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
     /* Display elements init */
     QDir translations(":translations");
     ui->lang->addItem(QString("(") + tr("default") + QString(")"), QVariant(""));
-    foreach(const QString &langStr, translations.entryList())
-    {
+    for(const QString &langStr: translations.entryList()) {
         QLocale locale(langStr);
 
         /** check if the locale name consists of 2 parts (language_country) */
@@ -124,7 +123,6 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
     ui->benchmarkCheckBox->setChecked(false);
 
     try {
-
         ui->unit->setModel(new BitcoinUnits(this));
 
         /* Widget-to-option mapper */

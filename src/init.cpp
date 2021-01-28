@@ -44,13 +44,13 @@ enum entry::bip66Mode entry::b66mode = entry::Bip66_ADVISORY;
 //
 void entry::ExitTimeout(void *parg)
 {
+    (void)parg;
 #ifdef WIN32
     util::Sleep(5000);
     ExitProcess(0);
 #endif
 }
 
-//void net_node::Shutdown(void *parg)
 void boot::Shutdown(void *parg)
 {
     (void)parg;
@@ -340,15 +340,10 @@ std::string entry::HelpMessage()
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
 //
-#define INIT_DEBUG_CS
-#ifdef INIT_DEBUG_CS
-# define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
-#else
-# define I_DEBUG_CS(str)
-#endif
+#define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 bool entry::AppInit2()
 {
-    // ********************************************************* Test
+    // ********************************************************* Test (if DEBUG)
     CMString_test();
 
     // ********************************************************* Step 1: setup

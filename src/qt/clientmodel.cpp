@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -62,13 +63,10 @@ int ClientModel::getNumConnections(uint8_t flags) const {
     }
 
     int nNum = 0;
-    for(CNode* pnode: net_node::vNodes)
-    {
-        if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT)) {
-            nNum++;
-        }
+    for(const CNode *pnode: net_node::vNodes) {
+        if (flags & (pnode->fInbound ? CONNECTIONS_IN : CONNECTIONS_OUT))
+            ++nNum;
     }
-
     return nNum;
 }
 

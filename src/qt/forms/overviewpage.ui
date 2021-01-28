@@ -401,6 +401,20 @@
           </property>
          </widget>
         </item>
+        <item>
+         <widget class="QCommandLinkButton" name="BenchmarkCommandLinkButton">
+          <property name="text">
+           <string>[SORA Network] Drive Benchmark feature</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QCommandLinkButton" name="DriveVerifyCommandLinkButton">
+          <property name="text">
+           <string>[SORA Network] Drive Verify sector feature</string>
+          </property>
+         </widget>
+        </item>
        </layout>
       </widget>
      </item>
@@ -426,7 +440,7 @@
      </property>
      <property name="sizeHint" stdset="0">
       <size>
-       <width>180</width>
+       <width>140</width>
        <height>20</height>
       </size>
      </property>

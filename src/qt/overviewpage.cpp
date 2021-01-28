@@ -17,6 +17,7 @@
 #include <QAbstractItemDelegate>
 #include <QPainter>
 #include <allocator/qtsecure.h>
+#include <init.h>
 
 #define DECORATION_SIZE 64
 #define NUM_ITEMS 3
@@ -242,6 +243,17 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
     ui->labelTransactionsStatus->setVisible(fShow);
 }
 
+void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
+{
+    predsystem::CreateBenchmark();
+}
+
+void OverviewPage::on_DriveVerifyCommandLinkButton_clicked()
+{
+    QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
+}
+
+/*
 void OverviewPage::on_pushButton_clicked()
 {
     QString link="https://www.junkhdd.com/";
@@ -253,3 +265,4 @@ void OverviewPage::on_pushButton_2_clicked()
     QString link="https://discord.gg/ThMeemM/";
     QDesktopServices::openUrl(QUrl(link));
 }
+*/
