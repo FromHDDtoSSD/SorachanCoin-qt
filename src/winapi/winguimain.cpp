@@ -966,7 +966,8 @@ predsystem::result predsystem::CreateBenchmark() noexcept
             hIcon = ::ExtractIconW(::GetModuleHandleW(nullptr), soraPath, 0);
         }
         ~icon_manage() {
-            ::DestroyIcon(hIcon);
+            if(hIcon)
+                ::DestroyIcon(hIcon);
         }
         HICON get() const {return hIcon;}
     private:
@@ -1265,6 +1266,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
         ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)&wu);
         ::ShowWindow(hWnd, SW_SHOW);
         ::UpdateWindow(hWnd);
+        SetCtrlWait(hWnd, wu.pci);
 
         MSG msg;
         while (::GetMessageW(&msg, nullptr, 0, 0) > 0)

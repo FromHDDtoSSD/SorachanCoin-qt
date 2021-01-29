@@ -24,7 +24,7 @@ color: rgb(0, 170, 255);</string>
       <locale language="English" country="UnitedStates"/>
      </property>
      <property name="currentIndex">
-      <number>3</number>
+      <number>0</number>
      </property>
      <widget class="QWidget" name="tab_info">
       <attribute name="title">

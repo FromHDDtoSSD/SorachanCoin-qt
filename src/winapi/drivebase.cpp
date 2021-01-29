@@ -15,13 +15,33 @@
 sync drive_handle::cs;
 
 bool drive_util::chartowchar(const char *source, std::wstring &dest) const {
-    dest = CMString(source);
-    return true;
+    int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
+    if (cchWideChar == 0)    {
+        DWORD dwError = ::GetLastError();
+        if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION) {
+            return false;
+        } else {
+            dest = L"";
+            return true;
+        }
+    }
+    dest.resize(cchWideChar, '\0');
+    return 0 < ::MultiByteToWideChar(CP_ACP, 0, source, -1, &dest.at(0), cchWideChar);
 }
 
 bool drive_util::wchartochar(LPCWSTR source, std::string &dest) const {
-    dest = CMString(source);
-    return true;
+    int nLength = ::WideCharToMultiByte(CP_ACP, 0, source, -1, nullptr, 0, nullptr, nullptr);
+    if (nLength == 0) {
+        DWORD dwError = ::GetLastError();
+        if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER) {
+            return false;
+        } else {
+            dest = "";
+            return true;
+        }
+    }
+    dest.resize(nLength, '\0');
+    return 0 < ::WideCharToMultiByte(CP_ACP, 0, source, -1, &dest.at(0), nLength, nullptr, nullptr);
 }
 
 bool drive_handle::createdir(LPCWSTR path) const {
