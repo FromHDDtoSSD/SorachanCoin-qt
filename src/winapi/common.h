@@ -14,9 +14,10 @@
 #include <util/logging.h>
 #include <libstr/cmstring.h>
 
-#define IDS_ERROR_CREATEWINDOW               L"To Process failed in CreateWindowEx."
-#define IDS_ERROR_CLASSREGISTER              L"To Process failed in RegisterClassEx."
-#define IDS_ERROR_FONT                       L"To Create fonts were failure."
+#ifdef WIN32
+# define IDS_ERROR_CREATEWINDOW               L"To Process failed in CreateWindowEx."
+# define IDS_ERROR_CLASSREGISTER              L"To Process failed in RegisterClassEx."
+# define IDS_ERROR_FONT                       L"To Create fonts were failure."
 
 class font
 {
@@ -44,6 +45,14 @@ public:
         static font fobj(cHeight);
         return fobj;
     }
+    const font &operator()(HDC hDC, RECT rc, const std::string &obj) const {
+        std::ostringstream stream;
+        stream << obj;
+        HFONT prev = (HFONT)::SelectObject(hDC, hFont);
+        ::DrawTextA(hDC, stream.str().c_str(), -1, &rc, DT_WORDBREAK);
+        ::SelectObject(hDC, prev);
+        return *this;
+    }
     template <typename T> const font &operator()(HDC hDC, RECT rc, const T &obj) const {
         std::wostringstream stream;
         stream << obj;
@@ -53,6 +62,7 @@ public:
         return *this;
     }
 };
+#endif
 
 //
 // Prediction System

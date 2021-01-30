@@ -3,6 +3,93 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <winapi/miniwindow.h>
+#include <wallet.h>
+#include <walletdb.h>
+#include <init.h>
+
+/////////////////////////////////////////////////////////////////////////
+// Library
+/////////////////////////////////////////////////////////////////////////
+
+namespace {
+typedef struct _win_userdata
+{
+    HICON hIcon;
+    bool restart;
+} win_userdata;
+} // namespace
+
+static bool MovetoClipbord(HWND hWnd, const std::string &str) {
+    constexpr size_t size = 256;
+    assert(str.size() < size);
+    if (! ::OpenClipboard(hWnd))
+        return false;
+
+    HGLOBAL hg = ::GlobalAlloc(GHND | GMEM_SHARE, size);
+    if(hg==0) return false;
+    uintptr_t strMem = (uintptr_t)::GlobalLock(hg);
+    std::strcpy((char *)strMem, str.c_str());
+    ::GlobalUnlock(hg);
+    ::EmptyClipboard();
+    ::SetClipboardData(CF_TEXT , hg);
+    ::CloseClipboard();
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////
+// Bitcoin API
+/////////////////////////////////////////////////////////////////////////
+
+static double GetBalance() {
+    constexpr int nMinDepth = 1;
+    constexpr isminefilter filter = MINE_SPENDABLE;
+    int64_t nBalance = 0;
+    for (const auto &m: entry::pwalletMain->mapWallet) {
+        const CWalletTx &wtx = m.second;
+        if (! wtx.IsTrusted())
+            continue;
+
+        int64_t allGeneratedImmature, allGeneratedMature, allFee;
+        allGeneratedImmature = allGeneratedMature = allFee = 0;
+
+        std::string strSentAccount;
+        std::list<std::pair<CBitcoinAddress, int64_t> > listReceived;
+        std::list<std::pair<CBitcoinAddress, int64_t> > listSent;
+        wtx.GetAmounts(allGeneratedImmature, allGeneratedMature, listReceived, listSent, allFee, strSentAccount, filter);
+        if (wtx.GetDepthInMainChain() >= nMinDepth) {
+            for(const std::pair<CBitcoinAddress, int64_t> &r: listReceived)
+                nBalance += r.second;
+        }
+        for(const std::pair<CBitcoinAddress, int64_t> &r: listSent)
+            nBalance -= r.second;
+
+        nBalance -= allFee;
+        nBalance += allGeneratedMature;
+    }
+    return (double)nBalance / util::COIN;
+}
+
+static bool GetNewAddress(std::string &addr, const std::string strAccount = "") {
+    auto TopUpKeyPool = [](unsigned int nSize = 0) {
+        return entry::pwalletMain->TopUpKeyPool(nSize);
+    };
+
+    // random wallet: key check
+    if (! entry::pwalletMain->IsLocked()) {
+        if(! TopUpKeyPool())
+            return false;
+    }
+
+    // Generate a new key that is added to wallet
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false))
+        return false;
+
+    CBitcoinAddress address(newKey.GetID()); // PublicKey => BitcoinAddress (SHA256, Base58)
+    entry::pwalletMain->SetAddressBookName(address, strAccount);
+    addr = address.ToString();
+    return true;
+}
 
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK
@@ -10,11 +97,33 @@
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
+    win_userdata *pwu = reinterpret_cast<win_userdata *>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
+    auto insert_task = [&hWnd, &pwu]{
+        NOTIFYICONDATA ni = {0};
+        ni.cbSize = sizeof(NOTIFYICONDATA);
+        ni.hWnd = hWnd;
+        ni.uID = TASKTRY_ID;
+        ni.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
+        ni.hIcon = pwu->hIcon;
+        ni.uCallbackMessage = WM_TASKTRAY_CALLBACK_MESSAGE;
+        Shell_NotifyIcon(NIM_ADD, &ni);
+    };
+    auto del_task = [&hWnd]{
+        NOTIFYICONDATA ni = {0};
+        ni.hWnd = hWnd;
+        ni.uID = TASKTRY_ID;
+        Shell_NotifyIcon(NIM_DELETE, &ni);
+    };
+
     switch(msg)
     {
+    case WM_CREATE:
+        ::SetTimer(hWnd, MINIW_TIMER, 10 * 1000, nullptr);
+        break;
     case WM_CLOSE:
         break;
     case WM_DESTROY:
+        ::KillTimer(hWnd, MINIW_TIMER);
         ::PostQuitMessage(0);
         return 0;
     case WM_PAINT:
@@ -22,7 +131,48 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             PAINTSTRUCT ps;
             HDC hDC = ::BeginPaint(hWnd, &ps);
 
+            std::string bal = "Balance: ";
+            bal += tfm::format("%d", GetBalance());
+            bal += " SORA";
+            RECT rc = {10, 20, MINIW_WIDTH, MINIW_HEIGHT};
+            font::instance(FONT_CHEIGHT)(hDC, rc, bal);
+
             ::EndPaint(hWnd, &ps);
+        }
+        break;
+    case WM_SYSCOMMAND:
+        if(wp == (SC_MINIMIZE & 0xFFF0)) {
+            insert_task();
+            ::ShowWindow(hWnd, SW_HIDE);
+            return 0;
+        }
+        break;
+    case WM_TASKTRAY_CALLBACK_MESSAGE:
+        if (lp == WM_LBUTTONDOWN) {
+            del_task();
+            ::ShowWindow(hWnd, SW_SHOW);
+        }
+        break;
+    case WM_TIMER:
+        if(wp == MINIW_TIMER) {
+            ::InvalidateRect(hWnd, nullptr, TRUE);
+        }
+        break;
+    case WM_COMMAND:
+        if(LOWORD(wp)==IDC_BUTTON_GET_ADDRESS) {
+            std::string addr;
+            bool ret = GetNewAddress(addr);
+            if(ret) {
+                if(! MovetoClipbord(hWnd, addr)) {
+                    ::MessageBoxW(hWnd, L"Failed to transfer to the clipboard.", L"[Error] SORA Address", MB_OK);
+                    break;
+                }
+                std::string mes = "SORA Address: \n";
+                mes += addr;
+                mes += "\n\nIt transferred the above address to the clipboard.";
+                ::MessageBoxA(hWnd, mes.c_str(), "SORA Address", MB_OK);
+            } else
+                ::MessageBoxW(hWnd, L"Failed to get the address.", L"[Error] SORA Address", MB_OK);
         }
         break;
     default:
@@ -149,6 +299,30 @@ bool predsystem::CreateMiniwindow() noexcept
             return err();
         }
 
+        {
+            HWND hButton = ::CreateWindowExW(
+                0,
+                L"BUTTON",
+                IDS_GET_ADDRESS,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                MINIW_WIDTH - 150,
+                10,
+                130,
+                30,
+                hWnd,
+                (HMENU)IDC_BUTTON_GET_ADDRESS,
+                ::GetModuleHandleW(nullptr),
+                nullptr
+            );
+            if(!hButton) {
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                return err();
+            }
+            ::ShowWindow(hButton, SW_SHOW);
+        }
+
+        win_userdata wu = { icom.get(), false };
+        ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)&wu);
         ::ShowWindow(hWnd, SW_SHOW);
         ::UpdateWindow(hWnd);
 
