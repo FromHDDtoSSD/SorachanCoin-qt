@@ -604,7 +604,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/winapi/drivebase.h \
     src/winapi/drivewin.h \
     src/winapi/sectorbase.h \
-    src/winapi/sectorwin.h
+    src/winapi/sectorwin.h \
+    src/winapi/miniwindow.h \
+    src/winapi/common.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -780,7 +782,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/winapi/drivebase.cpp \
     src/winapi/drivewin.cpp \
     src/winapi/sectorbase.cpp \
-    src/winapi/sectorwin.cpp
+    src/winapi/sectorwin.cpp \
+    src/winapi/miniwindow.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

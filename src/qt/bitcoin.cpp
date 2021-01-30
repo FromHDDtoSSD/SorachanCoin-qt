@@ -31,6 +31,10 @@
 #include <QLabel>
 #include <QTimer>
 
+#ifdef WIN32
+# include <winapi/common.h>
+#endif
+
 #if defined(BITCOIN_NEED_QT_PLUGINS) && !defined(_BITCOIN_QT_PLUGINS_INCLUDED)
 #define _BITCOIN_QT_PLUGINS_INCLUDED
 #define __INSURE__
@@ -175,7 +179,7 @@ public:
         shutWindow->show();
         label.show();
         shutdownRun obj;
-        QTimer::singleShot(1, &obj, SLOT(run()));
+        QTimer::singleShot(2, &obj, SLOT(run()));
         app->exec();
     }
     ~shutdownWindow() {
@@ -268,6 +272,35 @@ int main(int argc, char *argv[])
 
     app.processEvents();
     app.setQuitOnLastWindowClosed(false);
+
+#ifdef WIN32
+    if(map_arg::GetBoolArg("-miniw")) {
+        try {
+            if(entry::AppInit2()) {
+                if (splashref)
+                    splash.finish(nullptr);
+
+                // Place this here as guiref has to be defined if we don't want to lose URIs
+                qti_server::ipcInit(argc, argv);
+
+                predsystem::CreateMiniwindow();
+                guiref = 0;
+
+                shutdownWindow sdw(&app);
+
+                // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
+                boot::Shutdown(nullptr);
+            } else {
+                return 1;
+            }
+        } catch (std::exception &e) {
+            handleRunawayException(&e);
+        } catch (...) {
+            handleRunawayException(nullptr);
+        }
+        return 0;
+    }
+#endif
 
     try {
         // Regenerate startup link, to fix links to old versions

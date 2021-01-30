@@ -17,7 +17,9 @@
 #include <QAbstractItemDelegate>
 #include <QPainter>
 #include <allocator/qtsecure.h>
-#include <init.h>
+#ifdef WIN32
+# include <winapi/common.h>
+#endif
 
 #define DECORATION_SIZE 64
 #define NUM_ITEMS 3
@@ -245,7 +247,11 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
 
 void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
 {
+#ifdef WIN32
     predsystem::CreateBenchmark();
+#else
+    QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
+#endif
 }
 
 void OverviewPage::on_DriveVerifyCommandLinkButton_clicked()

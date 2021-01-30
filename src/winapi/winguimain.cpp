@@ -9,22 +9,6 @@
 
 #include <winapi/winguimain.h>
 #include <sync/lsync.h>
-#include <windows.h>
-#include <commctrl.h>
-#include <string>
-#include <sstream>
-#include <time.h>
-#include <shlobj.h>
-#include <util/logging.h>
-#include <libstr/cmstring.h>
-#include <init.h>
-
-constexpr int THREAD_TIMER_INTERVAL = 500;
-constexpr int DISK_MAX = 128;
-constexpr int THREAD_MAX = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
-constexpr int WINDOW_WIDTH = 700;
-constexpr int WINDOW_HEIGHT = 550;
-constexpr int PROGRESS_NUM = 9;
 
 /////////////////////////////////////////////////////////////////////////
 // prediction system LOG (char)
@@ -691,47 +675,6 @@ RECT &operator+=(RECT &rc, const int &d)
 } // namespace
 
 /////////////////////////////////////////////////////////////////////////
-// FONT
-/////////////////////////////////////////////////////////////////////////
-
-namespace {
-class font
-{
-private:
-    font(const font &)=delete;
-    font &operator=(const font &)=delete;
-    font(font &&)=delete;
-    font &operator=(font &&)=delete;
-
-    HFONT hFont;
-    font() {
-        hFont = ::CreateFontW(16, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_DONTCARE, nullptr);
-        if(! hFont)
-            throw std::runtime_error(CMString(IDS_ERROR_FONT));
-    }
-    ~font() {
-        if(hFont) {
-            ::DeleteObject(hFont);
-            hFont = nullptr;
-        }
-    }
-public:
-    static const font &instance() {
-        static font fobj;
-        return fobj;
-    }
-    template <typename T> const font &operator()(HDC hDC, RECT rc, const T &obj) const {
-        std::wostringstream stream;
-        stream << obj;
-        HFONT prev = (HFONT)::SelectObject(hDC, hFont);
-        ::DrawTextW(hDC, stream.str().c_str(), -1, &rc, DT_WORDBREAK);
-        ::SelectObject(hDC, prev);
-        return *this;
-    }
-};
-} // namespace
-
-/////////////////////////////////////////////////////////////////////////
 // FUNCTION
 /////////////////////////////////////////////////////////////////////////
 
@@ -817,7 +760,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         PAINTSTRUCT ps;
         HDC hDC = ::BeginPaint(hWnd, &ps);
         RECT rc = { 2, 60, 430, 95 };
-        font::instance()(hDC, rc, IDS_PROGRESSBAR_0);
+        font::instance(FONT_CHEIGHT)(hDC, rc, IDS_PROGRESSBAR_0);
         for(int i = 1; i < PROGRESS_NUM; ++i)
         {
             std::wostringstream stream;
@@ -851,7 +794,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
                 break;
             }
             rc += 45;
-            font::instance()(hDC, rc, stream.str());
+            font::instance(FONT_CHEIGHT)(hDC, rc, stream.str());
         }
         ::EndPaint(hWnd, &ps);
     }
@@ -934,7 +877,7 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
         HDC hDC = ::GetDC(hProgress);
         RECT rc = { 5, 10, 300, 35 };
         std::wstring str = ProgressString::GetString(proginfo->id);
-        font::instance()(hDC, rc, str);
+        font::instance(FONT_CHEIGHT)(hDC, rc, str);
         ::ReleaseDC(hProgress, hDC);
         //::ValidateRect(hProgress, &rc); // Note: ::BeginPaint is called by ::CallWindowProcW in WM_PAINT.
     }

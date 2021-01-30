@@ -69,34 +69,4 @@ public:
     static bool AppInit2();
 };
 
-//
-// Prediction System
-// Note: At first, Win32 supported
-// Note: load independent the MessageLoop below.
-//
-namespace predsystem {
-
-    enum ret_code {
-        success = 0,
-        error_createwindow,
-        error_initddk,
-        error_createobject,
-        error_outofmemory,
-    };
-
-    struct result {
-        intptr_t window_ret;
-        ret_code ret;
-        std::string e;
-        std::vector<uint8_t> vch;
-        result() {
-            window_ret = 0;
-            ret = success;
-        }
-    };
-
-    extern result CreateBenchmark() noexcept;
-
-} // namespace predsystem
-
 #endif

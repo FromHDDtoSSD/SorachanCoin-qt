@@ -6,6 +6,7 @@
 #define SORACHANCOIN_WINGUIMAIN_H
 #if defined(QT_GUI) && defined(WIN32)
 
+#include <winapi/common.h>
 #include <winapi/drivewin.h>
 #include <winapi/sectorwin.h>
 
@@ -66,11 +67,8 @@
 #define IDS_LANG_NO_CLOSE                    L"Can not change language while benchmark is running."
 #define IDS_BENCH_LOGSET_NO_CLOSE            L"Can not set a logs while benchmark is running."
 #define IDS_BENCH_START_NO_CLOSE             L"Already, The benchmark has been started."
-#define IDS_ERROR_CREATEWINDOW               L"To Process failed in CreateWindowEx."
-#define IDS_ERROR_CLASSREGISTER              L"To Process failed in RegisterClassEx."
 #define IDS_ERROR_BENCHMARK_START            L"Benchmark starting was failure.\n"
 #define IDS_ERROR_BENCHMARK_FAILURE          L"Benchmark starting was failure.\n(out of memory)"
-#define IDS_ERROR_FONT                       L"To Create fonts were failure."
 
 constexpr INT_PTR IDC_BUTTON_START    = 1000;
 constexpr INT_PTR IDC_BUTTON_STOP     = 1001;
@@ -89,6 +87,15 @@ constexpr int BENCH_SELECT_OFF        = 1;
 constexpr int RAND_STRENGTH_LOW       = 0;
 constexpr int RAND_STRENGTH_MID       = 1;
 constexpr int RAND_STRENGTH_HIGH      = 2;
+
+constexpr int THREAD_TIMER_INTERVAL   = 500;
+constexpr int DISK_MAX                = 128;
+constexpr int THREAD_MAX              = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
+constexpr int WINDOW_WIDTH            = 700;
+constexpr int WINDOW_HEIGHT           = 550;
+constexpr int PROGRESS_NUM            = 9;
+
+constexpr int FONT_CHEIGHT            = 16;
 
 #define ICO_MIMI                      100
 #define PROGRESS_ID(X)                ((INT_PTR)X)
