@@ -492,8 +492,10 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
         ::UpdateWindow(hWnd);
 
         MSG msg;
-        while (::GetMessageW(&msg, hWnd, 0, 0) > 0)
+        WINBOOL ret;
+        while ((ret=::GetMessageW(&msg, nullptr, 0, 0))!=0)
         {
+            if(ret==-1) break;
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
         }

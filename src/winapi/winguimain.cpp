@@ -1218,8 +1218,10 @@ predsystem::result predsystem::CreateBenchmark() noexcept
         SetCtrlWait(hWnd, wu.pci);
 
         MSG msg;
-        while (::GetMessageW(&msg, hWnd, 0, 0) > 0)
+        WINBOOL ret;
+        while ((ret=::GetMessageW(&msg, nullptr, 0, 0))!=0)
         {
+            if(ret==-1) break;
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
         }
