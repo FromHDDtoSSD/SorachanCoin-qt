@@ -11,9 +11,14 @@
 #define IDS_MINIW_TITLE                        L"SorachanCoin-Core mini window"
 #define IDS_MINIW_WINDOWCLASSNAME              L"prediction-system-mini-window"
 #define IDS_MINIW_HIDECLASSNAME                L"prediction-system-mini-hide"
-#define IDS_GET_ADDRESS                        L"new address"
+#define IDS_BUTTON_GET_ADDRESS                 _("deposit address").c_str()
+#define IDS_EDIT_WALLET_STATUS                 _("").c_str()
+#define IDM_TO_STAKING                         _("staking ...").c_str()
+#define IDM_TO_UNLOCK                          _("unlock SORA").c_str()
 
 constexpr int IDC_BUTTON_GET_ADDRESS = 2000;
+constexpr int IDC_BUTTON_WALLET_STATUS = 2001;
+constexpr int IDC_EDIT_WALLET_STATUS = 2002;
 
 constexpr int MINIW_WIDTH = 500;
 constexpr int MINIW_HEIGHT = 150;

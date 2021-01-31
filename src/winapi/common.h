@@ -19,6 +19,8 @@
 # define IDS_ERROR_CLASSREGISTER              L"To Process failed in RegisterClassEx."
 # define IDS_ERROR_FONT                       L"To Create fonts were failure."
 
+# define TRANS_STRING(str)                    (_(str)).c_str()
+
 class font
 {
 private:

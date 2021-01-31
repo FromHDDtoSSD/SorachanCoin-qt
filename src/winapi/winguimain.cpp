@@ -11,6 +11,12 @@
 #include <sync/lsync.h>
 
 /////////////////////////////////////////////////////////////////////////
+// Bitcoin API
+/////////////////////////////////////////////////////////////////////////
+
+
+
+/////////////////////////////////////////////////////////////////////////
 // prediction system LOG (char)
 /////////////////////////////////////////////////////////////////////////
 
@@ -1212,7 +1218,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
         SetCtrlWait(hWnd, wu.pci);
 
         MSG msg;
-        while (::GetMessageW(&msg, nullptr, 0, 0) > 0)
+        while (::GetMessageW(&msg, hWnd, 0, 0) > 0)
         {
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);

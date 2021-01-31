@@ -6,14 +6,24 @@
 #include <wallet.h>
 #include <walletdb.h>
 #include <init.h>
+#include <util/thread.h>
+#include <allocator/allocators.h>
+#include <rpc/bitcoinrpc.h>
+#include <cleanse/cleanse.h>
 
 /////////////////////////////////////////////////////////////////////////
 // Library
 /////////////////////////////////////////////////////////////////////////
 
 namespace {
+typedef struct _ctrl_info {
+    HWND hDepositButton;
+    HWND hWalletButton;
+    HWND hPassEdit;
+} ctrl_info;
 typedef struct _win_userdata
 {
+    ctrl_info *ci;
     HICON hIcon;
     bool restart;
 } win_userdata;
@@ -53,8 +63,8 @@ static double GetBalance() {
         allGeneratedImmature = allGeneratedMature = allFee = 0;
 
         std::string strSentAccount;
-        std::list<std::pair<CBitcoinAddress, int64_t> > listReceived;
-        std::list<std::pair<CBitcoinAddress, int64_t> > listSent;
+        std::list<std::pair<CBitcoinAddress, int64_t>> listReceived;
+        std::list<std::pair<CBitcoinAddress, int64_t>> listSent;
         wtx.GetAmounts(allGeneratedImmature, allGeneratedMature, listReceived, listSent, allFee, strSentAccount, filter);
         if (wtx.GetDepthInMainChain() >= nMinDepth) {
             for(const std::pair<CBitcoinAddress, int64_t> &r: listReceived)
@@ -91,12 +101,66 @@ static bool GetNewAddress(std::string &addr, const std::string strAccount = "") 
     return true;
 }
 
+static void ThreadTopUpKeyPool(void *parg) {
+    (void)parg;
+    // Make this thread recognisable as the key-topping-up thread
+    bitthread::manage::RenameThread(strCoinName "-key-top");
+    entry::pwalletMain->TopUpKeyPool();
+}
+
+static bool IsLockedWallet() {
+    return entry::pwalletMain->IsLocked();
+}
+
+static bool IsCryptedWallet() {
+    return entry::pwalletMain->IsCrypted();
+}
+
+static bool UnlockWalletStake(const SecureString &strWalletPass) {
+    if(! IsCryptedWallet())
+        return false;
+    if(! IsLockedWallet()) {
+        CWallet::fWalletUnlockMintOnly = true;
+        return true;
+    }
+
+    if (strWalletPass.length() > 0) {
+        if (! entry::pwalletMain->Unlock(strWalletPass))
+            return false;
+    } else
+        return false;
+
+    // [DEBUG] ::fprintf_s(stdout, "Unlock ThreadTopUpKeyPool\n");
+    if(! bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr))
+        return false;
+
+    CWallet::fWalletUnlockMintOnly = true;
+    return true;
+}
+
+static bool LockWallet() {
+    if(! IsCryptedWallet())
+        return false;
+    if(IsLockedWallet())
+        return true;
+
+    // Note: auto wallet lock in RPC thread, to disabled
+    {
+        LOCK(CRPCTable::cs_nWalletUnlockTime);
+        entry::pwalletMain->Lock();
+        CRPCTable::nWalletUnlockTime = 0;
+    }
+    CWallet::fWalletUnlockMintOnly = false;
+    return true;
+}
+
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK
 /////////////////////////////////////////////////////////////////////////
 
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
+    const RECT rc = {10, 20, MINIW_WIDTH, MINIW_HEIGHT};
     win_userdata *pwu = reinterpret_cast<win_userdata *>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
     auto insert_task = [&hWnd, &pwu]{
         NOTIFYICONDATA ni = {0};
@@ -134,7 +198,6 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             std::string bal = "Balance: ";
             bal += tfm::format("%d", GetBalance());
             bal += " SORA";
-            RECT rc = {10, 20, MINIW_WIDTH, MINIW_HEIGHT};
             font::instance(FONT_CHEIGHT)(hDC, rc, bal);
 
             ::EndPaint(hWnd, &ps);
@@ -154,8 +217,8 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
         }
         break;
     case WM_TIMER:
-        if(wp == MINIW_TIMER) {
-            ::InvalidateRect(hWnd, nullptr, TRUE);
+        if(wp==MINIW_TIMER) {
+            ::InvalidateRect(hWnd, &rc, TRUE);
         }
         break;
     case WM_COMMAND:
@@ -164,15 +227,40 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             bool ret = GetNewAddress(addr);
             if(ret) {
                 if(! MovetoClipbord(hWnd, addr)) {
-                    ::MessageBoxW(hWnd, L"Failed to transfer to the clipboard.", L"[Error] SORA Address", MB_OK);
+                    ::MessageBoxA(hWnd, TRANS_STRING("Failed to transfer to the clipboard."), TRANS_STRING("[Error] SORA Address"), MB_OK);
                     break;
                 }
-                std::string mes = "SORA Address: \n";
+                std::string mes = _("SORA Address: \n");
                 mes += addr;
-                mes += "\n\nIt transferred the above address to the clipboard.";
-                ::MessageBoxA(hWnd, mes.c_str(), "SORA Address", MB_OK);
+                mes += _("\n\nIt transferred the above address to the clipboard.");
+                ::MessageBoxA(hWnd, mes.c_str(), TRANS_STRING("SORA Address"), MB_OK);
             } else
-                ::MessageBoxW(hWnd, L"Failed to get the address.", L"[Error] SORA Address", MB_OK);
+                ::MessageBoxA(hWnd, TRANS_STRING("Failed to get the address."), TRANS_STRING("[Error] SORA Address"), MB_OK);
+        } else if (LOWORD(wp)==IDC_BUTTON_WALLET_STATUS) {
+            if(IsLockedWallet()) {
+                constexpr size_t max_size = 100;
+                char pass[max_size]; // stack passphrase
+                ::GetWindowTextA(pwu->ci->hPassEdit, pass, max_size-1);
+                std::string strPass = pass;
+                cleanse::OPENSSL_cleanse(pass, max_size); // stack cleanse
+                SecureString strWalletPass;
+                strWalletPass.reserve(max_size);
+                strWalletPass(strPass); // strPass cleanse
+                // [DEBUG] ::fprintf_s(stdout, strWalletPass.c_str());
+                if(UnlockWalletStake(strWalletPass)) {
+                    ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_STAKING);
+                } else {
+                    ::MessageBoxA(hWnd, TRANS_STRING("Faild to unlock wallet in stake."), TRANS_STRING("[Error] SORA unlock Stake PoS"), MB_OK | MB_ICONWARNING);
+                }
+                ::EmptyClipboard();
+                ::SetWindowTextA(pwu->ci->hPassEdit, "");
+            } else {
+                if(LockWallet()) {
+                    ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_UNLOCK);
+                } else {
+                    ::MessageBoxA(hWnd, TRANS_STRING("Failed to lock wallet."), TRANS_STRING("[ERROR] SORA lock wallet"), MB_OK | MB_ICONWARNING);
+                }
+            }
         }
         break;
     default:
@@ -258,6 +346,7 @@ bool predsystem::CreateMiniwindow() noexcept
     }
 
     INT_PTR winmain_ret = 0;
+    ctrl_info ci;
     do
     {
         const int desktopWidth = ::GetSystemMetrics(SM_CXSCREEN);
@@ -300,10 +389,10 @@ bool predsystem::CreateMiniwindow() noexcept
         }
 
         {
-            HWND hButton = ::CreateWindowExW(
+            HWND hButton = ::CreateWindowExA(
                 0,
-                L"BUTTON",
-                IDS_GET_ADDRESS,
+                "BUTTON",
+                IDS_BUTTON_GET_ADDRESS,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 MINIW_WIDTH - 150,
                 10,
@@ -314,20 +403,67 @@ bool predsystem::CreateMiniwindow() noexcept
                 ::GetModuleHandleW(nullptr),
                 nullptr
             );
-            if(!hButton) {
+            if(! hButton) {
                 logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
                 return err();
             }
             ::ShowWindow(hButton, SW_SHOW);
+            ci.hDepositButton = hButton;
         }
 
-        win_userdata wu = { icom.get(), false };
+        {
+            HWND hButton = ::CreateWindowExA(
+                0,
+                "BUTTON",
+                IDM_TO_UNLOCK,
+                WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
+                MINIW_WIDTH - 150,
+                50,
+                130,
+                30,
+                hWnd,
+                (HMENU)IDC_BUTTON_WALLET_STATUS,
+                ::GetModuleHandleW(nullptr),
+                nullptr
+            );
+            if(! hButton) {
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                return err();
+            }
+            ::ShowWindow(hButton, SW_SHOW);
+            ci.hWalletButton = hButton;
+        }
+
+        {
+            HWND hWallet = ::CreateWindowExA(
+                0,
+                "EDIT",
+                IDS_EDIT_WALLET_STATUS,
+                WS_CHILD | WS_VISIBLE | WS_BORDER | ES_PASSWORD,
+                10,
+                80,
+                320,
+                30,
+                hWnd,
+                (HMENU)IDC_EDIT_WALLET_STATUS,
+                ::GetModuleHandleW(nullptr),
+                nullptr
+            );
+            if(! hWallet) {
+                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                return err();
+            }
+            ::ShowWindow(hWallet, SW_SHOW);
+            ci.hPassEdit = hWallet;
+        }
+
+        win_userdata wu = { &ci, icom.get(), false };
         ::SetWindowLongPtrW(hWnd, GWLP_USERDATA, (LONG_PTR)&wu);
         ::ShowWindow(hWnd, SW_SHOW);
         ::UpdateWindow(hWnd);
 
         MSG msg;
-        while (::GetMessageW(&msg, nullptr, 0, 0) > 0)
+        while (::GetMessageW(&msg, hWnd, 0, 0) > 0)
         {
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
