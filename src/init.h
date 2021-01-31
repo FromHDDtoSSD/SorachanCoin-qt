@@ -66,7 +66,7 @@ public:
 
     static std::string HelpMessage();
     static void ExitTimeout(void *parg);
-    static bool AppInit2();
+    static bool AppInit2(bool restart=false);
 };
 
 #endif

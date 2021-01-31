@@ -15,6 +15,7 @@
 #define IDS_EDIT_WALLET_STATUS                 _("").c_str()
 #define IDM_TO_STAKING                         _("staking ...").c_str()
 #define IDM_TO_UNLOCK                          _("unlock SORA").c_str()
+#define IDM_TO_ENCRYPT                         _("encrypt SORA").c_str()
 
 constexpr int IDC_BUTTON_GET_ADDRESS = 2000;
 constexpr int IDC_BUTTON_WALLET_STATUS = 2001;

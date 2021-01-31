@@ -154,6 +154,15 @@ static bool LockWallet() {
     return true;
 }
 
+static bool EncryptWallet(const SecureString &strWalletPass) {
+    if (IsCryptedWallet())
+        return true;
+    if (strWalletPass.length() < 1)
+        return false;
+
+    return entry::pwalletMain->EncryptWallet(strWalletPass);
+}
+
 /////////////////////////////////////////////////////////////////////////
 // CALLBACK
 /////////////////////////////////////////////////////////////////////////
@@ -237,16 +246,31 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             } else
                 ::MessageBoxA(hWnd, TRANS_STRING("Failed to get the address."), TRANS_STRING("[Error] SORA Address"), MB_OK);
         } else if (LOWORD(wp)==IDC_BUTTON_WALLET_STATUS) {
-            if(IsLockedWallet()) {
+            auto get_edit = [&pwu](SecureString &strWalletPass) {
                 constexpr size_t max_size = 100;
                 char pass[max_size]; // stack passphrase
                 ::GetWindowTextA(pwu->ci->hPassEdit, pass, max_size-1);
                 std::string strPass = pass;
                 cleanse::OPENSSL_cleanse(pass, max_size); // stack cleanse
-                SecureString strWalletPass;
                 strWalletPass.reserve(max_size);
                 strWalletPass(strPass); // strPass cleanse
                 // [DEBUG] ::fprintf_s(stdout, strWalletPass.c_str());
+            };
+            if(! IsCryptedWallet()) {
+                SecureString strWalletPass;
+                get_edit(strWalletPass);
+                if(EncryptWallet(strWalletPass)) {
+                    ::MessageBoxA(hWnd, TRANS_STRING("The encryption in wallet was successful, therefore SORA will reload the blockchain."), TRANS_STRING("[Re Start] SorachanCoin"), MB_OK | MB_ICONINFORMATION);
+                    pwu->restart = true;
+                    ::PostMessageW(hWnd, WM_CLOSE, 0, 0);
+                } else {
+                    ::MessageBoxA(hWnd, TRANS_STRING("Failed to encrypt wallet."), TRANS_STRING("[Error] SORA"), MB_OK | MB_ICONWARNING);
+                }
+                ::EmptyClipboard();
+                ::SetWindowTextA(pwu->ci->hPassEdit, "");
+            } else if (IsLockedWallet()) {
+                SecureString strWalletPass;
+                get_edit(strWalletPass);
                 if(UnlockWalletStake(strWalletPass)) {
                     ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_STAKING);
                 } else {
@@ -261,6 +285,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
                     ::MessageBoxA(hWnd, TRANS_STRING("Failed to lock wallet."), TRANS_STRING("[ERROR] SORA lock wallet"), MB_OK | MB_ICONWARNING);
                 }
             }
+            ::InvalidateRect(hWnd, &rc, true);
         }
         break;
     default:
@@ -286,7 +311,7 @@ static LRESULT CALLBACK HideProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     return ::DefWindowProcW(hWnd, msg, wp, lp);
 }
 
-bool predsystem::CreateMiniwindow() noexcept
+bool predsystem::CreateMiniwindow(bool *restart) noexcept
 {
     auto unregister_wc = []{
         ::UnregisterClassW(IDS_MINIW_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr));
@@ -309,6 +334,9 @@ bool predsystem::CreateMiniwindow() noexcept
     private:
         HICON hIcon;
     };
+
+    if(restart)
+        *restart = false;
 
     icon_manage icom;
     WNDCLASSEX wh = {0};
@@ -345,7 +373,7 @@ bool predsystem::CreateMiniwindow() noexcept
         return err();
     }
 
-    INT_PTR winmain_ret = 0;
+    //INT_PTR winmain_ret = 0;
     ctrl_info ci;
     do
     {
@@ -412,10 +440,11 @@ bool predsystem::CreateMiniwindow() noexcept
         }
 
         {
+            const char *label = IsCryptedWallet() ? IDM_TO_UNLOCK: IDM_TO_ENCRYPT;
             HWND hButton = ::CreateWindowExA(
                 0,
                 "BUTTON",
-                IDM_TO_UNLOCK,
+                label,
                 WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON,
                 MINIW_WIDTH - 150,
                 50,
@@ -468,7 +497,9 @@ bool predsystem::CreateMiniwindow() noexcept
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
         }
-    } while(0);
+        if(restart)
+            *restart = wu.restart;
+    } while(0); // no loop
 
     unregister_wc();
     return true;

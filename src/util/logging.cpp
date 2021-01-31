@@ -44,6 +44,7 @@ bool BCLog::Logger::OpenDebugLog() {
     std::lock_guard<std::mutex> scoped_lock(m_file_mutex);
 
     assert(m_fileout == nullptr);
+    // if(m_fileout) ::fclose(m_fileout);
     assert(!m_file_path.empty());
     m_fileout = fsbridge::fopen(m_file_path, "a");
     if (! m_fileout)

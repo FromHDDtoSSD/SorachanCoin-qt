@@ -275,24 +275,29 @@ int main(int argc, char *argv[])
 
 #ifdef WIN32
     if(map_arg::GetBoolArg("-miniw")) {
+        bool restart = false;
         try {
-            if(entry::AppInit2()) {
-                if (splashref)
-                    splash.finish(nullptr);
+            do {
+                if(entry::AppInit2(restart)) {
+                    if (splashref)
+                        splash.finish(nullptr);
 
-                // Place this here as guiref has to be defined if we don't want to lose URIs
-                qti_server::ipcInit(argc, argv);
+                    // Place this here as guiref has to be defined if we don't want to lose URIs
+                    qti_server::ipcInit(argc, argv);
 
-                predsystem::CreateMiniwindow();
-                guiref = 0;
+                    predsystem::CreateMiniwindow(&restart);
+                    guiref = 0;
 
-                shutdownWindow sdw(&app);
+                    shutdownWindow sdw(&app);
 
-                // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
-                boot::Shutdown(nullptr);
-            } else {
-                return 1;
-            }
+                    // Shutdown the core and its threads, but don't exit Bitcoin-Qt here
+                    boot::Shutdown(nullptr);
+                } else {
+                    return 1;
+                }
+                // under development
+                restart = false;
+            } while(restart);
         } catch (std::exception &e) {
             handleRunawayException(&e);
         } catch (...) {

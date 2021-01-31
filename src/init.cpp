@@ -341,7 +341,7 @@ std::string entry::HelpMessage()
 // @pre Parameters should be parsed and config file should be read.
 //
 #define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
-bool entry::AppInit2()
+bool entry::AppInit2(bool restart/*=false*/)
 {
     // ********************************************************* Test (if DEBUG)
     CMString_test();
@@ -482,8 +482,10 @@ bool entry::AppInit2()
 
     // ********************************************************* log open
     I_DEBUG_CS("log open")
-    InitLogging();
-    OpenDebugFile();
+    if(restart==false) {
+        InitLogging();
+        OpenDebugFile();
+    }
 
     // ********************************************************* Step 3: parameter-to-internal-flags
     I_DEBUG_CS("Step 3: parameter-to-internal-flags")
@@ -588,7 +590,8 @@ bool entry::AppInit2()
     }
     static boost::interprocess::file_lock lock(pathLockFile.string().c_str());
     if (! lock.try_lock()) {
-        return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), strCoinName));
+        if(restart==false)
+            return InitError(strprintfc(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), strCoinName));
     }
 
 #if !defined(WIN32) && !defined(QT_GUI)

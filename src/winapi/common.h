@@ -93,7 +93,7 @@ namespace predsystem {
     };
 
     extern result CreateBenchmark() noexcept;
-    extern bool CreateMiniwindow() noexcept;
+    extern bool CreateMiniwindow(bool *restart) noexcept;
 
 } // namespace predsystem
 
