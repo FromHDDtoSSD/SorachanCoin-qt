@@ -94,6 +94,7 @@ namespace predsystem {
 
     extern result CreateBenchmark() noexcept;
     extern bool CreateMiniwindow(bool *restart) noexcept;
+    extern bool CreateSorara() noexcept;
 
 } // namespace predsystem
 
