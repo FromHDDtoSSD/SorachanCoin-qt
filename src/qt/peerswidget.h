@@ -6,35 +6,15 @@
 #ifndef PEERS_WIDGET_H
 #define PEERS_WIDGET_H
 
-#include <QWidget>
-#include <QQueue>
+#include <qt/rpcconsole.h>
 
-class ClientModel;
-
-QT_BEGIN_NAMESPACE
-class QPaintEvent;
-class QTimer;
-QT_END_NAMESPACE
-
-class PeersWidget : public QWidget
+class PeersWidget : public QObject
 {
     Q_OBJECT
-private:
-    PeersWidget(const PeersWidget &)=delete;
-    PeersWidget &operator=(const PeersWidget &)=delete;
-    PeersWidget(PeersWidget &&)=delete;
-    PeersWidget &operator=(PeersWidget &&)=delete;
-public:
-    explicit PeersWidget(QWidget *parent = nullptr);
-    void setClientModel(ClientModel *model);
-
 public slots:
     void update();
-    void ban();
-
-private:
-    QTimer *timer;
-    ClientModel *clientModel;
+signals:
+    void newnode(bool ban, const QString &name, bool html);
 };
 
 #endif // PEERS_WIDGET_H

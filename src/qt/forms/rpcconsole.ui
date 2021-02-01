@@ -976,13 +976,6 @@ color: rgb(0, 170, 255);</string>
            </property>
           </widget>
          </item>
-         <item>
-          <widget class="QPushButton" name="banPushButton">
-           <property name="text">
-            <string>BAN</string>
-           </property>
-          </widget>
-         </item>
         </layout>
        </item>
       </layout>

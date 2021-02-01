@@ -8,6 +8,7 @@
 #define RPCCONSOLE_H
 
 #include <allocator/qtsecure.h>
+#include <qt/peerswidget.h>
 #include <QWidget>
 
 namespace Ui {
@@ -56,10 +57,13 @@ private slots:
     void hideEvent(QHideEvent *event);
     /** display messagebox with program parameters (same as bitcoin-qt --help) */
     void on_showCLOptionsButton_clicked();
+    /** Peers display **/
+    void on_updatePushButton_clicked();
 
 public slots:
     void clear();
     void message(int category, const QString &message, bool html = false);
+    void peers(bool ban, const QString &message, bool html = false);
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */

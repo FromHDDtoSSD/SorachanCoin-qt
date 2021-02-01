@@ -345,7 +345,28 @@ void RPCConsole::clear() {
                         tr("Type <b>help</b> for an overview of available commands.")), true);
 }
 
-void RPCConsole::message(int category, const QString &message, bool html) {
+void RPCConsole::peers(bool ban, const QString &message, bool html/*=false*/) {
+    (void)ban;
+    ui->peersMessagesWidget->document()->setDefaultStyleSheet(
+                "table { }"
+                "td { font-family: Monospace; } "
+                "td.time { color: #FFFFFF; padding-top: 10px; } "
+                "td.cmd-request { color: #FFFFFF; } "
+                "td.cmd-error { color: red; } "
+                "b { color: #006060; } "
+                );
+
+    QTime time = QTime::currentTime();
+    QString timeString = time.toString();
+    QString out;
+    out += "<table width=\"600\"><tr><td class=\"time\" width=\"65\">" + timeString + "</td><td>";
+    if(html) out += message;
+    else out += GUIUtil::HtmlEscape(message, true);
+    out += "</td></tr></table>";
+    ui->peersMessagesWidget->append(out);
+}
+
+void RPCConsole::message(int category, const QString &message, bool html/*=false*/) {
     QTime time = QTime::currentTime();
     QString timeString = time.toString();
     QString out;
@@ -407,7 +428,8 @@ void RPCConsole::browseHistory(int offset) {
 void RPCConsole::startExecutor() {
     QThread *thread = new (std::nothrow) QThread;
     RPCExecutor *executor = new (std::nothrow) RPCExecutor;
-    if(!thread || !executor)
+    PeersWidget *pw = new (std::nothrow) PeersWidget;
+    if(!thread || !executor || !pw)
         throw qt_error("RPCConsole Failed to allocate memory.", this);
     executor->moveToThread(thread);
 
@@ -417,6 +439,10 @@ void RPCConsole::startExecutor() {
     connect(executor, SIGNAL(reply(int,QString)), this, SLOT(message(int,QString)));
     // Requests from this object must go to executor
     connect(this, SIGNAL(cmdRequest(QString)), executor, SLOT(request(QString)));
+    // Peers from executor object must go to this object
+    connect(pw, SIGNAL(newnode(bool,QString,bool)), this, SLOT(peers(bool,QString,bool)));
+    // Peers connect
+    connect(ui->updatePushButton, SIGNAL(clicked()), pw, SLOT(update()));
     // On stopExecutor signal
     // - queue executor for deletion (in execution thread)
     // - quit the Qt event loop in the execution thread
