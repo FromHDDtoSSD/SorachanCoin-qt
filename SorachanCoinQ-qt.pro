@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.1.10
+VERSION = 3.2.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -607,7 +607,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/winapi/sectorwin.h \
     src/winapi/miniwindow.h \
     src/winapi/common.h \
-    src/winapi/sorara.h
+    src/winapi/p2pwebsorara.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -785,7 +785,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/winapi/sectorbase.cpp \
     src/winapi/sectorwin.cpp \
     src/winapi/miniwindow.cpp \
-    src/winapi/sorara.cpp
+    src/winapi/p2pwebsorara.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc
@@ -807,7 +807,8 @@ FORMS += \
     src/qt/forms/multisigaddressentry.ui \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
-    src/qt/forms/secondauthdialog.ui
+    src/qt/forms/secondauthdialog.ui \
+    src/qt/forms/p2pwebsorara.ui
 
 contains(USE_QRCODE, 1) {
     HEADERS += src/qt/qrcodedialog.h

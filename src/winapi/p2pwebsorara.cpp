@@ -2,7 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <winapi/sorara.h>
+#include <winapi/p2pwebsorara.h>
+#include <QThread>
 #include <wallet.h>
 #include <walletdb.h>
 #include <init.h>
@@ -10,6 +11,102 @@
 #include <prevector/prevector.h>
 #include <map>
 #include <libstr/cmstring.h>
+#include <allocator/qtsecure.h>
+
+#include "ui_p2pwebsorara.h"
+
+/////////////////////////////////////////////////////////////////////////
+// SORARA project.
+// p2p web and p2p message on the Blockchain
+//
+// encode: UTF-8 (because no limit size.)
+// data: independent DB
+// blockchain: sha256 hash (32bytes) or qhash to sha256 (32bytes)
+/////////////////////////////////////////////////////////////////////////
+
+/////////////////////////////////////////////////////////////////////////
+// thread
+/////////////////////////////////////////////////////////////////////////
+
+class SoraraTherad : public QObject {
+    Q_OBJECT
+public:
+    SoraraTherad() {}
+public slots:
+    void start() {}
+    void reload();
+    void messagesend();
+signals:
+    void webRequest(const QString &url, bool html);
+    void messageRequest(const QString &message, bool html);
+};
+
+#include "p2pwebsorara.moc"
+
+/////////////////////////////////////////////////////////////////////////
+// Qt
+/////////////////////////////////////////////////////////////////////////
+
+SoraraWidget::SoraraWidget(QWidget *parent) : QWidget(parent), ui(new (std::nothrow) Ui::SoraraWidget) {
+    if(! ui)
+        throw qt_error("SoraraWidget Failed to allocate memory.", this);
+    ui->setupUi(this);
+
+    // Sorara
+    ui->contentsTextEdit->installEventFilter(this);
+    ui->messagesTextEdit->installEventFilter(this);
+    connect(ui->reloadPushButton, SIGNAL(clicked()), this, SLOT(reload()));
+    connect(ui->messagesendPushButton, SIGNAL(clicked()), this, SLOT(messagesend()));
+
+    startSorara();
+}
+
+SoraraWidget::~SoraraWidget() {
+    emit stopSorara();
+    delete ui;
+}
+
+void SoraraWidget::startSorara() {
+    QThread *thread = new (std::nothrow) QThread;
+    SoraraTherad *executor = new (std::nothrow) SoraraTherad;
+    if(!thread || !executor)
+        throw qt_error("SoraraWidget Failed to allocate memory.", this);
+    executor->moveToThread(thread);
+
+    // Notify executor when thread started (in executor thread)
+    connect(thread, SIGNAL(started()), executor, SLOT(start()));
+    // executor object must go to this object
+    connect(executor, SIGNAL(webRequest(QString,bool)), this, SLOT(web(QString,bool)));
+    connect(executor, SIGNAL(messageRequest(QString,bool)), this, SLOT(message(QString,bool)));
+    // connect button
+    connect(ui->reloadPushButton, SIGNAL(clicked()), this, SLOT(reload()));
+    connect(ui->messagesendPushButton, SIGNAL(clicked()), this, SLOT(messagesend()));
+    // finish thread connect
+    connect(this, SIGNAL(stopSorara()), executor, SLOT(deleteLater()));
+    connect(this, SIGNAL(stopSorara()), thread, SLOT(quit()));
+    connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
+    thread->start();
+}
+
+// slot (callback SoraraWidget, p2pweb reloadPushButton clicked())
+void SoraraTherad::reload() {
+
+}
+
+// slot (callback SoraraWidget, p2pmessage messagesendPushButton clicked())
+void SoraraTherad::messagesend() {
+
+}
+
+// slot (callback SoraraTherad, webRequest)
+void SoraraWidget::web(const QString &contents, bool html) {
+
+}
+
+// slot (callback SoraraTherad, messageRequest)
+void SoraraWidget::message(const QString &message, bool html) {
+
+}
 
 /////////////////////////////////////////////////////////////////////////
 // Library
