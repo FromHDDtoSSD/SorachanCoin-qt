@@ -413,6 +413,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/mintingtablemodel.h \
     src/qt/mintingview.h \
     src/qt/peerswidget.h \
+    src/qt/syncwait.h \
     src/kernelrecord.h \
     src/alert.h \
     src/addrman.h \
@@ -627,6 +628,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/mintingtablemodel.cpp \
     src/qt/mintingview.cpp \
     src/qt/peerswidget.cpp \
+    src/qt/syncwait.cpp \
     src/kernelrecord.cpp \
     src/alert.cpp \
     src/version.cpp \
@@ -808,7 +810,8 @@ FORMS += \
     src/qt/forms/multisiginputentry.ui \
     src/qt/forms/multisigdialog.ui \
     src/qt/forms/secondauthdialog.ui \
-    src/qt/forms/p2pwebsorara.ui
+    src/qt/forms/p2pwebsorara.ui \
+    src/qt/forms/syncview.ui
 
 contains(USE_QRCODE, 1) {
     HEADERS += src/qt/qrcodedialog.h

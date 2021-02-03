@@ -17,6 +17,9 @@
    <string notr="true">background-image: url(:/images/bkg2);
 color: rgb(0, 170, 255);</string>
   </property>
+  <property name="locale">
+   <locale language="English" country="UnitedStates"/>
+  </property>
   <layout class="QVBoxLayout" name="verticalLayout_2">
    <item>
     <widget class="QTabWidget" name="tabWidget">

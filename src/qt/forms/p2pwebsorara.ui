@@ -20,7 +20,8 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">color: rgb(0, 209, 255);</string>
+   <string notr="true">background-image: url(:/images/bkg2);
+color: rgb(0, 170, 255);</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
@@ -41,9 +42,9 @@
          <property name="geometry">
           <rect>
            <x>0</x>
-           <y>50</y>
-           <width>971</width>
-           <height>491</height>
+           <y>40</y>
+           <width>981</width>
+           <height>391</height>
           </rect>
          </property>
         </widget>
@@ -53,7 +54,7 @@
            <x>0</x>
            <y>10</y>
            <width>971</width>
-           <height>31</height>
+           <height>21</height>
           </rect>
          </property>
         </widget>
@@ -61,7 +62,7 @@
          <property name="geometry">
           <rect>
            <x>850</x>
-           <y>540</y>
+           <y>440</y>
            <width>121</width>
            <height>23</height>
           </rect>
@@ -81,7 +82,7 @@
            <x>0</x>
            <y>0</y>
            <width>971</width>
-           <height>531</height>
+           <height>441</height>
           </rect>
          </property>
         </widget>
@@ -89,9 +90,9 @@
          <property name="geometry">
           <rect>
            <x>0</x>
-           <y>530</y>
+           <y>450</y>
            <width>881</width>
-           <height>31</height>
+           <height>21</height>
           </rect>
          </property>
         </widget>
@@ -99,9 +100,9 @@
          <property name="geometry">
           <rect>
            <x>890</x>
-           <y>530</y>
+           <y>450</y>
            <width>81</width>
-           <height>31</height>
+           <height>21</height>
           </rect>
          </property>
          <property name="text">

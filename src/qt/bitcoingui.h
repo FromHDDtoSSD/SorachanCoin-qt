@@ -24,6 +24,8 @@ class Notificator;
 class RPCConsole;
 class AboutDialog;
 class OptionsDialog;
+class SoraraWidget;
+class SyncWidget;
 QT_BEGIN_NAMESPACE
 class QLabel;
 class QLineEdit;
@@ -82,6 +84,8 @@ private:
     SignVerifyMessageDialog *signVerifyMessageDialog;
     SecondAuthDialog *secondAuthDialog;
     MultisigDialog *multisigPage;
+    SoraraWidget *soraraWidget;
+    SyncWidget *syncWidget;
 
     QLabel *labelEncryptionIcon;
     QLabel *labelConnectionsIcon;
@@ -97,6 +101,8 @@ private:
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
+    QAction *soraraAction;
+    QAction *syncAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
     QAction *secondAuthAction;
@@ -174,6 +180,10 @@ private slots:
     void gotoMintingPage();
     /** Switch to address book page */
     void gotoAddressBookPage();
+    /** Switch to SORARA page */
+    void gotoSoraraWidget();
+    /** Open to Sync page (no sync) */
+    void gotoSyncWidget();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */

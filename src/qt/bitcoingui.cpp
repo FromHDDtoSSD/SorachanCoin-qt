@@ -28,6 +28,8 @@
 #include <ui_interface.h>
 #include <qt/rpcconsole.h>
 #include <qt/mintingview.h>
+#include <winapi/p2pwebsorara.h>
+#include <qt/syncwait.h>
 #include <wallet.h>
 #include <miner.h>
 #ifdef Q_OS_MAC
@@ -142,6 +144,10 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
         multisigPage = new MultisigDialog(0);
 
+        soraraWidget = new SoraraWidget;
+
+        syncWidget = new SyncWidget;
+
         centralWidget = new QStackedWidget(this);
         centralWidget->addWidget(overviewPage);
         centralWidget->addWidget(transactionsPage);
@@ -149,6 +155,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         centralWidget->addWidget(addressBookPage);
         centralWidget->addWidget(receiveCoinsPage);
         centralWidget->addWidget(sendCoinsPage);
+        centralWidget->addWidget(soraraWidget);
+        centralWidget->addWidget(syncWidget);
         setCentralWidget(centralWidget);
 
         // Create status bar
@@ -237,6 +245,8 @@ BitcoinGUI::~BitcoinGUI() {
     delete multisigPage;
     delete secondAuthDialog;
     delete signVerifyMessageDialog;
+    delete soraraWidget;
+    delete syncWidget;
 }
 
 void BitcoinGUI::createActions() {
@@ -280,6 +290,18 @@ void BitcoinGUI::createActions() {
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
     tabGroup->addAction(addressBookAction);
 
+    soraraAction = new QAction(QIcon(":/icons/address-book"), tr("&SORARA"), this);
+    soraraAction->setToolTip(tr("Welcome to SORARA"));
+    soraraAction->setCheckable(true);
+    soraraAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+    tabGroup->addAction(soraraAction);
+
+    syncAction = new QAction(QIcon(":/icons/history"), tr("&Sync"), this);
+    syncAction->setToolTip(tr("Synchronizing ... information"));
+    syncAction->setCheckable(true);
+    syncAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
+    tabGroup->addAction(syncAction);
+
     multisigAction = new QAction(QIcon(":/icons/send"), tr("Multisig"), this);
     multisigAction->setStatusTip(tr("Open window for working with multisig addresses"));
     tabGroup->addAction(multisigAction);
@@ -296,6 +318,10 @@ void BitcoinGUI::createActions() {
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
+    connect(soraraAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(soraraAction, SIGNAL(triggered()), this, SLOT(gotoSoraraWidget()));
+    connect(syncAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(syncAction, SIGNAL(triggered()), this, SLOT(gotoSyncWidget()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
 
@@ -422,6 +448,9 @@ void BitcoinGUI::createToolBars() {
     toolbar->addAction(historyAction);
     toolbar->addAction(mintingAction);
     toolbar->addAction(addressBookAction);
+    //toolbar->addAction(multisigAction);
+    toolbar->addAction(soraraAction);
+    //toolbar->addAction(syncAction);
 
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
     toolbar2->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
@@ -858,6 +887,24 @@ void BitcoinGUI::gotoAddressBookPage() {
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), addressBookPage, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoSoraraWidget() {
+    soraraAction->setChecked(true);
+    centralWidget->setCurrentWidget(soraraWidget);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), soraraWidget, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoSyncWidget() {
+    syncAction->setChecked(true);
+    centralWidget->setCurrentWidget(syncWidget);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), syncWidget, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage() {
