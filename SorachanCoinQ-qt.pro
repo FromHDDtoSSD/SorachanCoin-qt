@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.2.10
+VERSION = 3.3.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -608,7 +608,11 @@ HEADERS += src/qt/bitcoingui.h \
     src/winapi/sectorwin.h \
     src/winapi/miniwindow.h \
     src/winapi/common.h \
-    src/winapi/p2pwebsorara.h
+    src/winapi/p2pwebsorara.h \
+    src/sorara/soraramodel.h \
+    src/sorara/drivemodel.h \
+    src/sorara/soraradb.h \
+    src/sorara/soraranet.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -787,7 +791,11 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/winapi/sectorbase.cpp \
     src/winapi/sectorwin.cpp \
     src/winapi/miniwindow.cpp \
-    src/winapi/p2pwebsorara.cpp
+    src/winapi/p2pwebsorara.cpp \
+    src/sorara/soraramodel.cpp \
+    src/sorara/drivemodel.cpp \
+    src/sorara/soraradb.cpp \
+    src/sorara/soraranet.cpp
 
 RESOURCES += \
     src/qt/bitcoin.qrc

@@ -8,10 +8,6 @@
 #include <winapi/common.h>
 #include <QWidget>
 
-/////////////////////////////////////////////////////////////////////////
-// Qt
-/////////////////////////////////////////////////////////////////////////
-
 namespace Ui {
     class SoraraWidget;
 }
@@ -26,6 +22,7 @@ public:
 public slots:
     void web(const QString &contents, bool html = false);
     void message(const QString &message, bool html = false);
+    void exportClicked();
 
 signals:
     void stopSorara();

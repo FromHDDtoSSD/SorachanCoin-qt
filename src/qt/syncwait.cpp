@@ -81,7 +81,7 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
             int hours = remain/3600;
             int minutes = (remain-hours*3600)/60;
             int sec = remain-hours*3600-minutes*60;
-            if(sec>0) {
+            if(remain>0) {
                 ui->labelStatus->setVisible(true);
                 ui->labelRemain->setVisible(true);
                 ui->labelStatus->setText(tr("Synchronizing ..."));

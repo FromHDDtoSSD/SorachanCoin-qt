@@ -10,8 +10,15 @@
 #include <vector>
 #include <prevector/prevector.h>
 #include <map>
+#include <QTime>
 #include <libstr/cmstring.h>
 #include <allocator/qtsecure.h>
+#include <guiutil.h>
+
+#include <sorara/drivemodel.h>
+#include <sorara/soraradb.h>
+#include <sorara/soraramodel.h>
+#include <sorara/soraranet.h>
 
 #include "ui_p2pwebsorara.h"
 
@@ -32,10 +39,12 @@ class SoraraTherad : public QObject {
     Q_OBJECT
 public:
     SoraraTherad() {}
+
 public slots:
     void start() {}
     void reload();
     void messagesend();
+
 signals:
     void webRequest(const QString &url, bool html);
     void messageRequest(const QString &message, bool html);
@@ -44,7 +53,7 @@ signals:
 #include "p2pwebsorara.moc"
 
 /////////////////////////////////////////////////////////////////////////
-// Qt
+// Qt Widget
 /////////////////////////////////////////////////////////////////////////
 
 SoraraWidget::SoraraWidget(QWidget *parent) : QWidget(parent), ui(new (std::nothrow) Ui::SoraraWidget) {
@@ -55,8 +64,6 @@ SoraraWidget::SoraraWidget(QWidget *parent) : QWidget(parent), ui(new (std::noth
     // Sorara
     ui->contentsTextEdit->installEventFilter(this);
     ui->messagesTextEdit->installEventFilter(this);
-    connect(ui->reloadPushButton, SIGNAL(clicked()), this, SLOT(reload()));
-    connect(ui->messagesendPushButton, SIGNAL(clicked()), this, SLOT(messagesend()));
 
     startSorara();
 }
@@ -73,40 +80,73 @@ void SoraraWidget::startSorara() {
         throw qt_error("SoraraWidget Failed to allocate memory.", this);
     executor->moveToThread(thread);
 
-    // Notify executor when thread started (in executor thread)
     connect(thread, SIGNAL(started()), executor, SLOT(start()));
-    // executor object must go to this object
+
     connect(executor, SIGNAL(webRequest(QString,bool)), this, SLOT(web(QString,bool)));
     connect(executor, SIGNAL(messageRequest(QString,bool)), this, SLOT(message(QString,bool)));
-    // connect button
-    connect(ui->reloadPushButton, SIGNAL(clicked()), this, SLOT(reload()));
-    connect(ui->messagesendPushButton, SIGNAL(clicked()), this, SLOT(messagesend()));
-    // finish thread connect
+    connect(ui->reloadPushButton, SIGNAL(clicked()), executor, SLOT(reload()));
+    connect(ui->messagesendPushButton, SIGNAL(clicked()), executor, SLOT(messagesend()));
+
     connect(this, SIGNAL(stopSorara()), executor, SLOT(deleteLater()));
     connect(this, SIGNAL(stopSorara()), thread, SLOT(quit()));
     connect(thread, SIGNAL(finished()), thread, SLOT(deleteLater()));
     thread->start();
 }
 
-// slot (callback SoraraWidget, p2pweb reloadPushButton clicked())
+// slot (callback SoraraThread, p2pweb reloadPushButton)
 void SoraraTherad::reload() {
-
+    emit webRequest(QString("<p>Hello world p2p web!</p>"), true);
 }
 
-// slot (callback SoraraWidget, p2pmessage messagesendPushButton clicked())
+// slot (callback SoraraThread, p2pmessage messagesendPushButton)
 void SoraraTherad::messagesend() {
-
+    emit messageRequest(QString("<p>Hello world p2p message!</p>"), true);
 }
 
 // slot (callback SoraraTherad, webRequest)
 void SoraraWidget::web(const QString &contents, bool html) {
+    ui->contentsTextEdit->document()->setDefaultStyleSheet(
+                "table { }"
+                "td { font-family: Monospace; } "
+                "td.time { color: #FFFFFF; padding-top: 10px; } "
+                "td.cmd-request { color: #FFFFFF; } "
+                "td.cmd-error { color: red; } "
+                "b { color: #006060; } "
+                );
 
+    QTime time = QTime::currentTime();
+    QString timeString = time.toString();
+    QString out;
+    out += "<table width=\"600\"><tr><td class=\"time\" width=\"65\">" + timeString + "</td><td>";
+    if(html) out += contents;
+    else out += GUIUtil::HtmlEscape(contents, true);
+    out += "</td></tr></table>";
+    ui->contentsTextEdit->append(out);
 }
 
 // slot (callback SoraraTherad, messageRequest)
 void SoraraWidget::message(const QString &message, bool html) {
+    ui->messagesTextEdit->document()->setDefaultStyleSheet(
+                "table { }"
+                "td { font-family: Monospace; } "
+                "td.time { color: #FFFFFF; padding-top: 10px; } "
+                "td.cmd-request { color: #FFFFFF; } "
+                "td.cmd-error { color: red; } "
+                "b { color: #006060; } "
+                );
 
+    QTime time = QTime::currentTime();
+    QString timeString = time.toString();
+    QString out;
+    out += "<table width=\"600\"><tr><td class=\"time\" width=\"65\">" + timeString + "</td><td>";
+    if(html) out += message;
+    else out += GUIUtil::HtmlEscape(message, true);
+    out += "</td></tr></table>";
+    ui->messagesTextEdit->append(out);
 }
+
+// slot (callback bitcoingui)
+void SoraraWidget::exportClicked() {}
 
 /////////////////////////////////////////////////////////////////////////
 // Library

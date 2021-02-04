@@ -451,7 +451,7 @@ void BitcoinGUI::createToolBars() {
     toolbar->addAction(mintingAction);
     toolbar->addAction(addressBookAction);
     //toolbar->addAction(multisigAction);
-    toolbar->addAction(soraraAction);
+    //toolbar->addAction(soraraAction);
     //toolbar->addAction(syncAction);
 
     QToolBar *toolbar2 = addToolBar(tr("Actions toolbar"));
