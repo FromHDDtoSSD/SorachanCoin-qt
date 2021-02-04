@@ -224,7 +224,9 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         // Clicking on "Sign Message" in the receive coins page sends you to the sign message tab
         connect(receiveCoinsPage, SIGNAL(signMessage(QString)), this, SLOT(gotoSignMessageTab(QString)));
 
-        gotoOverviewPage();
+        //gotoOverviewPage();
+        connect(syncWidget, SIGNAL(gotoSyncToOverview()), this, SLOT(gotoOverviewPage()));
+        gotoSyncWidget();
 
     } catch (const std::bad_alloc &) {
         throw qt_error("BitcoinGUI Failed to allocate memory.", this);
@@ -494,6 +496,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel) {
         connect(clientModel, SIGNAL(error(QString,QString,bool)), this, SLOT(error(QString,QString,bool)));
 
         rpcConsole->setClientModel(clientModel);
+        syncWidget->setClientModel(clientModel);
         addressBookPage->setOptionsModel(clientModel->getOptionsModel());
         receiveCoinsPage->setOptionsModel(clientModel->getOptionsModel());
     }
@@ -731,7 +734,7 @@ void BitcoinGUI::updateMining() {
 }
 
 void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, const QString &detail) {
-    QString strTitle = tr("SorachanCoin") + " - ";
+    QString strTitle = tr(strCoinName) + " - ";
     // Default to information icon
     int nMBoxIcon = QMessageBox::Information;
     int nNotifyIcon = Notificator::Information;

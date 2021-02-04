@@ -8,6 +8,8 @@
 
 #include <QWidget>
 
+class ClientModel;
+
 namespace Ui {
     class SyncWidget;
 }
@@ -17,9 +19,20 @@ class SyncWidget : public QWidget
     Q_OBJECT
 public:
     explicit SyncWidget(QWidget *parent = nullptr);
+    ~SyncWidget();
+
+    void setClientModel(ClientModel *clientModel);
+
+public slots:
+    void progress(int count, int nTotalBlocks);
+    void exportClicked();
+
+signals:
+    void gotoSyncToOverview();
 
 private:
     Ui::SyncWidget *ui;
+    ClientModel *clientModel;
 };
 
 #endif

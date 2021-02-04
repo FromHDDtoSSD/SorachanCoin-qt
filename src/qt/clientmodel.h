@@ -31,6 +31,7 @@ class ClientModel : public QObject
 {
     Q_OBJECT
 private:
+    ClientModel()=delete;
     ClientModel(const ClientModel &)=delete;
     ClientModel &operator=(const ClientModel &)=delete;
     ClientModel(ClientModel &&)=delete;

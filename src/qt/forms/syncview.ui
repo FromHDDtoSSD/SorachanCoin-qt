@@ -6,13 +6,13 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>500</width>
+    <width>800</width>
     <height>300</height>
    </rect>
   </property>
   <property name="maximumSize">
    <size>
-    <width>500</width>
+    <width>800</width>
     <height>300</height>
    </size>
   </property>
@@ -20,31 +20,12 @@
    <string>Form</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">background-image: url(:/images/bkg2);
-color: rgb(0, 170, 255);</string>
+   <string notr="true">color: rgb(0, 170, 255);</string>
   </property>
   <property name="locale">
    <locale language="English" country="UnitedStates"/>
   </property>
   <layout class="QFormLayout" name="formLayout">
-   <item row="3" column="1">
-    <layout class="QHBoxLayout" name="horizontalLayout">
-     <item>
-      <widget class="QLabel" name="syncLabel">
-       <property name="text">
-        <string>Synchronizing ...</string>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
-   <item row="4" column="1">
-    <widget class="QProgressBar" name="syncProgressBar">
-     <property name="value">
-      <number>24</number>
-     </property>
-    </widget>
-   </item>
    <item row="0" column="1">
     <spacer name="verticalSpacer">
      <property name="orientation">
@@ -58,6 +39,51 @@ color: rgb(0, 170, 255);</string>
      </property>
     </spacer>
    </item>
+   <item row="1" column="0">
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>200</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="1" column="1">
+    <widget class="QLabel" name="labelExplain">
+     <property name="text">
+      <string>---</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="1">
+    <widget class="QLabel" name="labelRemain">
+     <property name="text">
+      <string>---</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLabel" name="labelStatus">
+       <property name="text">
+        <string>---</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item row="4" column="1">
+    <widget class="QProgressBar" name="progressbarSync">
+     <property name="value">
+      <number>24</number>
+     </property>
+    </widget>
+   </item>
    <item row="5" column="1">
     <spacer name="verticalSpacer_2">
      <property name="orientation">
@@ -70,20 +96,6 @@ color: rgb(0, 170, 255);</string>
       </size>
      </property>
     </spacer>
-   </item>
-   <item row="2" column="1">
-    <widget class="QLabel" name="remaintimeLabel">
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="1">
-    <widget class="QLabel" name="messageLabel">
-     <property name="text">
-      <string/>
-     </property>
-    </widget>
    </item>
   </layout>
  </widget>

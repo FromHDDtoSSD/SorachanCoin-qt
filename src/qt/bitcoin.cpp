@@ -324,7 +324,7 @@ int main(int argc, char *argv[])
 
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(entry::pwalletMain, &optionsModel);
-                window.setClientModel(&clientModel);
+                window.setClientModel(&clientModel); // clientmodel: bitcoingui => rpcconsole, syncWidget
                 window.setWalletModel(&walletModel);
 
                 // If -min option passed, start window minimized.
