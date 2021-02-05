@@ -26,6 +26,7 @@ class AboutDialog;
 class OptionsDialog;
 class SoraraWidget;
 class SyncWidget;
+class AutocheckpointsWidget;
 QT_BEGIN_NAMESPACE
 class QLabel;
 class QLineEdit;
@@ -86,6 +87,7 @@ private:
     MultisigDialog *multisigPage;
     SoraraWidget *soraraWidget;
     SyncWidget *syncWidget;
+    AutocheckpointsWidget *autocheckpointsWidget;
 
     QLabel *labelEncryptionIcon;
     QLabel *labelConnectionsIcon;
@@ -103,6 +105,7 @@ private:
     QAction *addressBookAction;
     QAction *soraraAction;
     QAction *syncAction;
+    QAction *autocheckpointsAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
     QAction *secondAuthAction;
@@ -184,6 +187,8 @@ private slots:
     void gotoSoraraWidget();
     /** Open to Sync page (no sync) */
     void gotoSyncWidget();
+    /** Switch to Autocheckpoints page */
+    void gotoAutocheckWidget();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */

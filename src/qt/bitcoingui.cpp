@@ -30,6 +30,7 @@
 #include <qt/mintingview.h>
 #include <winapi/p2pwebsorara.h>
 #include <qt/syncwait.h>
+#include <qt/autocheckpoints.h>
 #include <wallet.h>
 #include <miner.h>
 #ifdef Q_OS_MAC
@@ -138,15 +139,17 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
         sendCoinsPage = new SendCoinsDialog(this);
 
-        signVerifyMessageDialog = new SignVerifyMessageDialog(0);
+        signVerifyMessageDialog = new SignVerifyMessageDialog(nullptr);
 
-        secondAuthDialog = new SecondAuthDialog(0);
+        secondAuthDialog = new SecondAuthDialog(nullptr);
 
-        multisigPage = new MultisigDialog(0);
+        multisigPage = new MultisigDialog(nullptr);
 
-        soraraWidget = new SoraraWidget;
+        soraraWidget = new SoraraWidget(nullptr);
 
-        syncWidget = new SyncWidget;
+        syncWidget = new SyncWidget(nullptr);
+
+        autocheckpointsWidget = new AutocheckpointsWidget(nullptr);
 
         centralWidget = new QStackedWidget(this);
         centralWidget->addWidget(overviewPage);
@@ -249,6 +252,7 @@ BitcoinGUI::~BitcoinGUI() {
     delete signVerifyMessageDialog;
     delete soraraWidget;
     delete syncWidget;
+    delete autocheckpointsWidget;
 }
 
 void BitcoinGUI::createActions() {
@@ -304,6 +308,12 @@ void BitcoinGUI::createActions() {
     syncAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_8));
     tabGroup->addAction(syncAction);
 
+    autocheckpointsAction = new QAction(QIcon(":/icons/history"), tr("&Checkpoints"), this);
+    autocheckpointsAction->setToolTip(tr("Show your checkpoints information"));
+    autocheckpointsAction->setCheckable(true);
+    autocheckpointsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
+    tabGroup->addAction(autocheckpointsAction);
+
     multisigAction = new QAction(QIcon(":/icons/send"), tr("Multisig"), this);
     multisigAction->setStatusTip(tr("Open window for working with multisig addresses"));
     tabGroup->addAction(multisigAction);
@@ -324,6 +334,8 @@ void BitcoinGUI::createActions() {
     connect(soraraAction, SIGNAL(triggered()), this, SLOT(gotoSoraraWidget()));
     connect(syncAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(syncAction, SIGNAL(triggered()), this, SLOT(gotoSyncWidget()));
+    connect(autocheckpointsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(autocheckpointsAction, SIGNAL(triggered()), this, SLOT(gotoAutocheckWidget()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
 
@@ -449,6 +461,7 @@ void BitcoinGUI::createToolBars() {
     toolbar->addAction(receiveCoinsAction);
     toolbar->addAction(historyAction);
     toolbar->addAction(mintingAction);
+    toolbar->addAction(autocheckpointsAction);
     toolbar->addAction(addressBookAction);
     //toolbar->addAction(multisigAction);
     //toolbar->addAction(soraraAction);
@@ -908,6 +921,15 @@ void BitcoinGUI::gotoSyncWidget() {
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), syncWidget, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoAutocheckWidget() {
+    autocheckpointsAction->setChecked(true);
+    centralWidget->setCurrentWidget(autocheckpointsWidget);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), autocheckpointsWidget, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage() {
