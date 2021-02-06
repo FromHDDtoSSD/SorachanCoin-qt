@@ -416,6 +416,8 @@ HEADERS += src/qt/bitcoingui.h \
     src/qt/syncwait.h \
     src/qt/autocheckpoints.h \
     src/qt/autocheckpointsmodel.h \
+    src/qt/benchmarkpage.h \
+    src/qt/benchmarkmodel.h \
     src/kernelrecord.h \
     src/alert.h \
     src/addrman.h \
@@ -637,6 +639,8 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/syncwait.cpp \
     src/qt/autocheckpoints.cpp \
     src/qt/autocheckpointsmodel.cpp \
+    src/qt/benchmarkpage.cpp \
+    src/qt/benchmarkmodel.cpp \
     src/kernelrecord.cpp \
     src/alert.cpp \
     src/version.cpp \
@@ -824,7 +828,8 @@ FORMS += \
     src/qt/forms/secondauthdialog.ui \
     src/qt/forms/p2pwebsorara.ui \
     src/qt/forms/syncview.ui \
-    src/qt/forms/autocheckpoints.ui
+    src/qt/forms/autocheckpoints.ui \
+    src/qt/forms/benchmark.ui
 
 contains(USE_QRCODE, 1) {
     HEADERS += src/qt/qrcodedialog.h

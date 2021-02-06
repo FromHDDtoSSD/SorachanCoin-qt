@@ -13,11 +13,27 @@ AutocheckpointsWidget::AutocheckpointsWidget(QWidget *parent) :
     if(! ui)
         throw qt_error("AutocheckpointsWidget out of memory.", this);
     ui->setupUi(this);
+}
 
+AutocheckpointsWidget::~AutocheckpointsWidget() {
+    delete ui;
+}
+
+void AutocheckpointsWidget::setCheckpointsModel(CheckpointsModel *checkpointsModel) {
+    this->checkpointModel = checkpointModel;
+    connect(this->checkpointModel, SIGNAL(CheckpointsHardcode(const MapCheckpoints)), this, SLOT(update1(const MapCheckpoints)));
+    connect(this->checkpointModel, SIGNAL(CheckpointsAuto(const MapCheckpoints)), this, SLOT(update2(const MapCheckpoints)));
+}
+
+// slot (callback: AutocheckpointsModel: CheckpointsHardcode)
+void AutocheckpointsWidget::update1(const MapCheckpoints &hardcode) {
+
+}
+
+// slot (callback: AutocheckpointsModel: CheckpointsAuto)
+void AutocheckpointsWidget::update2(const MapCheckpoints &hardcode) {
 
 }
 
 // slot (callback: bitcoingui mainwindow: autocheckpoints tab clicked)
-void AutocheckpointsWidget::exportClicked() {
-
-}
+void AutocheckpointsWidget::exportClicked() {}

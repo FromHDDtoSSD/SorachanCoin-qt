@@ -239,6 +239,9 @@ namespace Checkpoints
         static bool AutoSendSyncCheckpoint();
         static bool IsMatureSyncCheckpoint();
 
+        static const MapCheckpoints &getMapCheckpoints() {
+            return mapCheckpoints;
+        }
         static uint256 &getHashSyncCheckpoint() {
             return Checkpoints::manage::hashSyncCheckpoint;
         }

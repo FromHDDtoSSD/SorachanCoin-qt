@@ -11,6 +11,7 @@
 #include <qt/clientmodel.h>
 #include <qt/walletmodel.h>
 #include <qt/optionsmodel.h>
+#include <qt/autocheckpointsmodel.h>
 #include <qt/guiutil.h>
 #include <qt/guiconstants.h>
 #include <init.h>
@@ -324,8 +325,10 @@ int main(int argc, char *argv[])
 
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(entry::pwalletMain, &optionsModel);
+                CheckpointsModel checkpointsModel(&optionsModel);
                 window.setClientModel(&clientModel); // clientmodel: bitcoingui => rpcconsole, syncWidget
                 window.setWalletModel(&walletModel);
+                window.setCheckpointsModel(&checkpointsModel);
 
                 // If -min option passed, start window minimized.
                 if(map_arg::GetBoolArg("-min"))

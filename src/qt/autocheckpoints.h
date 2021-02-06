@@ -6,22 +6,30 @@
 #define SORACHANCOIN_AUTOCHECKPOINTS_H
 
 #include <QWidget>
+#include <qt/autocheckpointsmodel.h>
 
 namespace Ui {
     class AutocheckpointsWidget;
 }
+class CheckpointsModel;
 
 class AutocheckpointsWidget : public QWidget
 {
     Q_OBJECT
 public:
-    explicit AutocheckpointsWidget(QWidget *parent=nullptr);
+    explicit AutocheckpointsWidget(QWidget *parent);
+    ~AutocheckpointsWidget();
+
+    void setCheckpointsModel(CheckpointsModel *checkpointsModel);
 
 public slots:
+    void update1(const MapCheckpoints &hardcode);
+    void update2(const MapCheckpoints &hardcode);
     void exportClicked();
 
 private:
     Ui::AutocheckpointsWidget *ui;
+    CheckpointsModel *checkpointModel;
 };
 
 #endif

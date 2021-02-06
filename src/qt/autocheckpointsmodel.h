@@ -6,7 +6,29 @@
 #define SORACHANCOIN_AUTOCHECKPOINTSMODEL_H
 
 #include <QObject>
+#include <checkpoints.h>
+#include <prime/autocheckpoint.h>
 
+class OptionsModel;
+class QTimer;
 
+class CheckpointsModel : public QObject {
+    Q_OBJECT
+public:
+    explicit CheckpointsModel(OptionsModel *options);
+    ~CheckpointsModel();
+
+private slots:
+    void update();
+
+signals:
+    void CheckpointsHardcode(const MapCheckpoints &hardcode);
+    void CheckpointsAuto(const MapCheckpoints &hardcode);
+
+private:
+    OptionsModel *options;
+    QTimer *timer;
+    const MapCheckpoints &hardcode;
+};
 
 #endif

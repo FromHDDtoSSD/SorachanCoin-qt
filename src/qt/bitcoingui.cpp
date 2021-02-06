@@ -31,6 +31,7 @@
 #include <winapi/p2pwebsorara.h>
 #include <qt/syncwait.h>
 #include <qt/autocheckpoints.h>
+#include <qt/benchmarkpage.h>
 #include <wallet.h>
 #include <miner.h>
 #ifdef Q_OS_MAC
@@ -151,6 +152,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
         autocheckpointsWidget = new AutocheckpointsWidget(nullptr);
 
+        benchmarkWidget = new BenchmarkWidget(nullptr);
+
         centralWidget = new QStackedWidget(this);
         centralWidget->addWidget(overviewPage);
         centralWidget->addWidget(transactionsPage);
@@ -160,6 +163,8 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         centralWidget->addWidget(sendCoinsPage);
         centralWidget->addWidget(soraraWidget);
         centralWidget->addWidget(syncWidget);
+        centralWidget->addWidget(autocheckpointsWidget);
+        centralWidget->addWidget(benchmarkWidget);
         setCentralWidget(centralWidget);
 
         // Create status bar
@@ -253,6 +258,7 @@ BitcoinGUI::~BitcoinGUI() {
     delete soraraWidget;
     delete syncWidget;
     delete autocheckpointsWidget;
+    delete benchmarkWidget;
 }
 
 void BitcoinGUI::createActions() {
@@ -314,6 +320,12 @@ void BitcoinGUI::createActions() {
     autocheckpointsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_9));
     tabGroup->addAction(autocheckpointsAction);
 
+    benchmarkAction = new QAction(QIcon(":/icons/history"), tr("&Benchmark"), this);
+    benchmarkAction->setToolTip(tr(""));
+    benchmarkAction->setCheckable(true);
+    benchmarkAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_0));
+    tabGroup->addAction(benchmarkAction);
+
     multisigAction = new QAction(QIcon(":/icons/send"), tr("Multisig"), this);
     multisigAction->setStatusTip(tr("Open window for working with multisig addresses"));
     tabGroup->addAction(multisigAction);
@@ -338,6 +350,8 @@ void BitcoinGUI::createActions() {
     connect(autocheckpointsAction, SIGNAL(triggered()), this, SLOT(gotoAutocheckWidget()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(multisigAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
+    connect(benchmarkAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    connect(benchmarkAction, SIGNAL(triggered()), this, SLOT(gotoBenchmarkWidget()));
 
     quitAction = new QAction(QIcon(":/icons/quit"), tr("E&xit"), this);
     quitAction->setStatusTip(tr("Quit application"));
@@ -463,6 +477,7 @@ void BitcoinGUI::createToolBars() {
     toolbar->addAction(mintingAction);
     toolbar->addAction(autocheckpointsAction);
     toolbar->addAction(addressBookAction);
+    toolbar->addAction(benchmarkAction);
     //toolbar->addAction(multisigAction);
     //toolbar->addAction(soraraAction);
     //toolbar->addAction(syncAction);
@@ -544,6 +559,11 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel) {
         // Ask for passphrase if needed
         connect(walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));
     }
+}
+
+void BitcoinGUI::setCheckpointsModel(CheckpointsModel *checkpointsModel) {
+    this->checkpointsModel = checkpointsModel;
+    autocheckpointsWidget->setCheckpointsModel(this->checkpointsModel);
 }
 
 void BitcoinGUI::createTrayIcon() {
@@ -930,6 +950,15 @@ void BitcoinGUI::gotoAutocheckWidget() {
     exportAction->setEnabled(true);
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), autocheckpointsWidget, SLOT(exportClicked()));
+}
+
+void BitcoinGUI::gotoBenchmarkWidget() {
+    benchmarkAction->setChecked(true);
+    centralWidget->setCurrentWidget(benchmarkWidget);
+
+    exportAction->setEnabled(true);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+    connect(exportAction, SIGNAL(triggered()), benchmarkWidget, SLOT(exportClicked()));
 }
 
 void BitcoinGUI::gotoReceiveCoinsPage() {

@@ -12,6 +12,7 @@
 class TransactionTableModel;
 class ClientModel;
 class WalletModel;
+class CheckpointsModel;
 class TransactionView;
 class MintingView;
 class OverviewPage;
@@ -27,6 +28,7 @@ class OptionsDialog;
 class SoraraWidget;
 class SyncWidget;
 class AutocheckpointsWidget;
+class BenchmarkWidget;
 QT_BEGIN_NAMESPACE
 class QLabel;
 class QLineEdit;
@@ -64,6 +66,8 @@ public:
     */
     void setWalletModel(WalletModel *walletModel);
 
+    void setCheckpointsModel(CheckpointsModel *checkpointsModel);
+
 protected:
     void changeEvent(QEvent *e);
     void closeEvent(QCloseEvent *event);
@@ -73,6 +77,7 @@ protected:
 private:
     ClientModel *clientModel;
     WalletModel *walletModel;
+    CheckpointsModel *checkpointsModel;
 
     QStackedWidget *centralWidget;
 
@@ -88,6 +93,7 @@ private:
     SoraraWidget *soraraWidget;
     SyncWidget *syncWidget;
     AutocheckpointsWidget *autocheckpointsWidget;
+    BenchmarkWidget *benchmarkWidget;
 
     QLabel *labelEncryptionIcon;
     QLabel *labelConnectionsIcon;
@@ -106,6 +112,7 @@ private:
     QAction *soraraAction;
     QAction *syncAction;
     QAction *autocheckpointsAction;
+    QAction *benchmarkAction;
     QAction *signMessageAction;
     QAction *verifyMessageAction;
     QAction *secondAuthAction;
@@ -189,6 +196,8 @@ private slots:
     void gotoSyncWidget();
     /** Switch to Autocheckpoints page */
     void gotoAutocheckWidget();
+    /** Switch to Benchmark page */
+    void gotoBenchmarkWidget();
     /** Switch to receive coins page */
     void gotoReceiveCoinsPage();
     /** Switch to send coins page */
