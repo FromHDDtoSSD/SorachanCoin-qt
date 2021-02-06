@@ -12,6 +12,7 @@ namespace Ui {
     class AutocheckpointsWidget;
 }
 class CheckpointsModel;
+class QStandardItemModel;
 
 class AutocheckpointsWidget : public QWidget
 {
@@ -29,7 +30,8 @@ public slots:
 
 private:
     Ui::AutocheckpointsWidget *ui;
-    CheckpointsModel *checkpointModel;
+    QStandardItemModel *model1, *model2;
+    CheckpointsModel *checkpointsModel;
 };
 
 #endif
