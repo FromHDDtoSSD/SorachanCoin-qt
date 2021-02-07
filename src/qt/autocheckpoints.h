@@ -24,8 +24,8 @@ public:
     void setCheckpointsModel(CheckpointsModel *checkpointsModel);
 
 public slots:
-    void update1(const MapCheckpoints &hardcode);
-    void update2(const MapCheckpoints &hardcode);
+    void update1(const MapCheckpoints &hardcode, const std::map<int, unsigned int> &hardstake);
+    void update2(const AutoCheckpoints &autocheck);
     void exportClicked();
 
 private:

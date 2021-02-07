@@ -15,50 +15,27 @@
 
 template <typename T> class CBlockHeader;
 
-//#ifdef WIN32
-//#undef STRICT
-//#undef PERMISSIVE
-//#undef ADVISORY
-//#endif
+struct AutoCheckData {
+    uint32_t nHeight;
+    uint64_t nTime;
+    uint65536 hash;
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nHeight);
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->hash);
+    }
+};
+using AutoCheckpoints = std::map<uint32_t, AutoCheckData>;
 
-namespace autocheckpoint {
-    //
-    // Autocheck Genesis
-    //
-    //const char *const pszTimeStamp = "";
-    //const uint65536 hashMerkleRoot("");
-    //const uint65536 hashGenesisBlock("");
-    //const uint65536 hashGenesisBlockTestnet("");
-
-    //
-    // dat method
-    //
-    const char *const datname = "autocheckpoints.dat";
-}
-
-/*
-** [B] autocheckpoints.dat method
-** Singleton class
-*/
 template <typename T>
 class CAutocheckPoint_impl {
 private:
     constexpr static int nCheckNum = 5;
-    BIGNUM *height;
-    BN_CTX *ctx;
-    // Note: must be FLATDATA
-    typedef struct _AutoCheckData {
-        uint32_t nHeight;
-        uint64_t nTime;
-        uint65536 hash;
-        IMPLEMENT_SERIALIZE(
-            READWRITE(this->nHeight);
-            READWRITE(this->nTime);
-            READWRITE(this->hash);
-        )
-    } AutoCheckData;
-    boost::filesystem::path pathAddr;
-    mutable std::map<uint32_t, AutoCheckData> mapAutocheck;
+    fs::path pathAddr;
+    mutable AutoCheckpoints mapAutocheck;
+
 private:
     CAutocheckPoint_impl(const CAutocheckPoint_impl &)=delete;
     CAutocheckPoint_impl(CAutocheckPoint_impl &&)=delete;
@@ -77,38 +54,19 @@ public:
         static CAutocheckPoint_impl<T> obj;
         return obj;
     }
+
+    const AutoCheckpoints &getAutocheckpoints() const {return mapAutocheck;}
     bool Check() const;
-    bool BuildAutocheckPoint();
+    bool Sign() const;
+    bool Verify() const;
+
+    bool BuildAutocheckPoints();
 };
 using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
 
 #else
 
-// unused
-template <typename T>
-class CAutocheckPoint_impl {
-private:
-    CAutocheckPoint_impl(const CAutocheckPoint_impl &)=delete;
-    CAutocheckPoint_impl(CAutocheckPoint_impl &&)=delete;
-    CAutocheckPoint_impl &operator=(const CAutocheckPoint_impl &)=delete;
-    CAutocheckPoint_impl &operator=(CAutocheckPoint_impl &&)=delete;
-
-    bool is_prime(int in_height) const {return false;}
-    bool Buildmap() {return false;}
-    bool Write(const CBlockHeader<T> &header, uint32_t nHeight, CAutoFile &fileout, CDataStream &whash) {return false;}
-    uint65536 get_hash(const CDataStream &data) const {return uint65536(0);}
-
-    CAutocheckPoint_impl() {}
-    ~CAutocheckPoint_impl() {}
-public:
-    static CAutocheckPoint_impl &get_instance() {
-        static CAutocheckPoint_impl<T> obj;
-        return obj;
-    }
-    bool Check() const {return true;}
-    bool BuildAutocheckPoint() {return true;}
-};
-using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
+static_assert(false, "After ver3, this macro is required.");
 
 #endif // defined(USE_QUANTUM)
 

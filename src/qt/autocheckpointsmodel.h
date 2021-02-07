@@ -18,17 +18,22 @@ public:
     explicit CheckpointsModel(OptionsModel *options);
     ~CheckpointsModel();
 
+    const MapCheckpoints &getHardcode() const {return hardcode;}
+    const std::map<int, unsigned int> &getHardstake() const {return hardstake;}
+
 private slots:
     void update();
 
 signals:
-    void CheckpointsHardcode(const MapCheckpoints &hardcode);
-    void CheckpointsAuto(const MapCheckpoints &hardcode);
+    void CheckpointsHardcode(const MapCheckpoints &hardcode, const std::map<int, unsigned int> &hardstake);
+    void CheckpointsAuto(const AutoCheckpoints &autocheck);
 
 private:
     OptionsModel *options;
     QTimer *timer;
     const MapCheckpoints &hardcode;
+    const std::map<int, unsigned int> &hardstake;
+    const AutoCheckpoints &autocheck;
 };
 
 #endif

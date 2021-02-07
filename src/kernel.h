@@ -36,6 +36,8 @@ private:
     static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, uint256 &hashProofOfStake, uint256 &targetProofOfStake, bool fPrintProofOfStake=false);
 
 public:
+    static const std::map<int, unsigned int> &getMapStakeModifierCheckpoints() {return mapStakeModifierCheckpoints;}
+
     // Note: user must upgrade before the protocol switch deadline, otherwise it's required to
     // re-download the blockchain. The timestamp of upgrade is recorded in the blockchain database.
     // ChainDB upgrade time

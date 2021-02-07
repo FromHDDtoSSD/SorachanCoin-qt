@@ -5,13 +5,16 @@
 #include <QTimer>
 #include <qt/autocheckpointsmodel.h>
 #include <qt/optionsmodel.h>
+#include <kernel.h>
 #include <allocator/qtsecure.h>
 
 constexpr int INTERVAL_AUTOCHECKPOINTS_RELOAD = 10 * 1000;
 
 CheckpointsModel::CheckpointsModel(OptionsModel *in) :
     options(in),
-    hardcode(Checkpoints::manage::getMapCheckpoints()) {
+    hardcode(Checkpoints::manage::getMapCheckpoints()),
+    hardstake(bitkernel::getMapStakeModifierCheckpoints()),
+    autocheck(CAutocheckPoint::get_instance().getAutocheckpoints()) {
     timer = new (std::nothrow) QTimer(this);
     if(! timer)
         throw qt_error("CheckpointsModel out of memory.", nullptr);
@@ -25,6 +28,6 @@ CheckpointsModel::~CheckpointsModel() {
 
 // slot (callback: this timer)
 void CheckpointsModel::update() {
-    emit CheckpointsHardcode(hardcode);
-    emit CheckpointsAuto(hardcode);
+    //emit CheckpointsHardcode(hardcode, hardstake);
+    emit CheckpointsAuto(autocheck);
 }

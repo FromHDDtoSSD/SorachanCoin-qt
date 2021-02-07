@@ -4,7 +4,6 @@
 
 #if defined(USE_QUANTUM)
 
-#include <openssl/bn.h>
 #include <prime/autocheckpoint.h>
 #include <prevector/prevector.h>
 #include <block/block.h>
@@ -13,6 +12,8 @@
 #include <file_operate/fs.h>
 #include <debugcs/debugcs.h>
 
+static const char *datname = "autocheckpoints.dat";
+
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vAuto = prevector<PREVECTOR_BLOCK_N, uint8_t>;
 #else
@@ -20,16 +21,15 @@
 #endif
 template <typename T>
 bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime number, false: Composite number */
-    ::BN_clear(height);
-    ::BN_CTX_init(ctx);
-    if(! ::BN_set_word(height, in_height)) return false;
-    int ret = ::BN_is_prime(height, BN_prime_checks, nullptr, ctx, nullptr);
-    if(ret==1) return true;
-    else if(ret==-1) {
-        printf("CAutocheckPoint_impl::is_prime: BIGNUM memory allocate failure");
+    if(in_height<=440000||in_height>=15000000) // out of range in Autocheckpoints.
         return false;
+    if(in_height%2==0 || in_height%3==0)
+        return false;
+    for(int i=5; i*i<=in_height; i+=6) {
+        if(in_height%i==0) return false;
+        if(in_height%(i+2)==0) return false;
     }
-    else return false;
+    return true;
 }
 
 template <typename T>
@@ -67,16 +67,18 @@ bool CAutocheckPoint_impl<T>::Buildmap() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::Write(const CBlockHeader<T> &header, uint32_t nHeight, CAutoFile &fileout, CDataStream &whash) {
     AutoCheckData data;
-    {
-        std::memset(&data, 0, sizeof(data));
-        data.nHeight = nHeight;
-        data.nTime = header.get_nTime();
-        CDataStream ssheader(FLATDATA(header));
-        data.hash = get_hash(ssheader);
-    }
-
-    CDataStream ssda(FLATDATA(data));
     try {
+        {
+            std::memset(&data, 0, sizeof(data));
+            data.nHeight = nHeight;
+            data.nTime = header.get_nTime();
+            CDataStream ssheader;
+            ssheader << FLATDATA(header);
+            data.hash = get_hash(ssheader);
+        }
+
+        CDataStream ssda;
+        ssda << FLATDATA(data);
         fileout << ssda;
     } catch(const std::exception &) {
         return false;
@@ -94,37 +96,56 @@ uint65536 CAutocheckPoint_impl<T>::get_hash(const CDataStream &data) const {
 template <typename T>
 CAutocheckPoint_impl<T>::CAutocheckPoint_impl() {
     mapAutocheck.clear();
-    pathAddr = iofs::GetDataDir() / autocheckpoint::datname;
-    height = ::BN_new();
-    ctx = ::BN_CTX_new();
-    if(!height || !ctx) std::runtime_error("CAutocheckPoint_impl(): BIGNUM memory allocate failure");
+    pathAddr = iofs::GetDataDir() / datname;
 }
 
 template <typename T>
-CAutocheckPoint_impl<T>::~CAutocheckPoint_impl() {
-    if(ctx) ::BN_CTX_free(ctx);
-    if(height) ::BN_free(height);
-}
+CAutocheckPoint_impl<T>::~CAutocheckPoint_impl() {}
 
 template <typename T>
 bool CAutocheckPoint_impl<T>::Check() const {
-    if(! Buildmap()) return false;
-    const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
-    for(const auto &mapdata: mapAutocheck) {
-        while(mapdata.first != block->get_nHeight())
-            block=block_info::mapBlockIndex[block->get_hashPrevBlock()];
-        CDataStream ssda(FLATDATA(*static_cast<const CBlockHeader<T> *>(block)));
-        if(mapdata.second.hash != get_hash(ssda)) return false;
+    try {
+        if(! Buildmap())
+            return false;
+        const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
+        for(const auto &mapdata: mapAutocheck) {
+            while(mapdata.first != block->get_nHeight())
+                block=block_info::mapBlockIndex[block->get_hashPrevBlock()];
+            CDataStream ssda;
+            ssda << FLATDATA(*static_cast<const CBlockHeader<T> *>(block));
+            if(mapdata.second.hash != get_hash(ssda))
+                return false;
+        }
+        return true;
+    } catch(const std::exception &) {
+        return false;
     }
-    return true;
 }
 
 template <typename T>
-bool CAutocheckPoint_impl<T>::BuildAutocheckPoint() {
+bool CAutocheckPoint_impl<T>::Sign() const {
+
+    //
+
+
+    return false;
+}
+
+template <typename T>
+bool CAutocheckPoint_impl<T>::Verify() const {
+
+    //
+
+
+    return false;
+}
+
+template <typename T>
+bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     unsigned short randv = 0;
     latest_crypto::random::GetStrongRandBytes((unsigned char *)&randv, sizeof(randv));
-    std::string tmpfn = strprintf("%s.%04x", autocheckpoint::datname, randv);
-    boost::filesystem::path pathTmp = iofs::GetDataDir() / tmpfn;
+    std::string tmpfn = tfm::format("%s.%4x", datname, randv);
+    fs::path pathTmp = iofs::GetDataDir() / tmpfn;
     CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);
     if(! fileout) return false;
 

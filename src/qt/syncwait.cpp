@@ -24,6 +24,8 @@ struct sync_info {
 };
 } // namespace
 
+static bool fcompsync = false;
+
 SyncWidget::SyncWidget(QWidget *parent) :
     QWidget(parent),
     ui(new(std::nothrow) Ui::SyncWidget) {
@@ -87,7 +89,9 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
                 ui->labelStatus->setText(tr("Synchronizing ..."));
                 ui->labelRemain->setText(QString(tr("until sync: %1 h %2 m %3 sec ...")).arg(hours).arg(minutes).arg(sec));
             } else {
-                emit gotoSyncToOverview(); // sync is complete.
+                if(fcompsync==false)
+                    emit gotoSyncToOverview(); // sync is complete.
+                fcompsync = true;
             }
         }
     }

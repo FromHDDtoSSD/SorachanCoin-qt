@@ -1329,9 +1329,9 @@ public:
         *this = obj;
     }
 
-    CDataStream(const CFlatData &obj, int nType=0, int nVersion=0) : CTypeVersion(nType, nVersion) {
-        *this << obj;
-    }
+    //CDataStream(const CFlatData &obj, int nType=0, int nVersion=0) : CTypeVersion(nType, nVersion) {
+    //    *this << obj;
+    //}
 
     CDataStream(const_iterator pbegin, const_iterator pend, int nType=0, int nVersion=0) : vch(pbegin, pend), CTypeVersion(nType, nVersion) {
         Init();
