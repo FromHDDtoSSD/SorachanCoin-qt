@@ -13,6 +13,8 @@
 #include <debugcs/debugcs.h>
 
 static const char *datname = "autocheckpoints.dat";
+static constexpr int lowerBlockHeight = 440000;
+#define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vAuto = prevector<PREVECTOR_BLOCK_N, uint8_t>;
@@ -21,7 +23,7 @@ static const char *datname = "autocheckpoints.dat";
 #endif
 template <typename T>
 bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime number, false: Composite number */
-    if(in_height<=440000||in_height>=15000000) // out of range in Autocheckpoints.
+    if(in_height<=lowerBlockHeight||in_height>=15000000) // out of range in Autocheckpoints.
         return false;
     if(in_height%2==0 || in_height%3==0)
         return false;
@@ -77,15 +79,17 @@ bool CAutocheckPoint_impl<T>::Write(const CBlockHeader<T> &header, uint32_t nHei
             data.hash = get_hash(ssheader);
         }
 
+        CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()))
+
         CDataStream ssda;
-        ssda << FLATDATA(data);
+        ssda << data;
         fileout << ssda;
+
+        whash << data;
+        return true;
     } catch(const std::exception &) {
         return false;
     }
-
-    whash << FLATDATA(data);
-    return true;
 }
 
 template <typename T>
@@ -124,7 +128,6 @@ bool CAutocheckPoint_impl<T>::Check() const {
 
 template <typename T>
 bool CAutocheckPoint_impl<T>::Sign() const {
-
     //
 
 
@@ -133,7 +136,6 @@ bool CAutocheckPoint_impl<T>::Sign() const {
 
 template <typename T>
 bool CAutocheckPoint_impl<T>::Verify() const {
-
     //
 
 
@@ -147,17 +149,37 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     std::string tmpfn = tfm::format("%s.%4x", datname, randv);
     fs::path pathTmp = iofs::GetDataDir() / tmpfn;
     CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);
-    if(! fileout) return false;
+    CP_DEBUG_CS(tfm::format("BuildAutocheckPoints path: %s, fileout: %d", pathTmp.string().c_str(), (uintptr_t)(FILE *)fileout))
+    if(! fileout)
+        return false;
 
     CDataStream whash;
     const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
-    int counter = nCheckNum;
+
+    /* checked mapBlockIndex
+    for(const auto &ref: block_info::mapBlockIndex) {
+        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex hash: %s", ref.first.ToString()))
+        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex blockHeight: %d", ref.second->get_nHeight()))
+        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex prev: %s", ref.second->get_hashPrevBlock().ToString()))
+        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex prev2: %s", ref.second->get_pprev()->get_phashBlock()->ToString()))
+    }
+    */
+
+    CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block))
+    CP_DEBUG_CS(tfm::format("block addr: %s", block->get_hashPrevBlock().ToString()))
+    int counter = nCheckBlocks;
+    assert(block);
     assert(0<counter);
     for(;;) {
-        if(block->get_nHeight()<=0) break;
+        //CP_DEBUG_CS(tfm::format("block check: %d", block->get_nHeight()))
+        if(block->get_nHeight()<=lowerBlockHeight)
+            break;
         if(is_prime(block->get_nHeight())) {
-            if(! Write(*static_cast<const CBlockHeader<T> *>(block), block->get_nHeight(), fileout, whash)) return false;
-            if(--counter==0) break;
+            CP_DEBUG_CS(tfm::format("block is_prime: %d", block->get_nHeight()))
+            if(! Write(*static_cast<const CBlockHeader<T> *>(block), block->get_nHeight(), fileout, whash))
+                return false;
+            if(--counter==0)
+                break;
         }
         block = block_info::mapBlockIndex[block->get_hashPrevBlock()];
     }

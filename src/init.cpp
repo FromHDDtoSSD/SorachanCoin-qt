@@ -18,6 +18,7 @@
 #include <block/block_process.h>
 #include <block/block_check.h>
 #include <quantum/quantum.h>
+#include <prime/autocheckpoint.h>
 #include <boost/format.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -343,7 +344,7 @@ std::string entry::HelpMessage()
 #define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 bool entry::AppInit2(bool restart/*=false*/)
 {
-    // ********************************************************* Test (if DEBUG)
+    // ********************************************************* Test and Autocheckpoint load (if DEBUG)
     CMString_test();
 
     // ********************************************************* Step 1: setup
@@ -841,8 +842,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
 
-    for(std::string strDest: map_arg::GetMapMultiArgsString("-seednode"))
-    {
+    for(std::string strDest: map_arg::GetMapMultiArgsString("-seednode")) {
         shot::AddOneShot(strDest);
     }
 
@@ -1053,31 +1053,34 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     if (map_arg::GetMapArgsCount("-loadblock")) {
         CClientUIInterface::uiInterface.InitMessage(_("Importing blockchain data file."));
-
-        for(std::string strFile: map_arg::GetMapMultiArgsString("-loadblock"))
-        {
+        for(std::string strFile: map_arg::GetMapMultiArgsString("-loadblock")) {
             FILE *file = ::fopen(strFile.c_str(), "rb");
-            if (file) {
+            if (file)
                 block_load::LoadExternalBlockFile(file);
-            }
         }
         boot::StartShutdown();
     }
 
-    boost::filesystem::path pathBootstrap = iofs::GetDataDir() / "bootstrap.dat";
-    if (boost::filesystem::exists(pathBootstrap)) {
+    fs::path pathBootstrap = iofs::GetDataDir() / "bootstrap.dat";
+    if (fs::exists(pathBootstrap)) {
         CClientUIInterface::uiInterface.InitMessage(_("Importing bootstrap blockchain data file."));
-
         FILE *file = ::fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
-            boost::filesystem::path pathBootstrapOld = iofs::GetDataDir() / "bootstrap.dat.old";
+            fs::path pathBootstrapOld = iofs::GetDataDir() / "bootstrap.dat.old";
             block_load::LoadExternalBlockFile(file);
             iofs::RenameOver(pathBootstrap, pathBootstrapOld);
         }
     }
 
-    // ********************************************************* Step 10: load peers
-    I_DEBUG_CS("Step 10: load peers")
+    // ********************************************************* Step 10: load Autocheckpoints.dat
+    I_DEBUG_CS("Step 10: load Autocheckpoints.dat")
+
+    // SorachanCoin: Autocheckpoints load
+    if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
+        return false;
+
+    // ********************************************************* Step 11: load peers
+    I_DEBUG_CS("Step 11: load peers")
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading addresses..."));
     printf("Loading addresses...\n");
@@ -1085,19 +1088,17 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     {
         CAddrDB adb;
-        if (! adb.Read(net_node::addrman)) {
+        if (! adb.Read(net_node::addrman))
             printf("Invalid or missing peers.dat; recreating\n");
-        }
     }
 
     printf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
 
-    // ********************************************************* Step 11: start node
-    I_DEBUG_CS("Step 11: start node")
+    // ********************************************************* Step 12: start node
+    I_DEBUG_CS("Step 12: start node")
 
-    if (! file_open::CheckDiskSpace()) {
+    if (! file_open::CheckDiskSpace())
         return false;
-    }
 
     seed::RandAddSeedPerfmon();
 
@@ -1108,17 +1109,16 @@ bool entry::AppInit2(bool restart/*=false*/)
     printf("mapWallet.size() = %" PRIszu "\n",       entry::pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  entry::pwalletMain->mapAddressBook.size());
 
-    if (! bitthread::manage::NewThread(net_node::StartNode, nullptr)) {
+    if (! bitthread::manage::NewThread(net_node::StartNode, nullptr))
         InitError(_("Error: could not start node"));
-    }
 
     if (args_bool::fServer) {
         if(! bitthread::manage::NewThread(bitrpc::ThreadRPCServer, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ThreadRPCServer");
     }
 
-    // ********************************************************* Step 12: IP collection thread
-    I_DEBUG_CS("Step 12: IP collection thread")
+    // ********************************************************* Step 13: IP collection thread
+    I_DEBUG_CS("Step 13: IP collection thread")
 
     ip_coll::strCollectorCommand = map_arg::GetArg("-peercollector", "");
     if (!args_bool::fTestNet && ip_coll::strCollectorCommand != "") {
@@ -1126,15 +1126,14 @@ bool entry::AppInit2(bool restart/*=false*/)
             bitthread::thread_error(std::string(__func__) + " :ThreadIPCollector");
     }
 
-    // ********************************************************* Step 13: finished
-    I_DEBUG_CS("Step 13: finished")
+    // ********************************************************* Step 14: finished
+    I_DEBUG_CS("Step 14: finished")
 
     CClientUIInterface::uiInterface.InitMessage(_("Done loading"));
     printf("Done loading\n");
 
-    if (! strErrors.str().empty()) {
+    if (! strErrors.str().empty())
         return InitError(strErrors.str());
-    }
 
     // Add wallet transactions that aren't already in a block to mapTransactions
     entry::pwalletMain->ReacceptWalletTransactions();

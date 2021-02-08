@@ -429,6 +429,7 @@ bool CTxDB::LoadBlockIndex()
         pindexNew->set_nTime(diskindex.get_nTime());
         pindexNew->set_nBits(diskindex.get_nBits());
         pindexNew->set_nNonce(diskindex.get_nNonce());
+        pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
 
         // Watch for genesis block
         if (block_info::pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet)) {

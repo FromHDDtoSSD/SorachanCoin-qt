@@ -19,6 +19,11 @@ struct AutoCheckData {
     uint32_t nHeight;
     uint64_t nTime;
     uint65536 hash;
+    AutoCheckData() {
+        nHeight = 0;
+        nTime = 0;
+        hash = 0;
+    }
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
@@ -32,7 +37,7 @@ using AutoCheckpoints = std::map<uint32_t, AutoCheckData>;
 template <typename T>
 class CAutocheckPoint_impl {
 private:
-    constexpr static int nCheckNum = 5;
+    constexpr static int nCheckBlocks = 25;
     fs::path pathAddr;
     mutable AutoCheckpoints mapAutocheck;
 
@@ -49,6 +54,9 @@ private:
 
     CAutocheckPoint_impl();
     ~CAutocheckPoint_impl();
+
+    bool Sign() const;
+    bool Verify() const;
 public:
     static CAutocheckPoint_impl &get_instance() {
         static CAutocheckPoint_impl<T> obj;
@@ -57,9 +65,6 @@ public:
 
     const AutoCheckpoints &getAutocheckpoints() const {return mapAutocheck;}
     bool Check() const;
-    bool Sign() const;
-    bool Verify() const;
-
     bool BuildAutocheckPoints();
 };
 using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
