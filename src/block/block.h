@@ -58,6 +58,17 @@ public:
     void set_nBits(uint32_t _in) {nBits=_in;}
     void set_nNonce(uint32_t _in) {nNonce=_in;}
     uint32_t &set_nNonce() {return nNonce;}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nVersion);
+        LREADWRITE(this->hashPrevBlock);
+        LREADWRITE(this->hashMerkleRoot);
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->nBits);
+        LREADWRITE(this->nNonce);
+    }
 };
 template <typename T>
 class CBlockHeader_impl : public CBlockHeader<T> {

@@ -16,10 +16,13 @@
 template <typename T> class CBlockHeader;
 
 struct AutoCheckData {
+    uint32_t sig;
     uint32_t nHeight;
     uint64_t nTime;
     uint65536 hash;
     AutoCheckData() {
+        char *s = (char *)&sig;
+        s[0] = 'd'; s[1] = 'o'; s[2] ='g'; s[3] = 'e';
         nHeight = 0;
         nTime = 0;
         hash = 0;
@@ -27,6 +30,7 @@ struct AutoCheckData {
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->sig);
         LREADWRITE(this->nHeight);
         LREADWRITE(this->nTime);
         LREADWRITE(this->hash);

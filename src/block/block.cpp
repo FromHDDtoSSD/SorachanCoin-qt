@@ -14,6 +14,7 @@
 #include <block/block_process.h>
 #include <miner/diff.h>
 #include <block/block_info.h>
+#include <prime/autocheckpoint.h>
 
 /*
 ** collect Block Print
@@ -701,7 +702,9 @@ bool CBlock_impl<T>::AcceptBlock()
 
     // ppcoin: check pending sync-checkpoint
     Checkpoints::manage::AcceptPendingSyncCheckpoint();
-    return true;
+
+    // SorachanCoin: check Autocheckpoint
+    return CAutocheckPoint::get_instance().Check();
 }
 
 // ppcoin: total coin age spent in block, in the unit of coin-days.

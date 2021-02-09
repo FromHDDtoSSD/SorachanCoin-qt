@@ -13,7 +13,7 @@
 #include <debugcs/debugcs.h>
 
 static const char *datname = "autocheckpoints.dat";
-static constexpr int lowerBlockHeight = 440000;
+static constexpr int lowerBlockHeight = 440000; // mainnet and testnet
 #define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 
 #ifdef BLOCK_PREVECTOR_ENABLE
@@ -37,10 +37,12 @@ bool CAutocheckPoint_impl<T>::is_prime(int in_height) const { /* true: Prime num
 template <typename T>
 bool CAutocheckPoint_impl<T>::Buildmap() const {
     CAutoFile filein = CAutoFile(pathAddr, "rb", 0, 0);
-    if(! filein) return false;
-    int fileSize = filein.getfilesize();
-    int dataSize = fileSize - sizeof(uint65536);
-    if(dataSize<=0) return true;
+    if(! filein)
+        return false;
+    const size_t fileSize = filein.getfilesize();
+    const size_t dataSize = fileSize - sizeof(uint65536);
+    if(dataSize<=0)
+        return false;
 
     std::vector<unsigned char> vchData;
     vchData.resize(dataSize);
@@ -55,13 +57,15 @@ bool CAutocheckPoint_impl<T>::Buildmap() const {
 
     CDataStream ssda(vchData);
     uint65536 hashTmp = get_hash(ssda);
-    if(hashIn != hashTmp) return false;
+    if(hashIn != hashTmp)
+        return false;
 
     mapAutocheck.clear();
     while(! ssda.eof()) {
         AutoCheckData data;
         ssda >> data;
-        mapAutocheck.insert(std::pair<uint32_t, AutoCheckData>(data.nHeight, data));
+        CP_DEBUG_CS(tfm::format("Autocheckpoint buildmap: %d %d %s", data.nHeight, data.nTime, data.hash.ToString().substr(0, 64)))
+        mapAutocheck.insert(std::make_pair(data.nHeight, data));
     }
     return true;
 }
@@ -71,16 +75,14 @@ bool CAutocheckPoint_impl<T>::Write(const CBlockHeader<T> &header, uint32_t nHei
     AutoCheckData data;
     try {
         {
-            std::memset(&data, 0, sizeof(data));
             data.nHeight = nHeight;
             data.nTime = header.get_nTime();
             CDataStream ssheader;
-            ssheader << FLATDATA(header);
+            ssheader << header;
             data.hash = get_hash(ssheader);
         }
 
-        CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()))
-
+        CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString().substr(0, 64)))
         CDataStream ssda;
         ssda << data;
         fileout << ssda;
@@ -107,17 +109,28 @@ template <typename T>
 CAutocheckPoint_impl<T>::~CAutocheckPoint_impl() {}
 
 template <typename T>
-bool CAutocheckPoint_impl<T>::Check() const {
+bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckpoints qhash(uint65536) check
     try {
-        if(! Buildmap())
+        if(block_info::mapBlockIndex.empty())
             return false;
-        const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
-        for(const auto &mapdata: mapAutocheck) {
-            while(mapdata.first != block->get_nHeight())
-                block=block_info::mapBlockIndex[block->get_hashPrevBlock()];
+
+        const CBlockIndex_impl<T> *const bestBlock = block_info::mapBlockIndex[block_info::hashBestChain];
+        for (int i=0; i < nCheckBlocks; ++i) {
+            const auto &autocpValue = mapAutocheck.find(bestBlock->get_nHeight()-i);
+            if(autocpValue==mapAutocheck.end()) continue;
+
+            const CBlockIndex_impl<T> *target = bestBlock;
+            for(;;) {
+                if(bestBlock->get_nHeight()-i!=target->get_nHeight())
+                    target = block_info::mapBlockIndex[target->get_pprev()->GetBlockHash()];
+                else
+                    break;
+            }
+
             CDataStream ssda;
-            ssda << FLATDATA(*static_cast<const CBlockHeader<T> *>(block));
-            if(mapdata.second.hash != get_hash(ssda))
+            ssda << *static_cast<const CBlockHeader<T> *>(target);
+            CP_DEBUG_CS(tfm::format("Autochekpoint Check %s, %s", autocpValue->second.hash.ToString().substr(0, 64), get_hash(ssda).ToString().substr(0, 64)))
+            if(autocpValue->second.hash != get_hash(ssda))
                 return false;
         }
         return true;
@@ -153,7 +166,6 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     if(! fileout)
         return false;
 
-    CDataStream whash;
     const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
 
     /* checked mapBlockIndex
@@ -165,13 +177,19 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     }
     */
 
+    assert(block);
     CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block))
     CP_DEBUG_CS(tfm::format("block addr: %s", block->get_hashPrevBlock().ToString()))
     int counter = nCheckBlocks;
-    assert(block);
+    if(block->get_hashPrevBlock()==0) { // genesis block
+        iofs::FileCommit(fileout);
+        fileout.fclose();
+        return iofs::RenameOver(pathTmp, pathAddr);
+    }
     assert(0<counter);
+    CDataStream whash; // output
     for(;;) {
-        //CP_DEBUG_CS(tfm::format("block check: %d", block->get_nHeight()))
+        CP_DEBUG_CS(tfm::format("block check: %d", block->get_nHeight()))
         if(block->get_nHeight()<=lowerBlockHeight)
             break;
         if(is_prime(block->get_nHeight())) {
@@ -181,7 +199,14 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
             if(--counter==0)
                 break;
         }
+        if(block->get_hashPrevBlock()==0)
+            break;
         block = block_info::mapBlockIndex[block->get_hashPrevBlock()];
+    }
+    if(whash.begin()==whash.end()) {
+        iofs::FileCommit(fileout);
+        fileout.fclose();
+        return iofs::RenameOver(pathTmp, pathAddr);
     }
 
     CDataStream dhash;
@@ -194,7 +219,7 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
 
     iofs::FileCommit(fileout);
     fileout.fclose();
-    return iofs::RenameOver(pathTmp, pathAddr);
+    return iofs::RenameOver(pathTmp, pathAddr) && Buildmap() && Check();
 }
 
 template class CAutocheckPoint_impl<uint256>;
