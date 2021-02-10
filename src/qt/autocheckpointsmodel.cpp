@@ -8,26 +8,40 @@
 #include <kernel.h>
 #include <allocator/qtsecure.h>
 
-constexpr int INTERVAL_AUTOCHECKPOINTS_RELOAD = 10 * 1000;
+constexpr int INTERVAL_AUTOCHECKPOINTS_RELOAD = 600 * 1000; // GUI refresh interval time
+constexpr int INTERVAL_AUTOCHECKPOINTS_BUILDMAP = 1800 * 1000; // block generate time(180s) * 10
+constexpr double TESTNET_INTERVAL_RATIO = 0.01;
 
 CheckpointsModel::CheckpointsModel(OptionsModel *in) :
     options(in),
-    hardcode(Checkpoints::manage::getMapCheckpoints()),
-    hardstake(bitkernel::getMapStakeModifierCheckpoints()),
+    hardcode(args_bool::fTestNet ? Checkpoints::manage::getMapCheckpointsTestnet(): Checkpoints::manage::getMapCheckpoints()),
+    hardstake(args_bool::fTestNet ? bitkernel::getMapStakeModifierCheckpointsTestnet(): bitkernel::getMapStakeModifierCheckpoints()),
     autocheck(CAutocheckPoint::get_instance().getAutocheckpoints()) {
-    timer = new (std::nothrow) QTimer(this);
-    if(! timer)
+    timer1 = new (std::nothrow) QTimer(this);
+    timer2 = new (std::nothrow) QTimer(this);
+    if(!timer1 || !timer2)
         throw qt_error("CheckpointsModel out of memory.", nullptr);
-    connect(timer, SIGNAL(timeout()), this, SLOT(update()));
-    timer->start(INTERVAL_AUTOCHECKPOINTS_RELOAD);
+    connect(timer1, SIGNAL(timeout()), this, SLOT(update()));
+    timer1->start(INTERVAL_AUTOCHECKPOINTS_RELOAD*(args_bool::fTestNet ? TESTNET_INTERVAL_RATIO: 1));
+    connect(timer2, SIGNAL(timeout()), this, SLOT(buildmap()));
+    timer2->start(INTERVAL_AUTOCHECKPOINTS_BUILDMAP*(args_bool::fTestNet ? TESTNET_INTERVAL_RATIO: 1));
 }
 
 CheckpointsModel::~CheckpointsModel() {
-    delete timer;
+    delete timer1;
+    delete timer2;
 }
 
-// slot (callback: this timer)
+// slot (callback: this timer1)
 void CheckpointsModel::update() {
     //emit CheckpointsHardcode(hardcode, hardstake);
     emit CheckpointsAuto(autocheck);
+}
+
+// slot (callback: this timer2)
+void CheckpointsModel::buildmap() {
+    // under development: if CUI, should use std::thread. because no use QTimer. adopt v4 later.
+    LLOCK(CAutocheckPoint::get_instance().getcs());
+    CAutocheckPoint::get_instance().BuildAutocheckPoints();
+    CAutocheckPoint::get_instance().Buildmap();
 }

@@ -242,6 +242,9 @@ namespace Checkpoints
         static const MapCheckpoints &getMapCheckpoints() {
             return mapCheckpoints;
         }
+        static const MapCheckpoints &getMapCheckpointsTestnet() {
+            return mapCheckpointsTestnet;
+        }
         static uint256 &getHashSyncCheckpoint() {
             return Checkpoints::manage::hashSyncCheckpoint;
         }

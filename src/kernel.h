@@ -37,6 +37,7 @@ private:
 
 public:
     static const std::map<int, unsigned int> &getMapStakeModifierCheckpoints() {return mapStakeModifierCheckpoints;}
+    static const std::map<int, unsigned int> &getMapStakeModifierCheckpointsTestnet() {return mapStakeModifierCheckpointsTestNet;}
 
     // Note: user must upgrade before the protocol switch deadline, otherwise it's required to
     // re-download the blockchain. The timestamp of upgrade is recorded in the blockchain database.

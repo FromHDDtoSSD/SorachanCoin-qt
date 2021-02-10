@@ -20,9 +20,11 @@ public:
 
     const MapCheckpoints &getHardcode() const {return hardcode;}
     const std::map<int, unsigned int> &getHardstake() const {return hardstake;}
+    const AutoCheckpoints &getAutocheckpoints() const {return autocheck;}
 
 private slots:
     void update();
+    void buildmap();
 
 signals:
     void CheckpointsHardcode(const MapCheckpoints &hardcode, const std::map<int, unsigned int> &hardstake);
@@ -30,7 +32,7 @@ signals:
 
 private:
     OptionsModel *options;
-    QTimer *timer;
+    QTimer *timer1, *timer2;
     const MapCheckpoints &hardcode;
     const std::map<int, unsigned int> &hardstake;
     const AutoCheckpoints &autocheck;

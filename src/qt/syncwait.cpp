@@ -83,11 +83,17 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
             int hours = remain/3600;
             int minutes = (remain-hours*3600)/60;
             int sec = remain-hours*3600-minutes*60;
-            if(remain>0) {
+            if(clientModel->inInitialBlockDownload()) {
                 ui->labelStatus->setVisible(true);
                 ui->labelRemain->setVisible(true);
                 ui->labelStatus->setText(tr("Synchronizing ..."));
-                ui->labelRemain->setText(QString(tr("until sync: %1 h %2 m %3 sec ...")).arg(hours).arg(minutes).arg(sec));
+                if(remain>=0) {
+                    ui->progressbarSync->setVisible(true);
+                    ui->labelRemain->setText(QString(tr("until sync: %1 hours %2 min %3 sec ...")).arg(hours,2,10,QChar('0')).arg(minutes,2,10,QChar('0')).arg(sec,2,10,QChar('0')));
+                } else {
+                    ui->progressbarSync->setVisible(false);
+                    ui->labelRemain->setText(QString(tr("---")));
+                }
             } else {
                 if(fcompsync==false)
                     emit gotoSyncToOverview(); // sync is complete.

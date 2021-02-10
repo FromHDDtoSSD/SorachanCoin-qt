@@ -5,6 +5,7 @@
 #include <qt/autocheckpoints.h>
 #include <allocator/qtsecure.h>
 #include <QStandardItemModel>
+#include <QFont>
 
 #include "ui_autocheckpoints.h"
 
@@ -14,12 +15,6 @@ public:
     QStandardItem2() : QStandardItem() {}
     QStandardItem2 *setText(const QString &str) {((QStandardItem *const)this)->setText(str); return this;}
     QStandardItem2 *setEditable(bool flag) {((QStandardItem *const)this)->setEditable(flag); return this;}
-};
-
-enum cptype {
-    CP_POW,
-    CP_POS,
-    CP_CHECKPOINT
 };
 } // namespace
 
@@ -32,8 +27,19 @@ AutocheckpointsWidget::AutocheckpointsWidget(QWidget *parent) :
         ui->setupUi(this);
         ui->listviewHardcode->setModel(model1);
         ui->listviewAutocheck->setModel(model2);
-        ui->labelHardcode->setText(tr("Below is a list of Hardcode Checkpoints."));
-        ui->labelAutocheck->setText(tr("Below is a list of Automatic Checkpoints."));
+
+        QFont font = QApplication::font();
+        font.setPointSize(font.pointSize() * 1.3);
+        font.setBold(true);
+        ui->labelHardcode->setFont(font);
+        ui->labelAutocheck->setFont(font);
+        ui->labelDiff->setFont(font);
+
+        ui->labelHardcode->setText(tr("Below is a list of Hardcode(static) Checkpoints."));
+        ui->labelAutocheck->setText(tr("Below is a list of Automatic(dynamic) Checkpoints."));
+        ui->labelDiff->setText(tr("Below is Automatic(dynamic) Checkpoints counter."));
+        ui->progAutocheck->setRange(0, CAutocheckPoint::GetCheckBlocks());
+        ui->progAutocheck->setValue(0);
     } catch (const std::bad_alloc &) {
         throw qt_error("AutocheckpointsWidget out of memory.", this);
     }
@@ -51,6 +57,7 @@ void AutocheckpointsWidget::setCheckpointsModel(CheckpointsModel *checkpointsMod
     connect(this->checkpointsModel, SIGNAL(CheckpointsHardcode(const MapCheckpoints, const std::map<int, unsigned int>)), this, SLOT(update1(const MapCheckpoints, const std::map<int, unsigned int>)));
     connect(this->checkpointsModel, SIGNAL(CheckpointsAuto(const AutoCheckpoints)), this, SLOT(update2(const AutoCheckpoints)));
     update1(this->checkpointsModel->getHardcode(), this->checkpointsModel->getHardstake());
+    update2(this->checkpointsModel->getAutocheckpoints());
 }
 
 // slot (callback: AutocheckpointsModel: CheckpointsHardcode)
@@ -92,7 +99,36 @@ void AutocheckpointsWidget::update1(const MapCheckpoints &hardcode, const std::m
 
 // slot (callback: AutocheckpointsModel: CheckpointsAuto)
 void AutocheckpointsWidget::update2(const AutoCheckpoints &autocheck) {
+    try {
+        model2->clear();
+        model2->setColumnCount(3);
+        ui->listviewAutocheck->setColumnWidth(0, 80);
+        ui->listviewAutocheck->setColumnWidth(1, 100);
+        ui->listviewAutocheck->setColumnWidth(2, 500);
+        model2->setHorizontalHeaderItem(0, (new QStandardItem2)->setText(tr("block")));
+        model2->setHorizontalHeaderItem(1, (new QStandardItem2)->setText(tr("type")));
+        model2->setHorizontalHeaderItem(2, (new QStandardItem2)->setText(tr("Checkpoint Blockhash(qhash)")));
 
+        QStringList liststr1, liststr2, liststr3;
+        for(const auto &ref: autocheck) {
+            std::string hash = ref.second.hash.ToString();
+            liststr1 << tr(std::to_string(ref.first).c_str());
+            liststr2 << tr("dynamic cp");
+            liststr3 << tr("0x") + tr(hash.c_str());
+        }
+
+        int n = 0;
+        for(const QString &str: liststr1) {
+            model2->setItem(n, 0, (new QStandardItem2)->setText(str)->setEditable(false));
+            model2->setItem(n, 1, (new QStandardItem2)->setText(liststr2[n])->setEditable(false));
+            model2->setItem(n, 2, (new QStandardItem2)->setText(liststr3[n])->setEditable(false));
+            ++n;
+        }
+
+        ui->progAutocheck->setValue(n);
+    } catch (const std::bad_alloc &) {
+        throw qt_error("AutocheckpointsWidget out of memory.", this);
+    }
 }
 
 // slot (callback: bitcoingui mainwindow: autocheckpoints tab clicked)

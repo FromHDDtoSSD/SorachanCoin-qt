@@ -12,17 +12,18 @@
 #include <uint256.h>
 #include <serialize.h>
 #include <file_operate/fs.h>
+#include <sync/lsync.h>
 
 template <typename T> class CBlockHeader;
 
 struct AutoCheckData {
     uint32_t sig;
-    uint32_t nHeight;
-    uint64_t nTime;
+    int32_t nHeight;
+    uint32_t nTime;
     uint65536 hash;
     AutoCheckData() {
         char *s = (char *)&sig;
-        s[0] = 'd'; s[1] = 'o'; s[2] ='g'; s[3] = 'e';
+        s[0] = 'd'; s[1] = 'o'; s[2] = 'g'; s[3] = 'e';
         nHeight = 0;
         nTime = 0;
         hash = 0;
@@ -44,6 +45,7 @@ private:
     constexpr static int nCheckBlocks = 25;
     fs::path pathAddr;
     mutable AutoCheckpoints mapAutocheck;
+    mutable LCCriticalSection cs_autocp;
 
 private:
     CAutocheckPoint_impl(const CAutocheckPoint_impl &)=delete;
@@ -52,8 +54,7 @@ private:
     CAutocheckPoint_impl &operator=(CAutocheckPoint_impl &&)=delete;
 
     bool is_prime(int in_height) const;
-    bool Buildmap() const;
-    bool Write(const CBlockHeader<T> &header, uint32_t nHeight, CAutoFile &fileout, CDataStream &whash);
+    bool Write(const CBlockHeader<T> &header, int32_t nHeight, CAutoFile &fileout, CDataStream &whash);
     uint65536 get_hash(const CDataStream &data) const;
 
     CAutocheckPoint_impl();
@@ -68,7 +69,11 @@ public:
     }
 
     const AutoCheckpoints &getAutocheckpoints() const {return mapAutocheck;}
+    LCCriticalSection &getcs() const {return cs_autocp;}
+    static int GetCheckBlocks() {return nCheckBlocks;}
     bool Check() const;
+
+    bool Buildmap() const;
     bool BuildAutocheckPoints();
 };
 using CAutocheckPoint = CAutocheckPoint_impl<uint256>;

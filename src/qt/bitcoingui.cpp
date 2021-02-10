@@ -477,7 +477,7 @@ void BitcoinGUI::createToolBars() {
     toolbar->addAction(mintingAction);
     toolbar->addAction(autocheckpointsAction);
     toolbar->addAction(addressBookAction);
-    toolbar->addAction(benchmarkAction);
+    //toolbar->addAction(benchmarkAction);
     //toolbar->addAction(multisigAction);
     //toolbar->addAction(soraraAction);
     //toolbar->addAction(syncAction);
