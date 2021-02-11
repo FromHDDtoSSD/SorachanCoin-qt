@@ -14,13 +14,13 @@
 #include <file_operate/fs.h>
 #include <sync/lsync.h>
 
-template <typename T> class CBlockHeader;
+template <typename T> class CBlockIndex_impl;
 
 struct AutoCheckData {
-    uint32_t sig;
+    int32_t sig;
     int32_t nHeight;
     uint32_t nTime;
-    uint65536 hash;
+    uint256 hash;
     AutoCheckData() {
         char *s = (char *)&sig;
         s[0] = 'd'; s[1] = 'o'; s[2] = 'g'; s[3] = 'e';
@@ -54,12 +54,12 @@ private:
     CAutocheckPoint_impl &operator=(CAutocheckPoint_impl &&)=delete;
 
     bool is_prime(int in_height) const;
-    bool Write(const CBlockHeader<T> &header, int32_t nHeight, CAutoFile &fileout, CDataStream &whash);
-    uint65536 get_hash(const CDataStream &data) const;
+    bool Write(const CBlockIndex_impl<T> &header, int32_t nHeight, CAutoFile &fileout, CDataStream &whash);
 
     CAutocheckPoint_impl();
     ~CAutocheckPoint_impl();
 
+    uint65536 get_hash_65536(const CDataStream &data) const;
     bool Sign() const;
     bool Verify() const;
 public:
@@ -80,7 +80,7 @@ using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
 
 #else
 
-static_assert(false, "After ver3, this macro is required.");
+static_assert(false, "After ver3, USE_QUANTUM macro is required.");
 
 #endif // defined(USE_QUANTUM)
 

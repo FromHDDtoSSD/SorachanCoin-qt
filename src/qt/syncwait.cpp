@@ -77,28 +77,29 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
     ui->progressbarSync->setValue(count);
     if(gblock_info.enbaled()) {
         int prog = count - gblock_info.cblockHeight;
-        if(0 < prog) {
+        int nRemainingBlocks = nTotalBlocks-count;
+        if(0 < nRemainingBlocks) {
             int64_t time = util::GetTimeMillis() - gblock_info.ctime;
-            int64_t remain = (double)(nTotalBlocks-count)/prog * time / 1000;
+            int64_t remain = (double)nRemainingBlocks/prog * time / 1000;
             int hours = remain/3600;
             int minutes = (remain-hours*3600)/60;
             int sec = remain-hours*3600-minutes*60;
-            if(clientModel->inInitialBlockDownload()) {
+            if(clientModel->inInitialBlockDownload() && nTotalBlocks!=count) {
                 ui->labelStatus->setVisible(true);
                 ui->labelRemain->setVisible(true);
                 ui->labelStatus->setText(tr("Synchronizing ..."));
-                if(remain>=0) {
+                if(remain>0) {
                     ui->progressbarSync->setVisible(true);
                     ui->labelRemain->setText(QString(tr("until sync: %1 hours %2 min %3 sec ...")).arg(hours,2,10,QChar('0')).arg(minutes,2,10,QChar('0')).arg(sec,2,10,QChar('0')));
                 } else {
                     ui->progressbarSync->setVisible(false);
                     ui->labelRemain->setText(QString(tr("---")));
                 }
-            } else {
-                if(fcompsync==false)
-                    emit gotoSyncToOverview(); // sync is complete.
-                fcompsync = true;
             }
+        } else {
+            if(fcompsync==false)
+                emit gotoSyncToOverview(); // sync is complete.
+            fcompsync = true;
         }
     }
 

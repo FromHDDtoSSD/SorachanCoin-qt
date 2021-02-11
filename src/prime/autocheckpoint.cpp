@@ -10,11 +10,13 @@
 #include <util.h>
 #include <random/random.h>
 #include <file_operate/fs.h>
+#include <scrypt.h>
 #include <debugcs/debugcs.h>
 
+static const char *dirname = "autocheckpoints";
 static const char *datname = "autocheckpoints.dat";
 static constexpr int lowerBlockHeight = 440000; // mainnet and testnet
-#define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
+#define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
 
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vAuto = prevector<PREVECTOR_BLOCK_N, uint8_t>;
@@ -56,16 +58,16 @@ bool CAutocheckPoint_impl<T>::Buildmap() const {
     }
     filein.fclose();
 
+    // check: checksum hash_65536
     CDataStream ssda(vchData);
-    uint65536 hashTmp = get_hash(ssda);
-    if(hashIn != hashTmp)
+    if(hashIn != get_hash_65536(ssda))
         return false;
 
     mapAutocheck.clear();
     while(! ssda.eof()) {
         AutoCheckData data;
         ssda >> data;
-        CP_DEBUG_CS(tfm::format("Autocheckpoint buildmap: %d %d %s", data.nHeight, data.nTime, data.hash.ToString().substr(0, 64)))
+        CP_DEBUG_CS(tfm::format("Autocheckpoint buildmap: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()));
         const char *s = (const char *)&data.sig;
         if(s[0]=='d' && s[1]=='o' && s[2]=='g' && s[3]=='e')
             mapAutocheck.insert(std::make_pair(data.nHeight, data));
@@ -76,19 +78,15 @@ bool CAutocheckPoint_impl<T>::Buildmap() const {
 }
 
 template <typename T>
-bool CAutocheckPoint_impl<T>::Write(const CBlockHeader<T> &header, int32_t nHeight, CAutoFile &fileout, CDataStream &whash) {
+bool CAutocheckPoint_impl<T>::Write(const CBlockIndex_impl<T> &header, int32_t nHeight, CAutoFile &fileout, CDataStream &whash) {
     AutoCheckData data;
     assert(header.get_hashPrevBlock()!=0);
     try {
-        {
-            data.nHeight = nHeight;
-            data.nTime = header.get_nTime();
-            CDataStream ssheader;
-            ssheader << header;
-            data.hash = get_hash(ssheader);
-        }
+        data.nHeight = nHeight;
+        data.nTime = header.get_nTime();
+        data.hash = header.GetBlockHash();
 
-        CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString().substr(0, 64)))
+        CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()));
         CDataStream ssda;
         ssda << data;
         fileout << ssda;
@@ -101,14 +99,16 @@ bool CAutocheckPoint_impl<T>::Write(const CBlockHeader<T> &header, int32_t nHeig
 }
 
 template <typename T>
-uint65536 CAutocheckPoint_impl<T>::get_hash(const CDataStream &data) const {
+uint65536 CAutocheckPoint_impl<T>::get_hash_65536(const CDataStream &data) const {
     return hash_basis::Hash65536(data.begin(), data.end());
 }
 
 template <typename T>
 CAutocheckPoint_impl<T>::CAutocheckPoint_impl() {
     mapAutocheck.clear();
-    pathAddr = iofs::GetDataDir() / datname;
+    if(! fsbridge::dir_create(iofs::GetDataDir() / dirname))
+        throw std::runtime_error("Autocheckpoint path error.");
+    pathAddr = iofs::GetDataDir() / dirname / datname;
 }
 
 template <typename T>
@@ -134,10 +134,8 @@ bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckp
                     break;
             }
 
-            CDataStream ssda;
-            ssda << *static_cast<const CBlockHeader<T> *>(target);
-            CP_DEBUG_CS(tfm::format("Autochekpoint Check %s, %s", autocpValue->second.hash.ToString().substr(0, 64), get_hash(ssda).ToString().substr(0, 64)))
-            if(autocpValue->second.hash != get_hash(ssda))
+            CP_DEBUG_CS(tfm::format("Autochekpoint Check %s, %s", autocpValue->second.hash.ToString(), target->GetBlockHash().ToString()));
+            if(autocpValue->second.hash != target->GetBlockHash())
                 return false;
         }
         return true;
@@ -149,7 +147,7 @@ bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckp
 template <typename T>
 bool CAutocheckPoint_impl<T>::Sign() const {
     LLOCK(cs_autocp);
-    // under development (v3, instead of checksum hash)
+    // under development (v3, instead of checksum hash_65536)
 
     return false;
 }
@@ -157,7 +155,7 @@ bool CAutocheckPoint_impl<T>::Sign() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::Verify() const {
     LLOCK(cs_autocp);
-    // under development (v3, instead of checksum hash)
+    // under development (v3, instead of checksum hash_65536)
 
     return false;
 }
@@ -177,8 +175,8 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     */
 
     assert(block);
-    CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block))
-    CP_DEBUG_CS(tfm::format("block addr: %s", block->get_hashPrevBlock().ToString()))
+    CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block));
+    CP_DEBUG_CS(tfm::format("block addr: %s", block->get_hashPrevBlock().ToString()));
     if(block->get_hashPrevBlock()==0) { // genesis block
         return true;
     }
@@ -205,22 +203,22 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     std::string tmpfn = tfm::format("%s.%d", datname, randv);
     fs::path pathTmp = iofs::GetDataDir() / tmpfn;
     CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);
-    CP_DEBUG_CS(tfm::format("BuildAutocheckPoints path: %s, fileout: %d", pathTmp.string().c_str(), (uintptr_t)(FILE *)fileout))
+    CP_DEBUG_CS(tfm::format("BuildAutocheckPoints path: %s, fileout: %d", pathTmp.string().c_str(), (uintptr_t)(FILE *)fileout));
     if(! fileout)
         return false;
 
     block = block_info::mapBlockIndex[block_info::hashBestChain];
     counter = nCheckBlocks;
     assert(0<counter);
-    CDataStream whash; // output data
+    CDataStream whash; // output data (for checksum hash_65536)
     for(;;) {
-        CP_DEBUG_CS(tfm::format("block check: %d", block->get_nHeight()))
+        CP_DEBUG_CS(tfm::format("block check: %d", block->get_nHeight()));
         if(block->get_nHeight()<=lowerBlockHeight)
             break;
         if(is_prime(block->get_nHeight())) {
-            CP_DEBUG_CS(tfm::format("block is_prime: %d", block->get_nHeight()))
+            CP_DEBUG_CS(tfm::format("block is_prime: %d", block->get_nHeight()));
             assert(block->get_hashPrevBlock()==block->get_pprev()->GetBlockHash());
-            if(! Write(*static_cast<const CBlockHeader<T> *>(block), block->get_nHeight(), fileout, whash)) {
+            if(! Write(*block, block->get_nHeight(), fileout, whash)) {
                 iofs::FileCommit(fileout);
                 fileout.fclose();
                 return false;
@@ -233,8 +231,9 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
         block = block_info::mapBlockIndex[block->get_hashPrevBlock()];
     }
 
+    // checksum hash_65536
     CDataStream dhash;
-    dhash << get_hash(whash);
+    dhash << get_hash_65536(whash);
     try {
         fileout << dhash;
     } catch(const std::exception &) {

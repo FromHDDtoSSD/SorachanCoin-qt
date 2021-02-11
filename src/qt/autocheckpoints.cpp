@@ -107,7 +107,7 @@ void AutocheckpointsWidget::update2(const AutoCheckpoints &autocheck) {
         ui->listviewAutocheck->setColumnWidth(2, 500);
         model2->setHorizontalHeaderItem(0, (new QStandardItem2)->setText(tr("block")));
         model2->setHorizontalHeaderItem(1, (new QStandardItem2)->setText(tr("type")));
-        model2->setHorizontalHeaderItem(2, (new QStandardItem2)->setText(tr("Checkpoint Blockhash(qhash)")));
+        model2->setHorizontalHeaderItem(2, (new QStandardItem2)->setText(tr("Checkpoint Blockhash")));
 
         QStringList liststr1, liststr2, liststr3;
         for(const auto &ref: autocheck) {
