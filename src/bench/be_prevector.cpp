@@ -16,7 +16,9 @@ namespace check_prevector {
 struct nontrivial_t {
     int x;
     nontrivial_t() :x(-1) {}
-    IMPLEMENT_SERIALIZE()
+    ADD_SERIALIZE_METHODS
+    //template <typename Stream, typename Operation>
+    //inline void SerializationOp(Stream &s, Operation ser_action) {}
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action) { int nSerSize = 0; READWRITE(x); }
     bool operator==(const struct nontrivial_t &obj) const { return (x == obj.x); }

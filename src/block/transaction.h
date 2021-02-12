@@ -146,9 +146,11 @@ public:
         printf("%s\n", ToString().c_str());
     }
 
-    IMPLEMENT_SERIALIZE(
-        READWRITE(FLATDATA(*this));
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(FLATDATA(*this));
+    }
 };
 using COutPoint = COutPoint_impl<uint256>;
 
@@ -201,9 +203,11 @@ public:
         printf("%s", ToString().c_str());
     }
 
-    IMPLEMENT_SERIALIZE(
-        READWRITE(FLATDATA(*this));
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(FLATDATA(*this));
+    }
 };
 
 // A txdb record that contains the disk location of a transaction and the locations of transactions that spend its outputs.
@@ -254,14 +258,15 @@ public:
 
     int GetDepthInMainChain() const noexcept;
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);
-        }
-        READWRITE(this->pos);
-        READWRITE(this->vSpent);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->pos);
+        LREADWRITE(this->vSpent);
+    }
 };
 
 // Transaction Memory Pool
@@ -407,22 +412,13 @@ public:
         printf("%s\n", ToString().c_str());
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         LREADWRITE(this->prevout);
         LREADWRITE(this->scriptSig);
         LREADWRITE(this->nSequence);
     }
-
-    /*
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->prevout);
-        READWRITE(this->scriptSig);
-        READWRITE(this->nSequence);
-    )
-    */
 };
 using CTxIn = CTxIn_impl<uint256>;
 
@@ -488,11 +484,12 @@ public:
         printf("%s\n", ToString().c_str());
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nValue);
-        READWRITE(this->scriptPubKey);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nValue);
+        LREADWRITE(this->scriptPubKey);
+    }
 };
 using CTxOut = CTxOut_impl<uint256>;
 
@@ -915,22 +912,6 @@ public:
             LREADWRITE(this->nLockTime);
         }
     }
-
-    /*
-    IMPLEMENT_SERIALIZE
-    (
-        if(1 < this->nVersion) {
-            debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
-            //assert(!"Only using CTransaction_impl<T>::Unserialize is (nVersion == 1)");
-        }
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
-        READWRITE(this->nTime);
-        READWRITE(this->vin);
-        READWRITE(this->vout);
-        READWRITE(this->nLockTime);
-    )
-    */
 };
 
 // Closure representing one script verification

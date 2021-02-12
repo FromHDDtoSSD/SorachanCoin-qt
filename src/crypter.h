@@ -63,14 +63,15 @@ public:
         vchOtherDerivationParameters = std::vector<unsigned char>(0);
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->vchCryptedKey);
-        READWRITE(this->vchSalt);
-        READWRITE(this->nDerivationMethod);
-        READWRITE(this->nDeriveIterations);
-        READWRITE(this->vchOtherDerivationParameters);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->vchCryptedKey);
+        LREADWRITE(this->vchSalt);
+        LREADWRITE(this->nDerivationMethod);
+        LREADWRITE(this->nDeriveIterations);
+        LREADWRITE(this->vchOtherDerivationParameters);
+    }
 };
 
 //

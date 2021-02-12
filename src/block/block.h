@@ -158,24 +158,27 @@ public:
     bool AcceptBlock();
     bool GetCoinAge(uint64_t &nCoinAge) const; // ppcoin: calculate total coin age spent in block
     bool CheckBlockSignature() const;
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion); // CBlockHeader this Version READWRITE
-        nVersion = this->nVersion;
-        READWRITE(this->hashPrevBlock);
-        READWRITE(this->hashMerkleRoot);
-        READWRITE(this->nTime);
-        READWRITE(this->nBits);
-        READWRITE(this->nNonce);
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nType = 0;
+        LREADWRITE(this->nVersion); // CBlockHeader this Version READWRITE
+        //int nVersion = this->nVersion;
+        LREADWRITE(this->hashPrevBlock);
+        LREADWRITE(this->hashMerkleRoot);
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->nBits);
+        LREADWRITE(this->nNonce);
         // ConnectBlock depends on vtx following header to generate CDiskTxPos
         if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY))) {
-            READWRITE(this->vtx);
-            READWRITE(this->vchBlockSig);
-        } else if (ser_ctr.isRead()) {
+            LREADWRITE(this->vtx);
+            LREADWRITE(this->vchBlockSig);
+        } else if (ser_action.ForRead()) {
             const_cast<CBlock_impl<T> *>(this)->vtx.clear();
             const_cast<CBlock_impl<T> *>(this)->vchBlockSig.clear();
         }
-    )
+    }
 };
 using CBlock = CBlock_impl<uint256>;
 
@@ -430,38 +433,40 @@ public:
     void print() const {
         printf("%s\n", ToString().c_str());
     }
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);    // IMPLEMENT_SERIALIZE has argument(nVersion).
-        }
-        READWRITE(this->hashNext);
-        READWRITE(this->nFile);
-        READWRITE(this->nBlockPos);
-        READWRITE(this->nHeight);
-        READWRITE(this->nMint);
-        READWRITE(this->nMoneySupply);
-        READWRITE(this->nFlags);
-        READWRITE(this->nStakeModifier);
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->hashNext);
+        LREADWRITE(this->nFile);
+        LREADWRITE(this->nBlockPos);
+        LREADWRITE(this->nHeight);
+        LREADWRITE(this->nMint);
+        LREADWRITE(this->nMoneySupply);
+        LREADWRITE(this->nFlags);
+        LREADWRITE(this->nStakeModifier);
         if (CBlockIndex_impl<T>::IsProofOfStake()) {
-            READWRITE(this->prevoutStake);
-            READWRITE(this->nStakeTime);
-            READWRITE(this->hashProofOfStake);
-        } else if (ser_ctr.isRead()) {
+            LREADWRITE(this->prevoutStake);
+            LREADWRITE(this->nStakeTime);
+            LREADWRITE(this->hashProofOfStake);
+        } else if (ser_action.ForRead()) {
             const_cast<CDiskBlockIndex_impl *>(this)->prevoutStake.SetNull();
             const_cast<CDiskBlockIndex_impl *>(this)->nStakeTime = 0;
             const_cast<CDiskBlockIndex_impl *>(this)->hashProofOfStake = 0;
         }
 
         // block header
-        READWRITE(this->nVersion);  // CBlockHeader this nVersion
-        READWRITE(this->hashPrev);
-        READWRITE(this->hashMerkleRoot);
-        READWRITE(this->nTime);
-        READWRITE(this->nBits);
-        READWRITE(this->nNonce);
-        READWRITE(this->blockHash);
-    )
+        LREADWRITE(this->nVersion);  // CBlockHeader this nVersion
+        LREADWRITE(this->hashPrev);
+        LREADWRITE(this->hashMerkleRoot);
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->nBits);
+        LREADWRITE(this->nNonce);
+        LREADWRITE(this->blockHash);
+    }
 };
 using CDiskBlockIndex = CDiskBlockIndex_impl<uint256>;
 

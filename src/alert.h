@@ -24,8 +24,10 @@ class CNode;
 class CUnsignedAlert
 {
 //private:
-    // CUnsignedAlert(const CUnsignedAlert &); // {}
-    // CUnsignedAlert &operator=(const CUnsignedAlert &); // {}
+    // CUnsignedAlert(const CUnsignedAlert &)=delete;
+    // CUnsignedAlert &operator=(const CUnsignedAlert &&)=delete;
+    // CUnsignedAlert(CUnsignedAlert &&)=delete;
+    // CUnsignedAlert &operator=(CUnsignedAlert &&)=delete;
 
 public:
     static CCriticalSection cs_mapAlerts;
@@ -49,42 +51,45 @@ public:
     std::string strStatusBar;
     std::string strReserved;
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nVersion);
+        //int nVersion = this->nVersion;
 
-        READWRITE(this->nRelayUntil);
-        READWRITE(this->nExpiration);
-        READWRITE(this->nID);
-        READWRITE(this->nCancel);
-        READWRITE(this->setCancel);
-        READWRITE(this->nMinVer);
-        READWRITE(this->nMaxVer);
-        READWRITE(this->setSubVer);
-        READWRITE(this->nPriority);
+        LREADWRITE(this->nRelayUntil);
+        LREADWRITE(this->nExpiration);
+        LREADWRITE(this->nID);
+        LREADWRITE(this->nCancel);
+        LREADWRITE(this->setCancel);
+        LREADWRITE(this->nMinVer);
+        LREADWRITE(this->nMaxVer);
+        LREADWRITE(this->setSubVer);
+        LREADWRITE(this->nPriority);
 
-        READWRITE(this->strComment);
-        READWRITE(this->strStatusBar);
-        READWRITE(this->strReserved);
-    )
+        LREADWRITE(this->strComment);
+        LREADWRITE(this->strStatusBar);
+        LREADWRITE(this->strReserved);
+    }
 
     void SetNull();
     std::string ToString() const;
 };
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> alert_vector;
+using alert_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> alert_vector;
+using alert_vector = std::vector<uint8_t>;
 #endif
 
 /** An alert is a combination of a serialized CUnsignedAlert and a signature. */
 class CAlert : public CUnsignedAlert
 {
 //private:
-    // CAlert(const CAlert &); // {}
-    // CAlert &operator=(const CAlert &); // {}
+    // CAlert(const CAlert &)=delete;
+    // CAlert &operator=(const CAlert &&)=delete;
+    // CAlert(CAlert &&)=delete;
+    // CAlert &operator=(CAlert &&)=delete;
 
 private:
     //
@@ -103,12 +108,6 @@ public:
         SetNull();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->vchMsg);
-        READWRITE(this->vchSig);
-    )
-
     void SetNull();
     bool IsNull() const;
     uint256 GetHash() const;
@@ -124,7 +123,13 @@ public:
     // Get copy of (active) alert object by hash. Returns a null alert if it is not found.
     //
     static CAlert getAlertByHash(const uint256 &hash);
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->vchMsg);
+        LREADWRITE(this->vchSig);
+    }
 };
 
 #endif
-//@

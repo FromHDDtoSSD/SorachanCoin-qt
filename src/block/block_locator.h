@@ -58,13 +58,14 @@ public:
     uint256 GetBlockHash();
     int GetHeight();
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);    // IMPLEMENT_SERIALIZE has argument(nVersion).
-        }
-        READWRITE(this->vHave);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->vHave);
+    }
 };
 using CBlockLocator = CBlockLocator_impl<uint256>;
 

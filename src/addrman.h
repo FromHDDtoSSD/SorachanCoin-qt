@@ -9,13 +9,9 @@
 #include <protocol.h>
 #include <util.h>
 #include <sync/sync.h>
-
-
 #include <map>
 #include <vector>
-
-#include <openssl/rand.h>
-
+//#include <openssl/rand.h>
 
 //
 // Extended statistics about a CAddress
@@ -23,8 +19,10 @@
 class CAddrInfo : public CAddress
 {
 //private:
-//    CAddrInfo(const CAddrInfo &); // {}
-//    CAddrInfo &operator=(const CAddrInfo &); // {}
+    // CAddrInfo(const CAddrInfo &)=delete;
+    // CAddrInfo &operator=(const CAddrInfo &&)=delete;
+    // CAddrInfo(CAddrInfo &&)=delete;
+    // CAddrInfo &operator=(CAddrInfo &&)=delete;
 
 private:
     friend class CAddrMan;
@@ -38,15 +36,6 @@ private:
 
     // int64_t CAddress::nLastTry // last try whatsoever by us:
 public:
-    IMPLEMENT_SERIALIZE
-    (
-        CAddress *pthis = (CAddress *)(this);
-        READWRITE(*pthis);
-        READWRITE(this->source);
-        READWRITE(this->nLastSuccess);
-        READWRITE(this->nAttempts);
-    )
-
     void Init() {
         nLastSuccess = 0;
         CAddress::nLastTry = 0;
@@ -72,6 +61,16 @@ public:
 
     // Calculate the relative chance this entry should be given when selecting nodes to connect to
     double GetChance(int64_t nNow = bitsystem::GetAdjustedTime()) const;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        CAddress *pthis = (CAddress *)(this);
+        LREADWRITE(*pthis);
+        LREADWRITE(this->source);
+        LREADWRITE(this->nLastSuccess);
+        LREADWRITE(this->nAttempts);
+    }
 };
 
 //
@@ -153,6 +152,8 @@ class CAddrMan
 private:
     CAddrMan(const CAddrMan &);
     CAddrMan &operator=(const CAddrMan &);
+    CAddrMan(CAddrMan &&);
+    CAddrMan &operator=(const CAddrMan &&);
 
     mutable CCriticalSection cs;        // critical section to protect the inner data structures
 
@@ -168,9 +169,9 @@ private:
     std::vector<std::set<int> > vvNew;             // list of "new" buckets
 
 protected:
-    CAddrInfo *Find(const CNetAddr &addr, int *pnId = NULL);                                // Find an entry.
-    CAddrInfo *Create(const CAddress &addr, const CNetAddr &addrSource, int *pnId = NULL);  // find an entry, creating it if necessary. nTime and nServices of found node is updated, if necessary.
-    void SwapRandom(unsigned int nRandomPos1, unsigned int nRandomPos2);                    // Swap two elements in vRandom.
+    CAddrInfo *Find(const CNetAddr &addr, int *pnId = nullptr);                                // Find an entry.
+    CAddrInfo *Create(const CAddress &addr, const CNetAddr &addrSource, int *pnId = nullptr);  // find an entry, creating it if necessary. nTime and nServices of found node is updated, if necessary.
+    void SwapRandom(unsigned int nRandomPos1, unsigned int nRandomPos2);                       // Swap two elements in vRandom.
     int SelectTried(int nKBucket);        // Return position in given bucket to replace.
 
     // Remove an element from a "new" bucket.
@@ -327,22 +328,24 @@ public:
         }
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
         LOCK(this->cs);
         unsigned char nVersion = 0;
 
-        READWRITE(nVersion);
-        READWRITE(this->nKey);
-        READWRITE(this->nNew);
-        READWRITE(this->nTried);
+        LREADWRITE(nVersion);
+        LREADWRITE(this->nKey);
+        LREADWRITE(this->nNew);
+        LREADWRITE(this->nTried);
 
         CAddrMan *am = const_cast<CAddrMan *>(this);
-        if (ser_ctr.isWrite()) {
+        //if (ser_action.ForWrite()) {
+        if (! ser_action.ForRead()) {
 
             int nUBuckets = ADDRMAN_NEW_BUCKET_COUNT;
 
-            READWRITE(nUBuckets);
+            LREADWRITE(nUBuckets);
 
             MapUnkIds mapUnkIds;
             int nIds = 0;
@@ -356,7 +359,7 @@ public:
 
                 CAddrInfo &info = (*it).second;
                 if (info.nRefCount) {
-                    READWRITE(info);
+                    LREADWRITE(info);
                     nIds++;
                 }
             }
@@ -371,7 +374,7 @@ public:
                 CAddrInfo &info = (*it).second;
 
                 if (info.fInTried) {
-                    READWRITE(info);
+                    LREADWRITE(info);
                     nIds++;
                 }
             }
@@ -380,18 +383,18 @@ public:
             {
                 std::set<int> &vNew = (*it);
                 int nSize = int( vNew.size() );
-                READWRITE(nSize);
+                LREADWRITE(nSize);
 
                 for (std::set<int>::iterator it2 = vNew.begin(); it2 != vNew.end(); it2++)
                 {
                     int nIndex = mapUnkIds[*it2];
-                    READWRITE(nIndex);
+                    LREADWRITE(nIndex);
                 }
             }
         } else {
             int nUBuckets = 0;
 
-            READWRITE(nUBuckets);
+            LREADWRITE(nUBuckets);
             am->nIdCount = 0;
             am->mapInfo.clear();
             am->mapAddr.clear();
@@ -403,7 +406,7 @@ public:
             {
                 CAddrInfo &info = am->mapInfo[n];
 
-                READWRITE(info);
+                LREADWRITE(info);
                 am->mapAddr[info] = n;
                 info.nRandomPos = int( vRandom.size() );
                 am->vRandom.push_back(n);
@@ -418,7 +421,7 @@ public:
             for (int n = 0; n < am->nTried; ++n)
             {
                 CAddrInfo info;
-                READWRITE(info);
+                LREADWRITE(info);
 
                 std::vector<int> &vTried = am->vvTried[info.GetTriedBucket(am->nKey)];
                 if (vTried.size() < ADDRMAN_TRIED_BUCKET_SIZE) {
@@ -441,11 +444,11 @@ public:
                 std::set<int> &vNew = am->vvNew[b];
                 int nSize = 0;
 
-                READWRITE(nSize);
+                LREADWRITE(nSize);
                 for (int n = 0; n < nSize; n++)
                 {
                     int nIndex = 0;
-                    READWRITE(nIndex);
+                    LREADWRITE(nIndex);
                     CAddrInfo &info = am->mapInfo[nIndex];
                     
                     if ( (nUBuckets == ADDRMAN_NEW_BUCKET_COUNT) && (info.nRefCount < ADDRMAN_NEW_BUCKETS_PER_ADDRESS) ) {
@@ -456,8 +459,7 @@ public:
             }
 
         }
-    )
+    }
 };
 
 #endif
-//@

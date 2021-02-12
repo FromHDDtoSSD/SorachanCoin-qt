@@ -67,20 +67,12 @@ public:
                 hashCheckpoint.ToString().c_str());
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         LREADWRITE(this->nVersion);
         LREADWRITE(this->hashCheckpoint);
     }
-    /*
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
-        READWRITE(this->hashCheckpoint);
-    )
-    */
 };
 
 class CSyncCheckpoint : public CUnsignedSyncCheckpoint
@@ -164,19 +156,12 @@ public:
     bool CheckSignature();
     bool ProcessSyncCheckpoint(CNode *pfrom);
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         LREADWRITE(this->vchMsg);
         LREADWRITE(this->vchSig);
     }
-    /*
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->vchMsg);
-        READWRITE(this->vchSig);
-    )
-    */
 };
 
 // Block-chain checkpoints are compiled-in sanity checks.

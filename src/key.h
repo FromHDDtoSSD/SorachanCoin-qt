@@ -251,11 +251,6 @@ public:
     CMalleablePubKey(const std::string &strMalleablePubKey) { SetString(strMalleablePubKey); }
     CMalleablePubKey(const CPubKey &pubKeyInL, const CPubKey &pubKeyInH) : pubKeyL(pubKeyInL), pubKeyH(pubKeyInH) {}
 
-    IMPLEMENT_SERIALIZE(
-        READWRITE(this->pubKeyL);
-        READWRITE(this->pubKeyH);
-    )
-
     bool IsValid() const {
         return pubKeyL.IsValid() && pubKeyH.IsValid();
     }
@@ -294,6 +289,13 @@ public:
     std::string ToString() const;
     bool SetString(const std::string &strMalleablePubKey);
     void GetVariant(CPubKey &R, CPubKey &vchPubKeyVariant) const;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->pubKeyL);
+        LREADWRITE(this->pubKeyH);
+    }
 };
 
 class CMalleableKey
@@ -309,11 +311,6 @@ public:
     CMalleableKey(const CMalleableKey &b) { SetSecrets(b.vchSecretL, b.vchSecretH); }
     CMalleableKey(const CSecret &L, const CSecret &H) { SetSecrets(L, H); }
     ~CMalleableKey() {}
-
-    IMPLEMENT_SERIALIZE(
-        READWRITE(vchSecretL);
-        READWRITE(vchSecretH);
-    )
 
     std::string ToString() const;
     bool SetString(const std::string &strMalleablePubKey);
@@ -373,6 +370,13 @@ public:
 
     bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant) const;
     bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant, CKey &privKeyVariant) const;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(vchSecretL);
+        LREADWRITE(vchSecretH);
+    }
 };
 
 class CMalleableKeyView
@@ -382,7 +386,7 @@ private:
     CPubKey vchPubKeyH;
 
 public:
-    CMalleableKeyView() {};
+    CMalleableKeyView() {}
     CMalleableKeyView(const CMalleableKey &b) {
         if (b.vchSecretL.size() != 32) {
             throw key_error("CMalleableKeyView::CMalleableKeyView() : L size must be 32 bytes");
@@ -409,11 +413,6 @@ public:
         return *this;
     }
     ~CMalleableKeyView() {}
-
-    IMPLEMENT_SERIALIZE(
-        READWRITE(vchSecretL);
-        READWRITE(vchPubKeyH);
-    )
 
     bool IsValid() const { return vchSecretL.size() == 32 && GetMalleablePubKey().IsValid(); }
 
@@ -444,7 +443,13 @@ public:
 
     bool operator <(const CMalleableKeyView &kv) const { return vchPubKeyH.GetID() < kv.vchPubKeyH.GetID(); }
     bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant) const;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(vchSecretL);
+        LREADWRITE(vchPubKeyH);
+    }
 };
 
 #endif
-//@
