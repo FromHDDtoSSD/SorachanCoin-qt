@@ -357,16 +357,21 @@ void CWallet::SetBestChain(const CBlockLocator &loc)
 class CCorruptAddress
 {
 private:
-    CCorruptAddress(const CCorruptAddress &); // {}
-    CCorruptAddress &operator=(const CCorruptAddress &); // {}
+    CCorruptAddress(const CCorruptAddress &)=delete;
+    CCorruptAddress &operator=(const CCorruptAddress &)=delete;
+    CCorruptAddress(CCorruptAddress &&)=delete;
+    CCorruptAddress &operator=(CCorruptAddress &&)=delete;
 
 public:
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nType = 0;
         if (nType & SER_DISK) {
-            READWRITE(nVersion);
+            int nVersion = 0;
+            LREADWRITE(nVersion);
         }
-    )
+    }
 };
 
 bool CWallet::SetMinVersion(enum WalletFeature nVersion, CWalletDB *pwalletdbIn/* =NULL */, bool fExplicit/* =false */)

@@ -47,8 +47,10 @@ enum WalletFeature
 class CKeyPool
 {
 private:
-    CKeyPool(const CKeyPool &); // {}
-    CKeyPool &operator=(const CKeyPool &); // {}
+    CKeyPool(const CKeyPool &)=delete;
+    CKeyPool &operator=(const CKeyPool &)=delete;
+    CKeyPool(CKeyPool &&)=delete;
+    CKeyPool &operator=(CKeyPool &&)=delete;
 
 public:
     int64_t nTime;
@@ -63,14 +65,15 @@ public:
         vchPubKey = vchPubKeyIn;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);
-        }
-        READWRITE(this->nTime);
-        READWRITE(this->vchPubKey);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->vchPubKey);
+    }
 };
 
 //
@@ -439,8 +442,10 @@ namespace mapValuePos
 class CWalletTx : public CMerkleTx
 {
 //private:
-    // CWalletTx(const CWalletTx &); // {}
-    // CWalletTx &operator=(const CWalletTx &); // {}
+    // CWalletTx(const CWalletTx &)=delete;
+    // CWalletTx &operator=(const CWalletTx &)=delete;
+    // CWalletTx(CWalletTx &&)=delete;
+    // CWalletTx &operator=(CWalletTx &&)=delete;
 
 private:
     const CWallet *pwallet;
@@ -478,7 +483,7 @@ public:
     mutable int64_t nChangeCached;
 
     CWalletTx() {
-        Init(NULL);
+        Init(nullptr);
     }
 
     CWalletTx(const CWallet *pwalletIn) {
@@ -525,15 +530,16 @@ public:
         nOrderPos = -1;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
         CWalletTx *pthis = const_cast<CWalletTx *>(this);
-        if (ser_ctr.isRead()) {
+        if (ser_action.ForRead()) {
             pthis->Init(nullptr);
         }
 
         char fSpent = false;
-        if (! ser_ctr.isRead()) {
+        if (! ser_action.ForRead()) {
             pthis->mapValue["fromaccount"] = pthis->strFromAccount;
 
             std::string str;
@@ -549,20 +555,21 @@ public:
             mapValuePos::WriteOrderPos(pthis->nOrderPos, pthis->mapValue);
 
             if (this->nTimeSmart) {
-                pthis->mapValue["timesmart"] = strprintf("%u", this->nTimeSmart);
+                pthis->mapValue["timesmart"] = tfm::format("%u", this->nTimeSmart);
             }
         }
 
-        nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx*)this, ser_action);
-        READWRITE(this->vtxPrev);
-        READWRITE(this->mapValue);
-        READWRITE(this->vOrderForm);
-        READWRITE(this->fTimeReceivedIsTxTime);
-        READWRITE(this->nTimeReceived);
-        READWRITE(this->fFromMe);
-        READWRITE(fSpent);
+        //nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx *)this, ser_action);
+        LREADWRITE(*(CMerkleTx *)this);
+        LREADWRITE(this->vtxPrev);
+        LREADWRITE(this->mapValue);
+        LREADWRITE(this->vOrderForm);
+        LREADWRITE(this->fTimeReceivedIsTxTime);
+        LREADWRITE(this->nTimeReceived);
+        LREADWRITE(this->fFromMe);
+        LREADWRITE(fSpent);
 
-        if (ser_ctr.isRead()) {
+        if (ser_action.ForRead()) {
             pthis->strFromAccount = pthis->mapValue["fromaccount"];
 
             if (mapValue.count("spent")) {
@@ -584,7 +591,7 @@ public:
         pthis->mapValue.erase("spent");
         pthis->mapValue.erase("n");
         pthis->mapValue.erase("timesmart");
-    )
+    }
 
     //
     // marks certain txout's as spent
@@ -665,8 +672,10 @@ class CWalletKey
 {
 private:
     // CWalletKey(); Call by CWalletKey(int64_t nExpires = 0)
-    CWalletKey(const CWalletKey &); // {}
-    CWalletKey &operator=(const CWalletKey &); // {}
+    CWalletKey(const CWalletKey &)=delete;
+    CWalletKey &operator=(const CWalletKey &)=delete;
+    CWalletKey(CWalletKey &&)=delete;
+    CWalletKey &operator=(CWalletKey &&)=delete;
 
 public:
     CPrivKey vchPrivKey;
@@ -684,16 +693,17 @@ public:
         nTimeExpires = nExpires;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);
-        }
-        READWRITE(this->vchPrivKey);
-        READWRITE(this->nTimeCreated);
-        READWRITE(this->nTimeExpires);
-        READWRITE(this->strComment);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->vchPrivKey);
+        LREADWRITE(this->nTimeCreated);
+        LREADWRITE(this->nTimeExpires);
+        LREADWRITE(this->strComment);
+    }
 };
 
 //
@@ -703,8 +713,10 @@ public:
 class CAccount
 {
 private:
-    CAccount(const CAccount &); // {}
-    CAccount &operator=(const CAccount &); // {}
+    CAccount(const CAccount &)=delete;
+    CAccount &operator=(const CAccount &)=delete;
+    CAccount(CAccount &&)=delete;
+    CAccount &operator=(CAccount &&)=delete;
 
 public:
     CPubKey vchPubKey;
@@ -717,13 +729,14 @@ public:
         vchPubKey = CPubKey();
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);
-        }
-        READWRITE(this->vchPubKey);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+
+        LREADWRITE(this->vchPubKey);
+    }
 };
 
 //
@@ -733,8 +746,10 @@ public:
 class CAccountingEntry
 {
 private:
-    // CAccountingEntry(const CAccountingEntry &); // {}
-    CAccountingEntry &operator=(const CAccountingEntry &); // {}
+    //CAccountingEntry(const CAccountingEntry &)=delete;
+    //CAccountingEntry(CAccountingEntry &&)=delete;
+    //CAccountingEntry &operator=(const CAccountingEntry &)=delete;
+    //CAccountingEntry &operator=(CAccountingEntry &&)=delete;
 
     std::vector<char> _ssExtra;
 
@@ -761,25 +776,23 @@ public:
         nOrderPos = -1;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
         CAccountingEntry &me = *const_cast<CAccountingEntry *>(this);
-        if (!(nType & SER_GETHASH)) {
-            READWRITE(nVersion);
-        }
+        int nVersion = 0;
+        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        //
         // Note: strAccount is serialized as part of the key, not here.
-        //
-        READWRITE(this->nCreditDebit);
-        READWRITE(this->nTime);
-        READWRITE(this->strOtherAccount);
+        LREADWRITE(this->nCreditDebit);
+        LREADWRITE(this->nTime);
+        LREADWRITE(this->strOtherAccount);
 
-        if (! ser_ctr.isRead()) {
+        if (! ser_action.ForRead()) {
             mapValuePos::WriteOrderPos(this->nOrderPos, me.mapValue);
 
             if (!(this->mapValue.empty() && this->_ssExtra.empty())) {
-                CDataStream ss(nType, nVersion);
+                CDataStream ss(0, 0);
                 ss.insert(ss.begin(), '\0');
                 ss << mapValue;
                 ss.insert(ss.end(), _ssExtra.begin(), _ssExtra.end());
@@ -787,13 +800,13 @@ public:
             }
         }
 
-        READWRITE(this->strComment);
+        LREADWRITE(this->strComment);
 
         size_t nSepPos = this->strComment.find("\0", 0, 1);
-        if (ser_ctr.isRead()) {
+        if (ser_action.ForRead()) {
             me.mapValue.clear();
             if (std::string::npos != nSepPos) {
-                CDataStream ss(datastream_signed_vector(this->strComment.begin() + nSepPos + 1, this->strComment.end()), nType, nVersion);
+                CDataStream ss(datastream_signed_vector(this->strComment.begin() + nSepPos + 1, this->strComment.end()), 0, 0);
                 ss >> me.mapValue;
                 me._ssExtra = std::vector<char>(ss.begin(), ss.end());
             }
@@ -804,7 +817,7 @@ public:
         }
 
         me.mapValue.erase("n");
-    )
+    }
 };
 
 namespace wallet_file
@@ -820,4 +833,3 @@ namespace wallet_file
 }
 
 #endif
-//@

@@ -30,8 +30,10 @@ enum DBErrors
 class CKeyMetadata
 {
 private:
-    CKeyMetadata(const CKeyMetadata &); //{}
-    // CKeyMetadata &operator=(const CKeyMetadata &); // {}
+    CKeyMetadata(const CKeyMetadata &)=delete;
+    // CKeyMetadata(CKeyMetadata &&)=delete;
+    // CKeyMetadata &operator=(const CKeyMetadata &)=delete;
+    // CKeyMetadata &operator=(CKeyMetadata &&)=delete;
 
 public:
     static const int CURRENT_VERSION = 1;
@@ -48,12 +50,12 @@ public:
         nCreateTime = nCreateTime_;
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->nVersion);
-        nVersion = this->nVersion;
-        READWRITE(this->nCreateTime);
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->nVersion);
+        LREADWRITE(this->nCreateTime);
+    }
 
     void SetNull() {
         nVersion = CKeyMetadata::CURRENT_VERSION;
