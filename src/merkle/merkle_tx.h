@@ -12,6 +12,7 @@
 #include <block/transaction.h>
 
 // transaction with a merkle branch linking it to the block chain.
+// CWalletTx => CMerkleTx => CTransaction
 class CMerkleTx : public CTransaction
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
@@ -21,8 +22,9 @@ class CMerkleTx : public CTransaction
 #endif
 //private:
     // CMerkleTx(const CMerkleTx &)=delete;
+    // CMerkleTx(CMerkleTx &&)=delete;
     // CMerkleTx &operator=(const CMerkleTx &)=delete;
-    // CMerkleTx &operator=(const CMerkleTx &&)=delete;
+    // CMerkleTx &operator=(CMerkleTx &&)=delete;
 public:
     uint256 hashBlock;
     vMerkle_t vMerkleBranch;
@@ -40,14 +42,7 @@ public:
         nIndex = -1;
         fMerkleVerified = false;
     }
-    IMPLEMENT_SERIALIZE
-    (
-        nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, ser_action);
-        nVersion = this->get_nVersion();
-        READWRITE(this->hashBlock);
-        READWRITE(this->vMerkleBranch);
-        READWRITE(this->nIndex);
-    )
+
     int SetMerkleBranch(const CBlock *pblock=nullptr);
     int GetDepthInMainChain(CBlockIndex *&pindexRet) const;
     int GetDepthInMainChain() const {
@@ -60,6 +55,17 @@ public:
     int GetBlocksToMaturity() const;
     bool AcceptToMemoryPool(CTxDB &txdb, bool fCheckInputs=true);
     bool AcceptToMemoryPool();
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        //nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, ser_action);
+        LREADWRITE(*(CTransaction *)this);
+        //nVersion = this->get_nVersion();
+        LREADWRITE(this->hashBlock);
+        LREADWRITE(this->vMerkleBranch);
+        LREADWRITE(this->nIndex);
+    }
 };
 
 #endif // BITCOIN_MERKLE_TX_H
