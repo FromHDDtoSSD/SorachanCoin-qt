@@ -84,37 +84,24 @@ public:
     static unsigned int GetMessageSizeOffset() { return CMD_SIZE::MESSAGE_SIZE_OFFSET; }
     static unsigned int GetChecksumOffset() { return CMD_SIZE::CHECKSUM_OFFSET; }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         LREADWRITE(FLATDATA(this->mpchMessageStart));
         LREADWRITE(FLATDATA(this->pchCommand));
         LREADWRITE(this->nMessageSize);
         LREADWRITE(this->nChecksum);
-
-        //LREADWRITE(pchMessageStart);
-        //LREADWRITE(pchCommand);
-        //LREADWRITE(nMessageSize);
-        //LREADWRITE(pchChecksum);
     }
-
-    /*
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(FLATDATA(this->mpchMessageStart));
-        READWRITE(FLATDATA(this->pchCommand));
-        READWRITE(this->nMessageSize);
-        READWRITE(this->nChecksum);
-    )
-    */
 };
 
 /** A CService with information about it as peer */
 class CAddress : public CService
 {
 //private:
-//    CAddress(const CAddress &); // {}
-//    CAddress &operator=(const CAddress &); // {}
+    // CAddress(const CAddress &)=delete;
+    // CAddress &operator=(const CAddress &)=delete;
+    // CAddress(CAddress &&)=delete;
+    // CAddress &operator=(CAddress &&)=delete;
 public:
     CAddress() : CService(), nServices(protocol::NODE_NETWORK), nTime(100000000), nLastTry(0) {}
     explicit CAddress(CService ipIn, uint64_t nServicesIn=protocol::NODE_NETWORK) : CService(ipIn), nServices(nServicesIn), nTime(100000000), nLastTry(0) {}
@@ -138,28 +125,29 @@ public:
     unsigned int get_nTime() const { return nTime; }
     void set_nTime(unsigned int nTimeIn) { nTime = nTimeIn; }
 
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nType=0, nVersion=0;
         CAddress *pthis = const_cast<CAddress *>(this);
         CService *pip = (CService *)pthis;
-        if (ser_ctr.isRead()) {
+        if (ser_action.ForRead()) {
             pthis->Init();
         }
         if (nType & SER_DISK) {
-            READWRITE(nVersion);
+            LREADWRITE(nVersion);
         }
         if ((nType & SER_DISK) || (nVersion >= version::CADDR_TIME_VERSION && !(nType & SER_GETHASH))) {
-            READWRITE(this->nTime);
+            LREADWRITE(this->nTime);
         }
 
-        READWRITE(this->nServices);
-        READWRITE(*pip);
-    )
+        LREADWRITE(this->nServices);
+        LREADWRITE(*pip);
+    }
 };
 
 //
 // inv message data
-//
 //
 // constructor int typeIn param, namespace protocol
 // static const std::string forfill[] = { "ERROR", "tx", "block" };
@@ -194,12 +182,6 @@ public:
         }
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(this->type);
-        READWRITE(this->hash);
-    )
-
     bool IsKnownType() const {
         return (type >= 1 && type < (int)protocol::vpszTypeName.size());
     }
@@ -215,6 +197,13 @@ public:
 
     friend bool operator<(const CInv &a, const CInv &b) {
         return (a.type < b.type || (a.type == b.type && a.hash < b.hash));
+    }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(this->type);
+        LREADWRITE(this->hash);
     }
 
 private:
