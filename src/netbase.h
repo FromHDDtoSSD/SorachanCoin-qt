@@ -76,8 +76,10 @@ namespace netbase
 class CNetAddr
 {
 //private:
-//    CNetAddr(const CNetAddr &); // {}
-//    CNetAddr &operator=(const CNetAddr &); // {}
+    // CNetAddr(const CNetAddr &)=delete;
+    // CNetAddr &operator=(const CNetAddr &)=delete;
+    // CNetAddr(CNetAddr &&)=delete;
+    // CNetAddr &operator=(CNetAddr &&)=delete;
 
 private:
     static const unsigned char pchIPv4[12]; // = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
@@ -88,7 +90,7 @@ private:
     static const int NET_UNKNOWN; // = netbase::NET_MAX + 0;
     static const int NET_TEREDO;  // = netbase::NET_MAX + 1;
     static int GetExtNetwork(const CNetAddr *addr) {
-        if (addr == NULL) {
+        if (addr == nullptr) {
             return NET_UNKNOWN;
         }
         if (addr->IsRFC4380()) {
@@ -133,7 +135,7 @@ public:
     uint64_t GetHash() const;
     bool GetInAddr(struct in_addr* pipv4Addr) const;
     std::vector<unsigned char> GetGroup() const;
-    int GetReachabilityFrom(const CNetAddr *paddrPartner = NULL) const;
+    int GetReachabilityFrom(const CNetAddr *paddrPartner = nullptr) const;
 
 #ifdef USE_IPV6
     CNetAddr(const struct in6_addr &pipv6Addr);
@@ -150,21 +152,24 @@ public:
         return (::memcmp(a.ip, b.ip, 16) < 0);
     }
 
-    IMPLEMENT_SERIALIZE
-    (
-        READWRITE(FLATDATA(this->ip));
-    )
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        LREADWRITE(FLATDATA(this->ip));
+    }
 };
 
 //
 // A combination of a network address (CNetAddr) and a (TCP) port
-// Ex, CService("0.0.0.0:0")
+// e.g., CService("0.0.0.0:0")
 //
 class CService : public CNetAddr
 {
 //private:
-//    CService(const CService &); // {}
-//    CService &operator=(const CService &); // {}
+    // CService(const CService &)=delete;
+    // CService &operator=(const CService &)=delete;
+    // CService(CService &&)=delete;
+    // CService &operator=(CService &&)=delete;
 
 protected:
     unsigned short port; // host order
@@ -203,17 +208,17 @@ public:
         return (CNetAddr)a < (CNetAddr)b || ((CNetAddr)a == (CNetAddr)b && a.port < b.port);
     }
 
-    IMPLEMENT_SERIALIZE
-    (
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
         CService *pthis = const_cast<CService *>(this);
-        READWRITE(FLATDATA(this->ip));
-        unsigned short portN = htons(this->port);
-        READWRITE(portN);
-        if (ser_ctr.isRead()) {
+        LREADWRITE(FLATDATA(this->ip));
+        unsigned short portN = ::htons(this->port);
+        LREADWRITE(portN);
+        if (ser_action.ForRead()) {
             pthis->port = ntohs(portN);
         }
-    )
+    }
 };
 
 #endif
-//@
