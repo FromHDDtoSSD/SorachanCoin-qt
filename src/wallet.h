@@ -69,10 +69,10 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->vchPubKey);
+        READWRITE(this->nTime);
+        READWRITE(this->vchPubKey);
     }
 };
 
@@ -560,14 +560,14 @@ public:
         }
 
         //nSerSize += imp_ser::manage::SerReadWrite(s, *(CMerkleTx *)this, ser_action);
-        LREADWRITE(*(CMerkleTx *)this);
-        LREADWRITE(this->vtxPrev);
-        LREADWRITE(this->mapValue);
-        LREADWRITE(this->vOrderForm);
-        LREADWRITE(this->fTimeReceivedIsTxTime);
-        LREADWRITE(this->nTimeReceived);
-        LREADWRITE(this->fFromMe);
-        LREADWRITE(fSpent);
+        READWRITE(*(CMerkleTx *)this);
+        READWRITE(this->vtxPrev);
+        READWRITE(this->mapValue);
+        READWRITE(this->vOrderForm);
+        READWRITE(this->fTimeReceivedIsTxTime);
+        READWRITE(this->nTimeReceived);
+        READWRITE(this->fFromMe);
+        READWRITE(fSpent);
 
         if (ser_action.ForRead()) {
             pthis->strFromAccount = pthis->mapValue["fromaccount"];
@@ -697,12 +697,12 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->vchPrivKey);
-        LREADWRITE(this->nTimeCreated);
-        LREADWRITE(this->nTimeExpires);
-        LREADWRITE(this->strComment);
+        READWRITE(this->vchPrivKey);
+        READWRITE(this->nTimeCreated);
+        READWRITE(this->nTimeExpires);
+        READWRITE(this->strComment);
     }
 };
 
@@ -733,9 +733,9 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->vchPubKey);
+        READWRITE(this->vchPubKey);
     }
 };
 
@@ -781,12 +781,12 @@ public:
     inline void SerializationOp(Stream &s, Operation ser_action) {
         CAccountingEntry &me = *const_cast<CAccountingEntry *>(this);
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
         // Note: strAccount is serialized as part of the key, not here.
-        LREADWRITE(this->nCreditDebit);
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->strOtherAccount);
+        READWRITE(this->nCreditDebit);
+        READWRITE(this->nTime);
+        READWRITE(this->strOtherAccount);
 
         if (! ser_action.ForRead()) {
             mapValuePos::WriteOrderPos(this->nOrderPos, me.mapValue);
@@ -800,7 +800,7 @@ public:
             }
         }
 
-        LREADWRITE(this->strComment);
+        READWRITE(this->strComment);
 
         size_t nSepPos = this->strComment.find("\0", 0, 1);
         if (ser_action.ForRead()) {

@@ -87,10 +87,10 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(FLATDATA(this->mpchMessageStart));
-        LREADWRITE(FLATDATA(this->pchCommand));
-        LREADWRITE(this->nMessageSize);
-        LREADWRITE(this->nChecksum);
+        READWRITE(FLATDATA(this->mpchMessageStart));
+        READWRITE(FLATDATA(this->pchCommand));
+        READWRITE(this->nMessageSize);
+        READWRITE(this->nChecksum);
     }
 };
 
@@ -135,14 +135,14 @@ public:
             pthis->Init();
         }
         if (nType & SER_DISK) {
-            LREADWRITE(nVersion);
+            READWRITE(nVersion);
         }
         if ((nType & SER_DISK) || (nVersion >= version::CADDR_TIME_VERSION && !(nType & SER_GETHASH))) {
-            LREADWRITE(this->nTime);
+            READWRITE(this->nTime);
         }
 
-        LREADWRITE(this->nServices);
-        LREADWRITE(*pip);
+        READWRITE(this->nServices);
+        READWRITE(*pip);
     }
 };
 
@@ -202,8 +202,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->type);
-        LREADWRITE(this->hash);
+        READWRITE(this->type);
+        READWRITE(this->hash);
     }
 
 private:

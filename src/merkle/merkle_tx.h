@@ -60,11 +60,11 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         //nSerSize += imp_ser::manage::SerReadWrite(s, *(CTransaction *)this, ser_action);
-        LREADWRITE(*(CTransaction *)this);
+        READWRITE(*(CTransaction *)this);
         //nVersion = this->get_nVersion();
-        LREADWRITE(this->hashBlock);
-        LREADWRITE(this->vMerkleBranch);
-        LREADWRITE(this->nIndex);
+        READWRITE(this->hashBlock);
+        READWRITE(this->vMerkleBranch);
+        READWRITE(this->nIndex);
     }
 };
 

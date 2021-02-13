@@ -62,12 +62,12 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->nVersion);
-        LREADWRITE(this->hashPrevBlock);
-        LREADWRITE(this->hashMerkleRoot);
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->nBits);
-        LREADWRITE(this->nNonce);
+        READWRITE(this->nVersion);
+        READWRITE(this->hashPrevBlock);
+        READWRITE(this->hashMerkleRoot);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->nNonce);
     }
 };
 template <typename T>
@@ -163,17 +163,17 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nType = 0;
-        LREADWRITE(this->nVersion); // CBlockHeader this Version READWRITE
+        READWRITE(this->nVersion); // CBlockHeader this Version READWRITE
         //int nVersion = this->nVersion;
-        LREADWRITE(this->hashPrevBlock);
-        LREADWRITE(this->hashMerkleRoot);
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->nBits);
-        LREADWRITE(this->nNonce);
+        READWRITE(this->hashPrevBlock);
+        READWRITE(this->hashMerkleRoot);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->nNonce);
         // ConnectBlock depends on vtx following header to generate CDiskTxPos
         if (!(nType & (SER_GETHASH|SER_BLOCKHEADERONLY))) {
-            LREADWRITE(this->vtx);
-            LREADWRITE(this->vchBlockSig);
+            READWRITE(this->vtx);
+            READWRITE(this->vchBlockSig);
         } else if (ser_action.ForRead()) {
             const_cast<CBlock_impl<T> *>(this)->vtx.clear();
             const_cast<CBlock_impl<T> *>(this)->vchBlockSig.clear();
@@ -438,20 +438,20 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->hashNext);
-        LREADWRITE(this->nFile);
-        LREADWRITE(this->nBlockPos);
-        LREADWRITE(this->nHeight);
-        LREADWRITE(this->nMint);
-        LREADWRITE(this->nMoneySupply);
-        LREADWRITE(this->nFlags);
-        LREADWRITE(this->nStakeModifier);
+        READWRITE(this->hashNext);
+        READWRITE(this->nFile);
+        READWRITE(this->nBlockPos);
+        READWRITE(this->nHeight);
+        READWRITE(this->nMint);
+        READWRITE(this->nMoneySupply);
+        READWRITE(this->nFlags);
+        READWRITE(this->nStakeModifier);
         if (CBlockIndex_impl<T>::IsProofOfStake()) {
-            LREADWRITE(this->prevoutStake);
-            LREADWRITE(this->nStakeTime);
-            LREADWRITE(this->hashProofOfStake);
+            READWRITE(this->prevoutStake);
+            READWRITE(this->nStakeTime);
+            READWRITE(this->hashProofOfStake);
         } else if (ser_action.ForRead()) {
             const_cast<CDiskBlockIndex_impl *>(this)->prevoutStake.SetNull();
             const_cast<CDiskBlockIndex_impl *>(this)->nStakeTime = 0;
@@ -459,13 +459,13 @@ public:
         }
 
         // block header
-        LREADWRITE(this->nVersion);  // CBlockHeader this nVersion
-        LREADWRITE(this->hashPrev);
-        LREADWRITE(this->hashMerkleRoot);
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->nBits);
-        LREADWRITE(this->nNonce);
-        LREADWRITE(this->blockHash);
+        READWRITE(this->nVersion);  // CBlockHeader this nVersion
+        READWRITE(this->hashPrev);
+        READWRITE(this->hashMerkleRoot);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->nNonce);
+        READWRITE(this->blockHash);
     }
 };
 using CDiskBlockIndex = CDiskBlockIndex_impl<uint256>;

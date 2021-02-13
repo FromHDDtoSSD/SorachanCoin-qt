@@ -376,10 +376,10 @@ public:
         return ret;
     }
 
-    ADD_SERIALIZE_METHODS;
+    ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITEAS(script_vector, *this);
+        READWRITEAS(script_vector, *this);
     }
 
     operator std::vector<unsigned char>() const { // convert from prevector to std::vector<unsigned char>

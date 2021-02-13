@@ -5,10 +5,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-// SorachanCoin: Both IMPLEMENT_SERIALIZE and ADD_SERIALIZE_METHODS are supported.
-// old core: IMPLEMENT_SERIALIZE
-// latest core: ADD_SERIALIZE_METHODS
-
 #ifndef BITCOIN_SERIALIZE_H
 #define BITCOIN_SERIALIZE_H
 
@@ -1110,10 +1106,7 @@ template<varint::VarIntMode Mode=varint::VarIntMode::DEFAULT, typename I>
 CVarInt<Mode, I> WrapVarInt(I &n) { return CVarInt<Mode, I>{n}; }
 
 /**
- * Support for ADD_SERIALIZE_METHODS and IMPLEMENT_SERIALIZE
- * using macro (exactly)
- * ADD_SERIALIZE_METHODS: LREADWRITE, LREADWRITEAS
- * IMPLEMENT_SERIALIZE: READWRITE
+ * Support for ADD_SERIALIZE_METHODS
  */
 struct CSerActionGetSerializeSize {};
 struct CSerActionSerialize {
@@ -1125,7 +1118,6 @@ struct CSerActionUnserialize {
 
 /**
  * variable template many serialize
- * for ADD_SERIALIZE_METHODS and LREADWRITE macro
  */
 template<typename Stream>
 void SerializeMany(Stream &s) {(void)s;}
@@ -1172,8 +1164,8 @@ size_t GetSerializeSizeMany(int nVersion, const T&... t) {
 //  Convert the reference base type to X, without changing constness or reference type.
 template<typename X> X &ReadWriteAsHelper(X &x) { return x; }
 template<typename X> const X &ReadWriteAsHelper(const X &x) { return x; }
-#define LREADWRITE(...) (::SerReadWriteMany(s, ser_action, __VA_ARGS__))
-#define LREADWRITEAS(type, obj) (::SerReadWriteMany(s, ser_action, ReadWriteAsHelper<type>(obj)))
+#define READWRITE(...) (::SerReadWriteMany(s, ser_action, __VA_ARGS__))
+#define READWRITEAS(type, obj) (::SerReadWriteMany(s, ser_action, ReadWriteAsHelper<type>(obj)))
 
 /**
  * Implement three methods for serializable objects. These are actually wrappers over
@@ -1192,108 +1184,16 @@ public:                                                               \
         SerializationOp(s, CSerActionUnserialize());                  \
     }
 
-// IMPLEMENT_SERIALIZE
-//! Support for IMPLEMENT_SERIALIZE and READWRITE macro
-class CSerCtr {
-    CSerCtr()=delete;
-    CSerCtr(const CSerCtr &)=delete;
-    CSerCtr(CSerCtr &&)=delete;
-    CSerCtr &operator=(const CSerCtr &)=delete;
-    CSerCtr &operator=(CSerCtr &&)=delete;
-    const bool fGetSize;
-    const bool fWrite;
-    const bool fRead;
-public:
-    explicit CSerCtr(CSerActionGetSerializeSize) noexcept : fGetSize(true), fWrite(false), fRead(false) {}
-    explicit CSerCtr(CSerActionSerialize) noexcept : fGetSize(false), fWrite(true), fRead(false) {}
-    explicit CSerCtr(CSerActionUnserialize) noexcept : fGetSize(false), fWrite(false), fRead(true) {}
-    bool isGetSize() const noexcept {
-        return fGetSize;
-    }
-    bool isRead() const noexcept {
-        return fRead;
-    }
-    bool isWrite() const noexcept {
-        return fWrite;
-    }
-};
-
-#define IMPLEMENT_SERIALIZE(statements)         \
-public:                                         \
-    size_t GetSerializeSize(int=0, int=0) const \
-    {                                           \
-        int nType=0, nVersion=0;                \
-        assert(nType == 0 && nVersion == 0);    \
-        CSerActionGetSerializeSize ser_action;  \
-        CSerCtr ser_ctr(ser_action);            \
-        size_t nSerSize = 0;                    \
-        struct ser_streamplaceholder {          \
-            int unused;                         \
-            ser_streamplaceholder():unused(0){} \
-        } s;                                    \
-        {statements}                            \
-        return nSerSize;                        \
-    }                                           \
-    template<typename Stream>                   \
-    void Serialize(Stream &s, int=0, int=0) const \
-    {                                           \
-        int nType=0, nVersion=0;                \
-        assert(nType == 0 && nVersion == 0);    \
-        CSerActionSerialize ser_action;         \
-        CSerCtr ser_ctr(ser_action);            \
-        unsigned int nSerSize = 0;              \
-        {statements}                            \
-        (void)nSerSize;                         \
-    }                                           \
-    template<typename Stream>                   \
-    void Unserialize(Stream &s, int=0, int=0)   \
-    {                                           \
-        int nType=0, nVersion=0;                \
-        assert(nType == 0 && nVersion == 0);    \
-        CSerActionUnserialize ser_action;       \
-        CSerCtr ser_ctr(ser_action);            \
-        unsigned int nSerSize = 0;              \
-        {statements}                            \
-        (void)nSerSize;                         \
-    }
-
-#define READWRITE(obj)      (nSerSize += imp_ser::manage::SerReadWrite(s, (obj), ser_action))
-
-namespace imp_ser
-{
-    class manage : private no_instance
-    {
-    public:
-        template<typename Stream, typename T>
-        static size_t SerReadWrite(Stream &s, const T &obj, CSerActionGetSerializeSize) {
-            (void)s;
-            return ::GetSerializeSize(obj, 0); // called CSizeComputer
-        }
-
-        template<typename Stream, typename T>
-        static unsigned int SerReadWrite(Stream &s, const T &obj, CSerActionSerialize) {
-            ::Serialize(s, obj);
-            return 0;
-        }
-
-        template<typename Stream, typename T>
-        static unsigned int SerReadWrite(Stream &s, T &obj, CSerActionUnserialize) {
-            ::Unserialize(s, obj);
-            return 0;
-        }
-    };
-}
-
 //! Double ended buffer combining vector and stream-like interfaces.
 // >> and << read and write unformatted data using the above serialization templates.
 // Fills with data in linear time; some stringstream implementations take N^2 time.
-typedef std::vector<char, zero_after_free_allocator<char> > CSerializeData;
+using CSerializeData = std::vector<char, zero_after_free_allocator<char> >;
 #ifdef DATASTREAM_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_DATASTREAM_N, uint8_t> datastream_vector;
-typedef prevector<PREVECTOR_DATASTREAM_N, int8_t> datastream_signed_vector;
+using datastream_vector = prevector<PREVECTOR_DATASTREAM_N, uint8_t>;
+using datastream_signed_vector = prevector<PREVECTOR_DATASTREAM_N, int8_t>;
 #else
-typedef std::vector<uint8_t> datastream_vector;
-typedef std::vector<int8_t> datastream_signed_vector;
+using datastream_vector = std::vector<uint8_t>;
+using datastream_signed_vector = std::vector<int8_t>;
 #endif
 class CDataStream : public CTypeVersion
 {
@@ -1605,9 +1505,9 @@ public:
 // If you're returning the file pointer, return file.release().
 // If you need to close the file early, use file.fclose() instead of fclose(file).
 #ifdef BUFFER_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_BUFFER_N, char> bufferedfile_vector;
+using bufferedfile_vector = prevector<PREVECTOR_BUFFER_N, char>;
 #else
-typedef std::vector<char> bufferedfile_vector;
+using bufferedfile_vector = std::vector<char>;
 #endif
 class CBufferedFile
 {

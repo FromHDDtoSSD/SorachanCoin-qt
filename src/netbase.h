@@ -155,7 +155,7 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(FLATDATA(this->ip));
+        READWRITE(FLATDATA(this->ip));
     }
 };
 
@@ -212,9 +212,9 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         CService *pthis = const_cast<CService *>(this);
-        LREADWRITE(FLATDATA(this->ip));
+        READWRITE(FLATDATA(this->ip));
         unsigned short portN = ::htons(this->port);
-        LREADWRITE(portN);
+        READWRITE(portN);
         if (ser_action.ForRead()) {
             pthis->port = ntohs(portN);
         }

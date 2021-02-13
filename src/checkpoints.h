@@ -70,8 +70,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->nVersion);
-        LREADWRITE(this->hashCheckpoint);
+        READWRITE(this->nVersion);
+        READWRITE(this->hashCheckpoint);
     }
 };
 
@@ -159,8 +159,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->vchMsg);
-        LREADWRITE(this->vchSig);
+        READWRITE(this->vchMsg);
+        READWRITE(this->vchSig);
     }
 };
 

@@ -62,9 +62,9 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->vHave);
+        READWRITE(this->vHave);
     }
 };
 using CBlockLocator = CBlockLocator_impl<uint256>;

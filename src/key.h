@@ -293,8 +293,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->pubKeyL);
-        LREADWRITE(this->pubKeyH);
+        READWRITE(this->pubKeyL);
+        READWRITE(this->pubKeyH);
     }
 };
 
@@ -374,8 +374,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(vchSecretL);
-        LREADWRITE(vchSecretH);
+        READWRITE(vchSecretL);
+        READWRITE(vchSecretH);
     }
 };
 
@@ -447,8 +447,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(vchSecretL);
-        LREADWRITE(vchPubKeyH);
+        READWRITE(vchSecretL);
+        READWRITE(vchPubKeyH);
     }
 };
 

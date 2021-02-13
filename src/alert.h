@@ -54,22 +54,22 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->nVersion);
+        READWRITE(this->nVersion);
         //int nVersion = this->nVersion;
 
-        LREADWRITE(this->nRelayUntil);
-        LREADWRITE(this->nExpiration);
-        LREADWRITE(this->nID);
-        LREADWRITE(this->nCancel);
-        LREADWRITE(this->setCancel);
-        LREADWRITE(this->nMinVer);
-        LREADWRITE(this->nMaxVer);
-        LREADWRITE(this->setSubVer);
-        LREADWRITE(this->nPriority);
+        READWRITE(this->nRelayUntil);
+        READWRITE(this->nExpiration);
+        READWRITE(this->nID);
+        READWRITE(this->nCancel);
+        READWRITE(this->setCancel);
+        READWRITE(this->nMinVer);
+        READWRITE(this->nMaxVer);
+        READWRITE(this->setSubVer);
+        READWRITE(this->nPriority);
 
-        LREADWRITE(this->strComment);
-        LREADWRITE(this->strStatusBar);
-        LREADWRITE(this->strReserved);
+        READWRITE(this->strComment);
+        READWRITE(this->strStatusBar);
+        READWRITE(this->strReserved);
     }
 
     void SetNull();
@@ -127,8 +127,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->vchMsg);
-        LREADWRITE(this->vchSig);
+        READWRITE(this->vchMsg);
+        READWRITE(this->vchSig);
     }
 };
 

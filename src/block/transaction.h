@@ -149,7 +149,7 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(FLATDATA(*this));
+        READWRITE(FLATDATA(*this));
     }
 };
 using COutPoint = COutPoint_impl<uint256>;
@@ -206,7 +206,7 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(FLATDATA(*this));
+        READWRITE(FLATDATA(*this));
     }
 };
 
@@ -262,10 +262,10 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        LREADWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
 
-        LREADWRITE(this->pos);
-        LREADWRITE(this->vSpent);
+        READWRITE(this->pos);
+        READWRITE(this->vSpent);
     }
 };
 
@@ -415,9 +415,9 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->prevout);
-        LREADWRITE(this->scriptSig);
-        LREADWRITE(this->nSequence);
+        READWRITE(this->prevout);
+        READWRITE(this->scriptSig);
+        READWRITE(this->nSequence);
     }
 };
 using CTxIn = CTxIn_impl<uint256>;
@@ -487,8 +487,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->nValue);
-        LREADWRITE(this->scriptPubKey);
+        READWRITE(this->nValue);
+        READWRITE(this->scriptPubKey);
     }
 };
 using CTxOut = CTxOut_impl<uint256>;
@@ -898,18 +898,18 @@ public:
             if(this->nVersion == 2) {
                 debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
             }
-            LREADWRITE(this->nVersion);
-            LREADWRITE(this->nTime);
-            LREADWRITE(this->vin);
-            LREADWRITE(this->vout);
-            LREADWRITE(this->nLockTime);
+            READWRITE(this->nVersion);
+            READWRITE(this->nTime);
+            READWRITE(this->vin);
+            READWRITE(this->vout);
+            READWRITE(this->nLockTime);
         } else {
             debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
             assert(!"Only using CTransaction_impl<T>::Unserialize is (2 < nVersion)");
-            LREADWRITE(this->nVersion);
-            LREADWRITE(this->vin);
-            LREADWRITE(this->vout);
-            LREADWRITE(this->nLockTime);
+            READWRITE(this->nVersion);
+            READWRITE(this->vin);
+            READWRITE(this->vout);
+            READWRITE(this->nLockTime);
         }
     }
 };

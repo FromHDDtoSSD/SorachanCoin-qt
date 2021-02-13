@@ -369,7 +369,7 @@ public:
         int nType = 0;
         if (nType & SER_DISK) {
             int nVersion = 0;
-            LREADWRITE(nVersion);
+            READWRITE(nVersion);
         }
     }
 };

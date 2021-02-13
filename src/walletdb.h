@@ -53,8 +53,8 @@ public:
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->nVersion);
-        LREADWRITE(this->nCreateTime);
+        READWRITE(this->nVersion);
+        READWRITE(this->nCreateTime);
     }
 
     void SetNull() {

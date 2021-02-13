@@ -28,13 +28,14 @@ struct AutoCheckData {
         nTime = 0;
         hash = 0;
     }
+
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        LREADWRITE(this->sig);
-        LREADWRITE(this->nHeight);
-        LREADWRITE(this->nTime);
-        LREADWRITE(this->hash);
+        READWRITE(this->sig);
+        READWRITE(this->nHeight);
+        READWRITE(this->nTime);
+        READWRITE(this->hash);
     }
 };
 using AutoCheckpoints = std::map<uint32_t, AutoCheckData>;
