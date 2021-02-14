@@ -185,8 +185,8 @@ const fs::path &lutil::GetBlocksDir() {
     if (! path.empty())
         return path;
 
-    if (gArgs.IsArgSet("-blocksdir")) {
-        path = fs::system_complete(gArgs.GetArg("-blocksdir", ""));
+    if (ARGS.IsArgSet("-blocksdir")) {
+        path = fs::system_complete(ARGS.GetArg("-blocksdir", ""));
         if (! fs::is_directory(path)) {
             path = "";
             return path;
@@ -210,8 +210,8 @@ const fs::path &lutil::GetDataDir(bool fNetSpecific) {
     if (! path.empty())
         return path;
 
-    if (gArgs.IsArgSet("-datadir")) {
-        path = fs::system_complete(gArgs.GetArg("-datadir", ""));
+    if (ARGS.IsArgSet("-datadir")) {
+        path = fs::system_complete(ARGS.GetArg("-datadir", ""));
         if (! fs::is_directory(path)) {
             path = "";
             return path;

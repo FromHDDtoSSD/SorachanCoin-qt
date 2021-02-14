@@ -222,11 +222,9 @@ public:
     }
 };
 
-
-
 class ArgsManager
 {
-protected:
+private:
     mutable LCCriticalSection cs_args;
     mutable std::map<std::string, std::vector<std::string> > m_override_args GUARDED_BY(cs_args);
     mutable std::map<std::string, std::vector<std::string> > m_config_args GUARDED_BY(cs_args);
@@ -236,21 +234,36 @@ protected:
     std::set<std::string> m_config_sections GUARDED_BY(cs_args);
 
     NODISCARD bool ReadConfigStream(std::istream &stream, std::string &error, bool ignore_invalid_keys = false);
+    ArgsManager();
+    ~ArgsManager();
 
 public:
-    ArgsManager();
+    /**
+     * interface
+     */
     LCCriticalSection &get_cs_args() const noexcept {return cs_args;}
-    std::map<std::string, std::vector<std::string> > &get_override_args() const noexcept {return m_override_args;}
-    std::map<std::string, std::vector<std::string> > &get_config_args() const noexcept {return m_config_args;}
+    std::map<std::string, std::vector<std::string>> &get_override_args() const noexcept {return m_override_args;}
+    std::map<std::string, std::vector<std::string>> &get_config_args() const noexcept {return m_config_args;}
     std::string &get_network() const noexcept {return m_network;}
     std::set<std::string> &get_network_only_args() const noexcept {return m_network_only_args;}
+
+    /**
+     * instance
+     */
+    static ArgsManager &get_instance() noexcept {
+        static ArgsManager obj;
+        return obj;
+    }
 
     /**
      * Select the network in use
      */
     void SelectConfigNetwork(const std::string &network);
 
-    NODISCARD bool ParseParameters(int argc, const char* const argv[], std::string &error);
+    /**
+     * Parse args and configure file
+     */
+    NODISCARD bool ParseParameters(int argc, const char *const argv[], std::string &error);
     NODISCARD bool ReadConfigFiles(std::string &error, bool ignore_invalid_keys = false);
 
     /**
@@ -375,45 +388,46 @@ public:
     bool IsArgKnown(const std::string &key) const;
 };
 
-/**
- * @return true if help has been requested via a command-line arg
- */
-bool HelpRequested(const ArgsManager &args);
-
-/** Add help options to the args manager */
-void SetupHelpOptions(ArgsManager &args);
-
-/**
- * Format a string to be used as group of options in help messages
- *
- * @param message Group name (e.g. "RPC server options:")
- * @return the formatted string
- */
-std::string HelpMessageGroup(const std::string &message);
-
-/**
- * Format a string to be used as option description in help messages
- *
- * @param option Option message (e.g. "-rpcuser=<user>")
- * @param message Option description (e.g. "Username for JSON-RPC connections")
- * @return the formatted string
- */
-std::string HelpMessageOpt(const std::string &option, const std::string &message);
-
-/**
- * Most paths passed as configuration arguments are treated as relative to
- * the datadir if they are not absolute.
- *
- * @return The normalized path.
- */
-fs::path GetConfigFile(const std::string &confPath);
-
-/**
- * arginit.cpp
- */
 namespace arginit {
+    /**
+     * @return true if help has been requested via a command-line arg
+     */
+    bool HelpRequested(const ArgsManager &args);
+
+    /** Add help options to the args manager */
+    void SetupHelpOptions(ArgsManager &args);
+
+    /**
+     * Format a string to be used as group of options in help messages
+     *
+     * @param message Group name (e.g. "RPC server options:")
+     * @return the formatted string
+     */
+    std::string HelpMessageGroup(const std::string &message);
+
+    /**
+     * Format a string to be used as option description in help messages
+     *
+     * @param option Option message (e.g. "-rpcuser=<user>")
+     * @param message Option description (e.g. "Username for JSON-RPC connections")
+     * @return the formatted string
+     */
+    std::string HelpMessageOpt(const std::string &option, const std::string &message);
+
+    /**
+     * Most paths passed as configuration arguments are treated as relative to
+     * the datadir if they are not absolute.
+     *
+     * @return The normalized path.
+     */
+    fs::path GetConfigFile(const std::string &confPath);
+
+    /**
+    * setup logging
+    */
     void SetupServerArgs();
 } // namespace arginit
 
-extern ArgsManager gArgs;
+#define ARGS ArgsManager::get_instance()
+
 #endif

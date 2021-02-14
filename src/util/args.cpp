@@ -14,6 +14,9 @@
 #include <file_operate/iofs.h>
 #include <util/c_overload.h>
 #include <random/random.h>
+#include <debugcs/debugcs.h>
+
+#define ARGS_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
 
 //
 // old core
@@ -476,7 +479,7 @@ static bool GetConfigOptions(std::istream &stream, std::string &error, std::vect
     return true;
 }
 
-fs::path GetConfigFile(const std::string &confPath) {
+fs::path arginit::GetConfigFile(const std::string &confPath) {
     /**
      * Most paths passed as configuration arguments are treated as relative to
      * the datadir if they are not absolute.
@@ -501,6 +504,10 @@ ArgsManager::ArgsManager() :
       "-wallet",
     }
 {
+    // nothing to do
+}
+
+ArgsManager::~ArgsManager() {
     // nothing to do
 }
 
@@ -621,7 +628,8 @@ bool ArgsManager::IsArgKnown(const std::string &key) const {
 
     LLOCK(cs_args);
     for (const auto &arg_map: m_available_args) {
-        if (arg_map.second.count(arg_no_net)) return true;
+        if (arg_map.second.count(arg_no_net))
+            return true;
     }
     return false;
 }
@@ -723,49 +731,49 @@ void ArgsManager::AddHiddenArgs(const std::vector<std::string> &names) {
 }
 
 std::string ArgsManager::GetHelpMessage() const {
-    const bool show_debug = gArgs.GetBoolArg("-help-debug", false);
+    const bool show_debug = ARGS.GetBoolArg("-help-debug", false);
     std::string usage = "";
     LLOCK(cs_args);
     for (const auto &arg_map: m_available_args) {
         switch(arg_map.first) {
             case OptionsCategory::OPTIONS:
-                usage += HelpMessageGroup("Options:");
+                usage += arginit::HelpMessageGroup("Options:");
                 break;
             case OptionsCategory::CONNECTION:
-                usage += HelpMessageGroup("Connection options:");
+                usage += arginit::HelpMessageGroup("Connection options:");
                 break;
             case OptionsCategory::ZMQ:
-                usage += HelpMessageGroup("ZeroMQ notification options:");
+                usage += arginit::HelpMessageGroup("ZeroMQ notification options:");
                 break;
             case OptionsCategory::DEBUG_TEST:
-                usage += HelpMessageGroup("Debugging/Testing options:");
+                usage += arginit::HelpMessageGroup("Debugging/Testing options:");
                 break;
             case OptionsCategory::NODE_RELAY:
-                usage += HelpMessageGroup("Node relay options:");
+                usage += arginit::HelpMessageGroup("Node relay options:");
                 break;
             case OptionsCategory::BLOCK_CREATION:
-                usage += HelpMessageGroup("Block creation options:");
+                usage += arginit::HelpMessageGroup("Block creation options:");
                 break;
             case OptionsCategory::RPC:
-                usage += HelpMessageGroup("RPC server options:");
+                usage += arginit::HelpMessageGroup("RPC server options:");
                 break;
             case OptionsCategory::WALLET:
-                usage += HelpMessageGroup("Wallet options:");
+                usage += arginit::HelpMessageGroup("Wallet options:");
                 break;
             case OptionsCategory::WALLET_DEBUG_TEST:
-                if (show_debug) usage += HelpMessageGroup("Wallet debugging/testing options:");
+                if (show_debug) usage += arginit::HelpMessageGroup("Wallet debugging/testing options:");
                 break;
             case OptionsCategory::CHAINPARAMS:
-                usage += HelpMessageGroup("Chain selection options:");
+                usage += arginit::HelpMessageGroup("Chain selection options:");
                 break;
             case OptionsCategory::GUI:
-                usage += HelpMessageGroup("UI Options:");
+                usage += arginit::HelpMessageGroup("UI Options:");
                 break;
             case OptionsCategory::COMMANDS:
-                usage += HelpMessageGroup("Commands:");
+                usage += arginit::HelpMessageGroup("Commands:");
                 break;
             case OptionsCategory::REGISTER_COMMANDS:
-                usage += HelpMessageGroup("Register Commands:");
+                usage += arginit::HelpMessageGroup("Register Commands:");
                 break;
             default:
                 break;
@@ -782,7 +790,7 @@ std::string ArgsManager::GetHelpMessage() const {
                 } else {
                     name = arg.first + arg.second.m_help_param;
                 }
-                usage += HelpMessageOpt(name, arg.second.m_help_text);
+                usage += arginit::HelpMessageOpt(name, arg.second.m_help_text);
             }
         }
     }
@@ -796,6 +804,9 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
     if (! ::GetConfigOptions(stream, error, options, m_config_sections)) {
         return false;
     }
+
+    ARGS_DEBUG_CS("OK: GetConfigOptions");
+
     for (const std::pair<std::string, std::string> &option: options) {
         std::string strKey = std::string("-") + option.first;
         std::string strValue = option.second;
@@ -804,6 +815,8 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
         } else {
             m_config_args[strKey].push_back(strValue);
         }
+
+        ARGS_DEBUG_CS(strKey.c_str());
 
         // Check that the arg is known
         if (! IsArgKnown(strKey)) {
@@ -818,20 +831,25 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
     return true;
 }
 
-bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) {
+bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*=false*/) {
     {
         LLOCK(cs_args);
         m_config_args.clear();
     }
 
     const std::string confPath = GetArg("-conf", lutil::BITCOIN_CONF_FILENAME().c_str());
-    fsbridge::ifstream stream(GetConfigFile(confPath));
+    fsbridge::ifstream stream(arginit::GetConfigFile(confPath));
+
+    ARGS_DEBUG_CS(arginit::GetConfigFile(confPath.c_str()).string().c_str());
 
     // ok to not have a config file
     if (stream.good()) {
         if (! ReadConfigStream(stream, error, ignore_invalid_keys)) {
             return false;
         }
+
+        ARGS_DEBUG_CS("OK: ReadConfigStream");
+
         // if there is an -includeconf in the override args, but it is empty, that means the user
         // passed '-noincludeconf' on the command line, in which case we should not include anything
         bool emptyIncludeConf;
@@ -858,7 +876,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) 
             }
 
             for (const std::string &to_include: includeconf) {
-                fsbridge::ifstream include_config(GetConfigFile(to_include));
+                fsbridge::ifstream include_config(arginit::GetConfigFile(to_include));
                 if (include_config.good()) {
                     if (! ReadConfigStream(include_config, error, ignore_invalid_keys)) {
                         return false;
@@ -891,7 +909,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys) 
     // If datadir is changed in .conf file:
     lutil::ClearDatadirCache();
     if (! fs::is_directory(lutil::GetDataDir(false))) {
-        error = strprintf("specified data directory \"%s\" does not exist.", gArgs.GetArg("-datadir", "").c_str());
+        error = strprintf("specified data directory \"%s\" does not exist.", ARGS.GetArg("-datadir", "").c_str());
         return false;
     }
     return true;
@@ -913,11 +931,11 @@ std::string ArgsManager::GetChainName() const {
     return chainparamsbase::CBaseChainParams::MAIN();
 }
 
-bool HelpRequested(const ArgsManager &args) {
+bool arginit::HelpRequested(const ArgsManager &args) {
     return args.IsArgSet("-?") || args.IsArgSet("-h") || args.IsArgSet("-help") || args.IsArgSet("-help-debug");
 }
 
-void SetupHelpOptions(ArgsManager &args) {
+void arginit::SetupHelpOptions(ArgsManager &args) {
     args.AddArg("-?", "Print this help message and exit", false, OptionsCategory::OPTIONS);
     args.AddHiddenArgs({"-h", "-help"});
 }
@@ -926,16 +944,13 @@ static constexpr int screenWidth = 79;
 static constexpr int optIndent = 2;
 static constexpr int msgIndent = 7;
 
-std::string HelpMessageGroup(const std::string &message) {
+std::string arginit::HelpMessageGroup(const std::string &message) {
     return std::string(message) + std::string("\n\n");
 }
 
-std::string HelpMessageOpt(const std::string &option, const std::string &message) {
+std::string arginit::HelpMessageOpt(const std::string &option, const std::string &message) {
     return std::string(optIndent,' ') + std::string(option) +
            std::string("\n") + std::string(msgIndent,' ') +
            strenc::FormatParagraph(message, screenWidth - msgIndent, msgIndent) +
            std::string("\n\n");
 }
-
-// extern global variable
-ArgsManager gArgs;

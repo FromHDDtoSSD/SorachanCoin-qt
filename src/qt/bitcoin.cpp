@@ -227,6 +227,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    std::string args_error;
+    if(! ARGS.ParseParameters(argc, argv, args_error)) {
+        QMessageBox::critical(0, strCoinName,
+            QObject::tr("Error: ARGS::ParseParameters %1").arg(args_error.c_str()));
+        return 1;
+    }
+
     // User language is set up: pick a data directory
     Intro::pickDataDirectory();
 
@@ -244,6 +251,13 @@ int main(int argc, char *argv[])
             QObject::tr("Error: map_arg::ReadConfigFile()").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
+
+    //std::string config_error;
+    //if(! ARGS.ReadConfigFiles(config_error)) {
+    //    QMessageBox::critical(0, strCoinName,
+    //        QObject::tr("Error: ARGS::ReadConfigFile() %1").arg(config_error.c_str()));
+    //    return 1;
+    //}
 
     // ... then GUI settings:
     OptionsModel optionsModel;

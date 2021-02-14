@@ -64,6 +64,7 @@ public:
     static void noui_connect();
 #endif
 
+    static void SetupServerArgs();
     static std::string HelpMessage();
     static void ExitTimeout(void *parg);
     static bool AppInit2(bool restart=false);
