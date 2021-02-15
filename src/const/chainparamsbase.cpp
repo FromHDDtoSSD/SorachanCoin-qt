@@ -28,14 +28,21 @@ const chainparamsbase::CBaseChainParams &chainparamsbase::BaseParams() noexcept 
 }
 
 std::unique_ptr<chainparamsbase::CBaseChainParams> chainparamsbase::CreateBaseChainParams(const std::string &chain) {
-    if (chain == CBaseChainParams::MAIN())
-        return MakeUnique<CBaseChainParams>("", 21587);
-    else if (chain == CBaseChainParams::TESTNET())
-        return MakeUnique<CBaseChainParams>("testnet2", 31587);
-    else if (chain == CBaseChainParams::REGTEST())
-        return MakeUnique<CBaseChainParams>("regtest", 41587);
-    else
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+    try {
+        if (chain == CBaseChainParams::MAIN())
+            return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("", 21587)));
+        else if (chain == CBaseChainParams::TESTNET())
+            return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("testnet2", 31587)));
+        else if (chain == CBaseChainParams::REGTEST())
+            return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("regtest", 41587)));
+        else {
+            throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+            return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("", 0)));
+        }
+    } catch (const std::exception &) {
+        throw std::runtime_error("CBaseChainParams: out of memory");
+        return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("", 0)));
+    }
 }
 
 void chainparamsbase::SelectBaseParams(const std::string &chain) {

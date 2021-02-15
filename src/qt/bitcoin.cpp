@@ -252,12 +252,13 @@ int main(int argc, char *argv[])
         return 1;
     }
 
-    //std::string config_error;
-    //if(! ARGS.ReadConfigFiles(config_error)) {
-    //    QMessageBox::critical(0, strCoinName,
-    //        QObject::tr("Error: ARGS::ReadConfigFile() %1").arg(config_error.c_str()));
-    //    return 1;
-    //}
+    entry::SetupServerArgs();
+    std::string config_error;
+    if(! ARGS.ReadConfigFiles(config_error)) {
+        QMessageBox::critical(0, strCoinName,
+            QObject::tr("Error: ARGS::ReadConfigFile() %1").arg(config_error.c_str()));
+        return 1;
+    }
 
     // ... then GUI settings:
     OptionsModel optionsModel;

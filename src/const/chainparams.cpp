@@ -135,13 +135,11 @@ public:
         m_fallback_fee_enabled = false;
     }
 };
-*/
 
 // Testnet (v2)
 
 
 // Testnet (v3)
-/*
 class CTestNetParams : public CChainParams {
 public:
     CTestNetParams() {
@@ -446,6 +444,19 @@ public:
 };
 */
 
+// under development
+class CMainParams : public CChainParams {};
+class CTestNetParams : public CChainParams {};
+class CTestNet2Params : public CChainParams {};
+class CRegTestParams : public CChainParams {
+public:
+    CRegTestParams(const ArgsManager& args) {}
+};
+class CPredictionTestParams : public CChainParams {
+public:
+    CPredictionTestParams(const ArgsManager& args) {}
+};
+
 namespace Chain_info {
     static std::unique_ptr<const CChainParams> globalChainParams;
 
@@ -455,25 +466,25 @@ namespace Chain_info {
     }
 
     std::unique_ptr<const CChainParams> CreateChainParams(const std::string &chain) {
-        /*
         try {
-            if (chain == CBaseChainParams::MAIN())
-                return std::unique_ptr<CChainParams>(new CMainParams());
-            else if (chain == CBaseChainParams::TESTNET())
-                return std::unique_ptr<CChainParams>(new CTestNetParams());
-            else if (chain == CBaseChainParams::TESTNET2())
-                return std::unique_ptr<CChainParams>(new CTestNet2Params());
-            else if (chain == CBaseChainParams::REGTEST())
-                return std::unique_ptr<CChainParams>(new CRegTestParams(gArgs));
-            else if (chain == CBaseChainParams::PREDICTIONTEST())
-                return std::unique_ptr<CChainParams>(new CPredictionTestParams(gArgs));
+            if (chain == chainparamsbase::CBaseChainParams::MAIN())
+                return std::move(std::unique_ptr<const CChainParams>(new CMainParams()));
+            else if (chain == chainparamsbase::CBaseChainParams::TESTNET())
+                return std::move(std::unique_ptr<const CChainParams>(new CTestNetParams()));
+            else if (chain == chainparamsbase::CBaseChainParams::TESTNET2())
+                return std::move(std::unique_ptr<const CChainParams>(new CTestNet2Params()));
+            else if (chain == chainparamsbase::CBaseChainParams::REGTEST())
+                return std::move(std::unique_ptr<const CChainParams>(new CRegTestParams(ARGS)));
+            else if (chain == chainparamsbase::CBaseChainParams::PREDICTIONTEST())
+                return std::move(std::unique_ptr<const CChainParams>(new CPredictionTestParams(ARGS)));
+            else {
+                throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+                return std::move(std::unique_ptr<const CChainParams>());
+            }
         } catch (const std::exception &) {
             throw std::runtime_error("CreateChainParams: out of memory");
-            return std::unique_ptr<const CChainParams>();
+            return std::move(std::unique_ptr<const CChainParams>());
         }
-        */
-        throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
-        return std::unique_ptr<const CChainParams>();
     }
 
     void SelectParams(const std::string &network) {

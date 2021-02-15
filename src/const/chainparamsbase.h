@@ -27,6 +27,7 @@ public:
     /** SorachanCoin chain name strings (test2, prediction) */
     static std::string TESTNET2() {return "test2";}
     static std::string PREDICTION() {return "prediction";}
+    static std::string PREDICTIONTEST() {return "predictiontest";}
 
     const std::string &DataDir() const noexcept { return strDataDir_; }
     int RPCPort() const noexcept { return nRPCPort_; }
@@ -36,6 +37,7 @@ public:
     CBaseChainParams(CBaseChainParams &&)=delete;
     CBaseChainParams &operator=(const CBaseChainParams &)=delete;
     CBaseChainParams &operator=(CBaseChainParams &&)=delete;
+
     CBaseChainParams(const std::string &data_dir, int rpc_port) noexcept :
         nRPCPort_(rpc_port), strDataDir_(data_dir) {}
 
