@@ -643,7 +643,7 @@ std::string dump::DecodeDumpString(const std::string &str)
     {
         unsigned char c = str[pos];
         if (c == '%' && pos + 2 < str.length()) {
-            c = (((str[pos+1] >> 6) * 9 + ((str[pos+1] - '0')&15)) << 4) | 
+            c = (((str[pos+1] >> 6) * 9 + ((str[pos+1] - '0')&15)) << 4) |
                 ((str[pos+2] >> 6) * 9+((str[pos+2]-'0')&15));
             pos += 2;
         }

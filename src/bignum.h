@@ -55,8 +55,8 @@ public:
     bool operator!() { return (pctx == NULL); }
 };
 
-/** 
-*** C++ wrapper for BIGNUM (OpenSSL bignum) 
+/**
+*** C++ wrapper for BIGNUM (OpenSSL bignum)
 **/
 //
 // CBigNum
@@ -155,8 +155,8 @@ public:
         uint64_t n;
 
         if (sn < (int64_t)0) {
-            // Since the minimum signed integer cannot be represented as positive so long as its type is signed, 
-            // and it's not well-defined what happens if you make it unsigned before negating it, 
+            // Since the minimum signed integer cannot be represented as positive so long as its type is signed,
+            // and it's not well-defined what happens if you make it unsigned before negating it,
             // we instead increment the negative integer by 1, convert it, then increment the (now positive) unsigned integer by 1 to compensate
             n = -(sn + 1);
             ++n;
@@ -458,7 +458,7 @@ public:
         }
     }
 
-    std::string ToString(int nBase=10) const {        // nBaseF10 is Decimal. 16 is Hex.
+    std::string ToString(int nBase=10) const {        // nBase F10 is Decimal. 16 is Hex.
         CAutoBN_CTX pctx;
         CBigNum bnBase = nBase;
         CBigNum bn0 = 0;
