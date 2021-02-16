@@ -227,7 +227,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         // Continuously rate-limit free transactions
         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
         // be annoying or make others' transactions take longer to confirm.
-        if (nFees < block_param::MIN_RELAY_TX_FEE) {
+        if (nFees < block_params::MIN_RELAY_TX_FEE) {
             static CCriticalSection __cs;
             static double dFreeCount;
             static int64_t nLastTime;
@@ -517,7 +517,7 @@ bool CTransaction_impl<T>::AllowFree(double dPriority) { // Large (in bytes) low
 template <typename T>
 int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAllowFree/*=false*/, enum GetMinFee_mode mode/*=GMF_BLOCK*/, unsigned int nBytes/*=0*/) const
 {
-    int64_t nMinTxFee = block_param::MIN_TX_FEE, nMinRelayTxFee = block_param::MIN_RELAY_TX_FEE;
+    int64_t nMinTxFee = block_params::MIN_TX_FEE, nMinRelayTxFee = block_params::MIN_RELAY_TX_FEE;
     if(IsCoinStake()) {
         // Enforce 0.01 as minimum fee for coinstake
         nMinTxFee = util::CENT;
@@ -542,7 +542,7 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
     }
 
     // [prevent SPAM] To limit dust spam,
-    // require additional block_param::MIN_TX_FEE/block_param::MIN_RELAY_TX_FEE for
+    // require additional block_params::MIN_TX_FEE/block_params::MIN_RELAY_TX_FEE for
     // each non empty output which is less than 0.01
     // It's safe to ignore empty outputs here, because these inputs are allowed only for coinbase and coinstake transactions.
     for(const CTxOut_impl<T> &txout: vout) {
@@ -551,12 +551,12 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
     }
 
     // Raise the price as the block approaches full
-    if (nBlockSize != 1 && nNewBlockSize >= block_param::MAX_BLOCK_SIZE_GEN / 2) {
-        if (nNewBlockSize >= block_param::MAX_BLOCK_SIZE_GEN) return block_param::MAX_MONEY;
-        nMinFee *= block_param::MAX_BLOCK_SIZE_GEN / (block_param::MAX_BLOCK_SIZE_GEN - nNewBlockSize);
+    if (nBlockSize != 1 && nNewBlockSize >= block_params::MAX_BLOCK_SIZE_GEN / 2) {
+        if (nNewBlockSize >= block_params::MAX_BLOCK_SIZE_GEN) return block_params::MAX_MONEY;
+        nMinFee *= block_params::MAX_BLOCK_SIZE_GEN / (block_params::MAX_BLOCK_SIZE_GEN - nNewBlockSize);
     }
     if (! block_transaction::manage::MoneyRange(nMinFee))
-        nMinFee = block_param::MAX_MONEY;
+        nMinFee = block_params::MAX_MONEY;
 
     return nMinFee;
 }
@@ -873,7 +873,7 @@ bool CTransaction_impl<T>::CheckTransaction() const
         return DoS(10, print::error("CTransaction_impl<T>::CheckTransaction() : vout empty"));
 
     // Size limits
-    if (::GetSerializeSize(*this) > block_param::MAX_BLOCK_SIZE)
+    if (::GetSerializeSize(*this) > block_params::MAX_BLOCK_SIZE)
         return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : size limits failed"));
 
     // Check for negative or overflow output values
@@ -884,7 +884,7 @@ bool CTransaction_impl<T>::CheckTransaction() const
             return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout empty for user transaction"));
         if (txout.get_nValue() < 0)
             return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue is negative"));
-        if (txout.get_nValue() > block_param::MAX_MONEY)
+        if (txout.get_nValue() > block_params::MAX_MONEY)
             return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue too high"));
         nValueOut += txout.get_nValue();
         if (! block_transaction::manage::MoneyRange(nValueOut))

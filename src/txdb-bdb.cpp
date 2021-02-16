@@ -446,7 +446,7 @@ bool CTxDB::LoadBlockIndexGuts()
                 pindexNew->set_nNonce( diskindex.get_nNonce() );
 
                 // Watch for genesis block
-                if (block_info::pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet)) {
+                if (block_info::pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
                     block_info::pindexGenesisBlock = pindexNew;
                 }
 

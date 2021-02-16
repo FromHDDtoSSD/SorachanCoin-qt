@@ -77,7 +77,7 @@ int64_t CRPCTable::AmountFromValue(const json_spirit::Value &value, CBitrpcData 
     double dAmount = value.get_real(status);
     if(! status.fSuccess()) {data.JSONRPCError(RPC_JSON_ERROR, status.e); return 0.0;}
     bool ret=true;
-    if (dAmount <= 0.0 || dAmount > block_param::MAX_MONEY)
+    if (dAmount <= 0.0 || dAmount > block_params::MAX_MONEY)
         ret=false;
 
     int64_t nAmount = util::roundint64(dAmount * util::COIN);

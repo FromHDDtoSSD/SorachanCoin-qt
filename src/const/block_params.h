@@ -2,14 +2,14 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SORACHANCOIN_BLOCK_PARAM
-#define SORACHANCOIN_BLOCK_PARAM
+#ifndef SORACHANCOIN_BLOCK_PARAMS
+#define SORACHANCOIN_BLOCK_PARAMS
 
 #include <uint256.h>
 #include <util.h>
 #include <timestamps.h>
 
-namespace block_param
+namespace block_params
 {
     const unsigned int MAX_BLOCK_SIZE = 1000000;
     const unsigned int MAX_BLOCK_SIZE_GEN = MAX_BLOCK_SIZE / 2;
@@ -46,4 +46,4 @@ namespace block_param
     const uint256 hashGenesisBlockTestNet("0x00002f6601da66030580c89a4652b44cf330102c42e2b4e06d97958df7738478");
 }
 
-#endif // SORACHANCOIN_BLOCK_PARAM
+#endif // SORACHANCOIN_BLOCK_PARAMS

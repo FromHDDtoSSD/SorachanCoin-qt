@@ -573,8 +573,8 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     result.push_back(json_spirit::Pair("mintime", (int64_t)pindexPrev->GetMedianTimePast()+1));
     result.push_back(json_spirit::Pair("mutable", aMutable));
     result.push_back(json_spirit::Pair("noncerange", "00000000ffffffff"));
-    result.push_back(json_spirit::Pair("sigoplimit", (int64_t)block_param::MAX_BLOCK_SIGOPS));
-    result.push_back(json_spirit::Pair("sizelimit", (int64_t)block_param::MAX_BLOCK_SIZE));
+    result.push_back(json_spirit::Pair("sigoplimit", (int64_t)block_params::MAX_BLOCK_SIGOPS));
+    result.push_back(json_spirit::Pair("sizelimit", (int64_t)block_params::MAX_BLOCK_SIZE));
     result.push_back(json_spirit::Pair("curtime", (int64_t)pblock->get_nTime()));
     result.push_back(json_spirit::Pair("bits", HexBits(pblock->get_nBits())));
     result.push_back(json_spirit::Pair("height", (int64_t)(pindexPrev->get_nHeight()+1)));

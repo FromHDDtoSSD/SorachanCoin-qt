@@ -12,7 +12,7 @@
 #include <list>
 #include <map>
 
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <block/block_info.h>
 #include <file_operate/file_open.h>
 #include <serialize.h>
@@ -59,7 +59,7 @@ namespace block_transaction
         static bool GetTransaction(const T &hash, CTransaction_impl<T> &tx, T &hashBlock);
         static CBlockIndex *FindBlockByHeight(int nHeight);
         static bool MoneyRange(int64_t nValue) noexcept {
-            return (nValue >= 0 && nValue <= block_param::MAX_MONEY);
+            return (nValue >= 0 && nValue <= block_params::MAX_MONEY);
         }
     };
     using manage = manage_impl<uint256>;
@@ -699,7 +699,7 @@ public:
             nBlockHeight = block_info::nBestHeight;
         if (nBlockTime == 0)
             nBlockTime = bitsystem::GetAdjustedTime();
-        if ((int64_t)nLockTime < ((int64_t)nLockTime < block_param::LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
+        if ((int64_t)nLockTime < ((int64_t)nLockTime < block_params::LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
             return true;
         for(const CTxIn_impl<T> &txin: this->vin) {
             if (! txin.IsFinal()) return false;

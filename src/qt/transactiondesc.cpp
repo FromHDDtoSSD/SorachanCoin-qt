@@ -17,7 +17,7 @@
 QString TransactionDesc::FormatTxStatus(const CWalletTx &wtx)
 {
     if (! wtx.IsFinal()) {
-        if (wtx.get_nLockTime() < block_param::LOCKTIME_THRESHOLD) {
+        if (wtx.get_nLockTime() < block_params::LOCKTIME_THRESHOLD) {
             return tr("Open for %n block(s)", "", block_info::nBestHeight - wtx.get_nLockTime());
         } else {
             return tr("Open until %1").arg(GUIUtil::dateTimeStr(wtx.get_nLockTime()));

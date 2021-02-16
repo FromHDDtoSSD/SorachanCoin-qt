@@ -221,7 +221,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
     } else if (strCommand == "inv") {
         std::vector<CInv> vInv;
         vRecv >> vInv;
-        if (vInv.size() > block_param::MAX_INV_SZ) {
+        if (vInv.size() > block_params::MAX_INV_SZ) {
             pfrom->Misbehaving(20);
             return print::error("message inv size() = %" PRIszu "", vInv.size());
         }
@@ -262,7 +262,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
     } else if (strCommand == "getdata") {
         std::vector<CInv> vInv;
         vRecv >> vInv;
-        if (vInv.size() > block_param::MAX_INV_SZ) {
+        if (vInv.size() > block_params::MAX_INV_SZ) {
             pfrom->Misbehaving(20);
             return print::error("message getdata size() = %" PRIszu "", vInv.size());
         }
@@ -442,7 +442,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             }
 
             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
-            unsigned int nEvicted = block_process::manage::LimitOrphanTxSize(block_param::MAX_ORPHAN_TRANSACTIONS);
+            unsigned int nEvicted = block_process::manage::LimitOrphanTxSize(block_params::MAX_ORPHAN_TRANSACTIONS);
             if (nEvicted > 0) printf("mapOrphan overflow, removed %u tx\n", nEvicted);
         }
         if (tx.nDoS)
@@ -482,7 +482,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         for (unsigned int i = 0; i < vtxid.size(); ++i) {
             CInv inv(_CINV_MSG_TYPE::MSG_TX, vtxid[i]);
             vInv.push_back(inv);
-            if (i == (block_param::MAX_INV_SZ - 1))
+            if (i == (block_params::MAX_INV_SZ - 1))
                 break;
         }
         if (vInv.size() > 0)

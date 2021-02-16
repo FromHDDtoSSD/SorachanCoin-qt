@@ -157,10 +157,10 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     }
 
     // Largest block you're willing to create:
-    unsigned int nBlockMaxSize = map_arg::GetArgUInt("-blockmaxsize", block_param::MAX_BLOCK_SIZE_GEN / 2);
+    unsigned int nBlockMaxSize = map_arg::GetArgUInt("-blockmaxsize", block_params::MAX_BLOCK_SIZE_GEN / 2);
 
     // Limit to betweeen 1K and MAX_BLOCK_SIZE - 1K for sanity:
-    nBlockMaxSize = std::max(1000u, std::min(block_param::MAX_BLOCK_SIZE - 1000u, nBlockMaxSize));
+    nBlockMaxSize = std::max(1000u, std::min(block_params::MAX_BLOCK_SIZE - 1000u, nBlockMaxSize));
 
     // How much of the block should be dedicated to high-priority transactions,
     // included regardless of the fees they pay
@@ -177,7 +177,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     // a transaction spammer can cheaply fill blocks using
     // 1-satoshi-fee transactions. It should be set above the real
     // cost to you of processing a transaction.
-    int64_t nMinTxFee = block_param::MIN_TX_FEE;
+    int64_t nMinTxFee = block_params::MIN_TX_FEE;
     if (map_arg::GetMapArgsCount("-mintxfee")) {
         bitstr::ParseMoney(map_arg::GetMapArgsString("-mintxfee").c_str(), nMinTxFee);
     }
@@ -316,7 +316,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             // Legacy limits on sigOps
             //
             unsigned int nTxSigOps = tx.GetLegacySigOpCount();
-            if (nBlockSigOps + nTxSigOps >= block_param::MAX_BLOCK_SIGOPS) {
+            if (nBlockSigOps + nTxSigOps >= block_params::MAX_BLOCK_SIGOPS) {
                 continue;
             }
 
@@ -363,7 +363,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
 
             // Sigops accumulation
             nTxSigOps += tx.GetP2SHSigOpCount(mapInputs);
-            if (nBlockSigOps + nTxSigOps >= block_param::MAX_BLOCK_SIGOPS) {
+            if (nBlockSigOps + nTxSigOps >= block_params::MAX_BLOCK_SIGOPS) {
                 continue;
             }
 
@@ -601,7 +601,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
         CoinsSet setCoins;
         int64_t nValueIn = 0;
-        if (! pwallet->SelectCoinsSimple(nBalance - nReserveBalance, block_param::MIN_TX_FEE, block_param::MAX_MONEY, nUpperTime, block_transaction::nCoinbaseMaturity * 10, setCoins, nValueIn)) {
+        if (! pwallet->SelectCoinsSimple(nBalance - nReserveBalance, block_params::MIN_TX_FEE, block_params::MAX_MONEY, nUpperTime, block_transaction::nCoinbaseMaturity * 10, setCoins, nValueIn)) {
             return print::error("FillMap() : SelectCoinsSimple failed");
         }
         if (setCoins.empty()) {

@@ -9,7 +9,7 @@
 
 #include <file_operate/iofs.h>
 #include <util/args.h> // map_arg, lsync
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <version.h>
 
 #ifdef WIN32

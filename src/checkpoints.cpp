@@ -30,7 +30,7 @@ std::string CSyncCheckpoint::strMasterPrivKey = "";
 //
 const MapCheckpoints Checkpoints::manage::mapCheckpoints = 
     {
-        { 0, block_param::hashGenesisBlock },
+        { 0, block_params::hashGenesisBlock },
         { 1275, uint256("0x000000dd7de58fad01cfa1799b5809df4c1d9c164fc49da39eb2954531e1a36c") },    // 1533654441
         { 4930, uint256("0x000000153d5cf5fed61add322826c8ec6f32ffe5f99a714fcbf5ac53aee09b14") },    // 1534233069
         { 6624, uint256("0x5130b59e93325dd0a2332f99edb763cdb4189a4e6b0cc481023d1a21fe2327c5") },    // 1534481948
@@ -47,7 +47,7 @@ const MapCheckpoints Checkpoints::manage::mapCheckpoints =
 
 const MapCheckpoints Checkpoints::manage::mapCheckpointsTestnet = 
     {
-        { 0, block_param::hashGenesisBlockTestNet },
+        { 0, block_params::hashGenesisBlockTestNet },
         { 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }     // 1533660799
         //{ 15330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }  // [OK] NG test 1533660799
     };
@@ -341,7 +341,7 @@ void Checkpoints::manage::AskForPendingSyncCheckpoint(CNode *pfrom) {
 
 bool Checkpoints::manage::SetCheckpointPrivKey(std::string strPrivKey) {
     // Test signing a sync-checkpoint with genesis block
-    CSyncCheckpoint checkpoint( (!args_bool::fTestNet) ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet );
+    CSyncCheckpoint checkpoint( (!args_bool::fTestNet) ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet );
 
     CDataStream sMsg(SER_NETWORK, version::PROTOCOL_VERSION);
     sMsg << (CUnsignedSyncCheckpoint)checkpoint;

@@ -30,6 +30,10 @@
 #include <util/logging.h>
 #include <util/thread.h>
 #include <libstr/cmstring.h>
+#include <const/validation.h>
+#include <const/net_processing.h>
+#include <const/net_params.h>
+#include <util/system.h>
 
 #ifndef WIN32
 # include <signal.h>
@@ -271,14 +275,17 @@ void entry::SetupServerArgs()
         // GUI args. These will be overwritten by SetupUIArgs for the GUI
         "-allowselfsignedrootcertificates", "-choosedatadir", "-lang=<lang>", "-min", "-resetguisettings", "-rootcertificates=<file>", "-splash", "-uiplatform"};
 
+    // old core is only options
+    ARGS.AddArg("-irc", "Find peers using internet relay chat (default: 0)", false, OptionsCategory::OPTIONS);
+
     ARGS.AddArg("-version", "Print version and exit", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-alertnotify=<cmd>", "Execute command when a relevant alert is received or we see a really long fork (%s in cmd is replaced by message)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-assumevalid=<hex>", strprintf("If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all, default: %s, testnet: %s)", defaultChainParams->GetConsensus().defaultAssumeValid.GetHex(), testnetChainParams->GetConsensus().defaultAssumeValid.GetHex()), false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blocksdir=<dir>", "Specify blocks directory (default: <datadir>/blocks)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blocknotify=<cmd>", "Execute command when the best block changes (%s in cmd is replaced by block hash)", false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-blockreconstructionextratxn=<n>", strprintf("Extra transactions to keep in memory for compact block reconstructions (default: %u)", DEFAULT_BLOCK_RECONSTRUCTION_EXTRA_TXN), false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-blocksonly", strprintf("Whether to reject transactions from network peers. Transactions from the wallet or RPC are not affected. (default: %u)", DEFAULT_BLOCKSONLY), false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-conf=<file>", strprintf("Specify configuration file. Relative paths will be prefixed by datadir location. (default: %s)", BITCOIN_CONF_FILENAME), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-blockreconstructionextratxn=<n>", strprintf("Extra transactions to keep in memory for compact block reconstructions (default: %u)", DEFAULT_BLOCK_RECONSTRUCTION_EXTRA_TXN), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-blocksonly", strprintf("Whether to reject transactions from network peers. Transactions from the wallet or RPC are not affected. (default: %u)", DEFAULT_BLOCKSONLY), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-conf=<file>", strprintf("Specify configuration file. Relative paths will be prefixed by datadir location. (default: %s)", lutil::BITCOIN_CONF_FILENAME().c_str()), false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-datadir=<dir>", "Specify data directory", false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-dbbatchsize", strprintf("Maximum database write batch size in bytes (default: %u)", nDefaultDbBatchSize), true, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-dbcache=<n>", strprintf("Maximum database cache size <n> MiB (%d to %d, default: %d). In addition, unused mempool memory is shared for this cache (see -maxmempool).", nMinDbCache, nMaxDbCache, nDefaultDbCache), false, OptionsCategory::OPTIONS);
@@ -304,7 +311,7 @@ void entry::SetupServerArgs()
 #else
     hidden_args.emplace_back("-sysperms");
 #endif
-    //ARGS.AddArg("-txindex", strprintf("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)", DEFAULT_TXINDEX), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-txindex", strprintf("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)", DEFAULT_TXINDEX), false, OptionsCategory::OPTIONS);
 
     ARGS.AddArg("-addnode=<ip>", "Add a node to connect to and attempt to keep the connection open (see the `addnode` RPC command help for more info). This option can be specified multiple times to add multiple nodes.", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-banscore=<n>", strprintf("Threshold for disconnecting misbehaving peers (default: %u)", DEFAULT_BANSCORE_THRESHOLD), false, OptionsCategory::CONNECTION);
@@ -499,7 +506,7 @@ std::string entry::HelpMessage()
 #endif
 
         "  -paytxfee=<amt>        " + _("Fee per KB to add to transactions you send") + "\n" +
-        "  -mininput=<amt>        " + str(boost::format(_("When creating transactions, ignore inputs with value less than this (default: %s)")) % bitstr::FormatMoney(block_param::MIN_TXOUT_AMOUNT)) + "\n" +
+        "  -mininput=<amt>        " + str(boost::format(_("When creating transactions, ignore inputs with value less than this (default: %s)")) % bitstr::FormatMoney(block_params::MIN_TXOUT_AMOUNT)) + "\n" +
 #ifdef QT_GUI
         "  -server                " + _("Accept command line and JSON-RPC commands") + "\n" +
 #endif
@@ -712,8 +719,8 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     if (block_info::nScriptCheckThreads <= 1) {
         block_info::nScriptCheckThreads = 0;
-    } else if (block_info::nScriptCheckThreads > block_param::MAX_SCRIPTCHECK_THREADS) {
-        block_info::nScriptCheckThreads = block_param::MAX_SCRIPTCHECK_THREADS;
+    } else if (block_info::nScriptCheckThreads > block_params::MAX_SCRIPTCHECK_THREADS) {
+        block_info::nScriptCheckThreads = block_params::MAX_SCRIPTCHECK_THREADS;
     }
 
     args_bool::fDebug = map_arg::GetBoolArg("-debug");

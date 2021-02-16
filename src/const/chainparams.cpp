@@ -14,15 +14,15 @@
 #include <assert.h>
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <miner/diff.h>
 
 namespace {
 CBlock CreateGenesisBlock() {
-    const char *const pszTimestamp = block_param::pszTimestamp;
+    const char *const pszTimestamp = block_params::pszTimestamp;
 
     CTransaction txNew;
-    txNew.set_nTime(!args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet);
+    txNew.set_nTime(!args_bool::fTestNet ? block_params::nGenesisTimeMainnet: block_params::nGenesisTimeTestnet);
     txNew.set_vin().resize(1);
     txNew.set_vout().resize(1);
     txNew.set_vin(0).set_scriptSig(CScript() << 0 << CScriptNum(42) << script_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp)));
@@ -33,9 +33,9 @@ CBlock CreateGenesisBlock() {
     block.set_hashPrevBlock(0);
     block.set_hashMerkleRoot(block.BuildMerkleTree());
     block.set_nVersion(1);
-    block.set_nTime(!args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet);
+    block.set_nTime(!args_bool::fTestNet ? block_params::nGenesisTimeMainnet: block_params::nGenesisTimeTestnet);
     block.set_nBits(diff::bnProofOfWorkLimit.GetCompact());
-    block.set_nNonce(!args_bool::fTestNet ? block_param::nGenesisNonceMainnet : block_param::nGenesisNonceTestnet);
+    block.set_nNonce(!args_bool::fTestNet ? block_params::nGenesisNonceMainnet : block_params::nGenesisNonceTestnet);
     return block;
 }
 } // namespace

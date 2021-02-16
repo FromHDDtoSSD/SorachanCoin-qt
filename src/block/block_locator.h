@@ -12,7 +12,7 @@
 #include <util.h>
 #include <uint256.h>
 #include <serialize.h>
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <block/block_info.h>
 
 template <typename T> class CBlockIndex_impl;

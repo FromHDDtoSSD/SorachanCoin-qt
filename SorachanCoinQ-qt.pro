@@ -542,7 +542,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/prime/autocheckpoint.h \
     src/merkle/merkle_tx.h \
     src/merkle/merkle_tree.h \
-    src/const/block_param.h \
+    src/const/block_params.h \
     src/const/no_instance.h \
     src/file_operate/file_open.h \
     src/file_operate/autofile.h \
@@ -574,6 +574,9 @@ HEADERS += src/qt/bitcoingui.h \
     src/const/assumptions.h \
     src/const/macro.h \
     src/const/amount.h \
+    src/const/validation.h \
+    src/const/net_processing.h \
+    src/const/net_params.h \
     src/script/lscript.h \
     src/script/scriptnum.h \
     src/script/standard.h \
@@ -779,6 +782,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/const/chainparamsbase.cpp \
     src/const/chainparams.cpp \
     src/const/clientversion.cpp \
+    src/const/net_processing.cpp \
     src/bip32/hdwalletutil.cpp \
     src/script/lscript.cpp \
     src/script/standard.cpp \

@@ -5,7 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <miner/diff.h>
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <block/block.h>
 #include <block/block_check.h>
 #include <timestamps.h>
@@ -71,9 +71,9 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
 // miner's coin base reward based on nBits
 int64_t diff::reward::GetProofOfWorkReward(unsigned int nBits, int64_t nFees /*= 0*/)
 {
-    int64_t nSubsidy = block_param::MAX_MINT_PROOF_OF_WORK;
+    int64_t nSubsidy = block_params::MAX_MINT_PROOF_OF_WORK;
     if (block_info::nBestHeight == 0)
-        nSubsidy = block_param::COIN_PREMINE;
+        nSubsidy = block_params::COIN_PREMINE;
     else {
         for(std::list<std::pair<int, int64_t> >::const_iterator it = blockreward::POW_REWARD_BLOCK.begin(); it != blockreward::POW_REWARD_BLOCK.end(); ++it) {
             std::pair<int, int64_t> data1 = *it;
@@ -98,7 +98,7 @@ int64_t diff::reward::GetProofOfWorkReward(unsigned int nBits, int64_t nFees /*=
 // miner's coin stake reward based on nBits and coin age spent (coin-days)
 int64_t diff::reward::GetProofOfStakeReward(int64_t nCoinAge, unsigned int nBits, int64_t nTime, bool bCoinYearOnly /*= false*/)
 {
-    int64_t nReward = block_param::COIN_YEAR_REWARD;
+    int64_t nReward = block_params::COIN_YEAR_REWARD;
     int64_t bTime = bitsystem::GetTime();
     for(std::list<std::pair<unsigned int, int64_t> >::const_iterator it = blockreward::POS_REWARD_BLOCK.begin(); it != blockreward::POS_REWARD_BLOCK.end(); ++it) {
         std::pair<unsigned int, int64_t> data1 = *it;

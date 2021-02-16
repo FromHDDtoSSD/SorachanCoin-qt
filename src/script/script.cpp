@@ -585,8 +585,8 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
         // unless the type of nLockTime being tested is the same as
         // the nLockTime in the transaction.
         if (!(
-            (txTo.get_nLockTime() <  block_param::LOCKTIME_THRESHOLD && nLockTime < block_param::LOCKTIME_THRESHOLD) ||
-            (txTo.get_nLockTime() >= block_param::LOCKTIME_THRESHOLD && nLockTime >= block_param::LOCKTIME_THRESHOLD)
+            (txTo.get_nLockTime() <  block_params::LOCKTIME_THRESHOLD && nLockTime < block_params::LOCKTIME_THRESHOLD) ||
+            (txTo.get_nLockTime() >= block_params::LOCKTIME_THRESHOLD && nLockTime >= block_params::LOCKTIME_THRESHOLD)
             )) {
             //printf("EvalScript_CheckLockTime Failure A.\n");
             return false;

@@ -180,17 +180,17 @@ json_spirit::Value CRPCTable::getdifficulty(const json_spirit::Array &params, CB
 
 json_spirit::Value CRPCTable::settxfee(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     data.e = "amount";
-    if (data.fHelp() || params.size() < 1 || params.size() > 1 || AmountFromValue(params[0], data) < block_param::MIN_TX_FEE) {
+    if (data.fHelp() || params.size() < 1 || params.size() > 1 || AmountFromValue(params[0], data) < block_params::MIN_TX_FEE) {
         return data.JSONRPCSuccess(
             "settxfee <amount>\n"
-            "<amount> is a real and is rounded to the nearest " + bitstr::FormatMoney(block_param::MIN_TX_FEE));
+            "<amount> is a real and is rounded to the nearest " + bitstr::FormatMoney(block_params::MIN_TX_FEE));
     }
     if(! data.fSuccess()) return data.JSONRPCError();
 
     data.e = "Transaction";
     block_info::nTransactionFee = AmountFromValue(params[0], data);
     if(! data.fSuccess()) return data.JSONRPCError();
-    block_info::nTransactionFee = (block_info::nTransactionFee / block_param::MIN_TX_FEE) * block_param::MIN_TX_FEE;  // round to minimum fee
+    block_info::nTransactionFee = (block_info::nTransactionFee / block_params::MIN_TX_FEE) * block_params::MIN_TX_FEE;  // round to minimum fee
     return data.JSONRPCSuccess(true);
 }
 

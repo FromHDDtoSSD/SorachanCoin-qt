@@ -10,7 +10,7 @@
 #include <checkpoints.h>
 #include <block/block_process.h>
 #include <miner/diff.h>
-#include <const/block_param.h>
+#include <const/block_params.h>
 #include <block/block_info.h>
 #include <block/block_check.h>
 #include <util/time.h>
@@ -186,10 +186,10 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         //
         // Genesis block
         //
-        const char *pszTimestamp = block_param::pszTimestamp;
+        const char *pszTimestamp = block_params::pszTimestamp;
 
         CTransaction txNew;
-        txNew.set_nTime( !args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet );
+        txNew.set_nTime( !args_bool::fTestNet ? block_params::nGenesisTimeMainnet: block_params::nGenesisTimeTestnet );
         txNew.set_vin().resize(1);
         txNew.set_vout().resize(1);
         txNew.set_vin(0).set_scriptSig(CScript() << 0 << CBigNum(42) << bignum_vector((const unsigned char *)pszTimestamp, (const unsigned char *)pszTimestamp + ::strlen(pszTimestamp)));
@@ -200,11 +200,11 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         block.set_hashPrevBlock(0);
         block.set_hashMerkleRoot(block.BuildMerkleTree());
         block.set_nVersion(1);
-        block.set_nTime(!args_bool::fTestNet ? block_param::nGenesisTimeMainnet: block_param::nGenesisTimeTestnet);
+        block.set_nTime(!args_bool::fTestNet ? block_params::nGenesisTimeMainnet: block_params::nGenesisTimeTestnet);
         block.set_nBits(diff::bnProofOfWorkLimit.GetCompact());
-        block.set_nNonce(!args_bool::fTestNet ? block_param::nGenesisNonceMainnet : block_param::nGenesisNonceTestnet);
+        block.set_nNonce(!args_bool::fTestNet ? block_params::nGenesisNonceMainnet : block_params::nGenesisNonceTestnet);
 
-        if (true && (block.GetHash() != block_param::hashGenesisBlock)) {
+        if (true && (block.GetHash() != block_params::hashGenesisBlock)) {
             //
             // This will figure out a valid hash and Nonce if you're creating a different genesis block
             //
@@ -228,8 +228,8 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         printf("block.nTime = %u \n", block.get_nTime());
         printf("block.nNonce = %u \n", block.get_nNonce());
 
-        assert(block.get_hashMerkleRoot() == block_param::hashMerkleRoot);
-        assert(block.GetHash() == (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet));
+        assert(block.get_hashMerkleRoot() == block_params::hashMerkleRoot);
+        assert(block.GetHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 
         //
@@ -245,7 +245,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         }
 
         // initialize synchronized checkpoint
-        if (! Checkpoints::manage::WriteSyncCheckpoint((!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet))) {
+        if (! Checkpoints::manage::WriteSyncCheckpoint((!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet))) {
             return print::error("LoadBlockIndex() : failed to init sync checkpoint");
         }
 
@@ -348,7 +348,7 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
                 ::fseek(blkdat, nPos, SEEK_SET);
                 unsigned int nSize;
                 blkdat >> nSize;
-                if (nSize > 0 && nSize <= block_param::MAX_BLOCK_SIZE) {
+                if (nSize > 0 && nSize <= block_params::MAX_BLOCK_SIZE) {
                     CBlock block;
                     blkdat >> block;
                     if (block_process::manage::ProcessBlock(NULL, &block)) {

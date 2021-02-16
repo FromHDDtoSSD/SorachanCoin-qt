@@ -20,7 +20,7 @@ void CBlockLocator_impl<T>::Set(const CBlockIndex *pindex) {
         if (vHave.size() > 10)
             nStep *= 2;
     }
-    vHave.push_back((!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet));
+    vHave.push_back((!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
 }
 
 template <typename T>
@@ -65,7 +65,7 @@ uint256 CBlockLocator_impl<T>::GetBlockHash() {
             if (pindex->IsInMainChain()) return hash;
         }
     }
-    return (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet);
+    return (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet);
 }
 
 template <typename T>

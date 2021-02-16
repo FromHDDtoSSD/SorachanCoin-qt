@@ -528,7 +528,7 @@ void MultisigDialog::on_sendTransactionButton_clicked()
 
     // Check the fee
     int64_t fee = (int64_t ) (ui->fee->text().toDouble() * util::COIN);
-    int64_t minFee = block_param::MIN_TX_FEE * (1 + (int64_t) transactionSize / 1000);
+    int64_t minFee = block_params::MIN_TX_FEE * (1 + (int64_t) transactionSize / 1000);
     if(fee < minFee) {
         QMessageBox::StandardButton ret = QMessageBox::question(this, tr("Confirm send transaction"), tr("The fee of the transaction (%1 SORA) is smaller than the expected fee (%2 SORA). Do you want to send the transaction anyway?").arg((double) fee / util::COIN).arg((double) minFee / util::COIN), QMessageBox::Yes | QMessageBox::Cancel, QMessageBox::Cancel);
         if(ret != QMessageBox::Yes) {

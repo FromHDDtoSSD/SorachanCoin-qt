@@ -233,7 +233,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
         }
 
         nSigOps += tx.GetLegacySigOpCount();
-        if (nSigOps > block_param::MAX_BLOCK_SIGOPS)
+        if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
             return DoS(100, print::error("ConnectBlock() : too many sigops"));
 
         CDiskTxPos posThisTx(pindex->get_nFile(), pindex->get_nBlockPos(), nTxPos);
@@ -252,7 +252,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
             // this is to prevent a "rogue miner" from creating
             // an incredibly-expensive-to-validate block.
             nSigOps += tx.GetP2SHSigOpCount(mapInputs);
-            if (nSigOps > block_param::MAX_BLOCK_SIGOPS)
+            if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
                 return DoS(100, print::error("ConnectBlock() : too many sigops"));
 
             int64_t nTxValueIn = tx.GetValueIn(mapInputs);
@@ -342,7 +342,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     if (! txdb.TxnBegin())
         return print::error("SetBestChain() : TxnBegin failed");
 
-    if (block_info::pindexGenesisBlock == NULL && hash == (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet)) {
+    if (block_info::pindexGenesisBlock == NULL && hash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
         txdb.WriteHashBestChain(hash);
         if (! txdb.TxnCommit())
             return print::error("SetBestChain() : TxnCommit failed");
@@ -526,7 +526,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
     unsigned int nSigOps = 0; // total sigops
 
     // Size limits
-    if (Merkle_t::vtx.empty() || Merkle_t::vtx.size() > block_param::MAX_BLOCK_SIZE || ::GetSerializeSize(*this) > block_param::MAX_BLOCK_SIZE)
+    if (Merkle_t::vtx.empty() || Merkle_t::vtx.size() > block_params::MAX_BLOCK_SIZE || ::GetSerializeSize(*this) > block_params::MAX_BLOCK_SIZE)
         return DoS(100, print::error("CheckBlock() : size limits failed"));
 
     bool fProofOfStake = IsProofOfStake();
@@ -610,7 +610,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         return DoS(100, print::error("CheckBlock() : duplicate transaction"));
 
     // Reject block if validation would consume too much resources.
-    if (nSigOps > block_param::MAX_BLOCK_SIGOPS)
+    if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
         return DoS(100, print::error("CheckBlock() : out-of-bounds SigOpCount"));
 
     // Check merkle root

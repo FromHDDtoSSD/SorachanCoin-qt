@@ -44,8 +44,8 @@ namespace block_info
     extern unsigned int nTransactionsUpdated;// = 0;
 
     // Settings
-    extern int64_t nTransactionFee;// = block_param::MIN_TX_FEE;
-    extern int64_t nMinimumInputValue;// = block_param::MIN_TXOUT_AMOUNT;
+    extern int64_t nTransactionFee;// = block_params::MIN_TX_FEE;
+    extern int64_t nMinimumInputValue;// = block_params::MIN_TXOUT_AMOUNT;
     extern int nScriptCheckThreads;// = 0;
 
     extern unsigned char gpchMessageStart[4];// = { 0xe4, 0xe8, 0xe9, 0xe5 };

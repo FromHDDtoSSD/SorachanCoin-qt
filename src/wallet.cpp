@@ -2286,7 +2286,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
 
                 // Limit size
                 unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
-                if (nBytes >= block_param::MAX_BLOCK_SIZE_GEN / 5) {
+                if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
                     return false;
                 }
                 dPriority /= nBytes;
@@ -2406,7 +2406,7 @@ bool CWallet::MergeCoins(const int64_t &nAmount, const int64_t &nMinValue, const
         //
         // Prepare transaction for commit if sum is enough ot its size is too big
         //
-        if (nBytes >= block_param::MAX_BLOCK_SIZE_GEN / 6 || wtxNew.get_vout(0).get_nValue() >= nOutputValue) {
+        if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 6 || wtxNew.get_vout(0).get_nValue() >= nOutputValue) {
             wtxNew.set_vout(0).sub_nValue(nMinFee); // Set actual fee
 
             for (unsigned int i = 0; i < wtxNew.get_vin().size(); ++i)
@@ -2549,7 +2549,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
 
     int64_t nValueIn = 0;
     CoinsSet setCoins;
-    if (! SelectCoinsSimple(nBalance - miner::nReserveBalance, block_param::MIN_TX_FEE, block_param::MAX_MONEY, nGenerationTime, block_transaction::nCoinbaseMaturity * 10, setCoins, nValueIn)) {
+    if (! SelectCoinsSimple(nBalance - miner::nReserveBalance, block_params::MIN_TX_FEE, block_params::MAX_MONEY, nGenerationTime, block_transaction::nCoinbaseMaturity * 10, setCoins, nValueIn)) {
         return false;
     }
     if (setCoins.empty()) {
@@ -2668,7 +2668,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         // Limit size
         //unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, version::PROTOCOL_VERSION);
         unsigned int nBytes = ::GetSerializeSize(txNew);
-        if (nBytes >= block_param::MAX_BLOCK_SIZE_GEN / 5) {
+        if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
             return print::error("CreateCoinStake : exceeded coinstake size limit\n");
         }
 

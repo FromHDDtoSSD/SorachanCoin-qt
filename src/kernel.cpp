@@ -506,7 +506,7 @@ bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, ui
 // Get stake modifier checksum
 uint32_t bitkernel::GetStakeModifierChecksum(const CBlockIndex *pindex)
 {
-    assert (pindex->get_pprev() || pindex->GetBlockHash() == (!args_bool::fTestNet ? block_param::hashGenesisBlock : block_param::hashGenesisBlockTestNet));
+    assert (pindex->get_pprev() || pindex->GetBlockHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
 
     //
     // Hash previous checksum with flags, hashProofOfStake and nStakeModifier
