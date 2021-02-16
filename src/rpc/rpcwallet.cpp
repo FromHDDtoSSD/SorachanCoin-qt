@@ -1601,14 +1601,14 @@ json_spirit::Value CRPCTable::keypoolreset(const json_spirit::Array &params, CBi
 void CRPCTable::ThreadTopUpKeyPool(void *parg) {
     (void)parg;
     // Make this thread recognisable as the key-topping-up thread
-    bitthread::manage::RenameThread(strCoinName "-key-top");
+    bitthread::RenameThread(strCoinName "-key-top");
     entry::pwalletMain->TopUpKeyPool();
 }
 
 void CRPCTable::ThreadCleanWalletPassphrase(void *parg) {
     // Make this thread recognisable as the wallet relocking thread
     // parg: int64_t *, dynamic object
-    bitthread::manage::RenameThread(strCoinName "-lock-wa");
+    bitthread::RenameThread(strCoinName "-lock-wa");
     int64_t nMyWakeTime = util::GetTimeMillis() + *((int64_t *)parg) * 1000;
 
     ENTER_CRITICAL_SECTION(cs_nWalletUnlockTime);

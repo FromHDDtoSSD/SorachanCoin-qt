@@ -12,6 +12,7 @@
 #include <qt/guiconstants.h>
 #include <ui_interface.h>
 #include <util.h>
+#include <util/exception.h>
 #include <allocator/qtsecure.h>
 #include <util/thread.h>
 #include <boost/algorithm/string/predicate.hpp>
@@ -66,7 +67,7 @@ bool ipcScanCmd(int argc, char *argv[], bool fRelay)
 void ipcThread(void *pArg)
 {
     // Make this thread recognisable as the GUI-IPC thread
-    bitthread::manage::RenameThread("SorachanCoin-gui-ipc");
+    bitthread::RenameThread("SorachanCoin-gui-ipc");
     
     try {
         ipcThread2(pArg);

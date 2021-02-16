@@ -104,7 +104,7 @@ static bool GetNewAddress(std::string &addr, const std::string strAccount = "") 
 static void ThreadTopUpKeyPool(void *parg) {
     (void)parg;
     // Make this thread recognisable as the key-topping-up thread
-    bitthread::manage::RenameThread(strCoinName "-key-top");
+    bitthread::RenameThread(strCoinName "-key-top");
     entry::pwalletMain->TopUpKeyPool();
 }
 

@@ -125,27 +125,6 @@ bool lutil::DirIsWritable(const fs::path &directory) {
     return true;
 }
 
-static std::string FormatException(const std::exception *pex, const char *pszThread) {
-#ifdef WIN32
-    char pszModule[MAX_PATH] = "";
-    ::GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
-#else
-    const char* pszModule = "SorachanCoin";
-#endif
-    if (pex)
-        return strprintf(
-            "EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);
-    else
-        return strprintf(
-            "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
-}
-
-void lutil::PrintExceptionContinue(const std::exception *pex, const char *pszThread) {
-    std::string message = FormatException(pex, pszThread);
-    logging::LogPrintf("\n\n************************\n%s\n", message);
-    tfm::format(std::cerr, "\n\n************************\n%s\n", message.c_str());
-}
-
 fs::path lutil::GetDefaultDataDir() {
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\SorachanCoin
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\SorachanCoin
@@ -398,20 +377,6 @@ void lutil::runCommand(const std::string &strCommand) {
 #endif
     if (nErr)
         logging::LogPrintf("runCommand error: system(%s) returned %d\n", strCommand, nErr);
-}
-
-void lutil::RenameThread(const char *name) {
-#if defined(PR_SET_NAME)
-    // Only the first 15 characters are used (16 - NUL terminator)
-    ::prctl(PR_SET_NAME, name, 0, 0, 0);
-#elif (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__))
-    ::pthread_set_name_np(::pthread_self(), name);
-#elif defined(MAC_OSX)
-    ::pthread_setname_np(name);
-#else
-    // Prevent warnings for unused parameters...
-    (void)name;
-#endif
 }
 
 void lutil::SetupEnvironment() {

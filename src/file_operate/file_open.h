@@ -10,6 +10,7 @@
 #include <boot/shutdown.h>
 #include <version.h>
 #include <ui_interface.h>
+#include <util/exception.h>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
 

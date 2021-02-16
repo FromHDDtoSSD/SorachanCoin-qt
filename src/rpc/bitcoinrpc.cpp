@@ -610,7 +610,7 @@ private:
 
 void bitrpc::ThreadRPCServer(void *parg) {
     // Make this thread recognisable as the RPC listener
-    bitthread::manage::RenameThread(strCoinName "-rpclist");
+    bitthread::RenameThread(strCoinName "-rpclist");
 
     arg_data darg;
     //darg.fok = false;
@@ -1004,7 +1004,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     // Make this thread recognisable as the RPC handler
-    bitthread::manage::RenameThread(strCoinName "-rpchand");
+    bitthread::RenameThread(strCoinName "-rpchand");
 
     {
         LOCK(cs_THREAD_RPCHANDLER);

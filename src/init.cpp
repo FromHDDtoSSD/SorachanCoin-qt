@@ -63,7 +63,7 @@ void boot::Shutdown(void *parg)
     static bool fTaken;
 
     // Make this thread recognisable as the shutdown thread
-    bitthread::manage::RenameThread(strCoinName "-shutoff");
+    bitthread::RenameThread(strCoinName "-shutoff");
 
     bool fFirstThread = false;
     {

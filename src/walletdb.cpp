@@ -690,7 +690,7 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     //
     // Make this thread recognisable as the wallet flushing thread
     //
-    bitthread::manage::RenameThread(strCoinName "-wallet");
+    bitthread::RenameThread(strCoinName "-wallet");
 
     const std::string &strFile = ((const std::string *)parg)[0];
 

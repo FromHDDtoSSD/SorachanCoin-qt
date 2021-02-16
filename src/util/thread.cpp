@@ -6,6 +6,7 @@
 
 #include <util/thread.h>
 #include <util/logging.h>
+#include <util/exception.h>
 #include <boost/thread.hpp>
 
 void bitthread::thread_error(const std::string &e) noexcept {
@@ -22,4 +23,24 @@ bool bitthread::manage::NewThread(void(*pfn)(void *), void *parg) noexcept {
         return false;
     }
     return true;
+}
+
+template <typename Callable>
+void bitthread::TraceThread(const char *name, Callable func) {
+    std::string s = tfm::format("SorachanCoin-%s", name);
+    RenameThread(s.c_str());
+    try {
+        logging::LogPrintf("%s thread start\n", name);
+        func();
+        logging::LogPrintf("%s thread exit\n", name);
+    } catch (const boost::thread_interrupted &) {
+        logging::LogPrintf("%s thread interrupt\n", name);
+        throw;
+    } catch (const std::exception &e) {
+        excep::PrintExceptionContinue(&e, name);
+        throw;
+    } catch (...) {
+        excep::PrintExceptionContinue(nullptr, name);
+        throw;
+    }
 }

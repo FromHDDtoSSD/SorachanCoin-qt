@@ -91,47 +91,6 @@ inline int64_t GetPerformanceCounter()
     return nCounter;
 }
 
-class excep : private no_instance
-{
-private:
-    static std::string strMiscWarning;
-    static std::string FormatException(const std::exception *pex, const char *pszThread) {
-#ifdef WIN32
-        char pszModule[MAX_PATH];
-        ::GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
-#else
-        const char *pszModule = strCoinName;
-#endif
-        if (pex) {
-            return strprintf("EXCEPTION: %s       \n%s       \n%s in %s       \n", typeid(*pex).name(), pex->what(), pszModule, pszThread);
-        } else {
-            return strprintf("UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
-        }
-    }
-
-public:
-    static std::string &get_strMiscWarning() {
-        return excep::strMiscWarning;
-    }
-    static void set_strMiscWarning(const std::string &str) {
-        strMiscWarning = str;
-    }
-    static void LogException(const std::exception *pex, const char *pszThread) {
-        std::string message = excep::FormatException(pex, pszThread);
-        printf("\n%s", message.c_str());
-    }
-    static void PrintException(const std::exception *pex, const char *pszThread) {
-        excep::PrintExceptionContinue(pex, pszThread);
-        throw;
-    }
-    static void PrintExceptionContinue(const std::exception *pex, const char *pszThread) {
-        std::string message = excep::FormatException(pex, pszThread);
-        printf("\n\n************************\n%s\n", message.c_str());
-        ::fprintf(stderr, "\n\n************************\n%s\n", message.c_str());
-        strMiscWarning = message;
-    }
-};
-
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using util_vector = prevector<PREVECTOR_N, uint8_t>;
 #else

@@ -4,6 +4,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+/**
+ * Server/client environment:
+ * thiscall thread wrappers, stdcall thread wrappers
+ */
 #ifndef SORACHANCOIN_THREAD_H
 #define SORACHANCOIN_THREAD_H
 
@@ -18,13 +22,14 @@
 # include <sys/time.h>
 # include <sys/resource.h>
 #endif
-
 #include <const/no_instance.h>
 #include <const/attributes.h>
 
-//
-// built in class, multithread.
-//
+/**
+ * thiscall thread wrappers
+ * T: class type
+ * Method: start(), stop(), signal(), waitclose()
+ */
 template <typename T>
 class cla_thread {
 public:
@@ -134,9 +139,9 @@ public:
     }
 };
 
-//
-// Bitcoin thread manager
-//
+/**
+ * stdcall thread wrappers
+ */
 namespace bitthread
 {
     extern void thread_error(const std::string &e) noexcept;
@@ -173,32 +178,27 @@ namespace bitthread
             ::pthread_exit((void *)nExitCode);
         }
 #endif
-
-        static void RenameThread(const char *name) noexcept {
-#if defined(PR_SET_NAME)
-            //
-            // Only the first 15 characters are used (16 - NUL terminator)
-            //
-            ::prctl(PR_SET_NAME, name, 0, 0, 0);
-#elif 0 && (defined(__FreeBSD__) || defined(__OpenBSD__))
-            //
-            // TODO: This is currently disabled because it needs to be verified to work
-            //       on FreeBSD or OpenBSD first. When verified the '0 &&' part can be
-            //       removed.
-            //
-            ::pthread_set_name_np(pthread_self(), name);
-
-            //
-            // This is XCode 10.6-and-later; bring back if we drop 10.5 support:
-            //
-            // #elif defined(MAC_OSX)
-            // ::pthread_setname_np(name);
-#else
-            // Prevent warnings for unused parameters...
-            (void)name;
-#endif
-        }
     };
-}
+
+    static void RenameThread(const char *name) noexcept {
+#if defined(PR_SET_NAME)
+        // Only the first 15 characters are used (16 - NUL terminator)
+        ::prctl(PR_SET_NAME, name, 0, 0, 0);
+#elif (defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__DragonFly__))
+        ::pthread_set_name_np(::pthread_self(), name);
+#elif defined(MAC_OSX)
+        ::pthread_setname_np(name);
+#else
+        // Prevent warnings for unused parameters...
+        (void)name;
+#endif
+    }
+
+    /**
+     * .. and a wrapper that just calls func once
+     */
+    template <typename Callable>
+    void TraceThread(const char *name, Callable func);
+} // namespace bitthread
 
 #endif // SORACHANCOIN_THREAD_H

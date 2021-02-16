@@ -11,6 +11,7 @@
 #include <boost/algorithm/string/join.hpp>
 #include <thread/threadsafety.h>
 #include <util/strencodings.h>
+#include <util/exception.h>
 
 // Work around clang compilation problem in Boost 1.46:
 // /usr/include/boost/program_options/detail/config_file.hpp:163:17: error: call to function 'to_internal' that is neither visible in the template definition nor found by argument-dependent lookup
@@ -36,7 +37,6 @@ namespace boost {
 #endif
 
 FILE *trace::_fileout = nullptr;
-std::string excep::strMiscWarning;
 int64_t bitsystem::nNodesOffset = INT64_MAX;
 const signed char hex::phexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,

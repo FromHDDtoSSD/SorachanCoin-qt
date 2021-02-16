@@ -325,7 +325,7 @@ void ntp::ThreadNtpSamples(void *parg)
     net_node::vnThreadsRunning[THREAD_NTP]++;
 
     // Make this thread recognisable as time synchronization thread
-    bitthread::manage::RenameThread(strCoinName "-ntp-samples");
+    bitthread::RenameThread(strCoinName "-ntp-samples");
 
     CMedianFilter<int64_t> vTimeOffsets(200, 0);
 

@@ -232,7 +232,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 void irc::ThreadIRCSeed(void *parg)
 {
     // Make this thread recognisable as the IRC seeding thread
-    bitthread::manage::RenameThread(strCoinName "coin-ircseed");
+    bitthread::RenameThread(strCoinName "coin-ircseed");
 
     printf("irc::ThreadIRCSeed started\n");
 

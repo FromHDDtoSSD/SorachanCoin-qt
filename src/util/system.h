@@ -6,14 +6,14 @@
 
 /**
  * Server/client environment: argument handling, config file parsing,
- * thread wrappers, startup time
+ * startup time
  */
 #ifndef BITCOIN_UTIL_SYSTEM_H
 #define BITCOIN_UTIL_SYSTEM_H
 
-//#if defined(HAVE_CONFIG_H)
-//# include <config/bitcoin-config.h>
-//#endif
+#if defined(HAVE_CONFIG_H)
+# include <config/bitcoin-config.h>
+#endif
 
 #include <const/assumptions.h>
 
@@ -70,7 +70,6 @@ bool error(const char* fmt, const Args&... args) noexcept {
     return false;
 }
 
-void PrintExceptionContinue(const std::exception *pex, const char* pszThread);
 bool FileCommit(FILE *file);
 bool TruncateFile(FILE *file, unsigned int length) noexcept;
 int RaiseFileDescriptorLimit(int nMinFD) noexcept;
@@ -111,36 +110,6 @@ inline bool IsSwitchChar(char c)
  * @note This does count virtual cores, such as those provided by HyperThreading.
  */
 int GetNumCores();
-
-void RenameThread(const char *name);
-
-/**
- * .. and a wrapper that just calls func once
- */
-template <typename Callable> void TraceThread(const char *name,  Callable func)
-{
-    std::string s = strprintf("SorachanCoin-%s", name);
-    RenameThread(s.c_str());
-    try
-    {
-        logging::LogPrintf("%s thread start\n", name);
-        func();
-        logging::LogPrintf("%s thread exit\n", name);
-    }
-    catch (const boost::thread_interrupted &)
-    {
-        logging::LogPrintf("%s thread interrupt\n", name);
-        throw;
-    }
-    catch (const std::exception &e) {
-        PrintExceptionContinue(&e, name);
-        throw;
-    }
-    catch (...) {
-        PrintExceptionContinue(nullptr, name);
-        throw;
-    }
-}
 
 //std::string CopyrightHolders(const std::string &strPrefix) noexcept;
 

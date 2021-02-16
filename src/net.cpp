@@ -567,7 +567,7 @@ bool ext_ip::GetMyExternalIP(CNetAddr &ipRet)
 void ext_ip::ThreadGetMyExternalIP(void *parg)
 {
     // Make this thread recognisable as the external IP detection thread
-    bitthread::manage::RenameThread(strCoinName "-ext-ip");
+    bitthread::RenameThread(strCoinName "-ext-ip");
 
     CNetAddr addrLocalHost;
     if(ext_ip::GetMyExternalIP(addrLocalHost)) {
@@ -813,7 +813,7 @@ void CNode::copyStats(CNodeStats &stats)
 void net_node::ThreadSocketHandler(void *parg)
 {
     // Make this thread recognisable as the networking thread
-    bitthread::manage::RenameThread(strCoinName "-net");
+    bitthread::RenameThread(strCoinName "-net");
 
     try
     {
@@ -1196,7 +1196,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 void upnp::ThreadMapPort(void *parg)
 {
     // Make this thread recognisable as the UPnP thread
-    bitthread::manage::RenameThread(strCoinName "-UPnP");
+    bitthread::RenameThread(strCoinName "-UPnP");
 
     try {
         net_node::vnThreadsRunning[THREAD_UPNP]++;
@@ -1337,7 +1337,7 @@ void upnp::MapPort()
 void dns_seed::ThreadDNSAddressSeed(void *parg)
 {
     // Make this thread recognisable as the DNS seeding thread
-    bitthread::manage::RenameThread(strCoinName "-dnsseed");
+    bitthread::RenameThread(strCoinName "-dnsseed");
 
     try {
         net_node::vnThreadsRunning[THREAD_DNSSEED]++;
@@ -1413,7 +1413,7 @@ void net_node::ThreadDumpAddress2(void *parg)
 void net_node::ThreadDumpAddress(void *parg)
 {
     // Make this thread recognisable as the address dumping thread
-    bitthread::manage::RenameThread(strCoinName "-adrdump");
+    bitthread::RenameThread(strCoinName "-adrdump");
 
     try {
         net_node::ThreadDumpAddress2(parg);
@@ -1426,7 +1426,7 @@ void net_node::ThreadDumpAddress(void *parg)
 void net_node::ThreadOpenConnections(void *parg)
 {
     // Make this thread recognisable as the connection opening thread
-    bitthread::manage::RenameThread(strCoinName "-opencon");
+    bitthread::RenameThread(strCoinName "-opencon");
 
     try {
         net_node::vnThreadsRunning[THREAD_OPENCONNECTIONS]++;
@@ -1617,7 +1617,7 @@ void net_node::ThreadOpenConnections2(void *parg)
 void net_node::ThreadOpenAddedConnections(void *parg)
 {
     // Make this thread recognisable as the connection opening thread
-    bitthread::manage::RenameThread(strCoinName "-opencon");
+    bitthread::RenameThread(strCoinName "-opencon");
 
     try {
         net_node::vnThreadsRunning[THREAD_ADDEDCONNECTIONS]++;
@@ -1834,7 +1834,7 @@ void net_node::StartSync(const std::vector<CNode *> &__vNodes)
 void net_node::ThreadMessageHandler(void *parg)
 {
     // Make this thread recognisable as the message handling thread
-    bitthread::manage::RenameThread(strCoinName "-msghand");
+    bitthread::RenameThread(strCoinName "-msghand");
 
     try {
         net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER]++;
@@ -2096,7 +2096,7 @@ void net_node::Discover()
 void net_node::StartNode(void *parg)
 {
     // Make this thread recognisable as the startup thread
-    bitthread::manage::RenameThread(strCoinName "-start");
+    bitthread::RenameThread(strCoinName "-start");
 
     if(shot::semOutbound == nullptr) {
         // initialize semaphore

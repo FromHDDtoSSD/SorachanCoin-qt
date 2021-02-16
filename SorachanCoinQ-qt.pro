@@ -566,6 +566,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/util/system.h \
     src/util/args.h \
     src/util/c_overload.h \
+    src/util/exception.h \
     src/thread/threadsafety.h \
     src/address/bech32.h \
     src/const/chainparamsbase.h \
@@ -796,6 +797,7 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/nvme/nvme_cpu.cpp \
     src/nvme/nvme_mem.cpp \
     src/util/thread.cpp \
+    src/util/exception.cpp \
     src/libstr/cmstring.cpp \
     src/winapi/winguimain.cpp \
     src/winapi/drivebase.cpp \
