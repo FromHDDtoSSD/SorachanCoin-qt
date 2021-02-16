@@ -2814,7 +2814,7 @@ DBErrors CWallet::LoadWallet(bool &fFirstRunRet)
     }
     fFirstRunRet = !vchDefaultKey.IsValid();
 
-    if(! bitthread::manage::NewThread(wallet_dispatch::ThreadFlushWalletDB, &strWalletFile))
+    if(! bitthread::NewThread(wallet_dispatch::ThreadFlushWalletDB, &strWalletFile))
         bitthread::thread_error(std::string(__func__) + " :ThreadFlushWalletDB");
 
     return DB_LOAD_OK;

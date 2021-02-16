@@ -725,7 +725,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         if (! fUseSSL)
             conn->stream() << http::HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
         delete conn;
-    } else if (! bitthread::manage::NewThread(bitrpc::ThreadRPCServer3, darg)) {
+    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
         // start HTTP client thread
         printf("Failed to create RPC server client thread\n");
         delete conn;
@@ -762,7 +762,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         if (! fUseSSL)
             conn->stream() << http::HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
         delete conn;
-    } else if (! bitthread::manage::NewThread(bitrpc::ThreadRPCServer3, darg)) {
+    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
         // start HTTP client thread
         printf("Failed to create RPC server client thread\n");
         delete conn;

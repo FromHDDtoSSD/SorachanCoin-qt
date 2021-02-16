@@ -1322,7 +1322,7 @@ void upnp::ThreadMapPort2(void *parg)
 void upnp::MapPort()
 {
     if(args_bool::fUseUPnP && net_node::vnThreadsRunning[THREAD_UPNP] < 1) {
-        if(! bitthread::manage::NewThread(ThreadMapPort, nullptr)) {
+        if(! bitthread::NewThread(ThreadMapPort, nullptr)) {
             printf("Error: ThreadMapPort(ThreadMapPort) failed\n");
         }
     }
@@ -1857,7 +1857,7 @@ void net_node::ThreadMessageHandler2(void *parg)
     };
 
     printf("net_node::ThreadMessageHandler started\n");
-    bitthread::manage::SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
+    bitthread::SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
 
     while(! args_bool::fShutdown)
     {
@@ -2088,7 +2088,7 @@ void net_node::Discover()
     // Don't use external IPv4 discovery, when -onlynet="IPv6"
     //
     if(! ext_ip::IsLimited(netbase::NET_IPV4)) {
-        if(! bitthread::manage::NewThread(ext_ip::ThreadGetMyExternalIP, nullptr))
+        if(! bitthread::NewThread(ext_ip::ThreadGetMyExternalIP, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ThreadGetMyExternalIP");
     }
 }
@@ -2121,8 +2121,8 @@ void net_node::StartNode(void *parg)
     if(! map_arg::GetBoolArg("-dnsseed", true)) {
         printf("DNS seeding disabled\n");
     } else {
-        if(! bitthread::manage::NewThread(dns_seed::ThreadDNSAddressSeed, nullptr)) {
-            printf("Error: bitthread::manage::NewThread(dns_seed::ThreadDNSAddressSeed) failed\n");
+        if(! bitthread::NewThread(dns_seed::ThreadDNSAddressSeed, nullptr)) {
+            printf("Error: bitthread::NewThread(dns_seed::ThreadDNSAddressSeed) failed\n");
         }
     }
 
@@ -2137,44 +2137,44 @@ void net_node::StartNode(void *parg)
     if(! map_arg::GetBoolArg("-irc", true)) {
         printf("IRC seeding disabled\n");
     } else {
-        if(! bitthread::manage::NewThread(irc_ext::ThreadIRCSeed, nullptr)) {
-            printf("Error: bitthread::manage::NewThread(irc::ThreadIRCSeed) failed\n");
+        if(! bitthread::NewThread(irc_ext::ThreadIRCSeed, nullptr)) {
+            printf("Error: bitthread::NewThread(irc::ThreadIRCSeed) failed\n");
         }
     }
 
     // Send and receive from sockets, accept connections
-    if(! bitthread::manage::NewThread(net_node::ThreadSocketHandler, nullptr)) {
-        printf("Error: bitthread::manage::NewThread(net_node::ThreadSocketHandler) failed\n");
+    if(! bitthread::NewThread(net_node::ThreadSocketHandler, nullptr)) {
+        printf("Error: bitthread::NewThread(net_node::ThreadSocketHandler) failed\n");
     }
 
     // Initiate outbound connections from -addnode
-    if(! bitthread::manage::NewThread(net_node::ThreadOpenAddedConnections, nullptr)) {
-        printf("Error: bitthread::manage::NewThread(net_node::ThreadOpenAddedConnections) failed\n");
+    if(! bitthread::NewThread(net_node::ThreadOpenAddedConnections, nullptr)) {
+        printf("Error: bitthread::NewThread(net_node::ThreadOpenAddedConnections) failed\n");
     }
 
     // Initiate outbound connections
-    if(! bitthread::manage::NewThread(net_node::ThreadOpenConnections, nullptr)) {
-        printf("Error: bitthread::manage::NewThread(net_node::ThreadOpenConnections) failed\n");
+    if(! bitthread::NewThread(net_node::ThreadOpenConnections, nullptr)) {
+        printf("Error: bitthread::NewThread(net_node::ThreadOpenConnections) failed\n");
     }
 
     // Process messages
-    if(! bitthread::manage::NewThread(net_node::ThreadMessageHandler, nullptr)) {
-        printf("Error: bitthread::manage::NewThread(net_node::ThreadMessageHandler) failed\n");
+    if(! bitthread::NewThread(net_node::ThreadMessageHandler, nullptr)) {
+        printf("Error: bitthread::NewThread(net_node::ThreadMessageHandler) failed\n");
     }
 
     // Dump network addresses
-    if(! bitthread::manage::NewThread(net_node::ThreadDumpAddress, nullptr)) {
-        printf("Error; bitthread::manage::NewThread(net_node::ThreadDumpAddress) failed\n");
+    if(! bitthread::NewThread(net_node::ThreadDumpAddress, nullptr)) {
+        printf("Error; bitthread::NewThread(net_node::ThreadDumpAddress) failed\n");
     }
 
     // Mine proof-of-stake blocks in the background
-    if(! bitthread::manage::NewThread(miner::ThreadStakeMiner, entry::pwalletMain)) {
-        printf("Error: bitthread::manage::NewThread(miner::ThreadStakeMiner) failed\n");
+    if(! bitthread::NewThread(miner::ThreadStakeMiner, entry::pwalletMain)) {
+        printf("Error: bitthread::NewThread(miner::ThreadStakeMiner) failed\n");
     }
 
     // Start periodical NTP sampling thread
     ntp_ext::SetTrustedUpstream("-ntp", tcp_domain::strLocal); // Trusted NTP server, it's localhost by default.
-    if(! bitthread::manage::NewThread(ntp_ext::ThreadNtpSamples, nullptr))
+    if(! bitthread::NewThread(ntp_ext::ThreadNtpSamples, nullptr))
         bitthread::thread_error(std::string(__func__) + " :ThreadNtpSamples");
 }
 

@@ -13,7 +13,7 @@
 
 void KernelWorker::Do_generic()
 {
-    bitthread::manage::SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    bitthread::SetThreadPriority(THREAD_PRIORITY_LOWEST);
 
     // Compute maximum possible target to filter out majority of obviously insufficient hashes
     CBigNum bnTargetPerCoinDay; bnTargetPerCoinDay.SetCompact(nBits);

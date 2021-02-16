@@ -44,24 +44,7 @@
 #include <random/random.h>
 #include <util/c_overload.h>
 
-//
-// Redefine printf so that it directs output to debug.log
-//
-class trace : private no_instance
-{
-private:
-    static FILE *_fileout;
-protected:
-    static FILE *get_fileout() { return _fileout; }
-    static void set_fileout(FILE *f) { _fileout = f; }
-public:
-    static void LogStackTrace();
-};
-
-// Rationale for the real_strprintf / strprintf construction:
-// It is not allowed to use va_start with a pass-by-reference argument. (C++ standard, 18.7, paragraph 3).
-// Use a dummy argument to work around this, and use a macro to keep similar semantics.
-class print : public trace
+class print
 {
 public:
     template <typename... Args>
@@ -72,7 +55,6 @@ public:
         return false;
     }
 };
-
 #define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
 
 //

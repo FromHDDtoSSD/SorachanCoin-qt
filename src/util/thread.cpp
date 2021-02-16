@@ -15,7 +15,7 @@ void bitthread::thread_error(const std::string &e) noexcept {
     logging::LogPrintf(err.c_str());
 }
 
-bool bitthread::manage::NewThread(void(*pfn)(void *), void *parg) noexcept {
+bool bitthread::NewThread(void(*pfn)(void *), void *parg) noexcept {
     try {
         boost::thread(pfn, parg); // thread detaches when out of scope
     } catch (boost::thread_resource_error &e) {

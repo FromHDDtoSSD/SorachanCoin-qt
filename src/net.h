@@ -277,7 +277,7 @@ public:
     static uint64_t SendBufferSize() { return 1000 * map_arg::GetArg("-maxsendbuffer", 1 * 1000); }
 
     /// StartNode: CNode, UPnP, IRC, send/receive, addnode, outbound, message, dump network, StakeMiner, NTP
-    static void StartNode(void *parg);   // call to bitthread::manage::NewThread
+    static void StartNode(void *parg);   // call to bitthread::NewThread
     static bool StopNode();
     //static void Shutdown(void *parg);  // init.cpp
 

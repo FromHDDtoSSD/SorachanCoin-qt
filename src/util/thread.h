@@ -145,40 +145,35 @@ public:
 namespace bitthread
 {
     extern void thread_error(const std::string &e) noexcept;
-    class manage : private no_instance
-    {
-    public:
-        NODISCARD static bool NewThread(void(*pfn)(void *), void *parg) noexcept;
+    NODISCARD extern bool NewThread(void(*pfn)(void *), void *parg) noexcept;
 
 #ifdef WIN32
-        static void SetThreadPriority(int nPriority) noexcept {
-            ::SetThreadPriority(::GetCurrentThread(), nPriority);
-        }
-        static void ExitThread(size_t nExitCode) noexcept {
-            ::ExitThread(nExitCode);
-        }
+    static void SetThreadPriority(int nPriority) noexcept {
+        ::SetThreadPriority(::GetCurrentThread(), nPriority);
+    }
+
+    static void ExitThread(size_t nExitCode) noexcept {
+        ::ExitThread(nExitCode);
+    }
 #else
 # define THREAD_PRIORITY_LOWEST          PRIO_MAX
 # define THREAD_PRIORITY_BELOW_NORMAL    2
 # define THREAD_PRIORITY_NORMAL          0
 # define THREAD_PRIORITY_ABOVE_NORMAL    0
-
-        static void SetThreadPriority(int nPriority) noexcept {
-            //
-            // It's unclear if it's even possible to change thread priorities on Linux,
-            // but we really and truly need it for the generation threads.
-            //
+    static void SetThreadPriority(int nPriority) noexcept {
+        // It's unclear if it's even possible to change thread priorities on Linux,
+        // but we really and truly need it for the generation threads.
 # ifdef PRIO_THREAD
-            ::setpriority(PRIO_THREAD, 0, nPriority);
+        ::setpriority(PRIO_THREAD, 0, nPriority);
 # else
-            ::setpriority(PRIO_PROCESS, 0, nPriority);
+        ::setpriority(PRIO_PROCESS, 0, nPriority);
 # endif
-        }
-        static void ExitThread(size_t nExitCode) noexcept {
-            ::pthread_exit((void *)nExitCode);
-        }
+    }
+
+    static void ExitThread(size_t nExitCode) noexcept {
+        ::pthread_exit((void *)nExitCode);
+    }
 #endif
-    };
 
     static void RenameThread(const char *name) noexcept {
 #if defined(PR_SET_NAME)
@@ -198,7 +193,7 @@ namespace bitthread
      * .. and a wrapper that just calls func once
      */
     template <typename Callable>
-    void TraceThread(const char *name, Callable func);
+    extern void TraceThread(const char *name, Callable func);
 } // namespace bitthread
 
 #endif // SORACHANCOIN_THREAD_H

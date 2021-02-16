@@ -22,7 +22,7 @@ public:
         CClientUIInterface::uiInterface.QueueShutdown();
 #else
         // Without UI, Shutdown() can simply be started in a new thread
-        if(! bitthread::manage::NewThread(Shutdown, nullptr))
+        if(! bitthread::NewThread(Shutdown, nullptr))
             bitthread::thread_error(std::string(__func__) + " :Shutdown");
 #endif
     }

@@ -149,7 +149,7 @@ void qti_server::ipcInit(int argc, char *argv[])
         throw qt_error("ipcInit Failed to allocate memory.", nullptr);
     }
 
-    if (! bitthread::manage::NewThread(ipcThread, mq)) {
+    if (! bitthread::NewThread(ipcThread, mq)) {
         delete mq;
         return;
     }

@@ -711,7 +711,7 @@ bool miner::ScanMap(const MidstateMap &inputsMap, uint32_t nBits, MidstateMap::k
 
 void miner::ThreadStakeMiner(void *parg)
 {
-    bitthread::manage::SetThreadPriority(THREAD_PRIORITY_LOWEST);
+    bitthread::SetThreadPriority(THREAD_PRIORITY_LOWEST);
     bitthread::RenameThread(strCoinName "-stakeminer");    // Make this thread recognisable as the mining thread
     
     // parg
@@ -760,7 +760,7 @@ void miner::ThreadStakeMiner(void *parg)
                 }
             }
             if (ScanMap(inputsMap, nBits, LuckyInput, solution)) {
-                bitthread::manage::SetThreadPriority(THREAD_PRIORITY_NORMAL);
+                bitthread::SetThreadPriority(THREAD_PRIORITY_NORMAL);
                 inputsMap.erase(inputsMap.find(LuckyInput));
 
                 CKey key;
@@ -794,7 +794,7 @@ void miner::ThreadStakeMiner(void *parg)
 
                 (void)CheckStake(pblock, *pwallet);
 
-                bitthread::manage::SetThreadPriority(THREAD_PRIORITY_LOWEST);
+                bitthread::SetThreadPriority(THREAD_PRIORITY_LOWEST);
                 util::Sleep(500);
             }
 

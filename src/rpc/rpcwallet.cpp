@@ -1675,13 +1675,13 @@ json_spirit::Value CRPCTable::walletpassphrase(const json_spirit::Array &params,
             "Stores the wallet decryption key in memory for <timeout> seconds.\n"
             "mintonly is optional true/false allowing only block minting.");
 
-    if(! bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr))
+    if(! bitthread::NewThread(ThreadTopUpKeyPool, nullptr))
         return data.runtime_error("walletpassphrase ThreadTopUpKeyPool create failure.");
     int64_t *pnSleepTime = new(std::nothrow) int64_t(params[1].get_int64(status));
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     if(pnSleepTime == nullptr)
         return data.runtime_error("walletpassphrase memory allocate failure.");
-    if(! bitthread::manage::NewThread(ThreadCleanWalletPassphrase, pnSleepTime)) // this thread, delete pnSleepTime.
+    if(! bitthread::NewThread(ThreadCleanWalletPassphrase, pnSleepTime)) // this thread, delete pnSleepTime.
         return data.runtime_error("walletpassphrase ThreadCleanWalletPassphrase create failure.");
 
     // ppcoin: if user OS account compromised prevent trivial sendmoney commands

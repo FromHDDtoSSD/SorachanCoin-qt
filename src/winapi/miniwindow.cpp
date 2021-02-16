@@ -131,7 +131,7 @@ static bool UnlockWalletStake(const SecureString &strWalletPass) {
         return false;
 
     // [DEBUG] ::fprintf_s(stdout, "Unlock ThreadTopUpKeyPool\n");
-    if(! bitthread::manage::NewThread(ThreadTopUpKeyPool, nullptr))
+    if(! bitthread::NewThread(ThreadTopUpKeyPool, nullptr))
         return false;
 
     CWallet::fWalletUnlockMintOnly = true;

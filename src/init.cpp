@@ -88,7 +88,7 @@ void boot::Shutdown(void *parg)
         wallet_process::manage::UnregisterWallet(entry::pwalletMain);
         delete entry::pwalletMain;
 
-        if(! bitthread::manage::NewThread(entry::ExitTimeout, nullptr))
+        if(! bitthread::NewThread(entry::ExitTimeout, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ExitTimeout");
         util::Sleep(50);
         printf("%s exited\n\n", strCoinName);
@@ -103,7 +103,7 @@ void boot::Shutdown(void *parg)
             util::Sleep(500);
         }
         util::Sleep(100);
-        bitthread::manage::ExitThread(0);
+        bitthread::ExitThread(0);
     }
 }
 
@@ -855,7 +855,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (block_info::nScriptCheckThreads) {
         printf("Using %u threads for script verification\n", block_info::nScriptCheckThreads);
         for (int i=0; i < block_info::nScriptCheckThreads-1; ++i) {
-            if(! bitthread::manage::NewThread(block_check::thread::ThreadScriptCheck, nullptr))
+            if(! bitthread::NewThread(block_check::thread::ThreadScriptCheck, nullptr))
                 bitthread::thread_error(std::string(__func__) + " :ThreadScriptCheck");
         }
     }
@@ -1327,11 +1327,11 @@ bool entry::AppInit2(bool restart/*=false*/)
     printf("mapWallet.size() = %" PRIszu "\n",       entry::pwalletMain->mapWallet.size());
     printf("mapAddressBook.size() = %" PRIszu "\n",  entry::pwalletMain->mapAddressBook.size());
 
-    if (! bitthread::manage::NewThread(net_node::StartNode, nullptr))
+    if (! bitthread::NewThread(net_node::StartNode, nullptr))
         InitError(_("Error: could not start node"));
 
     if (args_bool::fServer) {
-        if(! bitthread::manage::NewThread(bitrpc::ThreadRPCServer, nullptr))
+        if(! bitthread::NewThread(bitrpc::ThreadRPCServer, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ThreadRPCServer");
     }
 
@@ -1340,7 +1340,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     ip_coll::strCollectorCommand = map_arg::GetArg("-peercollector", "");
     if (!args_bool::fTestNet && ip_coll::strCollectorCommand != "") {
-        if(! bitthread::manage::NewThread(ip_coll::ThreadIPCollector, nullptr))
+        if(! bitthread::NewThread(ip_coll::ThreadIPCollector, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ThreadIPCollector");
     }
 
