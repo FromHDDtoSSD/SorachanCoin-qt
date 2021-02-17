@@ -621,11 +621,11 @@ void bitrpc::ThreadRPCServer(void *parg) {
         net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
         std::string log(darg.e.c_str());
         log += " : ThreadRPCServer()";
-        printf(log.c_str());
+        logging::LogPrintf(log.c_str());
     //} else
         //net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 
-    printf("ThreadRPCServer exited\n");
+    logging::LogPrintf("ThreadRPCServer exited\n");
 }
 
 // Sets up I/O resources to accept and handle a new connection.
@@ -727,7 +727,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         delete conn;
     } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
         // start HTTP client thread
-        printf("Failed to create RPC server client thread\n");
+        logging::LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
@@ -764,7 +764,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         delete conn;
     } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
         // start HTTP client thread
-        printf("Failed to create RPC server client thread\n");
+        logging::LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
@@ -775,7 +775,7 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
 #endif
 
 void bitrpc::ThreadRPCServer2(void *parg) {
-    printf("ThreadRPCServer started\n");
+    logging::LogPrintf("ThreadRPCServer started\n");
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     strRPCUserColonPass = map_arg::GetMapArgsString("-rpcuser") + ":" + map_arg::GetMapArgsString("-rpcpassword");
@@ -822,7 +822,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         if (boost::filesystem::exists(pathCertFile))
             context.use_certificate_chain_file(pathCertFile.string());
         else
-            printf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
+            logging::LogPrintf("ThreadRPCServer ERROR: missing server certificate file %s\n", pathCertFile.string().c_str());
 
         boost::filesystem::path pathPKFile(map_arg::GetArg("-rpcsslprivatekeyfile", "server.pem"));
         if (! pathPKFile.is_complete())
@@ -830,7 +830,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         if (boost::filesystem::exists(pathPKFile))
             context.use_private_key_file(pathPKFile.string(), boost::asio::ssl::context::pem);
         else
-            printf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
+            logging::LogPrintf("ThreadRPCServer ERROR: missing server private key file %s\n", pathPKFile.string().c_str());
 
         std::string strCiphers = map_arg::GetArg("-rpcsslciphers", "TLSv1+HIGH:!SSLv2:!aNULL:!eNULL:!AH:!3DES:@STRENGTH");
 #if BOOST_VERSION >= 106600
@@ -1000,7 +1000,7 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData
 }
 
 void bitrpc::ThreadRPCServer3(void *parg) {
-    printf("ThreadRPCServer3 started\n");
+    logging::LogPrintf("ThreadRPCServer3 started\n");
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     // Make this thread recognisable as the RPC handler
@@ -1034,7 +1034,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
             break;
         }
         if (! bitrpc::HTTPAuthorized(mapHeaders)) {
-            printf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
+            logging::LogPrintf("ThreadRPCServer incorrect password attempt from %s\n", conn->peer_address_to_string().c_str());
 
             // Deter brute-forcing short passwords. If this results in a DOS the user really shouldn't have their RPC port exposed.
             if (map_arg::GetMapArgsString("-rpcpassword").size() < 20)
@@ -1056,7 +1056,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
             json_spirit::Value valRequest;
             json_spirit::json_flags status;
             if (! read_string(strRequest, valRequest, status)) {
-                printf("ThreadRPCServer3 JSON ParseError\n");
+                logging::LogPrintf("ThreadRPCServer3 JSON ParseError\n");
                 data.JSONRPCError(RPC_PARSE_ERROR, "Parse error");
                 break;
             }
@@ -1091,7 +1091,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
                 conn->stream() << http::HTTPReply(HTTP_OK, strReply, fRun) << std::flush;
         } while (false);
         if(data.ret == CBitrpcData::BITRPC_STATUS_ERROR) {
-            printf("ThreadRPCServer3 JSON Error1\n");
+            logging::LogPrintf("ThreadRPCServer3 JSON Error1\n");
             json_spirit::json_flags status;
             json::ErrorReply(conn->stream(), bitjson::JSONRPCError(data.code, data.e), jreq.id, status);
             if(! status.fSuccess()) {
@@ -1101,7 +1101,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
             break;
         }
         if (data.ret == CBitrpcData::BITRPC_STATUS_EXCEPT) {
-            printf("ThreadRPCServer3 JSON Error2\n");
+            logging::LogPrintf("ThreadRPCServer3 JSON Error2\n");
             json_spirit::json_flags status;
             json::ErrorReply(conn->stream(), bitjson::JSONRPCError(RPC_PARSE_ERROR, data.e), jreq.id, status);
             if(! status.fSuccess()) {
@@ -1123,13 +1123,13 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     // secure allocator: json_spirit::Array includes.
     const CRPCCommand *pcmd = CRPCCmd::get_instance()[strMethod];
     if (! pcmd) {
-        printf("ThreadRPCServer3 execute Error1\n");
+        logging::LogPrintf("ThreadRPCServer3 execute Error1\n");
         return data.JSONRPCError(RPC_METHOD_NOT_FOUND, "Method not found");
     }
 
     std::string strWarning = block_alert::GetWarnings("rpc");
     if (!strWarning.empty() && !map_arg::GetBoolArg("-disablesafemode") && !pcmd->okSafeMode) {
-        printf("ThreadRPCServer3 execute Error2\n");
+        logging::LogPrintf("ThreadRPCServer3 execute Error2\n");
         return data.JSONRPCError(RPC_FORBIDDEN_BY_SAFE_MODE, std::string("Safe mode: ") + strWarning);
     }
 
@@ -1144,11 +1144,11 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 
     if(data.ret == CBitrpcData::BITRPC_STATUS_EXCEPT) {
-        printf("ThreadRPCServer3 execute Except 3\n");
+        logging::LogPrintf("ThreadRPCServer3 execute Except 3\n");
         //data.code = RPC_MISC_ERROR;
         return data.e;
     } else if (data.ret == CBitrpcData::BITRPC_STATUS_ERROR) {
-        printf("ThreadRPCServer3 execute Error 3\n");
+        logging::LogPrintf("ThreadRPCServer3 execute Error 3\n");
         //data.code = RPC_MISC_ERROR;
         return data.e;
     } else {

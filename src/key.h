@@ -214,7 +214,7 @@ public:
     // ECC multiplication by specified multiplier
     bool ECMUL(const CBigNum &bnMultiplier) {
         if (! EC_POINT_mul(group, point, NULL, point, &bnMultiplier, NULL)) {
-            printf("CPoint::ECMUL() : EC_POINT_mul failed");
+            logging::LogPrintf("CPoint::ECMUL() : EC_POINT_mul failed");
             return false;
         }
         return true;
@@ -223,7 +223,7 @@ public:
     // Calculate G*m + q
     bool ECMULGEN(const CBigNum &bnMultiplier, const CPoint &qPoint) {
         if (! EC_POINT_mul(group, point, &bnMultiplier, qPoint.point, BN_value_one(), NULL)) {
-            printf("CPoint::ECMULGEN() : EC_POINT_mul failed.");
+            logging::LogPrintf("CPoint::ECMULGEN() : EC_POINT_mul failed.");
             return false;
         }
         return true;

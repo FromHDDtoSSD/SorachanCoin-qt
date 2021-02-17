@@ -377,7 +377,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
             nStart = bitsystem::GetTime();
 
             // Create new block
-            //printf("ThreadRPCServer3 getwork new Block\n");
+            //logging::LogPrintf("ThreadRPCServer3 getwork new Block\n");
             pblock = miner::CreateNewBlock(entry::pwalletMain);
             if (! pblock)
                 return bitjson::JSONRPCError(RPC_OUT_OF_MEMORY, "Out of memory");

@@ -442,18 +442,18 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
     }
 
     if (! R.IsValid()) {
-        printf("CMalleableKey::CheckKeyVariant() : R is invalid");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : R is invalid");
         return false;
     }
 
     if (! vchPubKeyVariant.IsValid()) {
-        printf("CMalleableKey::CheckKeyVariant() : public key variant is invalid");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : public key variant is invalid");
         return false;
     }
 
     CPoint point_R;
     if (! point_R.setPubKey(R)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode R value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode R value");
         return false;
     }
 
@@ -462,19 +462,19 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     CPoint point_H;
     if (! point_H.setPubKey(vchPubKeyH)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode H value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode H value");
         return false;
     }
 
     CPoint point_P;
     if (! point_P.setPubKey(vchPubKeyVariant)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode P value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode P value");
         return false;
     }
 
     // Infinity points are senseless
     if (point_P.IsInfinity()) {
-        printf("CMalleableKey::CheckKeyVariant() : P is infinity");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : P is infinity");
         return false;
     }
 
@@ -485,7 +485,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
         return false;
     }
 
@@ -499,7 +499,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     // Infinity points are senseless
     if (point_Ps.IsInfinity()) {
-        printf("CMalleableKey::CheckKeyVariant() : Ps is infinity");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Ps is infinity");
         return false;
     }
 
@@ -519,18 +519,18 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
     }
 
     if (! R.IsValid()) {
-        printf("CMalleableKey::CheckKeyVariant() : R is invalid");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : R is invalid");
         return false;
     }
 
     if (! vchPubKeyVariant.IsValid()) {
-        printf("CMalleableKey::CheckKeyVariant() : public key variant is invalid");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : public key variant is invalid");
         return false;
     }
 
     CPoint point_R;
     if (! point_R.setPubKey(R)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode R value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode R value");
         return false;
     }
 
@@ -539,19 +539,19 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     CPoint point_H;
     if (! point_H.setPubKey(vchPubKeyH)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode H value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode H value");
         return false;
     }
 
     CPoint point_P;
     if (! point_P.setPubKey(vchPubKeyVariant)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to decode P value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to decode P value");
         return false;
     }
 
     // Infinity points are senseless
     if (point_P.IsInfinity()) {
-        printf("CMalleableKey::CheckKeyVariant() : P is infinity");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : P is infinity");
         return false;
     }
 
@@ -562,7 +562,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
-        printf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Unable to convert Rl value");
         return false;
     }
 
@@ -576,7 +576,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 
     // Infinity points are senseless
     if (point_Ps.IsInfinity()) {
-        ::printf("CMalleableKey::CheckKeyVariant() : Ps is infinity");
+        logging::LogPrintf("CMalleableKey::CheckKeyVariant() : Ps is infinity");
         return false;
     }
 
@@ -634,36 +634,36 @@ bool CMalleableKeyView::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubK
     }
 
     if (! R.IsValid()) {
-        printf("CMalleableKeyView::CheckKeyVariant() : R is invalid");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : R is invalid");
         return false;
     }
 
     if (! vchPubKeyVariant.IsValid()) {
-        printf("CMalleableKeyView::CheckKeyVariant() : public key variant is invalid");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : public key variant is invalid");
         return false;
     }
 
     CPoint point_R;
     if (! point_R.setPubKey(R)) {
-        printf("CMalleableKeyView::CheckKeyVariant() : Unable to decode R value");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : Unable to decode R value");
         return false;
     }
 
     CPoint point_H;
     if (! point_H.setPubKey(vchPubKeyH)) {
-        printf("CMalleableKeyView::CheckKeyVariant() : Unable to decode H value");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : Unable to decode H value");
         return false;
     }
 
     CPoint point_P;
     if (! point_P.setPubKey(vchPubKeyVariant)) {
-        printf("CMalleableKeyView::CheckKeyVariant() : Unable to decode P value");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : Unable to decode P value");
         return false;
     }
 
     // Infinity points are senseless
     if (point_P.IsInfinity()) {
-        printf("CMalleableKeyView::CheckKeyVariant() : P is infinity");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : P is infinity");
         return false;
     }
 
@@ -674,7 +674,7 @@ bool CMalleableKeyView::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubK
 
     key_vector vchRl;
     if (! point_R.getBytes(vchRl)) {
-        printf("CMalleableKeyView::CheckKeyVariant() : Unable to convert Rl value");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : Unable to convert Rl value");
         return false;
     }
 
@@ -688,7 +688,7 @@ bool CMalleableKeyView::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubK
 
     // Infinity points are senseless
     if (point_Ps.IsInfinity()) {
-        printf("CMalleableKeyView::CheckKeyVariant() : Ps is infinity");
+        logging::LogPrintf("CMalleableKeyView::CheckKeyVariant() : Ps is infinity");
         return false;
     }
 

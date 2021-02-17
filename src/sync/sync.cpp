@@ -13,33 +13,33 @@ std::string CLockLocation::ToString() const {
 }
 
 void CLockOnTrack::potential_deadlock_detected(const std::pair<void *, void *> &mismatch, const LockStack &s1, const LockStack &s2) {
-    printf("POTENTIAL DEADLOCK DETECTED\n");
-    printf("Previous lock order was:\n");
+    logging::LogPrintf("POTENTIAL DEADLOCK DETECTED\n");
+    logging::LogPrintf("Previous lock order was:\n");
 
     for(auto i = s2.begin(); i != s2.end(); ++i)
     {
         if(i->first == mismatch.first) {
-            printf(" (1)");
+            logging::LogPrintf(" (1)");
         }
         if(i->first == mismatch.second) {
-            printf(" (2)");
+            logging::LogPrintf(" (2)");
         }
 
-        printf(" %s\n", i->second.ToString().c_str());
+        logging::LogPrintf(" %s\n", i->second.ToString().c_str());
     }
 
-    printf("Current lock order is:\n");
+    logging::LogPrintf("Current lock order is:\n");
 
     for(auto i = s1.begin(); i != s1.end(); ++i)
     {
         if(i->first == mismatch.first) {
-            printf(" (1)");
+            logging::LogPrintf(" (1)");
         }
         if(i->first == mismatch.second) {
-            printf(" (2)");
+            logging::LogPrintf(" (2)");
         }
 
-        printf(" %s\n", i->second.ToString().c_str());
+        logging::LogPrintf(" %s\n", i->second.ToString().c_str());
     }
 }
 
@@ -49,7 +49,7 @@ void CLockOnTrack::push_lock(void *c, const CLockLocation &locklocation, bool fT
     }
 
     if(args_bool::fDebug) {
-        printf("Locking: %s\n", locklocation.ToString().c_str());
+        logging::LogPrintf("Locking: %s\n", locklocation.ToString().c_str());
     }
 
     dd_mutex.lock();
@@ -84,7 +84,7 @@ void CLockOnTrack::push_lock(void *c, const CLockLocation &locklocation, bool fT
 void CLockOnTrack::pop_lock() {
     if(args_bool::fDebug) {
         const CLockLocation &locklocation = (*lockstack).rbegin()->second;
-        printf("Unlocked: %s\n", locklocation.ToString().c_str());
+        logging::LogPrintf("Unlocked: %s\n", locklocation.ToString().c_str());
     }
 
     dd_mutex.lock();

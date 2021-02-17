@@ -151,11 +151,11 @@ namespace util // used json-RPC
 
     template<typename T>
     inline void PrintHex(const T pbegin, const T pend, const char *pszFormat = "%s", bool fSpaces = true) {
-        printf(pszFormat, util::HexStr(pbegin, pend, fSpaces).c_str());
+        logging::LogPrintf(pszFormat, util::HexStr(pbegin, pend, fSpaces).c_str());
     }
 
     inline void PrintHex(const util_vector &vch, const char *pszFormat = "%s", bool fSpaces = true) {
-        printf(pszFormat, util::HexStr(vch, fSpaces).c_str());
+        logging::LogPrintf(pszFormat, util::HexStr(vch, fSpaces).c_str());
     }
 
     inline std::string DateTimeStrFormat(const char *pszFormat, int64_t nTime) {

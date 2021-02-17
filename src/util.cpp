@@ -97,7 +97,7 @@ void seed::RandAddSeedPerfmon()
     if (ret == ERROR_SUCCESS) {
         ::RAND_add(pdata, nSize, nSize / 100.0);
         cleanse::OPENSSL_cleanse(pdata, nSize);
-        printf("seed::RandAddSeed() %lu bytes\n", nSize);
+        logging::LogPrintf("seed::RandAddSeed() %lu bytes\n", nSize);
     }
 #endif
 }
@@ -591,7 +591,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 
     // Add data
     vTimeOffsets.input(nOffsetSample);
-    printf("Added time data, samples %d, offset %+" PRId64 " (%+" PRId64 " minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample / 60);
+    logging::LogPrintf("Added time data, samples %d, offset %+" PRId64 " (%+" PRId64 " minutes)\n", vTimeOffsets.size(), nOffsetSample, nOffsetSample / 60);
     if (vTimeOffsets.size() >= 5 && vTimeOffsets.size() % 2 == 1) {
         int64_t nMedian = vTimeOffsets.median();
         std::vector<int64_t> vSorted = vTimeOffsets.sorted();
@@ -617,19 +617,19 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
                     fDone = true;
                     std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong " strCoinName " will not work properly.");
                     excep::set_strMiscWarning( strMessage );
-                    printf("*** %s\n", strMessage.c_str());
+                    logging::LogPrintf("*** %s\n", strMessage.c_str());
                     CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage+" ", strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
                 }
             }
         }
         if (args_bool::fDebug) {
             for(int64_t n: vSorted) {
-                printf("%+" PRId64 "  ", n);
+                logging::LogPrintf("%+" PRId64 "  ", n);
             }
-            printf("|  ");
+            logging::LogPrintf("|  ");
         }
         if (nNodesOffset != INT64_MAX) {
-            printf("nNodesOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNodesOffset, nNodesOffset / 60);
+            logging::LogPrintf("nNodesOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNodesOffset, nNodesOffset / 60);
         }
     }
 }
@@ -638,6 +638,6 @@ void cmd::runCommand(std::string strCommand)
 {
     int nErr = ::system(strCommand.c_str());
     if (nErr) {
-        printf("cmd::runCommand error: system(%s) returned %d\n", strCommand.c_str(), nErr);
+        logging::LogPrintf("cmd::runCommand error: system(%s) returned %d\n", strCommand.c_str(), nErr);
     }
 }

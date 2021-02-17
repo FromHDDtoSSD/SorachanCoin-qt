@@ -35,7 +35,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock *pblock/*=nullptr*/)
         if (nIndex == (int)pblock->get_vtx().size()) {
             vMerkleBranch.clear();
             nIndex = -1;
-            printf("ERROR: SetMerkleBranch() : couldn't find tx in block\n");
+            logging::LogPrintf("ERROR: SetMerkleBranch() : couldn't find tx in block\n");
             return 0;
         }
 

@@ -304,7 +304,7 @@ public:
         {
             if (hListenSocket != INVALID_SOCKET) {
                 if (! netbase::manage::CloseSocket(hListenSocket)) {
-                    printf("CloseSocket(hListenSocket) failed with error %d\n", WSAGetLastError());
+                    logging::LogPrintf("CloseSocket(hListenSocket) failed with error %d\n", WSAGetLastError());
                 }
             }
         }
@@ -653,7 +653,7 @@ public:
         //
         int64_t &nRequestTime = net_node::mapAlreadyAskedFor[inv];
         if (args_bool::fDebugNet) {
-            printf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, util::DateTimeStrFormat("%H:%M:%S", nRequestTime / 1000000).c_str());
+            logging::LogPrintf("askfor %s   %" PRId64 " (%s)\n", inv.ToString().c_str(), nRequestTime, util::DateTimeStrFormat("%H:%M:%S", nRequestTime / 1000000).c_str());
         }
 
         // Make sure not to reuse time indexes to keep things in the same order
@@ -681,7 +681,7 @@ public:
 
         nMessageStart = (uint32_t)vSend.size();
         if (args_bool::fDebug) {
-            printf("sending: %s ", pszCommand);
+            logging::LogPrintf("sending: %s ", pszCommand);
         }
     }
 
@@ -695,13 +695,13 @@ public:
         nMessageStart = (std::numeric_limits<uint32_t>::max)();
         LEAVE_CRITICAL_SECTION(cs_vSend);
         if (args_bool::fDebug) {
-            printf("(aborted)\n");
+            logging::LogPrintf("(aborted)\n");
         }
     }
 
     void EndMessage() {
         if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(strenc::atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
-            printf("dropmessages DROPPING SEND MESSAGE\n");
+            logging::LogPrintf("dropmessages DROPPING SEND MESSAGE\n");
             AbortMessage();
             return;
         }
@@ -727,7 +727,7 @@ public:
         std::memcpy((char *)&vSend[nHeaderStart] + CMessageHeader::GetChecksumOffset(), &nChecksum, sizeof(nChecksum));
 
         if (args_bool::fDebug) {
-            printf("(%d bytes)\n", nSize);
+            logging::LogPrintf("(%d bytes)\n", nSize);
         }
 
         nHeaderStart = -1;

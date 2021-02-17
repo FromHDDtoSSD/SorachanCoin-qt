@@ -11,7 +11,7 @@
 
 int CClientUIInterface::noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style)
 {
-    printf("%s: %s\n", caption.c_str(), message.c_str());
+    logging::LogPrintf("%s: %s\n", caption.c_str(), message.c_str());
     fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
     return 4;
 }

@@ -54,7 +54,7 @@
 namespace latest_crypto {
 
 [[noreturn]] void random::RandFailure() noexcept {
-    printf("Failed to read randomness, aborting\n");
+    logging::LogPrintf("Failed to read randomness, aborting\n");
     std::abort();
 }
 
@@ -114,10 +114,10 @@ void random::ReportHardwareRand() {
     // This must be done in a separate function, as HWRandInit() may be indirectly called
     // from global constructors, before logging is initialized.
     if (g_rdseed_supported) {
-        printf("Using RdSeed as additional entropy source\n");
+        logging::LogPrintf("Using RdSeed as additional entropy source\n");
     }
     if (g_rdrand_supported) {
-        printf("Using RdRand as an additional entropy source\n");
+        logging::LogPrintf("Using RdRand as an additional entropy source\n");
     }
 }
 

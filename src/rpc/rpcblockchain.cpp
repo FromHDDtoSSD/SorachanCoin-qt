@@ -307,10 +307,10 @@ bool CRPCTable::ExportBlock(const std::string &strBlockHash, const CDataStream &
         exportStream << util::HexStr(ssBlock.begin(), ssBlock.end());
         exportStream.flush();
 
-        printf("Successfully exported block to %s\n", pathDest.string().c_str());
+        logging::LogPrintf("Successfully exported block to %s\n", pathDest.string().c_str());
         return true;
     } catch(const boost::filesystem::filesystem_error &e) {
-        printf("error exporting the block data %s (%s)\n", pathDest.string().c_str(), e.what());
+        logging::LogPrintf("error exporting the block data %s (%s)\n", pathDest.string().c_str(), e.what());
         return false;
     }
 }

@@ -127,7 +127,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
         }
     };
 
-    printf("GetDefaultPort type_%d\n", (int)type);
+    logging::LogPrintf("GetDefaultPort type_%d\n", (int)type);
     const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet : tcp_port::uMainnet;
 
     {
@@ -190,7 +190,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
 #endif
                         netbase::manage::CloseSocket(hSocket);
                         util::Sleep(20);
-                        //printf("GetDefaultPort port_target %d\n", (int)port_target);
+                        //logging::LogPrintf("GetDefaultPort port_target %d\n", (int)port_target);
                         return port_target;
                     } else {
                         netbase::manage::CloseSocket(hSocket);
@@ -208,7 +208,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                 std::map<NET_ADDR_TYPE, unsigned short>::const_iterator ite = map_port_info.find(key);
                 if(ite != map_port_info.end()) {
                     const std::pair<const NET_ADDR_TYPE, unsigned short> data = *ite;
-                    //printf("GetDefaultPort map_port find %d\n", (int)data.second);
+                    //logging::LogPrintf("GetDefaultPort map_port find %d\n", (int)data.second);
                     return data.second;
                 }
             }
@@ -219,7 +219,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
     // no connect or addnode or default (Ver1.0.0 - Ver1.0.4)
     //
 
-    //printf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default]);
+    //logging::LogPrintf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default]);
     return p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default];
 }
 
@@ -249,7 +249,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         std::map<GET_PORT_TYPE, unsigned short>::const_iterator ite = map_port_type.find(type);
         if(ite != map_port_type.end()) {
             std::pair<GET_PORT_TYPE, unsigned short> data = *ite;
-            //printf("GetListenPort map_port %d\n", (int)data.second);
+            //logging::LogPrintf("GetListenPort map_port %d\n", (int)data.second);
             return data.second;
         } else {
             std::string strError;
@@ -260,7 +260,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
             {
                 unsigned short port_target = p_uport[i];
                 if(entry::BindListenPort(CService(inaddr_loopback, port_target), strError, true)) {
-                    //printf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
+                    //logging::LogPrintf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
                     std::pair<GET_PORT_TYPE, unsigned short> data = std::make_pair(type, port_target);
                     map_port_type.insert(data);
                     return port_target;
@@ -270,7 +270,7 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         }
 
         // can not bind
-        //printf("GetListenPort can not bind port %d\n", (int)port_default);
+        //logging::LogPrintf("GetListenPort can not bind port %d\n", (int)port_default);
         return port_default;
     }
 }
@@ -371,12 +371,12 @@ bool net_basis::RecvLine(SOCKET hSocket, std::string &strLine)
             }
             if(nBytes == 0) {
                 // socket closed
-                printf("socket closed\n");
+                logging::LogPrintf("socket closed\n");
                 return false;
             } else {
                 // socket error
                 int nErr = WSAGetLastError();
-                printf("recv failed: %d\n", nErr);
+                logging::LogPrintf("recv failed: %d\n", nErr);
                 return false;
             }
         }
@@ -444,7 +444,7 @@ void ext_ip::AdvertiseLocal(CNode *pnode)
             addrLocal.SetIP(pnode->addrLocal);
         }
         if(addrLocal.IsRoutable()) {
-            printf("ext_ip::AdvertiseLocal: advertising address %s\n", addrLocal.ToString().c_str());
+            logging::LogPrintf("ext_ip::AdvertiseLocal: advertising address %s\n", addrLocal.ToString().c_str());
             pnode->PushAddress(addrLocal);
         }
     }
@@ -464,7 +464,7 @@ bool ext_ip::AddLocal(const CService &addr, int nScore/* =LOCAL_NONE */)
     if(ext_ip::IsLimited(addr)) {
         return false;
     }
-    printf("ext_ip::AddLocal(%s,%i)\n", addr.ToString().c_str(), nScore);
+    logging::LogPrintf("ext_ip::AddLocal(%s,%i)\n", addr.ToString().c_str(), nScore);
 
     {
         LOCK(ext_ip::cs_mapLocalHost);
@@ -558,7 +558,7 @@ bool ext_ip::GetMyExternalIP(CNetAddr &ipRet)
 
     if(rc >= 0) {
         ipRet = CNetAddr(mapped.sin_addr);
-        printf("GetExternalIPbySTUN(%" PRIu64 ") returned %s in attempt %d; Server=%s\n", rnd, ipRet.ToStringIP().c_str(), rc, srv);
+        logging::LogPrintf("GetExternalIPbySTUN(%" PRIu64 ") returned %s in attempt %d; Server=%s\n", rnd, ipRet.ToStringIP().c_str(), rc, srv);
         return true;
     }
     return false;
@@ -571,7 +571,7 @@ void ext_ip::ThreadGetMyExternalIP(void *parg)
 
     CNetAddr addrLocalHost;
     if(ext_ip::GetMyExternalIP(addrLocalHost)) {
-        printf("ext_ip::GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
+        logging::LogPrintf("ext_ip::GetMyExternalIP() returned %s\n", addrLocalHost.ToStringIP().c_str());
         ext_ip::AddLocal(addrLocalHost, LOCAL_HTTP);
     }
 }
@@ -637,7 +637,7 @@ CNode *net_node::ConnectNode(CAddress addrConnect, const char *pszDest/*=nullptr
     }
 
     /// debug print
-    printf("trying connection %s lastseen=%.1fhrs\n",
+    logging::LogPrintf("trying connection %s lastseen=%.1fhrs\n",
         pszDest ? pszDest : addrConnect.ToString().c_str(),
         pszDest ? 0 : (double)(bitsystem::GetAdjustedTime() - addrConnect.get_nTime()) / 3600.0);
 
@@ -649,24 +649,24 @@ CNode *net_node::ConnectNode(CAddress addrConnect, const char *pszDest/*=nullptr
         net_node::addrman.Attempt(addrConnect);
 
         /// debug print
-        printf("connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
+        logging::LogPrintf("connected %s\n", pszDest ? pszDest : addrConnect.ToString().c_str());
 
         // Set to non-blocking
 #ifdef WIN32
         u_long nOne = 1;
         if(::ioctlsocket(hSocket, FIONBIO, &nOne) == SOCKET_ERROR) {
-            printf("ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
+            logging::LogPrintf("ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
         }
 #else
         if(::fcntl(hSocket, F_SETFL, O_NONBLOCK) == SOCKET_ERROR) {
-            printf("ConnectSocket() : fcntl non-blocking setting failed, error %d\n", errno);
+            logging::LogPrintf("ConnectSocket() : fcntl non-blocking setting failed, error %d\n", errno);
         }
 #endif
 
         // Add node
         CNode *pnode = new(std::nothrow) CNode(hSocket, addrConnect, pszDest ? pszDest : "", false);
         if(! pnode) {
-            printf("ConnectSocket() : Memory allocate failure, error\n");
+            logging::LogPrintf("ConnectSocket() : Memory allocate failure, error\n");
             return nullptr;
         }
         if(nTimeout != 0) {
@@ -691,7 +691,7 @@ void CNode::CloseSocketDisconnect()
 {
     fDisconnect = true;
     if(hSocket != INVALID_SOCKET) {
-        printf("disconnecting node %s\n", addrName.c_str());
+        logging::LogPrintf("disconnecting node %s\n", addrName.c_str());
         netbase::manage::CloseSocket(hSocket);
         vRecv.clear();
     }
@@ -735,7 +735,7 @@ void CNode::PushVersion()
     }
 
     latest_crypto::random::GetStrongRandBytes((unsigned char *)&bitsocket::nLocalHostNonce, sizeof(bitsocket::nLocalHostNonce));
-    printf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", version::PROTOCOL_VERSION, block_info::nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
+    logging::LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", version::PROTOCOL_VERSION, block_info::nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", version::PROTOCOL_VERSION, net_node::nLocalServices, nTime, addrYou, addrMe, bitsocket::nLocalHostNonce, format_version::FormatSubVersion(version::CLIENT_NAME, version::CLIENT_VERSION, std::vector<std::string>()), block_info::nBestHeight);
     debugcs::instance() << "PushMessage send version" << debugcs::endl();
 }
@@ -765,14 +765,14 @@ bool CNode::IsBanned(CNetAddr ip)
 bool CNode::Misbehaving(int howmuch)
 {
     if(addr.IsLocal()) {
-        printf("Warning: Local node %s misbehaving (delta: %d)!\n", addrName.c_str(), howmuch);
+        logging::LogPrintf("Warning: Local node %s misbehaving (delta: %d)!\n", addrName.c_str(), howmuch);
         return false;
     }
 
     nMisbehavior += howmuch;
     if(nMisbehavior >= map_arg::GetArgInt("-banscore", 100)) {
         int64_t banTime = bitsystem::GetTime() + map_arg::GetArg("-bantime", util::nOneDay);  // Default 24-hour ban
-        printf("Misbehaving: %s (%d -> %d) DISCONNECTING\n", addr.ToString().c_str(), nMisbehavior - howmuch, nMisbehavior);
+        logging::LogPrintf("Misbehaving: %s (%d -> %d) DISCONNECTING\n", addr.ToString().c_str(), nMisbehavior - howmuch, nMisbehavior);
         {
             LOCK(cs_setBanned);
             if(setBanned[this->addr] < banTime) {
@@ -782,7 +782,7 @@ bool CNode::Misbehaving(int howmuch)
         CloseSocketDisconnect();
         return true;
     } else {
-        printf("Misbehaving: %s (%d -> %d)\n", addr.ToString().c_str(), nMisbehavior - howmuch, nMisbehavior);
+        logging::LogPrintf("Misbehaving: %s (%d -> %d)\n", addr.ToString().c_str(), nMisbehavior - howmuch, nMisbehavior);
     }
 
     return false;
@@ -827,7 +827,7 @@ void net_node::ThreadSocketHandler(void *parg)
         net_node::vnThreadsRunning[THREAD_SOCKETHANDLER]--;
         throw; // support pthread_cancel()
     }
-    printf("net_node::ThreadSocketHandler exited\n");
+    logging::LogPrintf("net_node::ThreadSocketHandler exited\n");
 }
 
 //
@@ -839,7 +839,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         node->Release();
     };
 
-    printf("net_node::ThreadSocketHandler started\n");
+    logging::LogPrintf("net_node::ThreadSocketHandler started\n");
 
     size_t nPrevNodeCount = 0;
     for( ; ; )
@@ -964,7 +964,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         if(nSelect == SOCKET_ERROR) {
             if(have_fds) {
                 int nErr = WSAGetLastError();
-                printf("socket select error %d\n", nErr);
+                logging::LogPrintf("socket select error %d\n", nErr);
                 for(unsigned int i = 0; i <= hSocketMax; ++i)
                 {
                     FD_SET(i, &fdsetRecv);
@@ -994,7 +994,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 
                 if(hSocket != INVALID_SOCKET) {
                     if(!addr.SetSockAddr((const struct sockaddr *)&sockaddr)) {
-                        printf("Warning: Unknown socket family\n");
+                        logging::LogPrintf("Warning: Unknown socket family\n");
                     }
                 }
 
@@ -1011,7 +1011,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                 if(hSocket == INVALID_SOCKET) {
                     int nErr = WSAGetLastError();
                     if(nErr != WSAEWOULDBLOCK) {
-                        printf("socket error accept failed: %d\n", nErr);
+                        logging::LogPrintf("socket error accept failed: %d\n", nErr);
                     }
                 } else if(nInbound >= map_arg::GetArgInt("-maxconnections", 125) - MAX_OUTBOUND_CONNECTIONS) {
                     {
@@ -1021,13 +1021,13 @@ void net_node::ThreadSocketHandler2(void *parg)
                         }
                     }
                 } else if(CNode::IsBanned(addr)) {
-                    printf("connection from %s dropped (banned)\n", addr.ToString().c_str());
+                    logging::LogPrintf("connection from %s dropped (banned)\n", addr.ToString().c_str());
                     netbase::manage::CloseSocket(hSocket);
                 } else {
-                    printf("accepted connection %s\n", addr.ToString().c_str());
+                    logging::LogPrintf("accepted connection %s\n", addr.ToString().c_str());
                     CNode *pnode = new(std::nothrow) CNode(hSocket, addr, "", true);
                     if(!pnode) {
-                        printf("CNode memory allocate failed.\n");
+                        logging::LogPrintf("CNode memory allocate failed.\n");
                         netbase::manage::CloseSocket(hSocket);
                     } else {
                         pnode->AddRef();
@@ -1073,7 +1073,7 @@ void net_node::ThreadSocketHandler2(void *parg)
 
                     if(nPos > net_node::ReceiveBufferSize()) {
                         if(! pnode->fDisconnect) {
-                            printf("socket recv flood control disconnect (%" PRIszu " bytes)\n", vRecv.size());
+                            logging::LogPrintf("socket recv flood control disconnect (%" PRIszu " bytes)\n", vRecv.size());
                         }
                         pnode->CloseSocketDisconnect();
                     } else {
@@ -1101,7 +1101,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                             //
                             // Quantum SorachanCoin
                             //
-                            printf("socket of quantum is send, and closed socket\n");
+                            logging::LogPrintf("socket of quantum is send, and closed socket\n");
                             if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
                                 pnode->CloseSocketDisconnect();
                             } else {
@@ -1117,7 +1117,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                         } else if(nBytes == 0) {
                             // socket closed gracefully
                             if(! pnode->fDisconnect) {
-                                printf("socket closed\n");
+                                logging::LogPrintf("socket closed\n");
                             }
                             pnode->CloseSocketDisconnect();
                         } else if(nBytes < 0) {
@@ -1125,7 +1125,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                             int nErr = WSAGetLastError();
                             if(nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
                                 if(!pnode->fDisconnect) {
-                                    printf("socket recv error %d\n", nErr);
+                                    logging::LogPrintf("socket recv error %d\n", nErr);
                                 }
                                 pnode->CloseSocketDisconnect();
                             }
@@ -1155,7 +1155,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                             // error
                             int nErr = WSAGetLastError();
                             if(nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
-                                printf("socket send error %d\n", nErr);
+                                logging::LogPrintf("socket send error %d\n", nErr);
                                 pnode->CloseSocketDisconnect();
                             }
                         }
@@ -1171,13 +1171,13 @@ void net_node::ThreadSocketHandler2(void *parg)
             }
             if(bitsystem::GetTime() - pnode->nTimeConnected > 60) {
                 if(pnode->nLastRecv == 0 || pnode->nLastSend == 0) {
-                    printf("socket no message in first 60 seconds, %d %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0);
+                    logging::LogPrintf("socket no message in first 60 seconds, %d %d\n", pnode->nLastRecv != 0, pnode->nLastSend != 0);
                     pnode->fDisconnect = true;
                 } else if(bitsystem::GetTime() - pnode->nLastSend > 90 * 60 && bitsystem::GetTime() - pnode->nLastSendEmpty > 90 * 60) {
-                    printf("socket not sending\n");
+                    logging::LogPrintf("socket not sending\n");
                     pnode->fDisconnect = true;
                 } else if(bitsystem::GetTime() - pnode->nLastRecv > 90 * 60) {
-                    printf("socket inactivity timeout\n");
+                    logging::LogPrintf("socket inactivity timeout\n");
                     pnode->fDisconnect = true;
                 }
             }
@@ -1210,12 +1210,12 @@ void upnp::ThreadMapPort(void *parg)
         excep::PrintException(nullptr, "upnp::ThreadMapPort()");
     }
 
-    printf("upnp::ThreadMapPort() exited\n");
+    logging::LogPrintf("upnp::ThreadMapPort() exited\n");
 }
 
 void upnp::ThreadMapPort2(void *parg)
 {
-    printf("upup::ThreadMapPort started\n");
+    logging::LogPrintf("upup::ThreadMapPort started\n");
 
     std::string port = strprintf("%u", net_basis::GetListenPort());
     const char *multicastif = 0;
@@ -1243,13 +1243,13 @@ void upnp::ThreadMapPort2(void *parg)
             char externalIPAddress[40];
             r = ::UPNP_GetExternalIPAddress(urls.controlURL, data.first.servicetype, externalIPAddress);
             if(r != UPNPCOMMAND_SUCCESS) {
-                printf("UPnP: upnp::GetExternalIPAddress() returned %d\n", r);
+                logging::LogPrintf("UPnP: upnp::GetExternalIPAddress() returned %d\n", r);
             } else {
                 if(externalIPAddress[0]) {
-                    printf("UPnP: upnp::ExternalIPAddress = %s\n", externalIPAddress);
+                    logging::LogPrintf("UPnP: upnp::ExternalIPAddress = %s\n", externalIPAddress);
                     ext_ip::AddLocal(CNetAddr(externalIPAddress), LOCAL_UPNP);
                 } else {
-                    printf("UPnP: GetExternalIPAddress failed.\n");
+                    logging::LogPrintf("UPnP: GetExternalIPAddress failed.\n");
                 }
             }
         }
@@ -1266,9 +1266,9 @@ void upnp::ThreadMapPort2(void *parg)
 #endif
 
         if(r != UPNPCOMMAND_SUCCESS) {
-            printf("AddPortMapping(%s, %s, %s) failed with code %d (%s)\n", port.c_str(), port.c_str(), lanaddr, r, strupnperror(r));
+            logging::LogPrintf("AddPortMapping(%s, %s, %s) failed with code %d (%s)\n", port.c_str(), port.c_str(), lanaddr, r, strupnperror(r));
         } else {
-            printf("UPnP Port Mapping successful.\n");
+            logging::LogPrintf("UPnP Port Mapping successful.\n");
         }
 
         int i = 1;
@@ -1276,7 +1276,7 @@ void upnp::ThreadMapPort2(void *parg)
         {
             if(args_bool::fShutdown || !args_bool::fUseUPnP) {
                 r = ::UPNP_DeletePortMapping(urls.controlURL, data.first.servicetype, port.c_str(), "TCP", 0);
-                printf("upnp::UPNP_DeletePortMapping() returned : %d\n", r);
+                logging::LogPrintf("upnp::UPNP_DeletePortMapping() returned : %d\n", r);
 
                 ::freeUPNPDevlist(devlist); devlist = 0;
                 ::FreeUPNPUrls(&urls);
@@ -1294,16 +1294,16 @@ void upnp::ThreadMapPort2(void *parg)
 #endif
 
                 if(r != UPNPCOMMAND_SUCCESS) {
-                    printf("AddPortMapping(%s, %s, %s) failed with code %d (%s)\n", port.c_str(), port.c_str(), lanaddr, r, strupnperror(r));
+                    logging::LogPrintf("AddPortMapping(%s, %s, %s) failed with code %d (%s)\n", port.c_str(), port.c_str(), lanaddr, r, strupnperror(r));
                 } else {
-                    printf("UPnP Port Mapping successful.\n");
+                    logging::LogPrintf("UPnP Port Mapping successful.\n");
                 }
             }
             util::MilliSleep(2000);
             ++i;
         }
     } else {
-        printf("No valid UPnP IGDs found\n");
+        logging::LogPrintf("No valid UPnP IGDs found\n");
         ::freeUPNPDevlist(devlist); devlist = 0;
         if(r != 0) {
             ::FreeUPNPUrls(&urls);
@@ -1323,7 +1323,7 @@ void upnp::MapPort()
 {
     if(args_bool::fUseUPnP && net_node::vnThreadsRunning[THREAD_UPNP] < 1) {
         if(! bitthread::NewThread(ThreadMapPort, nullptr)) {
-            printf("Error: ThreadMapPort(ThreadMapPort) failed\n");
+            logging::LogPrintf("Error: ThreadMapPort(ThreadMapPort) failed\n");
         }
     }
 }
@@ -1350,16 +1350,16 @@ void dns_seed::ThreadDNSAddressSeed(void *parg)
         net_node::vnThreadsRunning[THREAD_DNSSEED]--;
         throw; // support pthread_cancel()
     }
-    printf("dns_seed::ThreadDNSAddressSeed exited\n");
+    logging::LogPrintf("dns_seed::ThreadDNSAddressSeed exited\n");
 }
 
 void dns_seed::ThreadDNSAddressSeed2(void *parg)
 {
-    printf("dns_seed::ThreadDNSAddressSeed started\n");
+    logging::LogPrintf("dns_seed::ThreadDNSAddressSeed started\n");
     int found = 0;
 
     //if(! args_bool::fTestNet) {
-        printf("Loading addresses from DNS seeds (could take a while)\n");
+        logging::LogPrintf("Loading addresses from DNS seeds (could take a while)\n");
 
         for(unsigned int seed_idx = 0; seed_idx < ARRAYLEN(dns_seed::strDNSSeed); ++seed_idx)
         {
@@ -1382,7 +1382,7 @@ void dns_seed::ThreadDNSAddressSeed2(void *parg)
         }
     //}
 
-    printf("%d addresses found from DNS seeds\n", found);
+    logging::LogPrintf("%d addresses found from DNS seeds\n", found);
 }
 
 void net_node::DumpAddresses()
@@ -1392,12 +1392,12 @@ void net_node::DumpAddresses()
     CAddrDB adb;
     adb.Write(net_node::addrman);
 
-    printf("Flushed %d addresses to peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
+    logging::LogPrintf("Flushed %d addresses to peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
 }
 
 void net_node::ThreadDumpAddress2(void *parg)
 {
-    printf("net_node::ThreadDumpAddress started\n");
+    logging::LogPrintf("net_node::ThreadDumpAddress started\n");
 
     net_node::vnThreadsRunning[THREAD_DUMPADDRESS]++;
     while(! args_bool::fShutdown)
@@ -1420,7 +1420,7 @@ void net_node::ThreadDumpAddress(void *parg)
     } catch(std::exception &e) {
         excep::PrintException(&e, "ThreadDumpAddress()");
     }
-    printf("ThreadDumpAddress exited\n");
+    logging::LogPrintf("ThreadDumpAddress exited\n");
 }
 
 void net_node::ThreadOpenConnections(void *parg)
@@ -1439,7 +1439,7 @@ void net_node::ThreadOpenConnections(void *parg)
         net_node::vnThreadsRunning[THREAD_OPENCONNECTIONS]--;
         excep::PrintException(nullptr, "net_node::ThreadOpenConnections()");
     }
-    printf("net_node::ThreadOpenConnections exited\n");
+    logging::LogPrintf("net_node::ThreadOpenConnections exited\n");
 }
 
 void shot::AddOneShot(std::string strDest)
@@ -1472,7 +1472,7 @@ void shot::ProcessOneShot()
 
 void net_node::ThreadOpenConnections2(void *parg)
 {
-    printf("net_node::ThreadOpenConnections started\n");
+    logging::LogPrintf("net_node::ThreadOpenConnections started\n");
 
     //
     // Connect to specific addresses
@@ -1630,12 +1630,12 @@ void net_node::ThreadOpenAddedConnections(void *parg)
         net_node::vnThreadsRunning[THREAD_ADDEDCONNECTIONS]--;
         excep::PrintException(nullptr, "net_node::ThreadOpenAddedConnections()");
     }
-    printf("net_node::ThreadOpenAddedConnections exited\n");
+    logging::LogPrintf("net_node::ThreadOpenAddedConnections exited\n");
 }
 
 void net_node::ThreadOpenAddedConnections2(void *parg)
 {
-    printf("net_node::ThreadOpenAddedConnections started\n");
+    logging::LogPrintf("net_node::ThreadOpenAddedConnections started\n");
 
     {
         LOCK(net_node::cs_vAddedNodes);
@@ -1847,7 +1847,7 @@ void net_node::ThreadMessageHandler(void *parg)
         net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER]--;
         excep::PrintException(nullptr, "net_node::ThreadMessageHandler()");
     }
-    printf("net_node::ThreadMessageHandler exited\n");
+    logging::LogPrintf("net_node::ThreadMessageHandler exited\n");
 }
 
 void net_node::ThreadMessageHandler2(void *parg)
@@ -1856,7 +1856,7 @@ void net_node::ThreadMessageHandler2(void *parg)
         node->Release();
     };
 
-    printf("net_node::ThreadMessageHandler started\n");
+    logging::LogPrintf("net_node::ThreadMessageHandler started\n");
     bitthread::SetThreadPriority(THREAD_PRIORITY_BELOW_NORMAL);
 
     while(! args_bool::fShutdown)
@@ -1942,14 +1942,14 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
     socklen_t len = sizeof(sockaddr);
     if(!addrBind.GetSockAddr((struct sockaddr *)&sockaddr, &len)) {
         strError = strprintf("Error: bind address family for %s not supported", addrBind.ToString().c_str());
-        printf("%s\n", strError.c_str());
+        logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
 
     SOCKET hListenSocket = ::socket(((struct sockaddr *)&sockaddr)->sa_family, SOCK_STREAM, IPPROTO_TCP);
     if(hListenSocket == INVALID_SOCKET) {
         strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
-        printf("%s\n", strError.c_str());
+        logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
 
@@ -1971,7 +1971,7 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
 #endif
     {
         strError = strprintf("Error: Couldn't set properties on socket for incoming connections (error %d)", WSAGetLastError());
-        printf("%s\n", strError.c_str());
+        logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
 
@@ -2001,23 +2001,23 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
             strError = strprintfc(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString().c_str(), nErr, strerror(nErr));
         }
 
-        printf("%s\n", strError.c_str());
+        logging::LogPrintf("%s\n", strError.c_str());
         netbase::manage::CloseSocket(hListenSocket);
         return false;
     }
     if(check) {
-        printf("Bound to %s OK\n", addrBind.ToString().c_str());
+        logging::LogPrintf("Bound to %s OK\n", addrBind.ToString().c_str());
         netbase::manage::CloseSocket(hListenSocket);
         util::Sleep(500);
         return true;
     } else {
-        printf("Bound to %s\n", addrBind.ToString().c_str());
+        logging::LogPrintf("Bound to %s\n", addrBind.ToString().c_str());
     }
 
     // Listen for incoming connections
     if(::listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR) {
         strError = strprintf("Error: Listening for incoming connections failed (listen returned error %d)", WSAGetLastError());
-        printf("%s\n", strError.c_str());
+        logging::LogPrintf("%s\n", strError.c_str());
         netbase::manage::CloseSocket(hListenSocket);
         return false;
     }
@@ -2067,7 +2067,7 @@ void net_node::Discover()
                 struct sockaddr_in *s4 = (struct sockaddr_in *)(ifa->ifa_addr);
                 CNetAddr addr(s4->sin_addr);
                 if(ext_ip::AddLocal(addr, LOCAL_IF)) {
-                    printf("IPv4 %s: %s\n", ifa->ifa_name, addr.ToString().c_str());
+                    logging::LogPrintf("IPv4 %s: %s\n", ifa->ifa_name, addr.ToString().c_str());
                 }
             }
 # ifdef USE_IPV6
@@ -2075,7 +2075,7 @@ void net_node::Discover()
                 struct sockaddr_in6 *s6 = (struct sockaddr_in6 *)(ifa->ifa_addr);
                 CNetAddr addr(s6->sin6_addr);
                 if(ext_ip::AddLocal(addr, LOCAL_IF)) {
-                    printf("IPv6 %s: %s\n", ifa->ifa_name, addr.ToString().c_str());
+                    logging::LogPrintf("IPv6 %s: %s\n", ifa->ifa_name, addr.ToString().c_str());
                 }
             }
 # endif
@@ -2109,7 +2109,7 @@ void net_node::StartNode(void *parg)
         pnodeLocalHost = new (std::nothrow) CNode(INVALID_SOCKET, CAddress(CService(net_basis::strLocal, net_basis::nPortZero), net_node::nLocalServices));
     }
     if(pnodeLocalHost == nullptr) {
-        printf("net_node::StartNode: Memory allocate failure.");
+        logging::LogPrintf("net_node::StartNode: Memory allocate failure.");
         throw std::runtime_error("net_node::StartNode: Memory allocate failure.");
     }
 
@@ -2119,10 +2119,10 @@ void net_node::StartNode(void *parg)
     // Start threads
     //
     if(! map_arg::GetBoolArg("-dnsseed", true)) {
-        printf("DNS seeding disabled\n");
+        logging::LogPrintf("DNS seeding disabled\n");
     } else {
         if(! bitthread::NewThread(dns_seed::ThreadDNSAddressSeed, nullptr)) {
-            printf("Error: bitthread::NewThread(dns_seed::ThreadDNSAddressSeed) failed\n");
+            logging::LogPrintf("Error: bitthread::NewThread(dns_seed::ThreadDNSAddressSeed) failed\n");
         }
     }
 
@@ -2135,41 +2135,41 @@ void net_node::StartNode(void *parg)
 
     // Get addresses from IRC and advertise ours
     if(! map_arg::GetBoolArg("-irc", true)) {
-        printf("IRC seeding disabled\n");
+        logging::LogPrintf("IRC seeding disabled\n");
     } else {
         if(! bitthread::NewThread(irc_ext::ThreadIRCSeed, nullptr)) {
-            printf("Error: bitthread::NewThread(irc::ThreadIRCSeed) failed\n");
+            logging::LogPrintf("Error: bitthread::NewThread(irc::ThreadIRCSeed) failed\n");
         }
     }
 
     // Send and receive from sockets, accept connections
     if(! bitthread::NewThread(net_node::ThreadSocketHandler, nullptr)) {
-        printf("Error: bitthread::NewThread(net_node::ThreadSocketHandler) failed\n");
+        logging::LogPrintf("Error: bitthread::NewThread(net_node::ThreadSocketHandler) failed\n");
     }
 
     // Initiate outbound connections from -addnode
     if(! bitthread::NewThread(net_node::ThreadOpenAddedConnections, nullptr)) {
-        printf("Error: bitthread::NewThread(net_node::ThreadOpenAddedConnections) failed\n");
+        logging::LogPrintf("Error: bitthread::NewThread(net_node::ThreadOpenAddedConnections) failed\n");
     }
 
     // Initiate outbound connections
     if(! bitthread::NewThread(net_node::ThreadOpenConnections, nullptr)) {
-        printf("Error: bitthread::NewThread(net_node::ThreadOpenConnections) failed\n");
+        logging::LogPrintf("Error: bitthread::NewThread(net_node::ThreadOpenConnections) failed\n");
     }
 
     // Process messages
     if(! bitthread::NewThread(net_node::ThreadMessageHandler, nullptr)) {
-        printf("Error: bitthread::NewThread(net_node::ThreadMessageHandler) failed\n");
+        logging::LogPrintf("Error: bitthread::NewThread(net_node::ThreadMessageHandler) failed\n");
     }
 
     // Dump network addresses
     if(! bitthread::NewThread(net_node::ThreadDumpAddress, nullptr)) {
-        printf("Error; bitthread::NewThread(net_node::ThreadDumpAddress) failed\n");
+        logging::LogPrintf("Error; bitthread::NewThread(net_node::ThreadDumpAddress) failed\n");
     }
 
     // Mine proof-of-stake blocks in the background
     if(! bitthread::NewThread(miner::ThreadStakeMiner, entry::pwalletMain)) {
-        printf("Error: bitthread::NewThread(miner::ThreadStakeMiner) failed\n");
+        logging::LogPrintf("Error: bitthread::NewThread(miner::ThreadStakeMiner) failed\n");
     }
 
     // Start periodical NTP sampling thread
@@ -2180,7 +2180,7 @@ void net_node::StartNode(void *parg)
 
 bool net_node::StopNode()
 {
-    printf("net_node::StopNode()\n");
+    logging::LogPrintf("net_node::StopNode()\n");
 
     args_bool::fShutdown = true;
     block_info::nTransactionsUpdated++;
@@ -2206,19 +2206,19 @@ bool net_node::StopNode()
         util::Sleep(20);
     }
 
-    if(net_node::vnThreadsRunning[THREAD_SOCKETHANDLER] > 0) { printf("net_node::ThreadSocketHandler still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_OPENCONNECTIONS] > 0) { printf("net_node::ThreadOpenConnections still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0) { printf("net_node::ThreadMessageHandler still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_RPCLISTENER] > 0) { printf("ThreadRPCListener still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_RPCHANDLER] > 0) { printf("ThreadsRPCServer still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_SOCKETHANDLER] > 0) { logging::LogPrintf("net_node::ThreadSocketHandler still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_OPENCONNECTIONS] > 0) { logging::LogPrintf("net_node::ThreadOpenConnections still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0) { logging::LogPrintf("net_node::ThreadMessageHandler still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_RPCLISTENER] > 0) { logging::LogPrintf("ThreadRPCListener still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_RPCHANDLER] > 0) { logging::LogPrintf("ThreadsRPCServer still running\n"); }
 #ifdef USE_UPNP
-    if(net_node::vnThreadsRunning[THREAD_UPNP] > 0) { printf("ThreadMapPort still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_UPNP] > 0) { logging::LogPrintf("ThreadMapPort still running\n"); }
 #endif
-    if(net_node::vnThreadsRunning[THREAD_DNSSEED] > 0) { printf("dns_seed::ThreadDNSAddressSeed still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_ADDEDCONNECTIONS] > 0) { printf("net_node::ThreadOpenAddedConnections still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_DUMPADDRESS] > 0) { printf("net_node::ThreadDumpAddresses still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_MINTER] > 0) { printf("ThreadStakeMinter still running\n"); }
-    if(net_node::vnThreadsRunning[THREAD_SCRIPTCHECK] > 0) { printf("block_check::thread::ThreadScriptCheck still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_DNSSEED] > 0) { logging::LogPrintf("dns_seed::ThreadDNSAddressSeed still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_ADDEDCONNECTIONS] > 0) { logging::LogPrintf("net_node::ThreadOpenAddedConnections still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_DUMPADDRESS] > 0) { logging::LogPrintf("net_node::ThreadDumpAddresses still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_MINTER] > 0) { logging::LogPrintf("ThreadStakeMinter still running\n"); }
+    if(net_node::vnThreadsRunning[THREAD_SCRIPTCHECK] > 0) { logging::LogPrintf("block_check::thread::ThreadScriptCheck still running\n"); }
     while(net_node::vnThreadsRunning[THREAD_MESSAGEHANDLER] > 0 || net_node::vnThreadsRunning[THREAD_RPCHANDLER] > 0 || net_node::vnThreadsRunning[THREAD_SCRIPTCHECK] > 0)
         util::Sleep(20);
     util::Sleep(50);

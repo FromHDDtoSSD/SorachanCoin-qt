@@ -90,7 +90,7 @@ bool irc::DecodeAddress(std::string str, CService &addr)
 bool irc::Send(SOCKET hSocket, const char *pszSend)
 {
     if (::strstr(pszSend, "PONG") != pszSend) {
-        printf("IRC SENDING: %s\n", pszSend);
+        logging::LogPrintf("IRC SENDING: %s\n", pszSend);
     }
 
     const char *psz = pszSend;
@@ -139,7 +139,7 @@ int irc::RecvUntil(SOCKET hSocket, const char *psz1, const char *psz2/* =NULL */
             return 0;
         }
 
-        printf("IRC %s\n", strLine.c_str());
+        logging::LogPrintf("IRC %s\n", strLine.c_str());
         if (psz1 && strLine.find(psz1) != std::string::npos) {
             return 1;
         }
@@ -161,7 +161,7 @@ bool irc::Wait(int nSeconds)
         return false;
     }
 
-    printf("IRC waiting %d seconds to reconnect\n", nSeconds);
+    logging::LogPrintf("IRC waiting %d seconds to reconnect\n", nSeconds);
     for (int i = 0; i < nSeconds; ++i)
     {
         if (args_bool::fShutdown) {
@@ -189,7 +189,7 @@ bool irc::RecvCodeLine(SOCKET hSocket, const char *psz1, std::string &strRet)
         }
 
         if (vWords[1] == psz1) {
-            printf("IRC %s\n", strLine.c_str());
+            logging::LogPrintf("IRC %s\n", strLine.c_str());
             strRet = strLine;
             return true;
         }
@@ -219,7 +219,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 
     // Hybrid IRC used by lfnet always returns IP when you userhost yourself,
     // but in case another IRC is ever used this should work.
-    printf("irc::GetIPFromIRC() got userhost %s\n", strHost.c_str());
+    logging::LogPrintf("irc::GetIPFromIRC() got userhost %s\n", strHost.c_str());
     CNetAddr addr(strHost, true);
     if (! addr.IsValid()) {
         return false;
@@ -234,7 +234,7 @@ void irc::ThreadIRCSeed(void *parg)
     // Make this thread recognisable as the IRC seeding thread
     bitthread::RenameThread(strCoinName "coin-ircseed");
 
-    printf("irc::ThreadIRCSeed started\n");
+    logging::LogPrintf("irc::ThreadIRCSeed started\n");
 
     try {
         irc::ThreadIRCSeed2(parg);
@@ -243,7 +243,7 @@ void irc::ThreadIRCSeed(void *parg)
     } catch (...) {
         excep::PrintExceptionContinue(nullptr, "irc::ThreadIRCSeed()");
     }
-    printf("irc::ThreadIRCSeed exited\n");
+    logging::LogPrintf("irc::ThreadIRCSeed exited\n");
 }
 
 //
@@ -266,7 +266,7 @@ void irc::ThreadIRCSeed2(void *parg)
         return;
     }
 
-    printf("irc::ThreadIRCSeed trying to connect...\n");
+    logging::LogPrintf("irc::ThreadIRCSeed trying to connect...\n");
 
     int nErrorWait = 10;
     int nRetryWait = 10;
@@ -284,7 +284,7 @@ void irc::ThreadIRCSeed2(void *parg)
 
         SOCKET hSocket;
         if (! netbase::manage::ConnectSocket(addrConnect, hSocket)) {
-            printf("IRC connect failed\n");
+            logging::LogPrintf("IRC connect failed\n");
             nErrorWait = nErrorWait * 11 / 10;
             if (irc::Wait(nErrorWait += 60)) {
                 continue;
@@ -325,7 +325,7 @@ void irc::ThreadIRCSeed2(void *parg)
         if (nRet != 1) {
             netbase::manage::CloseSocket(hSocket);
             if (nRet == 2) {
-                printf("IRC name already in use\n");
+                logging::LogPrintf("IRC name already in use\n");
                 nNameRetry++;
                 irc::Wait(10);
                 continue;
@@ -346,7 +346,7 @@ void irc::ThreadIRCSeed2(void *parg)
         //
         CNetAddr addrFromIRC;
         if (irc::GetIPFromIRC(hSocket, strMyName, addrFromIRC)) {
-            printf("irc::GetIPFromIRC() returned %s\n", addrFromIRC.ToString().c_str());
+            logging::LogPrintf("irc::GetIPFromIRC() returned %s\n", addrFromIRC.ToString().c_str());
 
             //
             // Don't use our IP as our nick if we're not listening
@@ -399,7 +399,7 @@ void irc::ThreadIRCSeed2(void *parg)
                 // could get full length name at index 10, but would be different from join messages
                 //
                 strName = vWords[7];
-                printf("IRC got who\n");
+                logging::LogPrintf("IRC got who\n");
             }
 
             if (vWords[1] == "JOIN" && vWords[0].size() > 1) {
@@ -407,7 +407,7 @@ void irc::ThreadIRCSeed2(void *parg)
                 // :username!username@50000007.F000000B.90000002.IP JOIN :#channelname
                 //
                 strName = vWords[0].substr(1, vWords[0].find('!', 1) - 1);
-                printf("IRC got join\n");
+                logging::LogPrintf("IRC got join\n");
             }
 
             if (strName.compare(0,1, "u") == 0) {
@@ -415,11 +415,11 @@ void irc::ThreadIRCSeed2(void *parg)
                 if (irc::DecodeAddress(strName, addr)) {
                     addr.set_nTime( bitsystem::GetAdjustedTime() );
                     if (net_node::addrman.Add(addr, addrConnect, 51 * 60)) {
-                        printf("IRC got new address: %s\n", addr.ToString().c_str());
+                        logging::LogPrintf("IRC got new address: %s\n", addr.ToString().c_str());
                     }
                     irc::nGotIRCAddresses++;
                 } else {
-                    printf("IRC decode failed\n");
+                    logging::LogPrintf("IRC decode failed\n");
                 }
             }
         }
@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
 {
     WSADATA wsadata;
     if (::WSAStartup(MAKEWORD(2,2), &wsadata) != NO_ERROR) {
-        printf("Error at WSAStartup()\n");
+        ::printf("Error at WSAStartup()\n");
         return false;
     }
 

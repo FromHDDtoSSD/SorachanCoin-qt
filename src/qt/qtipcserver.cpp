@@ -55,7 +55,7 @@ bool ipcScanCmd(int argc, char *argv[], bool fRelay)
                 // don't log the "file not found" exception, because that's normal for
                 // the first start of the first instance
                 if (ex.get_error_code() != boost::interprocess::not_found_error || !fRelay) {
-                    printf("main() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
+                    logging::LogPrintf("main() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
                     break;
                 }
             }
@@ -76,12 +76,12 @@ void ipcThread(void *pArg)
     } catch (...) {
         excep::PrintExceptionContinue(nullptr, "ipcThread()");
     }
-    printf("ipcThread exited\n");
+    logging::LogPrintf("ipcThread exited\n");
 }
 
 void ipcThread2(void *pArg)
 {
-    printf("ipcThread started\n");
+    logging::LogPrintf("ipcThread started\n");
 
     boost::interprocess::message_queue *mq = (boost::interprocess::message_queue *)pArg;
     char buffer[MAX_URI_LENGTH + 1] = "";
@@ -143,7 +143,7 @@ void qti_server::ipcInit(int argc, char *argv[])
 
         mq = new(std::nothrow) boost::interprocess::message_queue(boost::interprocess::open_or_create, bitcoin_queue_name.c_str(), 2, MAX_URI_LENGTH);
     } catch (const boost::interprocess::interprocess_exception &ex) {
-        printf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
+        logging::LogPrintf("ipcInit() - boost interprocess exception #%d: %s\n", ex.get_error_code(), ex.what());
         return;
     } catch (const std::bad_alloc &) {
         throw qt_error("ipcInit Failed to allocate memory.", nullptr);

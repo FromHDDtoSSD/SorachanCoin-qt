@@ -180,7 +180,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     //int64_t nCredit = wtx.GetCredit(MINE_ALL);
     //int64_t nDebit = wtx.GetDebit(MINE_ALL);
     //int64_t nMine = nCredit - nDebit;
-    //printf("TransactionRecord::updateStatus %s _ %I64d %d %d\n", wtx.GetHash().ToString().c_str(), nMine, wtx.IsCoinBase(), wtx.IsCoinStake());
+    //logging::LogPrintf("TransactionRecord::updateStatus %s _ %I64d %d %d\n", wtx.GetHash().ToString().c_str(), nMine, wtx.IsCoinBase(), wtx.IsCoinStake());
 
     //
     // Find confirmations

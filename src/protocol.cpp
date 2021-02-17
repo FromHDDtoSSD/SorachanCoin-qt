@@ -58,7 +58,7 @@ bool CMessageHeader::IsValid() const
 
     // Message size
     if (nMessageSize > compact_size::MAX_SIZE) {
-        printf("CMessageHeader::IsValid() : (%s, %u bytes) nMessageSize > compact_size::MAX_SIZE\n", GetCommand().c_str(), nMessageSize);
+        logging::LogPrintf("CMessageHeader::IsValid() : (%s, %u bytes) nMessageSize > compact_size::MAX_SIZE\n", GetCommand().c_str(), nMessageSize);
         return false;
     }
 

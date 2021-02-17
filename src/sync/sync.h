@@ -93,8 +93,8 @@ public:
 
 #ifdef DEBUG_LOCKCONTENTION
 inline void PrintLockContention(const char *pszName, const char *pszFile, int nLine) {
-    printf("LOCKCONTENTION: %s\n", pszName);
-    printf("Locker: %s:%d\n", pszFile, nLine);
+    logging::LogPrintf("LOCKCONTENTION: %s\n", pszName);
+    logging::LogPrintf("Locker: %s:%d\n", pszFile, nLine);
 }
 #endif
 

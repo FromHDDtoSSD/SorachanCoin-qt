@@ -185,7 +185,7 @@ bool netbase::manage::LookupNumeric(const char *pszName, CService &addr, uint16_
 
 bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
 {
-    printf("SOCKS4 connecting %s\n", addrDest.ToString().c_str());
+    logging::LogPrintf("SOCKS4 connecting %s\n", addrDest.ToString().c_str());
     if (! addrDest.IsIPv4()) {
         netbase::manage::CloseSocket(hSocket);
         return print::error("Proxy destination is not IPv4");
@@ -218,18 +218,18 @@ bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
     if (pchRet[1] != 0x5a) {
         netbase::manage::CloseSocket(hSocket);
         if (pchRet[1] != 0x5b) {
-            printf("ERROR: Proxy returned error %d\n", pchRet[1]);
+            logging::LogPrintf("ERROR: Proxy returned error %d\n", pchRet[1]);
         }
         return false;
     }
 
-    printf("SOCKS4 connected %s\n", addrDest.ToString().c_str());
+    logging::LogPrintf("SOCKS4 connected %s\n", addrDest.ToString().c_str());
     return true;
 }
 
 bool netbase::manage::Socks5(std::string strDest, uint16_t port, SOCKET &hSocket)
 {
-    printf("SOCKS5 connecting %s\n", strDest.c_str());
+    logging::LogPrintf("SOCKS5 connecting %s\n", strDest.c_str());
     if (strDest.size() > 255) {
         netbase::manage::CloseSocket(hSocket);
         return print::error("Hostname too long");
@@ -323,7 +323,7 @@ bool netbase::manage::Socks5(std::string strDest, uint16_t port, SOCKET &hSocket
         return print::error("Error reading from proxy");
     }
 
-    printf("SOCKS5 connected %s\n", strDest.c_str());
+    logging::LogPrintf("SOCKS5 connected %s\n", strDest.c_str());
     return true;
 }
 
@@ -339,7 +339,7 @@ bool netbase::manage::ConnectSocketDirectly(const CService &addrConnect, SOCKET 
 
     socklen_t len = sizeof(sockaddr);
     if (! addrConnect.GetSockAddr((struct sockaddr *)&sockaddr, &len)) {
-        printf("Cannot connect to %s: unsupported network\n", addrConnect.ToString().c_str());
+        logging::LogPrintf("Cannot connect to %s: unsupported network\n", addrConnect.ToString().c_str());
         return false;
     }
 
@@ -379,12 +379,12 @@ bool netbase::manage::ConnectSocketDirectly(const CService &addrConnect, SOCKET 
             FD_SET(hSocket, &fdset);
             int nRet = ::select(hSocket + 1, NULL, &fdset, NULL, &timeout);
             if (nRet == 0) {
-                printf("connection timeout\n");
+                logging::LogPrintf("connection timeout\n");
                 netbase::manage::CloseSocket(hSocket);
                 return false;
             }
             if (nRet == SOCKET_ERROR) {
-                printf("select() for connection failed: %i\n",WSAGetLastError());
+                logging::LogPrintf("select() for connection failed: %i\n",WSAGetLastError());
                 netbase::manage::CloseSocket(hSocket);
                 return false;
             }
@@ -396,12 +396,12 @@ bool netbase::manage::ConnectSocketDirectly(const CService &addrConnect, SOCKET 
             if (::getsockopt(hSocket, SOL_SOCKET, SO_ERROR, &nRet, &nRetSize) == SOCKET_ERROR)
 #endif
             {
-                printf("getsockopt() for connection failed: %i\n",WSAGetLastError());
+                logging::LogPrintf("getsockopt() for connection failed: %i\n",WSAGetLastError());
                 netbase::manage::CloseSocket(hSocket);
                 return false;
             }
             if (nRet != 0) {
-                printf("connect() failed after select(): %s\n",strerror(nRet));
+                logging::LogPrintf("connect() failed after select(): %s\n",strerror(nRet));
                 netbase::manage::CloseSocket(hSocket);
                 return false;
             }
@@ -412,7 +412,7 @@ bool netbase::manage::ConnectSocketDirectly(const CService &addrConnect, SOCKET 
         else
 #endif
         {
-            printf("connect() failed: %i\n",WSAGetLastError());
+            logging::LogPrintf("connect() failed: %i\n",WSAGetLastError());
             netbase::manage::CloseSocket(hSocket);
             return false;
         }

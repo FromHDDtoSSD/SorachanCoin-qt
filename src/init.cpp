@@ -91,7 +91,7 @@ void boot::Shutdown(void *parg)
         if(! bitthread::NewThread(entry::ExitTimeout, nullptr))
             bitthread::thread_error(std::string(__func__) + " :ExitTimeout");
         util::Sleep(50);
-        printf("%s exited\n\n", strCoinName);
+        logging::LogPrintf("%s exited\n\n", strCoinName);
         fExit = true;
 #ifndef QT_GUI
         // ensure non-UI client gets exited here, but let Bitcoin-Qt reach 'return 0;' in bitcoin.cpp
@@ -695,7 +695,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         // -zapwallettx implies a rescan
         if (map_arg::SoftSetBoolArg("-rescan", true)) {
-            printf("AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\n");
+            logging::LogPrintf("AppInit2 : parameter interaction: -zapwallettxes=1 -> setting -rescan=1\n");
         }
     }
 
@@ -837,14 +837,14 @@ bool entry::AppInit2(bool restart/*=false*/)
         iofs::ShrinkDebugFile();
     }
 
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    printf("%s version %s (%s)\n", strCoinName, format_version::FormatFullVersion().c_str(), version::CLIENT_DATE.c_str());
-    printf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
+    logging::LogPrintf("\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    logging::LogPrintf("%s version %s (%s)\n", strCoinName, format_version::FormatFullVersion().c_str(), version::CLIENT_DATE.c_str());
+    logging::LogPrintf("Using OpenSSL version %s\n", SSLeay_version(SSLEAY_VERSION));
     if (! args_bool::fLogTimestamps) {
-        printf("Startup time: %s\n", util::DateTimeStrFormat("%x %H:%M:%S", bitsystem::GetTime()).c_str());
+        logging::LogPrintf("Startup time: %s\n", util::DateTimeStrFormat("%x %H:%M:%S", bitsystem::GetTime()).c_str());
     }
-    printf("Default data directory %s\n", iofs::GetDefaultDataDir().string().c_str());
-    printf("Used data directory %s\n", strDataDir.c_str());
+    logging::LogPrintf("Default data directory %s\n", iofs::GetDefaultDataDir().string().c_str());
+    logging::LogPrintf("Used data directory %s\n", strDataDir.c_str());
     std::ostringstream strErrors;
 
     if (args_bool::fDaemon) {
@@ -853,7 +853,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     //I_DEBUG_CS("Step 4d: Script check ...");
     if (block_info::nScriptCheckThreads) {
-        printf("Using %u threads for script verification\n", block_info::nScriptCheckThreads);
+        logging::LogPrintf("Using %u threads for script verification\n", block_info::nScriptCheckThreads);
         for (int i=0; i < block_info::nScriptCheckThreads-1; ++i) {
             if(! bitthread::NewThread(block_check::thread::ThreadScriptCheck, nullptr))
                 bitthread::thread_error(std::string(__func__) + " :ThreadScriptCheck");
@@ -1079,7 +1079,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         return false;
     }
 
-    printf("Loading block index...\n");
+    logging::LogPrintf("Loading block index...\n");
     bool fLoaded = false;
     while (! fLoaded)
     {
@@ -1115,10 +1115,10 @@ bool entry::AppInit2(bool restart/*=false*/)
     // If so, exit. As the program has not fully started yet, Shutdown() is possibly overkill.
     //
     if (args_bool::fRequestShutdown) {
-        printf("Shutdown requested. Exiting.\n");
+        logging::LogPrintf("Shutdown requested. Exiting.\n");
         return false;
     }
-    printf(" block index %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
+    logging::LogPrintf(" block index %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
 
     if (map_arg::GetBoolArg("-printblockindex") || map_arg::GetBoolArg("-printblocktree")) {
         CBlock_print::PrintBlockTree();
@@ -1138,12 +1138,12 @@ bool entry::AppInit2(bool restart/*=false*/)
                 block.ReadFromDisk(pindex);
                 block.BuildMerkleTree();
                 block.print();
-                printf("\n");
+                logging::LogPrintf("\n");
                 nFound++;
             }
         }
         if (nFound == 0) {
-            printf("No blocks matching %s were found\n", strMatch.c_str());
+            logging::LogPrintf("No blocks matching %s were found\n", strMatch.c_str());
         }
         return false;
     }
@@ -1174,7 +1174,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading wallet..."));
-    printf("Loading wallet...\n");
+    logging::LogPrintf("Loading wallet...\n");
     nStart = util::GetTimeMillis();
 
     bool fFirstRun = true;
@@ -1195,7 +1195,7 @@ bool entry::AppInit2(bool restart/*=false*/)
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of coin") << "\n";
         } else if (nLoadWalletRet == DB_NEED_REWRITE) {
             strErrors << _("Wallet needed to be rewritten: restart " strCoinName " to complete") << "\n";
-            printf("%s", strErrors.str().c_str());
+            logging::LogPrintf("%s", strErrors.str().c_str());
             return InitError(strErrors.str());
         } else {
             strErrors << _("Error loading wallet.dat") << "\n";
@@ -1205,11 +1205,11 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-upgradewallet", fFirstRun)) {
         int nMaxVersion = map_arg::GetArgInt("-upgradewallet", 0);
         if (nMaxVersion == 0) { // the -upgradewallet without argument case
-            printf("Performing wallet upgrade to %i\n", FEATURE_LATEST);
+            logging::LogPrintf("Performing wallet upgrade to %i\n", FEATURE_LATEST);
             nMaxVersion = version::CLIENT_VERSION;
             entry::pwalletMain->SetMinVersion(FEATURE_LATEST); // permanently upgrade the wallet immediately
         } else {
-            printf("Allowing wallet upgrade up to %i\n", nMaxVersion);
+            logging::LogPrintf("Allowing wallet upgrade up to %i\n", nMaxVersion);
         }
 
         if (nMaxVersion < entry::pwalletMain->GetVersion()) {
@@ -1243,8 +1243,8 @@ bool entry::AppInit2(bool restart/*=false*/)
         */
     }
 
-    printf("%s", strErrors.str().c_str());
-    printf(" wallet      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
+    logging::LogPrintf("%s", strErrors.str().c_str());
+    logging::LogPrintf(" wallet      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
 
     wallet_process::manage::RegisterWallet(entry::pwalletMain);
 
@@ -1260,10 +1260,10 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
     if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->get_nHeight() > pindexRescan->get_nHeight()) {
         CClientUIInterface::uiInterface.InitMessage(_("Rescanning..."));
-        printf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->get_nHeight() - pindexRescan->get_nHeight(), pindexRescan->get_nHeight());
+        logging::LogPrintf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->get_nHeight() - pindexRescan->get_nHeight(), pindexRescan->get_nHeight());
         nStart = util::GetTimeMillis();
         entry::pwalletMain->ScanForWalletTransactions(pindexRescan, true);
-        printf(" rescan      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
+        logging::LogPrintf(" rescan      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
     }
 
     // ********************************************************* Step 9: import blocks
@@ -1301,16 +1301,16 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 11: load peers")
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading addresses..."));
-    printf("Loading addresses...\n");
+    logging::LogPrintf("Loading addresses...\n");
     nStart = util::GetTimeMillis();
 
     {
         CAddrDB adb;
         if (! adb.Read(net_node::addrman))
-            printf("Invalid or missing peers.dat; recreating\n");
+            logging::LogPrintf("Invalid or missing peers.dat; recreating\n");
     }
 
-    printf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
+    logging::LogPrintf("Loaded %i addresses from peers.dat  %" PRId64 "ms\n", net_node::addrman.size(), util::GetTimeMillis() - nStart);
 
     // ********************************************************* Step 12: start node
     I_DEBUG_CS("Step 12: start node")
@@ -1321,11 +1321,11 @@ bool entry::AppInit2(bool restart/*=false*/)
     seed::RandAddSeedPerfmon();
 
     //// debug print
-    printf("mapBlockIndex.size() = %" PRIszu "\n",   block_info::mapBlockIndex.size());
-    printf("nBestHeight = %d\n",                     block_info::nBestHeight);
-    printf("setKeyPool.size() = %" PRIszu "\n",      entry::pwalletMain->setKeyPool.size());
-    printf("mapWallet.size() = %" PRIszu "\n",       entry::pwalletMain->mapWallet.size());
-    printf("mapAddressBook.size() = %" PRIszu "\n",  entry::pwalletMain->mapAddressBook.size());
+    logging::LogPrintf("mapBlockIndex.size() = %" PRIszu "\n",   block_info::mapBlockIndex.size());
+    logging::LogPrintf("nBestHeight = %d\n",                     block_info::nBestHeight);
+    logging::LogPrintf("setKeyPool.size() = %" PRIszu "\n",      entry::pwalletMain->setKeyPool.size());
+    logging::LogPrintf("mapWallet.size() = %" PRIszu "\n",       entry::pwalletMain->mapWallet.size());
+    logging::LogPrintf("mapAddressBook.size() = %" PRIszu "\n",  entry::pwalletMain->mapAddressBook.size());
 
     if (! bitthread::NewThread(net_node::StartNode, nullptr))
         InitError(_("Error: could not start node"));
@@ -1348,7 +1348,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 14: finished")
 
     CClientUIInterface::uiInterface.InitMessage(_("Done loading"));
-    printf("Done loading\n");
+    logging::LogPrintf("Done loading\n");
 
     if (! strErrors.str().empty())
         return InitError(strErrors.str());

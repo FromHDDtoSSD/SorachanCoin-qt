@@ -104,7 +104,7 @@ static void ThreadSafeMessageBox(const std::string &message, const std::string &
                                   Q_ARG(QString, QString::fromStdString(message)),
                                   Q_ARG(bool, modal));
     } else {
-        printf("%s: %s\n", caption.c_str(), message.c_str());
+        logging::LogPrintf("%s: %s\n", caption.c_str(), message.c_str());
         fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
     }
 }

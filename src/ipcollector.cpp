@@ -41,7 +41,7 @@ bool ip_coll::AddPeer(std::string &strIpAddr)
         return false;
     }
 
-    printf("Adding node %s\n", strIpAddr.c_str());
+    logging::LogPrintf("Adding node %s\n", strIpAddr.c_str());
     net_node::vAddedNodes.push_back(strIpAddr);
 
     return true;
@@ -49,7 +49,7 @@ bool ip_coll::AddPeer(std::string &strIpAddr)
 
 void ip_coll::ThreadIPCollector(void *parg)
 {
-    printf("ip_coll::ThreadIPCollector started\n");
+    logging::LogPrintf("ip_coll::ThreadIPCollector started\n");
 
     net_node::vnThreadsRunning[THREAD_IPCOLLECTOR]++;
 
@@ -80,7 +80,7 @@ void ip_coll::ThreadIPCollector(void *parg)
                 // If RPC server is enabled then we don't have to parse anything.
                 //
                 std::string strCollectorOutput = exec(strExecutableFilePath.c_str());
-                printf("Peer collector output: %s\n", strCollectorOutput.c_str());
+                logging::LogPrintf("Peer collector output: %s\n", strCollectorOutput.c_str());
             } else {
                 //
                 // Otherwise, there is a work to be done.
@@ -103,6 +103,6 @@ void ip_coll::ThreadIPCollector(void *parg)
         }
     }
 
-    printf("ip_coll::ThreadIPCollector stopped\n");
+    logging::LogPrintf("ip_coll::ThreadIPCollector stopped\n");
     net_node::vnThreadsRunning[THREAD_IPCOLLECTOR]--;
 }

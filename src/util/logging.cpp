@@ -10,10 +10,6 @@
 #include <util/time.h>
 #include <version.h>
 
-#ifndef printf
-# define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
-#endif
-
 BCLog::Logger &LogInstance() noexcept {
 /**
  * NOTE: the logger instances is leaked on exit. This is ugly, but will be
@@ -258,7 +254,7 @@ bool BCLog::Logger::ShrinkDebugFile() {
     // Scroll debug.log if it's getting too big
     FILE *file = fsbridge::fopen(m_file_path, "r");
     if(! file) {
-        printf("Failed to shrink debug log file: FILE* get error\n");
+        logging::LogPrintf("Failed to shrink debug log file: FILE* get error\n");
         return false;
     }
 
@@ -267,7 +263,7 @@ bool BCLog::Logger::ShrinkDebugFile() {
     try {
         log_size = fs::file_size(m_file_path);
     } catch (const fs::filesystem_error &) {
-        printf("Failed to shrink debug log file: log_size get error\n");
+        logging::LogPrintf("Failed to shrink debug log file: log_size get error\n");
         fclose(file);
         return false;
     }
@@ -280,7 +276,7 @@ bool BCLog::Logger::ShrinkDebugFile() {
             std::vector<char> vch(RECENT_DEBUG_HISTORY_SIZE, 0);
             if (::fseek(file, -((long)vch.size()), SEEK_END)) {
                 fclose(file);
-                printf("Failed to shrink debug log file: fseek(...) failed\n");
+                logging::LogPrintf("Failed to shrink debug log file: fseek(...) failed\n");
                 return false;
             }
             int nBytes = ::fread(vch.data(), 1, vch.size(), file);
@@ -295,12 +291,12 @@ bool BCLog::Logger::ShrinkDebugFile() {
                 }
                 ::fclose(wfile); // "w" fclose
             } else {
-                printf("Failed to shrink debug log file: fopen write failed\n");
+                logging::LogPrintf("Failed to shrink debug log file: fopen write failed\n");
                 return false;
             }
         } catch (const std::bad_alloc &) {
             if(file) ::fclose(file);
-            printf("Failed to shrink debug log file: memory allocate failure\n");
+            logging::LogPrintf("Failed to shrink debug log file: memory allocate failure\n");
             return false;
         }
     } else if (file != nullptr)
@@ -329,7 +325,7 @@ void InitLogging() {
     // Add newlines to the logfile to distinguish this execution from the last
     // one; called before console logging is set up, so this is only sent to
     // debug.log.
-    printf("\n\n\n\n\n");
+    logging::LogPrintf("\n\n\n\n\n");
 
 #ifdef QT_GUI
     if(args_bool::fTestNet)
@@ -351,8 +347,8 @@ void InitLogging() {
 #else
     version_string += " (release build)";
 #endif
-    //printf(PACKAGE_NAME " version %s\n", version_string);
-    printf(" version %s\n", version_string);
+    //logging::LogPrintf(PACKAGE_NAME " version %s\n", version_string);
+    logging::LogPrintf(" version %s\n", version_string);
 }
 
 bool OpenDebugFile() {

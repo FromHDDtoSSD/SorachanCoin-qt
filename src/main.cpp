@@ -213,7 +213,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
             {
                 ++block.set_nNonce();
                 if (block.get_nNonce() == 0) {
-                    printf("NONCE WRAPPED, incrementing time");
+                    logging::LogPrintf("NONCE WRAPPED, incrementing time");
                     ++block.set_nTime();
                 }
             }
@@ -223,10 +223,10 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         // Genesis check
         //
         block.print();        
-        printf("block.GetHash() == %s\n", block.GetHash().ToString().c_str());
-        printf("block.hashMerkleRoot == %s\n", block.get_hashMerkleRoot().ToString().c_str());
-        printf("block.nTime = %u \n", block.get_nTime());
-        printf("block.nNonce = %u \n", block.get_nNonce());
+        logging::LogPrintf("block.GetHash() == %s\n", block.GetHash().ToString().c_str());
+        logging::LogPrintf("block.hashMerkleRoot == %s\n", block.get_hashMerkleRoot().ToString().c_str());
+        logging::LogPrintf("block.nTime = %u \n", block.get_nTime());
+        logging::LogPrintf("block.nNonce = %u \n", block.get_nNonce());
 
         assert(block.get_hashMerkleRoot() == block_params::hashMerkleRoot);
         assert(block.GetHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
@@ -254,7 +254,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
             if (! txdb.WriteModifierUpgradeTime(0)) {
                 return print::error("LoadBlockIndex() : failed to init upgrade info");
             }
-            printf(" Upgrade Info: ModifierUpgradeTime txdb initialization\n");
+            logging::LogPrintf(" Upgrade Info: ModifierUpgradeTime txdb initialization\n");
         }
 
     }
@@ -287,13 +287,13 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         //
         if (txdb.ReadModifierUpgradeTime(bitkernel::nModifierUpgradeTime)) {
             if (bitkernel::nModifierUpgradeTime) {
-                printf(" Upgrade Info: blocktreedb upgrade detected at timestamp %d\n", bitkernel::nModifierUpgradeTime);
+                logging::LogPrintf(" Upgrade Info: blocktreedb upgrade detected at timestamp %d\n", bitkernel::nModifierUpgradeTime);
             } else {
-                printf(" Upgrade Info: no blocktreedb upgrade detected.\n");
+                logging::LogPrintf(" Upgrade Info: no blocktreedb upgrade detected.\n");
             }
         } else {
             bitkernel::nModifierUpgradeTime = bitsystem::GetTime();
-            printf(" Upgrade Info: upgrading blocktreedb at timestamp %u\n", bitkernel::nModifierUpgradeTime);
+            logging::LogPrintf(" Upgrade Info: upgrading blocktreedb at timestamp %u\n", bitkernel::nModifierUpgradeTime);
             if (! txdb.WriteModifierUpgradeTime(bitkernel::nModifierUpgradeTime)) {
                 return print::error("LoadBlockIndex() : failed to write upgrade info");
             }
@@ -358,11 +358,11 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
                 }
             }
         } catch (const std::exception &) {
-            printf("%s() : Deserialize or I/O error caught during load\n", BOOST_CURRENT_FUNCTION);
+            logging::LogPrintf("%s() : Deserialize or I/O error caught during load\n", BOOST_CURRENT_FUNCTION);
         }
     }
 
-    printf("Loaded %i blocks from external file in %" PRId64 "ms\n", nLoaded, util::GetTimeMillis() - nStart);
+    logging::LogPrintf("Loaded %i blocks from external file in %" PRId64 "ms\n", nLoaded, util::GetTimeMillis() - nStart);
     return nLoaded > 0;
 }
 

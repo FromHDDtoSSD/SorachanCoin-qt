@@ -225,7 +225,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                     // or other transactions in the memory pool.
                     //
                     if (! CTxMemPool::mempool.get_mapTx().count(txin.get_prevout().get_hash())) {
-                        printf("ERROR: CTxMemPool::mempool transaction missing input\n");
+                        logging::LogPrintf("ERROR: CTxMemPool::mempool transaction missing input\n");
                         if (args_bool::fDebug) {
                             assert("CTxMemPool::mempool transaction missing input" == 0);
                         }
@@ -277,7 +277,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             }
         }
 
-        // printf("miner CreateNewBlock Collect\n");
+        // logging::LogPrintf("miner CreateNewBlock Collect\n");
 
         //
         // Collect transactions into block
@@ -382,7 +382,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             nFees += nTxFees;
 
             if (args_bool::fDebug && map_arg::GetBoolArg("-printpriority")) {
-                printf("priority %.1f feeperkb %.1f txid %s\n", dPriority, dFeePerKb, tx.GetHash().ToString().c_str());
+                logging::LogPrintf("priority %.1f feeperkb %.1f txid %s\n", dPriority, dFeePerKb, tx.GetHash().ToString().c_str());
             }
 
             // Add transactions that depend on this one to the priority queue
@@ -401,7 +401,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             }
         }
 
-        // printf("miner CreateNewBlock reword\n");
+        // logging::LogPrintf("miner CreateNewBlock reword\n");
 
         block_info::nLastBlockTx = nBlockTx;
         block_info::nLastBlockSize = nBlockSize;
@@ -410,12 +410,12 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             pblock->set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees));
 
             if (args_bool::fDebug) {
-                printf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).get_vout(0).get_nValue());
+                logging::LogPrintf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).get_vout(0).get_nValue());
             }
         }
 
         if (args_bool::fDebug && map_arg::GetBoolArg("-printpriority")) {
-            printf("miner::CreateNewBlock(): total size %" PRIu64 "\n", nBlockSize);
+            logging::LogPrintf("miner::CreateNewBlock(): total size %" PRIu64 "\n", nBlockSize);
         }
 
         // Fill in header
@@ -511,9 +511,9 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     }
 
     //// debug print
-    printf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
+    logging::LogPrintf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
+    logging::LogPrintf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
 
     //
     // Found a solution
@@ -557,9 +557,9 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     }
 
     //// debug print
-    printf("miner::CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
+    logging::LogPrintf("miner::CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    printf("out %s\n", bitstr::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
+    logging::LogPrintf("out %s\n", bitstr::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
 
     // Found a solution
     {
@@ -665,7 +665,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
         nStakeInputsMapSize = inputsMap.size();
 
         if (args_bool::fDebug) {
-            printf("FillMap() : Map of %" PRIu64 " precalculated contexts has been created by stake miner\n", nStakeInputsMapSize);
+            logging::LogPrintf("FillMap() : Map of %" PRIu64 " precalculated contexts has been created by stake miner\n", nStakeInputsMapSize);
         }
     }
 
@@ -725,7 +725,7 @@ void miner::ThreadStakeMiner(void *parg)
     CBlockIndex *pindexPrev = block_info::pindexBest;
     uint32_t nBits = diff::spacing::GetNextTargetRequired(pindexPrev, true);
 
-    printf("ThreadStakeMinter started\n");
+    logging::LogPrintf("ThreadStakeMinter started\n");
     bool fTrySync = true;
     try {
         net_node::vnThreadsRunning[THREAD_MINTER]++;
@@ -768,7 +768,7 @@ void miner::ThreadStakeMiner(void *parg)
                 if (! pwallet->CreateCoinStake(LuckyInput.first, LuckyInput.second, solution.second, nBits, txCoinStake, key))    {        // Create new coinstake transaction
                     std::string strMessage = _("Warning: Unable to create coinstake transaction, see debug.log for the details. Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
-                    printf("*** %s\n", strMessage.c_str());
+                    logging::LogPrintf("*** %s\n", strMessage.c_str());
                     goto _endloop;
                 }
 
@@ -777,7 +777,7 @@ void miner::ThreadStakeMiner(void *parg)
                 if (! pblock) {
                     std::string strMessage = _("Warning: Unable to allocate memory for the new block object. Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
-                    printf("*** %s\n", strMessage.c_str());
+                    logging::LogPrintf("*** %s\n", strMessage.c_str());
                     goto _endloop;
                 }
 
@@ -788,7 +788,7 @@ void miner::ThreadStakeMiner(void *parg)
                 if (! key.Sign(pblock->GetHash(), pblock->set_vchBlockSig())) {
                     std::string strMessage = _("Warning: Proof-of-Stake miner is unable to sign the block (locked wallet?). Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
-                    printf("*** %s\n", strMessage.c_str());
+                    logging::LogPrintf("*** %s\n", strMessage.c_str());
                     goto _endloop;
                 }
 
@@ -820,5 +820,5 @@ _endloop:
         excep::PrintException(NULL, "ThreadStakeMinter()");
     }
 
-    printf("ThreadStakeMinter exiting, %d threads remaining\n", net_node::vnThreadsRunning[THREAD_MINTER]);
+    logging::LogPrintf("ThreadStakeMinter exiting, %d threads remaining\n", net_node::vnThreadsRunning[THREAD_MINTER]);
 }

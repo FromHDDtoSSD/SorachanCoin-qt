@@ -88,7 +88,7 @@ public:
         {
         case CT_NEW:
             if(inModel) {
-                printf("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
+                logging::LogPrintf("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
                 break;
             }
 
@@ -98,7 +98,7 @@ public:
             break;
         case CT_UPDATED:
             if(! inModel) {
-                printf("Warning: AddressTablePriv::updateEntry: Got CT_UPDATED, but entry is not in model\n");
+                logging::LogPrintf("Warning: AddressTablePriv::updateEntry: Got CT_UPDATED, but entry is not in model\n");
                 break;
             }
 
@@ -108,7 +108,7 @@ public:
             break;
         case CT_DELETED:
             if(! inModel) {
-                printf("Warning: AddressTablePriv::updateEntry: Got CT_DELETED, but entry is not in model\n");
+                logging::LogPrintf("Warning: AddressTablePriv::updateEntry: Got CT_DELETED, but entry is not in model\n");
                 break;
             }
 

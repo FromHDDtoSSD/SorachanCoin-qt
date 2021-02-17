@@ -205,10 +205,10 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
 #ifdef WIN32
     u_long nOne = 1;
     if(::ioctlsocket(sockfd, FIONBIO, &nOne) == SOCKET_ERROR) {
-        printf("ntp::ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
+        logging::LogPrintf("ntp::ConnectSocket() : ioctlsocket non-blocking setting failed, error %d\n", WSAGetLastError());
 #else
     if(::fcntl(sockfd, F_SETFL, O_NONBLOCK) == SOCKET_ERROR) {
-        printf("ntp::ConnectSocket() : fcntl non-blocking setting failed, error %d\n", errno);
+        logging::LogPrintf("ntp::ConnectSocket() : fcntl non-blocking setting failed, error %d\n", errno);
 #endif
         return -2;
     }
@@ -219,7 +219,7 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
     if(!msg || !prt) {
         if(msg) { delete msg; }
         if(prt) { delete prt; }
-        printf("ntp::ConnectSocket() : msg and prt memory allocate failure, error %d\n", errno);
+        logging::LogPrintf("ntp::ConnectSocket() : msg and prt memory allocate failure, error %d\n", errno);
         return -2;
     }
 
@@ -244,7 +244,7 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
 
     int retcode = ::sendto(sockfd, (char *)msg, len, 0, &cliaddr, servlen);
     if(retcode < 0) {
-        printf("sendto() failed: %d\n", retcode);
+        logging::LogPrintf("sendto() failed: %d\n", retcode);
         seconds_transmit = -3;
         goto _end;
     }
@@ -255,7 +255,7 @@ int64_t ntp::DoReq(SOCKET sockfd, socklen_t servlen, struct sockaddr cliaddr)
 
     retcode = ::select(sockfd + 1, &fdset, nullptr, nullptr, &timeout);
     if(retcode <= 0) {
-        printf("ntp recvfrom() error\n");
+        logging::LogPrintf("ntp recvfrom() error\n");
         seconds_transmit = -4;
         goto _end;
     }
@@ -312,16 +312,16 @@ void ntp::ThreadNtpSamples(void *parg)
 {
     const int64_t nMaxOffset = util::nOneDay; // Not a real limit, just sanity threshold.
 
-    printf("Trying to find NTP server at localhost...\n");
+    logging::LogPrintf("Trying to find NTP server at localhost...\n");
 
     std::string strLocalHost = net_basis::strLocal;
     if(NtpGetTime(strLocalHost) == bitsystem::GetTime()) {
-        printf("There is NTP server active at localhost,  we don't need NTP thread.\n");
+        logging::LogPrintf("There is NTP server active at localhost,  we don't need NTP thread.\n");
         nNtpOffset = 0;
         return;
     }
 
-    printf("ThreadNtpSamples started\n");
+    logging::LogPrintf("ThreadNtpSamples started\n");
     net_node::vnThreadsRunning[THREAD_NTP]++;
 
     // Make this thread recognisable as time synchronization thread
@@ -337,7 +337,7 @@ void ntp::ThreadNtpSamples(void *parg)
 
             if(util::abs64(nClockOffset) < nMaxOffset) {
                 // Everything seems right, remember new trusted offset.
-                printf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", strTrustedUpstream.c_str(), nClockOffset);
+                logging::LogPrintf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", strTrustedUpstream.c_str(), nClockOffset);
                 nNtpOffset = nClockOffset;
             } else {
                 // Something went wrong, disable trusted offset sampling.
@@ -362,7 +362,7 @@ void ntp::ThreadNtpSamples(void *parg)
                 int64_t nClockOffset = NtpGetTime(ip) - bitsystem::GetTime();
 
                 if(util::abs64(nClockOffset) < nMaxOffset) { // Skip the deliberately wrong timestamps
-                    printf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", ip.ToString().c_str(), nClockOffset);
+                    logging::LogPrintf("ThreadNtpSamples: new offset sample from %s, offset=%" PRId64 ".\n", ip.ToString().c_str(), nClockOffset);
                     vTimeOffsets.input(nClockOffset);
                 }
             }
@@ -386,11 +386,11 @@ void ntp::ThreadNtpSamples(void *parg)
             // If there is not enough node offsets data and NTP time offset is greater than 40 minutes then give a warning.
             std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong " strCoinName " will not work properly.");
             excep::set_strMiscWarning(strMessage);
-            printf("*** %s\n", strMessage.c_str());
+            logging::LogPrintf("*** %s\n", strMessage.c_str());
             CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage + " ", strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
         }
 
-        printf("nNtpOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNtpOffset, nNtpOffset / 60);
+        logging::LogPrintf("nNtpOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNtpOffset, nNtpOffset / 60);
 
         int nSleepHours = 1 + bitsystem::GetRandInt(5); // Sleep for 1-6 hours.
         for(int i = 0; i < nSleepHours * 3600 && !args_bool::fShutdown; ++i)
@@ -400,5 +400,5 @@ void ntp::ThreadNtpSamples(void *parg)
     }
 
     net_node::vnThreadsRunning[THREAD_NTP]--;
-    printf("ThreadNtpSamples exited\n");
+    logging::LogPrintf("ThreadNtpSamples exited\n");
 }
