@@ -126,7 +126,7 @@ public:
         // Take last bit of block hash as entropy bit
         unsigned int nEntropyBit = ((CBlockHeader_impl<T>::GetHash().Get64()) & 1llu);
         if (args_bool::fDebug && map_arg::GetBoolArg("-printstakemodifier"))
-            printf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", CBlockHeader_impl<T>::GetHash().ToString().c_str(), nEntropyBit);
+            logging::LogPrintf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", CBlockHeader_impl<T>::GetHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
     }
     // ppcoin: two types of block: proof-of-work or proof-of-stake
@@ -384,7 +384,7 @@ public:
     }
     std::string ToString() const;
     void print() const {
-        printf("%s\n", ToString().c_str());
+        logging::LogPrintf("%s\n", ToString().c_str());
     }
 };
 using CBlockIndex = CBlockIndex_impl<uint256>;
@@ -431,7 +431,7 @@ public:
     }
     std::string ToString() const;
     void print() const {
-        printf("%s\n", ToString().c_str());
+        logging::LogPrintf("%s\n", ToString().c_str());
     }
 
     ADD_SERIALIZE_METHODS

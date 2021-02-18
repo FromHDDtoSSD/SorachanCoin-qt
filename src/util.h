@@ -55,7 +55,6 @@ public:
         return false;
     }
 };
-#define printf(format, ...) logging::LogPrintf(format, ##__VA_ARGS__)
 
 //
 // API overload

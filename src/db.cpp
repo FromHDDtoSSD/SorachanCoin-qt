@@ -32,7 +32,7 @@ void CDBEnv::EnvShutdown()
     fDbEnvInit = false;
     int ret = dbenv.close(0);
     if (ret != 0) {
-        printf("EnvShutdown exception: %s (%d)\n", DbEnv::strerror(ret), ret);
+        logging::LogPrintf("EnvShutdown exception: %s (%d)\n", DbEnv::strerror(ret), ret);
     }
     if (! fMockDb) {
         DbEnv(0).remove(strPath.c_str(), 0);
@@ -71,7 +71,7 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
     boost::filesystem::create_directory(pathLogDir);
 
     boost::filesystem::path pathErrorFile = pathDataDir / "db.log";
-    printf("dbenv.open LogDir=%s ErrorFile=%s\n", pathLogDir.string().c_str(), pathErrorFile.string().c_str());
+    logging::LogPrintf("dbenv.open LogDir=%s ErrorFile=%s\n", pathLogDir.string().c_str(), pathErrorFile.string().c_str());
 
     unsigned int nEnvFlags = 0;
     if (map_arg::GetBoolArg("-privdb", true)) {
@@ -126,7 +126,7 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
         nBlocks = nMaxLocks / 48768;
         nDeepReorg = (nBlocks - 1) / 2;
 
-        printf("Final lk_max_locks is %u, sufficient for (worst case) %d block%s in a single transaction (up to a %d-deep reorganization)\n", nMaxLocks, nBlocks, (nBlocks == 1) ? "" : "s", nDeepReorg);
+        logging::LogPrintf("Final lk_max_locks is %u, sufficient for (worst case) %d block%s in a single transaction (up to a %d-deep reorganization)\n", nMaxLocks, nBlocks, (nBlocks == 1) ? "" : "s", nDeepReorg);
         if (nDeepReorg < 3) {
             if (nBlocks < 1) {
                 strMessage = strprintfc(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
@@ -135,7 +135,7 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
             }
 
             excep::set_strMiscWarning(strMessage);
-            printf("*** %s\n", strMessage.c_str());
+            logging::LogPrintf("*** %s\n", strMessage.c_str());
         }
     }
 #endif
@@ -152,7 +152,7 @@ void CDBEnv::MakeMock()
         throw std::runtime_error("CDBEnv::MakeMock(): during shutdown");
     }
 
-    printf("CDBEnv::MakeMock()\n");
+    logging::LogPrintf("CDBEnv::MakeMock()\n");
 
     dbenv.set_cachesize(1, 0, 1);
     dbenv.set_lg_bsize(10485760 * 4);
@@ -211,7 +211,7 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive, std::vector<CDBEnv::
     Db db(&dbenv, 0);
     int result = db.verify(strFile.c_str(), nullptr, &strDump, flags);
     if (result != 0) {
-        printf("ERROR: db salvage failed\n");
+        logging::LogPrintf("ERROR: db salvage failed\n");
         return false;
     }
 
@@ -429,14 +429,14 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                 CDBEnv::bitdb.mapFileUseCount.erase(strFile);
 
                 bool fSuccess = true;
-                printf("Rewriting %s...\n", strFile.c_str());
+                logging::LogPrintf("Rewriting %s...\n", strFile.c_str());
                 std::string strFileRes = strFile + ".rewrite";
 
                 { // surround usage of db with extra {}
                     CDB db(strFile.c_str(), "r");
                     Db *pdbCopy = new(std::nothrow) Db(&CDBEnv::bitdb.dbenv, 0);
                     if (pdbCopy == nullptr) {
-                        printf("Memory allocate failure for CDB::Rewrite.");
+                        logging::LogPrintf("Memory allocate failure for CDB::Rewrite.");
                         return false;
                     }
 
@@ -447,7 +447,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                         DB_CREATE,                    // Flags
                         0);
                     if (ret > 0) {
-                        printf("Cannot create database file %s\n", strFileRes.c_str());
+                        logging::LogPrintf("Cannot create database file %s\n", strFileRes.c_str());
                         fSuccess = false;
                     }
 
@@ -509,7 +509,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                     }
                 }
                 if (! fSuccess) {
-                    printf("Rewriting of %s FAILED!\n", strFileRes.c_str());
+                    logging::LogPrintf("Rewriting of %s FAILED!\n", strFileRes.c_str());
                 }
                 return fSuccess;
             }
@@ -527,7 +527,7 @@ void CDBEnv::Flush(bool fShutdown)
     //
     // Flush log data to the actual data file on all files that are not in use
     //
-    printf("Flush(%s)%s\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started");
+    logging::LogPrintf("Flush(%s)%s\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started");
     if (! fDbEnvInit) {
         return;
     }
@@ -539,28 +539,28 @@ void CDBEnv::Flush(bool fShutdown)
         {
             std::string strFile = (*mi).first;
             int nRefCount = (*mi).second;
-            printf("%s refcount=%d\n", strFile.c_str(), nRefCount);
+            logging::LogPrintf("%s refcount=%d\n", strFile.c_str(), nRefCount);
             if (nRefCount == 0) {
                 //
                 // Move log data to the dat file
                 //
                 CloseDb(strFile);
-                printf("%s checkpoint\n", strFile.c_str());
+                logging::LogPrintf("%s checkpoint\n", strFile.c_str());
                 dbenv.txn_checkpoint(0, 0, 0);
                 if (!CDBCommon::IsChainFile(strFile) || fDetachDB) {
-                    printf("%s detach\n", strFile.c_str());
+                    logging::LogPrintf("%s detach\n", strFile.c_str());
                     if (!fMockDb) {
                         dbenv.lsn_reset(strFile.c_str(), 0);
                     }
                 }
-                printf("%s closed\n", strFile.c_str());
+                logging::LogPrintf("%s closed\n", strFile.c_str());
                 mapFileUseCount.erase(mi++);
             } else {
                 ++mi;
             }
         }
 
-        printf("DBFlush(%s)%s ended %15" PRId64 "ms\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started", util::GetTimeMillis() - nStart);
+        logging::LogPrintf("DBFlush(%s)%s ended %15" PRId64 "ms\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started", util::GetTimeMillis() - nStart);
         if (args_bool::fShutdown) {
             char **listp;
             if (mapFileUseCount.empty()) {

@@ -13,6 +13,7 @@
 #include <vector>
 #include <cstring>
 #include <cleanse/cleanse.h>
+#include <util/logging.h>
 
 #define SET_ERROR(string) \
     sprintf(error, "%s %s:%d", (string), __FILE__, __LINE__)
@@ -506,7 +507,7 @@ unsigned char *cryptogram::decrypt_body(const ies_ctx_t *ctx, const cryptogram_t
 
     block += output_sum;
     if (EVP_DecryptFinal_ex(&cipher, block, &out_len) != 1) {
-        printf("Unable to decrypt the data using the chosen symmetric cipher. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
+        logging::LogPrintf("Unable to decrypt the data using the chosen symmetric cipher. {error = %s}\n", ERR_error_string(ERR_get_error(), NULL));
         EVP_CIPHER_CTX_cleanup(&cipher);
         free(output);
         return NULL;
@@ -559,7 +560,7 @@ ies_ctx_t *cryptogram::create_context(EC_KEY *user_key)
         ctx->user_key = user_key;
         return ctx;
     } catch (const std::bad_alloc &e) {
-        printf("Error: %s in %s:%d\n", e.what(), __FILE__, __LINE__);
+        logging::LogPrintf("Error: %s in %s:%d\n", e.what(), __FILE__, __LINE__);
         // TODO: add checking to NULL where necessary
         return NULL;
     }

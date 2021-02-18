@@ -45,7 +45,7 @@ public:
             args_bool::fShutdown = true;
             std::string strMessage = _("Warning: Disk space is low!");
             excep::set_strMiscWarning( strMessage );
-            printf("*** %s\n", strMessage.c_str());
+            logging::LogPrintf("*** %s\n", strMessage.c_str());
             CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage, strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
             boot::StartShutdown();
             return false;

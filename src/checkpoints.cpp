@@ -211,7 +211,7 @@ bool Checkpoints::manage::AcceptPendingSyncCheckpoint() {
         Checkpoints::hashPendingCheckpoint = 0;
         Checkpoints::checkpointMessage = Checkpoints::checkpointMessagePending;
         Checkpoints::checkpointMessagePending.SetNull();
-        printf("Checkpoints::manage::AcceptPendingSyncCheckpoint : sync-checkpoint at %s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
+        logging::LogPrintf("Checkpoints::manage::AcceptPendingSyncCheckpoint : sync-checkpoint at %s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
 
         // relay the checkpoint
         if (! Checkpoints::checkpointMessage.IsNull()) {
@@ -245,8 +245,8 @@ bool Checkpoints::manage::CheckSync(const uint256 &hashBlock, const CBlockIndex 
     LLOCK(Checkpoints::cs_hashSyncCheckpoint);
 
     // sync-checkpoint should always be accepted block
-    // printf("Checkpoints::manage::CheckSync: pindexSync - block Checkpoints::manage::hashSyncCheckpoint_%s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
-    // printf("Checkpoints::manage::CheckSync: pindexSync - block block_info::mapBlockIndex.count_%d\n", block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint));
+    // logging::LogPrintf("Checkpoints::manage::CheckSync: pindexSync - block Checkpoints::manage::hashSyncCheckpoint_%s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
+    // logging::LogPrintf("Checkpoints::manage::CheckSync: pindexSync - block block_info::mapBlockIndex.count_%d\n", block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint));
     assert(block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint));
     const CBlockIndex *pindexSync = block_info::mapBlockIndex[Checkpoints::manage::hashSyncCheckpoint];
 
@@ -294,7 +294,7 @@ bool Checkpoints::manage::ResetSyncCheckpoint() {
         //
         // checkpoint block accepted but not yet in main chain
         //
-        printf("Checkpoints::manage::ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString().c_str());
+        logging::LogPrintf("Checkpoints::manage::ResetSyncCheckpoint: SetBestChain to hardened checkpoint %s\n", hash.ToString().c_str());
         CTxDB txdb;
         CBlock block;
         if (! block.ReadFromDisk(block_info::mapBlockIndex[hash])) {
@@ -313,7 +313,7 @@ bool Checkpoints::manage::ResetSyncCheckpoint() {
         //
         Checkpoints::hashPendingCheckpoint = hash;
         Checkpoints::checkpointMessagePending.SetNull();
-        printf("Checkpoints::manage::ResetSyncCheckpoint: pending for sync-checkpoint %s\n", Checkpoints::hashPendingCheckpoint.ToString().c_str());
+        logging::LogPrintf("Checkpoints::manage::ResetSyncCheckpoint: pending for sync-checkpoint %s\n", Checkpoints::hashPendingCheckpoint.ToString().c_str());
     }
 
     BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type &i, Checkpoints::manage::mapCheckpoints)
@@ -324,7 +324,7 @@ bool Checkpoints::manage::ResetSyncCheckpoint() {
                 return print::error("Checkpoints::manage::ResetSyncCheckpoint: failed to write sync checkpoint %s", hash.ToString().c_str());
             }
 
-            printf("Checkpoints::manage::ResetSyncCheckpoint: sync-checkpoint reset to %s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
+            logging::LogPrintf("Checkpoints::manage::ResetSyncCheckpoint: sync-checkpoint reset to %s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
             return true;
         }
     }
@@ -379,7 +379,7 @@ bool Checkpoints::manage::SendSyncCheckpoint(uint256 hashCheckpoint) {
     }
 
     if(! checkpoint.ProcessSyncCheckpoint(nullptr)) {
-        printf("WARNING: Checkpoints::manage::SendSyncCheckpoint: Failed to process checkpoint.\n");
+        logging::LogPrintf("WARNING: Checkpoints::manage::SendSyncCheckpoint: Failed to process checkpoint.\n");
         return false;
     }
 
@@ -430,7 +430,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode *pfrom) {
         // We haven't received the checkpoint chain, keep the checkpoint as pending
         Checkpoints::hashPendingCheckpoint = hashCheckpoint;
         Checkpoints::checkpointMessagePending = *this;
-        printf("CSyncCheckpoint::ProcessSyncCheckpoint: pending for sync-checkpoint %s\n", hashCheckpoint.ToString().c_str());
+        logging::LogPrintf("CSyncCheckpoint::ProcessSyncCheckpoint: pending for sync-checkpoint %s\n", hashCheckpoint.ToString().c_str());
 
         // Ask this guy to fill in what we're missing
         if (pfrom) {
@@ -471,6 +471,6 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode *pfrom) {
     Checkpoints::checkpointMessage = *this;
     Checkpoints::hashPendingCheckpoint = 0;
     Checkpoints::checkpointMessagePending.SetNull();
-    printf("CSyncCheckpoint::ProcessSyncCheckpoint: sync-checkpoint at %s\n", hashCheckpoint.ToString().c_str());
+    logging::LogPrintf("CSyncCheckpoint::ProcessSyncCheckpoint: sync-checkpoint at %s\n", hashCheckpoint.ToString().c_str());
     return true;
 }

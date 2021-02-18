@@ -28,7 +28,7 @@ fs::path iofs::GetSpecialFolderPath(int nFolder, bool fCreate) {
     char pszPath[MAX_PATH] = "";
     if(::SHGetSpecialFolderPathA(nullptr, pszPath, nFolder, fCreate))
         return fs::path(pszPath);
-    printf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
+    logging::LogPrintf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
     return fs::path("");
 }
 #endif
@@ -165,7 +165,7 @@ void iofs::ShrinkDebugFile() {
         } catch (const std::bad_alloc &e) {
             // Bad things happen - no free memory in heap at program startup
             ::fclose(file);
-            printf("Warning: %s in %s:%d\n iofs::ShrinkDebugFile failed - debug.log expands further", e.what(), __FILE__, __LINE__);
+            logging::LogPrintf("Warning: %s in %s:%d\n iofs::ShrinkDebugFile failed - debug.log expands further", e.what(), __FILE__, __LINE__);
         }
     }
 }

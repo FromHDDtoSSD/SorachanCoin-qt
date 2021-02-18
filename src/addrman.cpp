@@ -274,7 +274,7 @@ void CAddrMan::MakeTried(CAddrInfo& info, int nId, int nOrigin)
 
 void CAddrMan::Good_(const CService &addr, int64_t nTime)
 {
-    // printf("Good: addr=%s\n", addr.ToString());
+    // logging::LogPrintf("Good: addr=%s\n", addr.ToString());
     int nId;
     CAddrInfo *pinfo = Find(addr, &nId);
 
@@ -320,7 +320,7 @@ void CAddrMan::Good_(const CService &addr, int64_t nTime)
         return;
     }
 
-    printf("Moving %s to tried\n", addr.ToString());
+    logging::LogPrintf("Moving %s to tried\n", addr.ToString());
 
     // move nId to the tried tables
     MakeTried(info, nId, nUBucket);
@@ -373,7 +373,7 @@ bool CAddrMan::Add_(const CAddress &addr, const CNetAddr &source, int64_t nTimeP
     } else {
         pinfo = Create(addr, source, &nId);
         pinfo->nTime = std::max((int64_t)0, (int64_t)pinfo->nTime - nTimePenalty);
-        // printf("Added %s [nTime=%fhr]\n", pinfo->ToString().c_str(), (bitsystem::GetAdjustedTime() - pinfo->nTime) / 3600.0);
+        // logging::LogPrintf("Added %s [nTime=%fhr]\n", pinfo->ToString().c_str(), (bitsystem::GetAdjustedTime() - pinfo->nTime) / 3600.0);
         nNew++;
         fNew = true;
     }

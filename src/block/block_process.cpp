@@ -33,9 +33,9 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
     static std::map<CService, CPubKey> mapReuseKey;
     seed::RandAddSeedPerfmon();
     if (args_bool::fDebug)
-        printf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
+        logging::LogPrintf("received: %s (%" PRIszu " bytes)\n", strCommand.c_str(), vRecv.size());
     if (map_arg::GetMapArgsCount("-dropmessagestest") && bitsystem::GetRand(strenc::atoi(map_arg::GetMapArgsString("-dropmessagestest"))) == 0) {
-        printf("dropmessagestest DROPPING RECV MESSAGE\n");
+        logging::LogPrintf("dropmessagestest DROPPING RECV MESSAGE\n");
         return true;
     }
 
@@ -55,7 +55,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         if (pfrom->nVersion < version::MIN_PROTO_VERSION) {
             // Since February 20, 2012, the protocol is initiated at version 209,
             // and earlier versions are no longer supported
-            printf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+            logging::LogPrintf("partner %s using obsolete version %i; disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return false;
         }
@@ -75,12 +75,12 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
 
         // Disconnect if we connected to ourself
         if (nNonce == bitsocket::nLocalHostNonce && nNonce > 1) {
-            printf("connected to self at %s, disconnecting\n", pfrom->addr.ToString().c_str());
+            logging::LogPrintf("connected to self at %s, disconnecting\n", pfrom->addr.ToString().c_str());
             pfrom->fDisconnect = true;
             return true;
         }
         if (pfrom->nVersion < 60010) {
-            printf("partner %s using a buggy client %d, disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
+            logging::LogPrintf("partner %s using a buggy client %d, disconnecting\n", pfrom->addr.ToString().c_str(), pfrom->nVersion);
             pfrom->fDisconnect = true;
             return true;
         }
@@ -144,7 +144,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         }
 
         pfrom->fSuccessfullyConnected = true;
-        printf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());
+        logging::LogPrintf("receive version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", pfrom->nVersion, pfrom->nStartingHeight, addrMe.ToString().c_str(), addrFrom.ToString().c_str(), pfrom->addr.ToString().c_str());
         cPeerBlockCounts.input(pfrom->nStartingHeight);
 
         // ppcoin: ask for pending sync-checkpoint if any
@@ -243,7 +243,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             pfrom->AddInventoryKnown(inv);
             bool fAlreadyHave = block_process::manage::AlreadyHave(txdb, inv);
             if (args_bool::fDebug)
-                printf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
+                logging::LogPrintf("  got inventory: %s  %s\n", inv.ToString().c_str(), fAlreadyHave ? "have" : "new");
             if (! fAlreadyHave)
                 pfrom->AskFor(inv);
             else if (inv.get_type() == _CINV_MSG_TYPE::MSG_BLOCK && block_process::mapOrphanBlocks.count(inv.get_hash()))
@@ -253,7 +253,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                 // the last block in an inv bundle sent in response to getblocks. Try to detect
                 // this situation and push another getblocks to continue.
                 pfrom->PushGetBlocks(block_info::mapBlockIndex[inv.get_hash()], uint256(0));
-                if (args_bool::fDebug) printf("force request: %s\n", inv.ToString().c_str());
+                if (args_bool::fDebug) logging::LogPrintf("force request: %s\n", inv.ToString().c_str());
             }
 
             // Track requests for our stuff
@@ -267,13 +267,13 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             return print::error("message getdata size() = %" PRIszu "", vInv.size());
         }
         if (args_bool::fDebugNet || (vInv.size() != 1))
-            printf("received getdata (%" PRIszu " invsz)\n", vInv.size());
+            logging::LogPrintf("received getdata (%" PRIszu " invsz)\n", vInv.size());
 
         for(const CInv &inv: vInv) {
             if (args_bool::fShutdown)
                 return true;
             if (args_bool::fDebugNet || (vInv.size() == 1))
-                printf("received getdata for: %s\n", inv.ToString().c_str());
+                logging::LogPrintf("received getdata for: %s\n", inv.ToString().c_str());
             if (inv.get_type() == _CINV_MSG_TYPE::MSG_BLOCK) {
                 // Send block from disk
                 std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(inv.get_hash());
@@ -332,10 +332,10 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             pindex = pindex->set_pnext();
 
         int nLimit = 500;
-        printf("getblocks %d to %s limit %d\n", (pindex ? pindex->get_nHeight() : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
+        logging::LogPrintf("getblocks %d to %s limit %d\n", (pindex ? pindex->get_nHeight() : -1), hashStop.ToString().substr(0,20).c_str(), nLimit);
         for (; pindex; pindex = pindex->set_pnext()) {
             if (pindex->GetBlockHash() == hashStop) {
-                printf("  getblocks stopping at %d %s\n", pindex->get_nHeight(), pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                logging::LogPrintf("  getblocks stopping at %d %s\n", pindex->get_nHeight(), pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 // ppcoin: tell downloading node about the latest block if it's
                 // without risk being rejected due to stake connection check
                 if (hashStop != block_info::hashBestChain && pindex->GetBlockTime() + block_check::nStakeMinAge > block_info::pindexBest->GetBlockTime())
@@ -347,7 +347,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             if (--nLimit <= 0) {
                 // When this block is requested, we'll send an inv that'll make them
                 // getblocks the next batch of inventory.
-                printf("  getblocks stopping at limit %d %s\n", pindex->get_nHeight(), pindex->GetBlockHash().ToString().substr(0,20).c_str());
+                logging::LogPrintf("  getblocks stopping at limit %d %s\n", pindex->get_nHeight(), pindex->GetBlockHash().ToString().substr(0,20).c_str());
                 pfrom->hashContinue = pindex->GetBlockHash();
                 break;
             }
@@ -384,7 +384,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
 
         std::vector<CBlock> vHeaders;
         int nLimit = 2000;
-        printf("getheaders %d to %s\n", (pindex ? pindex->get_nHeight() : -1), hashStop.ToString().substr(0,20).c_str());
+        logging::LogPrintf("getheaders %d to %s\n", (pindex ? pindex->get_nHeight() : -1), hashStop.ToString().substr(0,20).c_str());
         for (; pindex; pindex = pindex->set_pnext()) {
             vHeaders.push_back(pindex->GetBlockHeader());
             if (--nLimit <= 0 || pindex->GetBlockHash() == hashStop)
@@ -419,7 +419,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                     bool fMissingInputs2 = false;
 
                     if (orphanTx.AcceptToMemoryPool(txdb, true, &fMissingInputs2)) {
-                        printf("   accepted orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                        logging::LogPrintf("   accepted orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
                         wallet_process::manage::SyncWithWallets(tx, NULL, true);
                         bitrelay::RelayTransaction(orphanTx, orphanTxHash);
                         net_node::mapAlreadyAskedFor.erase(CInv(_CINV_MSG_TYPE::MSG_TX, orphanTxHash));
@@ -428,7 +428,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                     } else if (!fMissingInputs2) {
                         // invalid orphan
                         vEraseQueue.push_back(orphanTxHash);
-                        printf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
+                        logging::LogPrintf("   removed invalid orphan tx %s\n", orphanTxHash.ToString().substr(0,10).c_str());
                     }
                 }
             }
@@ -437,13 +437,13 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                 block_process::manage::EraseOrphanTx(hash);
         } else if (fMissingInputs) {
             if(! block_process::manage::AddOrphanTx(tx)) {
-                printf("mapOrphan overflow\n");
+                logging::LogPrintf("mapOrphan overflow\n");
                 return false;    // add
             }
 
             // DoS prevention: do not allow mapOrphanTransactions to grow unbounded
             unsigned int nEvicted = block_process::manage::LimitOrphanTxSize(block_params::MAX_ORPHAN_TRANSACTIONS);
-            if (nEvicted > 0) printf("mapOrphan overflow, removed %u tx\n", nEvicted);
+            if (nEvicted > 0) logging::LogPrintf("mapOrphan overflow, removed %u tx\n", nEvicted);
         }
         if (tx.nDoS)
             pfrom->Misbehaving(tx.nDoS);
@@ -452,7 +452,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         vRecv >> block;
         uint256 hashBlock = block.GetHash();
 
-        printf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
+        logging::LogPrintf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
         // block.print();
 
         CInv inv(_CINV_MSG_TYPE::MSG_BLOCK, hashBlock);
@@ -598,13 +598,13 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         int nHeaderSize = vRecv.GetSerializeSize(CMessageHeader());
         if (vRecv.end() - pstart < nHeaderSize) {
             if ((int)vRecv.size() > nHeaderSize) {
-                printf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
+                logging::LogPrintf("\n\nPROCESSMESSAGE MESSAGESTART NOT FOUND\n\n");
                 vRecv.erase(vRecv.begin(), vRecv.end() - nHeaderSize);
             }
             break;
         }
         if (pstart - vRecv.begin() > 0)
-            printf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
+            logging::LogPrintf("\n\nPROCESSMESSAGE SKIPPED %" PRIpdd " BYTES\n\n", pstart - vRecv.begin());
 
         vRecv.erase(vRecv.begin(), pstart);
 
@@ -613,7 +613,7 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         CMessageHeader hdr;
         vRecv >> hdr;
         if (! hdr.IsValid()) {
-            printf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
+            logging::LogPrintf("\n\nPROCESSMESSAGE: ERRORS IN HEADER %s\n\n\n", hdr.GetCommand().c_str());
             continue;
         }
         std::string strCommand = hdr.GetCommand();
@@ -621,7 +621,7 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         // Message size
         unsigned int nMessageSize = hdr.GetMessageSize();
         if (nMessageSize > compact_size::MAX_SIZE) {
-            printf("block_process::manage::ProcessMessages(%s, %u bytes) : nMessageSize > compact_size::MAX_SIZE\n", strCommand.c_str(), nMessageSize);
+            logging::LogPrintf("block_process::manage::ProcessMessages(%s, %u bytes) : nMessageSize > compact_size::MAX_SIZE\n", strCommand.c_str(), nMessageSize);
             continue;
         }
         if (nMessageSize > vRecv.size()) {
@@ -635,7 +635,7 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         unsigned int nChecksum = 0;
         std::memcpy(&nChecksum, &hash, sizeof(nChecksum));
         if (nChecksum != hdr.GetChecksum()) {
-            printf("block_process::manage::ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.GetChecksum());
+            logging::LogPrintf("block_process::manage::ProcessMessages(%s, %u bytes) : CHECKSUM ERROR nChecksum=%08x hdr.nChecksum=%08x\n", strCommand.c_str(), nMessageSize, nChecksum, hdr.GetChecksum());
             continue;
         }
 
@@ -655,10 +655,10 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
         } catch (std::ios_base::failure &e) {
             if (::strstr(e.what(), "end of data")) {
                 // Allow exceptions from under-length message on vRecv
-                printf("block_process::manage::ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
+                logging::LogPrintf("block_process::manage::ProcessMessages(%s, %u bytes) : Exception '%s' caught, normally caused by a message being shorter than its stated length\n", strCommand.c_str(), nMessageSize, e.what());
             } else if (strstr(e.what(), "size too large")) {
                 // Allow exceptions from over-long size
-                printf("block_process::manage::ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
+                logging::LogPrintf("block_process::manage::ProcessMessages(%s, %u bytes) : Exception '%s' caught\n", strCommand.c_str(), nMessageSize, e.what());
             } else
                 excep::PrintExceptionContinue(&e, "block_process::manage::ProcessMessages()");
         } catch (std::exception &e) {
@@ -667,7 +667,7 @@ bool block_process::manage::ProcessMessages(CNode *pfrom)
             excep::PrintExceptionContinue(NULL, "block_process::manage::ProcessMessages()");
         }
         if (! fRet)
-            printf("block_process::manage::ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
+            logging::LogPrintf("block_process::manage::ProcessMessage(%s, %u bytes) FAILED\n", strCommand.c_str(), nMessageSize);
     }
 
     vRecv.Compact();
@@ -781,7 +781,7 @@ bool block_process::manage::SendMessages(CNode *pto)
             const CInv& inv = (*pto->mapAskFor.begin()).second;
             if (! block_process::manage::AlreadyHave(txdb, inv)) {
                 if (args_bool::fDebugNet)
-                    printf("sending getdata: %s\n", inv.ToString().c_str());
+                    logging::LogPrintf("sending getdata: %s\n", inv.ToString().c_str());
 
                 vGetData.push_back(inv);
                 if (vGetData.size() >= 1000) {
@@ -871,7 +871,7 @@ bool block_process::manage::AddOrphanTx(const CTransaction &tx)
     // 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
     size_t nSize = tx.GetSerializeSize();
     if (nSize > block_transaction::MAX_ORPHAN_SERIALIZESIZE) {
-        printf("ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
+        logging::LogPrintf("ignoring large orphan tx (size: %" PRIszu ", hash: %s)\n", nSize, hash.ToString().substr(0,10).c_str());
         return false;
     }
 
@@ -879,7 +879,7 @@ bool block_process::manage::AddOrphanTx(const CTransaction &tx)
     for(const CTxIn &txin: tx.get_vin())
         block_process::manage::mapOrphanTransactionsByPrev[txin.get_prevout().get_hash()].insert(hash);
 
-    printf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
+    logging::LogPrintf("stored orphan tx %s (mapsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapOrphanTransactions.size());
     return true;
 }
 
@@ -951,7 +951,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
     // Strip the garbage from newly received blocks, if we found some
     if (! block_process::manage::IsCanonicalBlockSignature(pblock)) {
         if (! block_process::manage::ReserealizeBlockSignature(pblock))
-            printf("WARNING: ProcessBlock() : ReserealizeBlockSignature FAILED\n");
+            logging::LogPrintf("WARNING: ProcessBlock() : ReserealizeBlockSignature FAILED\n");
     }
 
     // Preliminary checks
@@ -962,7 +962,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
     if (pblock->IsProofOfStake()) {
         uint256 hashProofOfStake = 0, targetProofOfStake = 0;
         if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), hashProofOfStake, targetProofOfStake)) {
-            printf("WARNING: block_process::manage::ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
+            logging::LogPrintf("WARNING: block_process::manage::ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
             return false; // do not error here as we expect this during initial block download
         }
         if (! block_process::mapProofOfStake.count(hash)) // add to mapProofOfStake
@@ -994,7 +994,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 
     // If don't already have its previous block, shunt it off to holding area until we get it
     if (! block_info::mapBlockIndex.count(pblock->get_hashPrevBlock())) {
-        printf("block_process::manage::ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->get_hashPrevBlock().ToString().substr(0,20).c_str());
+        logging::LogPrintf("block_process::manage::ProcessBlock: ORPHAN BLOCK, prev=%s\n", pblock->get_hashPrevBlock().ToString().substr(0,20).c_str());
 
         // ppcoin: check proof-of-stake
         if (pblock->IsProofOfStake()) {
@@ -1047,7 +1047,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
         block_process::manage::mapOrphanBlocksByPrev.erase(hashPrev);
     }
 
-    printf("block_process::manage::ProcessBlock: ACCEPTED\n");
+    logging::LogPrintf("block_process::manage::ProcessBlock: ACCEPTED\n");
 
     // ppcoin: if responsible for sync-checkpoint send it
     if (pfrom && !CSyncCheckpoint::Get_strMasterPrivKey().empty())

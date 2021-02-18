@@ -143,7 +143,7 @@ public:
 
     std::string ToString() const noexcept;
     void print() const {
-        printf("%s\n", ToString().c_str());
+        logging::LogPrintf("%s\n", ToString().c_str());
     }
 
     ADD_SERIALIZE_METHODS
@@ -200,7 +200,7 @@ public:
 
     std::string ToString() const noexcept;
     void print() const noexcept {
-        printf("%s", ToString().c_str());
+        logging::LogPrintf("%s", ToString().c_str());
     }
 
     ADD_SERIALIZE_METHODS
@@ -409,7 +409,7 @@ public:
     std::string ToStringShort() const;
     std::string ToString() const;
     void print() const {
-        printf("%s\n", ToString().c_str());
+        logging::LogPrintf("%s\n", ToString().c_str());
     }
 
     ADD_SERIALIZE_METHODS
@@ -481,7 +481,7 @@ public:
     std::string ToStringShort() const;
     std::string ToString() const;
     void print() const {
-        printf("%s\n", ToString().c_str());
+        logging::LogPrintf("%s\n", ToString().c_str());
     }
 
     ADD_SERIALIZE_METHODS
@@ -788,7 +788,7 @@ public:
     std::string ToStringShort() const;
     std::string ToString() const;
     void print() const {
-        printf("%s", ToString().c_str());
+        logging::LogPrintf("%s", ToString().c_str());
     }
 
     bool ReadFromDisk(CDiskTxPos pos, FILE **pfileRet=nullptr);

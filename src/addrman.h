@@ -221,7 +221,7 @@ public:
             LOCK(cs);
             int err;
             if ((err = Check_())) {
-                printf("ADDRMAN CONSISTENCY CHECK FAILED!!! err=%i\n", err);
+                logging::LogPrintf("ADDRMAN CONSISTENCY CHECK FAILED!!! err=%i\n", err);
             }
         }
 #endif
@@ -238,7 +238,7 @@ public:
         }
 
         if (fRet) {
-            printf("Added %s from %s: %i tried, %i new\n", addr.ToStringIPPort().c_str(), source.ToString().c_str(), nTried, nNew);
+            logging::LogPrintf("Added %s from %s: %i tried, %i new\n", addr.ToStringIPPort().c_str(), source.ToString().c_str(), nTried, nNew);
         }
         return fRet;
     }
@@ -257,7 +257,7 @@ public:
         }
 
         if (nAdd) {
-            printf("Added %i addresses from %s: %i tried, %i new\n", nAdd, source.ToString().c_str(), nTried, nNew);
+            logging::LogPrintf("Added %i addresses from %s: %i tried, %i new\n", nAdd, source.ToString().c_str(), nTried, nNew);
         }
         return nAdd > 0;
     }

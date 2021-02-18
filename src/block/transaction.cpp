@@ -244,7 +244,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
                 if (dFreeCount > map_arg::GetArg("-limitfreerelay", 15) * 10 * 1000 && !IsFromMe(tx))
                     return print::error("CTxMemPool::accept() : free transaction rejected by rate limiter");
                 if (args_bool::fDebug)
-                    printf("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
+                    logging::LogPrintf("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
                 dFreeCount += nSize;
             }
         }
@@ -259,7 +259,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
     {
         LOCK(cs);
         if (ptxOld) {
-            printf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
+            logging::LogPrintf("CTxMemPool::accept() : replacing tx %s with new version\n", ptxOld->GetHash().ToString().c_str());
             remove(*ptxOld);
         }
         addUnchecked(hash, tx);
@@ -270,7 +270,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
     if (ptxOld)
         EraseFromWallets(ptxOld->GetHash());
 
-    printf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
+    logging::LogPrintf("CTxMemPool::accept() : accepted %s (poolsz %" PRIszu ")\n", hash.ToString().substr(0,10).c_str(), mapTx.size());
     return true;
 }
 
@@ -949,12 +949,12 @@ bool CTransaction_impl<T>::GetCoinAge(CTxDB &txdb, uint64_t &nCoinAge) const
         int64_t nValueIn = txPrev.vout[txin.get_prevout().get_n()].get_nValue();
         bnCentSecond += CBigNum(nValueIn) * (nTime-txPrev.nTime) / util::CENT;
         if (args_bool::fDebug && map_arg::GetBoolArg("-printcoinage"))
-            printf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
+            logging::LogPrintf("coin age nValueIn=%" PRId64 " nTimeDiff=%d bnCentSecond=%s\n", nValueIn, nTime - txPrev.nTime, bnCentSecond.ToString().c_str());
     }
 
     CBigNum bnCoinDay = bnCentSecond * util::CENT / util::COIN / util::nOneDay;
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcoinage"))
-        printf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
+        logging::LogPrintf("coin age bnCoinDay=%s\n", bnCoinDay.ToString().c_str());
 
     nCoinAge = bnCoinDay.getuint64();
     return true;

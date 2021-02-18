@@ -71,21 +71,21 @@ void CBlock_print_impl<T>::PrintBlockTree() {
 
         // print split or gap
         if (nCol > nPrevCol) {
-            for (int i=0; i < nCol-1; ++i) printf("| ");
-            printf("|\\\n");
+            for (int i=0; i < nCol-1; ++i) logging::LogPrintf("| ");
+            logging::LogPrintf("|\\\n");
         } else if (nCol < nPrevCol) {
-            for (int i=0; i < nCol; ++i) printf("| ");
-            printf("|\n");
+            for (int i=0; i < nCol; ++i) logging::LogPrintf("| ");
+            logging::LogPrintf("|\n");
         }
         nPrevCol = nCol;
 
         // print columns
-        for (int i=0; i < nCol; ++i) printf("| ");
+        for (int i=0; i < nCol; ++i) logging::LogPrintf("| ");
 
         // print item
         CBlock block;
         block.ReadFromDisk(pindex);
-        printf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "\n",
+        logging::LogPrintf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "\n",
             pindex->get_nHeight(),
             pindex->get_nFile(),
             pindex->get_nBlockPos(),
@@ -295,7 +295,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
     // fees are not collected by proof-of-stake miners
     // fees are destroyed to compensate the entire network
     if (args_bool::fDebug && IsProofOfStake() && map_arg::GetBoolArg("-printcreation"))
-        printf("ConnectBlock() : destroy=%s nFees=%" PRId64 "\n", bitstr::FormatMoney(nFees).c_str(), nFees);
+        logging::LogPrintf("ConnectBlock() : destroy=%s nFees=%" PRId64 "\n", bitstr::FormatMoney(nFees).c_str(), nFees);
     if (fJustCheck)
         return true;
 
@@ -364,7 +364,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             pindexIntermediate = pindexIntermediate->set_pprev();
         }
         if (! vpindexSecondary.empty())
-            printf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
+            logging::LogPrintf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
         if (! block_check::manage::Reorganize(txdb, pindexIntermediate)) {
@@ -377,11 +377,11 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
         for (std::vector<CBlockIndex *>::reverse_iterator rit = vpindexSecondary.rbegin(); rit != vpindexSecondary.rend(); ++rit) {
             CBlock block;
             if (! block.ReadFromDisk(*rit)) {
-                printf("SetBestChain() : ReadFromDisk failed\n");
+                logging::LogPrintf("SetBestChain() : ReadFromDisk failed\n");
                 break;
             }
             if (! txdb.TxnBegin()) {
-                printf("SetBestChain() : TxnBegin 2 failed\n");
+                logging::LogPrintf("SetBestChain() : TxnBegin 2 failed\n");
                 break;
             }
 
@@ -408,7 +408,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     block_info::nTransactionsUpdated++;
 
     T nBestBlockTrust = block_info::pindexBest->get_nHeight() != 0 ? (block_info::pindexBest->get_nChainTrust() - block_info::pindexBest->get_pprev()->get_nChainTrust()) : block_info::pindexBest->get_nChainTrust();
-    printf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    logging::LogPrintf("SetBestChain: new best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
         block_info::hashBestChain.ToString().substr(0,20).c_str(), block_info::nBestHeight,
         CBigNum(block_info::nBestChainTrust).ToString().c_str(),
         nBestBlockTrust.Get64(),
@@ -424,7 +424,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             pindex = pindex->get_pprev();
         }
         if (nUpgraded > 0)
-            printf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, this->get_nVersion());
+            logging::LogPrintf("SetBestChain: %d of last 100 blocks above version %d\n", nUpgraded, this->get_nVersion());
         if (nUpgraded > 100 / 2) {
             // excep::strMiscWarning is read by block_alert::manage::GetWarnings(), called by Qt and the JSON-RPC code to warn the user:
             excep::set_strMiscWarning( _("Warning: This version is obsolete, upgrade required!") );
@@ -724,7 +724,7 @@ bool CBlock_impl<T>::GetCoinAge(uint64_t &nCoinAge) const
     if (nCoinAge == 0)    // block coin age minimum 1 coin-day
         nCoinAge = 1;
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcoinage"))
-        printf("block %s age total nCoinDays=%" PRId64 "\n", strCoinName, nCoinAge);
+        logging::LogPrintf("block %s age total nCoinDays=%" PRId64 "\n", strCoinName, nCoinAge);
 
     return true;
 }
@@ -815,7 +815,7 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
 
 template <typename T>
 void CBlock_impl<T>::print() const {
-    printf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
+    logging::LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         CBlockHeader_impl<T>::GetHash().ToString().c_str(),
         CBlockHeader<T>::nVersion,
         CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
@@ -824,13 +824,13 @@ void CBlock_impl<T>::print() const {
         Merkle_t::vtx.size(),
         util::HexStr(vchBlockSig.begin(), vchBlockSig.end()).c_str());
     for (unsigned int i=0; i<this->vtx.size(); ++i) {
-        printf("  ");
+        logging::LogPrintf("  ");
         Merkle_t::vtx[i].print();
     }
-    printf("  vMerkleTree: ");
+    logging::LogPrintf("  vMerkleTree: ");
     for (unsigned int i=0; i<Merkle_t::vMerkleTree.size(); ++i)
-        printf("%s ", Merkle_t::vMerkleTree[i].ToString().substr(0,10).c_str());
-    printf("\n");
+        logging::LogPrintf("%s ", Merkle_t::vMerkleTree[i].ToString().substr(0,10).c_str());
+    logging::LogPrintf("\n");
 }
 
 template <typename T>
@@ -863,7 +863,7 @@ T CBlockIndex_impl<T>::GetBlockTrust() const
 
         // Return 1/3 of score if less than 3 PoW blocks found
         if (nPoWCount < 3) {
-            printf("GetBlockTrust(Return 1/3 of score) nPoWCount %d\n", nPoWCount);
+            logging::LogPrintf("GetBlockTrust(Return 1/3 of score) nPoWCount %d\n", nPoWCount);
             return (bnNewTrust / 3).getuint256();
         }
 
@@ -892,7 +892,7 @@ T CBlockIndex_impl<T>::GetBlockTrust() const
 
         // Return nPoWTrust + 2/3 of previous block score if less than 7 PoS blocks found
         if (nPoSCount < 7) {
-            printf("GetBlockTrust(nPoWTrust + 2/3 of previous block) nPosCount %d\n", nPoSCount);
+            logging::LogPrintf("GetBlockTrust(nPoWTrust + 2/3 of previous block) nPosCount %d\n", nPoSCount);
             return (bnPoWTrust + 2 * bnLastBlockTrust / 3).getuint256();
         }
 

@@ -26,11 +26,11 @@ void block_check::manage::InvalidChainFound(CBlockIndex *pindexNew)
     uint256 nBestInvalidBlockTrust = pindexNew->get_nChainTrust() - pindexNew->get_pprev()->get_nChainTrust();
     uint256 nBestBlockTrust = block_info::pindexBest->get_nHeight() != 0 ? (block_info::pindexBest->get_nChainTrust() - block_info::pindexBest->get_pprev()->get_nChainTrust()) : block_info::pindexBest->get_nChainTrust();
 
-    printf("block_check::manage::InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    logging::LogPrintf("block_check::manage::InvalidChainFound: invalid block=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
             pindexNew->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->get_nHeight(),
             CBigNum(pindexNew->get_nChainTrust()).ToString().c_str(), nBestInvalidBlockTrust.Get64(),
             util::DateTimeStrFormat("%x %H:%M:%S", pindexNew->GetBlockTime()).c_str());
-    printf("block_check::manage::InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
+    logging::LogPrintf("block_check::manage::InvalidChainFound:  current best=%s  height=%d  trust=%s  blocktrust=%" PRId64 "  date=%s\n",
             block_info::hashBestChain.ToString().substr(0,20).c_str(), block_info::nBestHeight,
             CBigNum(block_info::pindexBest->get_nChainTrust()).ToString().c_str(),
             nBestBlockTrust.Get64(),
@@ -44,7 +44,7 @@ bool block_check::manage::VerifySignature(const CTransaction &txFrom, const CTra
 
 bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
 {
-    printf("REORGANIZE\n");
+    logging::LogPrintf("REORGANIZE\n");
 
     // Find the fork
     CBlockIndex *pfork = block_info::pindexBest;
@@ -71,8 +71,8 @@ bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
         vConnect.push_back(pindex);
 
     reverse(vConnect.begin(), vConnect.end());
-    printf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), block_info::pindexBest->GetBlockHash().ToString().substr(0,20).c_str());
-    printf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->GetBlockHash().ToString().substr(0,20).c_str());
+    logging::LogPrintf("REORGANIZE: Disconnect %" PRIszu " blocks; %s..%s\n", vDisconnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), block_info::pindexBest->GetBlockHash().ToString().substr(0,20).c_str());
+    logging::LogPrintf("REORGANIZE: Connect %" PRIszu " blocks; %s..%s\n", vConnect.size(), pfork->GetBlockHash().ToString().substr(0,20).c_str(), pindexNew->GetBlockHash().ToString().substr(0,20).c_str());
 
     // Disconnect shorter branch
     std::vector<CTransaction> vResurrect;
@@ -131,7 +131,7 @@ bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
     for(CTransaction &tx: vDelete)
         CTxMemPool::mempool.remove(tx);
 
-    printf("REORGANIZE: done\n");
+    logging::LogPrintf("REORGANIZE: done\n");
     return true;
 }
 

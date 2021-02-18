@@ -147,7 +147,7 @@ std::string FileLock::GetErrorReason() {
     wchar_t *err;
     if(! ::FormatMessageW(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
                           nullptr, ::GetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<WCHAR *>(&err), 0, nullptr)) {
-        printf("Format message failed with 0x%x\n", ::GetLastError());
+        logging::LogPrintf("Format message failed with 0x%x\n", ::GetLastError());
         return std::string("Format message failed.");
     }
     std::wstring err_str(err);
