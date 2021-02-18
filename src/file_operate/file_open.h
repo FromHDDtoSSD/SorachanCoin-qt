@@ -21,7 +21,7 @@ private:
 public:
     static FILE *OpenBlockFile(unsigned int nFile, unsigned int nBlockPos, const char *pszMode="rb") {
         auto BlockFilePath = [](unsigned int nFile) {
-            std::string strBlockFn = strprintf("blk%04u.dat", nFile);
+            std::string strBlockFn = tfm::format("blk%04u.dat", nFile);
             return iofs::GetDataDir() / strBlockFn;
         };
 

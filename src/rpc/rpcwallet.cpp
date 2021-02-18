@@ -996,7 +996,7 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
     if (nRequired < 1)
         return data.runtime_error("a multisignature address must require at least one key to redeem");
     if ((int)keys.size() < nRequired)
-        return data.runtime_error(strprintf("not enough keys supplied (got %" PRIszu " keys, but need at least %d to redeem)", keys.size(), nRequired));
+        return data.runtime_error(tfm::format("not enough keys supplied (got %" PRIszu " keys, but need at least %d to redeem)", keys.size(), nRequired));
     if (keys.size() > 16)
         return data.runtime_error("Number of addresses involved in the multisignature address creation > 16\nReduce the number");
 
@@ -1011,11 +1011,11 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
             // Case 1: Bitcoin address and we have full public key
             CKeyID keyID;
             if (! address.GetKeyID(keyID))
-                return data.runtime_error(strprintf("%s does not refer to a key", ks.c_str()));
+                return data.runtime_error(tfm::format("%s does not refer to a key", ks.c_str()));
 
             CPubKey vchPubKey;
             if (! entry::pwalletMain->GetPubKey(keyID, vchPubKey))
-                return data.runtime_error(strprintf("no full public key for address %s", ks.c_str()));
+                return data.runtime_error(tfm::format("no full public key for address %s", ks.c_str()));
             if (! vchPubKey.IsValid())
                 return data.runtime_error(std::string(" Invalid public key: ") + ks);
             pubkeys[i] = vchPubKey;
@@ -1033,7 +1033,7 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
     CScript inner;
     inner.SetMultisig(nRequired, pubkeys);
     if (inner.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE)
-        return data.runtime_error(strprintf("redeemScript exceeds size limit: %" PRIszu " > %d", inner.size(), Script_const::MAX_SCRIPT_ELEMENT_SIZE));
+        return data.runtime_error(tfm::format("redeemScript exceeds size limit: %" PRIszu " > %d", inner.size(), Script_const::MAX_SCRIPT_ELEMENT_SIZE));
 
     entry::pwalletMain->AddCScript(inner);
     CBitcoinAddress address(inner.GetID());

@@ -105,11 +105,11 @@ json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockInde
     if (blockindex->get_pnext())
         result.push_back(json_spirit::Pair("nextblockhash", blockindex->get_pnext()->GetBlockHash().GetHex()));
 
-    result.push_back(json_spirit::Pair("flags", strprintf("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
+    result.push_back(json_spirit::Pair("flags", tfm::format("%s%s", blockindex->IsProofOfStake()? "proof-of-stake" : "proof-of-work", blockindex->GeneratedStakeModifier()? " stake-modifier": "")));
     result.push_back(json_spirit::Pair("proofhash", blockindex->IsProofOfStake()? blockindex->get_hashProofOfStake().GetHex() : blockindex->GetBlockHash().GetHex()));
     result.push_back(json_spirit::Pair("entropybit", (int)blockindex->GetStakeEntropyBit()));
-    result.push_back(json_spirit::Pair("modifier", strprintf("%016" PRIx64, blockindex->get_nStakeModifier())));
-    result.push_back(json_spirit::Pair("modifierchecksum", strprintf("%08x", blockindex->get_nStakeModifierChecksum())));
+    result.push_back(json_spirit::Pair("modifier", tfm::format("%016" PRIx64, blockindex->get_nStakeModifier())));
+    result.push_back(json_spirit::Pair("modifierchecksum", tfm::format("%08x", blockindex->get_nStakeModifierChecksum())));
 
     json_spirit::Array txinfo;
     for (const CTransaction &tx: block.get_vtx()) {

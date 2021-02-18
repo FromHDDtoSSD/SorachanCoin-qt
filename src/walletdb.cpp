@@ -267,10 +267,10 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
                     char fTmp;
                     char fUnused;
                     ssValue >> fTmp >> fUnused >> wtx.strFromAccount;
-                    strErr = strprintf("LoadWallet() upgrading tx ver=%d %d '%s' %s", wtx.fTimeReceivedIsTxTime, fTmp, wtx.strFromAccount.c_str(), hash.ToString().c_str());
+                    strErr = tfm::format("LoadWallet() upgrading tx ver=%d %d '%s' %s", wtx.fTimeReceivedIsTxTime, fTmp, wtx.strFromAccount.c_str(), hash.ToString().c_str());
                     wtx.fTimeReceivedIsTxTime = fTmp;
                 } else {
-                    strErr = strprintf("LoadWallet() repairing tx ver=%d %s", wtx.fTimeReceivedIsTxTime, hash.ToString().c_str());
+                    strErr = tfm::format("LoadWallet() repairing tx ver=%d %s", wtx.fTimeReceivedIsTxTime, hash.ToString().c_str());
                     wtx.fTimeReceivedIsTxTime = 0;
                 }
                 wss.vWalletUpgrade.push_back(hash);
@@ -390,7 +390,7 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
             ssValue >> kMasterKey;
 
             if(pwallet->mapMasterKeys.count(nID) != 0) {
-                strErr = strprintf("Error reading wallet database: duplicate CMasterKey id %u", nID);
+                strErr = tfm::format("Error reading wallet database: duplicate CMasterKey id %u", nID);
                 return false;
             }
 
@@ -833,10 +833,10 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
     //
     // produce output
     //
-    file << strprintf("# Wallet dump created by %s %s (%s)\n", strCoinName, version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
-    file << strprintf("# * Created on %s\n", dump::EncodeDumpTime(bitsystem::GetTime()).c_str());
-    file << strprintf("# * Best block at time of backup was %i (%s),\n", block_info::nBestHeight, block_info::hashBestChain.ToString().c_str());
-    file << strprintf("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->get_nTime()).c_str());
+    file << tfm::format("# Wallet dump created by %s %s (%s)\n", strCoinName, version::CLIENT_BUILD.c_str(), version::CLIENT_DATE.c_str());
+    file << tfm::format("# * Created on %s\n", dump::EncodeDumpTime(bitsystem::GetTime()).c_str());
+    file << tfm::format("# * Best block at time of backup was %i (%s),\n", block_info::nBestHeight, block_info::hashBestChain.ToString().c_str());
+    file << tfm::format("#   mined on %s\n", dump::EncodeDumpTime(block_info::pindexBest->get_nTime()).c_str());
     file << "\n";
 
     for (std::vector<std::pair<int64_t, CBitcoinAddress> >::const_iterator it = vAddresses.begin(); it != vAddresses.end(); it++)
@@ -857,9 +857,9 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
             pwallet->GetMalleableKey(keyView, mKey);
             file << mKey.ToString();
             if (pwallet->mapAddressBook.count(addr)) {
-                file << strprintf(" %s label=%s # view=%s addr=%s\n", strTime.c_str(), dump::EncodeDumpString(pwallet->mapAddressBook[addr]).c_str(), keyView.ToString().c_str(), strAddr.c_str());
+                file << tfm::format(" %s label=%s # view=%s addr=%s\n", strTime.c_str(), dump::EncodeDumpString(pwallet->mapAddressBook[addr]).c_str(), keyView.ToString().c_str(), strAddr.c_str());
             } else {
-                file << strprintf(" %s # view=%s addr=%s\n", strTime.c_str(), keyView.ToString().c_str(), strAddr.c_str());
+                file << tfm::format(" %s # view=%s addr=%s\n", strTime.c_str(), keyView.ToString().c_str(), strAddr.c_str());
             }
         } else {
             // Pubkey hash address
@@ -874,11 +874,11 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
             CSecret secret = key.GetSecret(IsCompressed);
             file << CBitcoinSecret(secret, IsCompressed).ToString();
             if (pwallet->mapAddressBook.count(addr)) {
-                file << strprintf(" %s label=%s # addr=%s\n", strTime.c_str(), dump::EncodeDumpString(pwallet->mapAddressBook[addr]).c_str(), strAddr.c_str());
+                file << tfm::format(" %s label=%s # addr=%s\n", strTime.c_str(), dump::EncodeDumpString(pwallet->mapAddressBook[addr]).c_str(), strAddr.c_str());
             } else if (setKeyPool.count(keyid)) {
-                file << strprintf(" %s reserve=1 # addr=%s\n", strTime.c_str(), strAddr.c_str());
+                file << tfm::format(" %s reserve=1 # addr=%s\n", strTime.c_str(), strAddr.c_str());
             } else {
-                file << strprintf(" %s change=1 # addr=%s\n", strTime.c_str(), strAddr.c_str());
+                file << tfm::format(" %s change=1 # addr=%s\n", strTime.c_str(), strAddr.c_str());
             }
         }
     }
@@ -1031,7 +1031,7 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     // create backup file (.bak)
     //
     int64_t now = bitsystem::GetTime();
-    std::string newFilename = strprintf("wallet.%" PRId64 ".bak", now);
+    std::string newFilename = tfm::format("wallet.%" PRId64 ".bak", now);
 
     int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL, newFilename.c_str(), DB_AUTO_COMMIT);
     if (result == 0) {

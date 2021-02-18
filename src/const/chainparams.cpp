@@ -332,10 +332,10 @@ void CRegTestParams::UpdateVersionBitsParametersFromArgs(const ArgsManager& args
         }
         int64_t nStartTime, nTimeout;
         if (!ParseInt64(vDeploymentParams[1], &nStartTime)) {
-            throw std::runtime_error(strprintf("Invalid nStartTime (%s)", vDeploymentParams[1]));
+            throw std::runtime_error(tfm::format("Invalid nStartTime (%s)", vDeploymentParams[1]));
         }
         if (!ParseInt64(vDeploymentParams[2], &nTimeout)) {
-            throw std::runtime_error(strprintf("Invalid nTimeout (%s)", vDeploymentParams[2]));
+            throw std::runtime_error(tfm::format("Invalid nTimeout (%s)", vDeploymentParams[2]));
         }
         bool found = false;
         for (int j=0; j < (int)Consensus::MAX_VERSION_BITS_DEPLOYMENTS; ++j) {
@@ -347,7 +347,7 @@ void CRegTestParams::UpdateVersionBitsParametersFromArgs(const ArgsManager& args
             }
         }
         if (!found) {
-            throw std::runtime_error(strprintf("Invalid deployment (%s)", vDeploymentParams[0]));
+            throw std::runtime_error(tfm::format("Invalid deployment (%s)", vDeploymentParams[0]));
         }
     }
 }
@@ -478,7 +478,7 @@ namespace Chain_info {
             else if (chain == chainparamsbase::CBaseChainParams::PREDICTIONTEST())
                 return std::move(std::unique_ptr<const CChainParams>(new CPredictionTestParams(ARGS)));
             else {
-                throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+                throw std::runtime_error(tfm::format("%s: Unknown chain %s.", __func__, chain));
                 return std::move(std::unique_ptr<const CChainParams>());
             }
         } catch (const std::exception &) {

@@ -170,7 +170,7 @@ bool map_arg::ParseParameters(int argc, const char *const argv[], std::string *e
         // Check that the arg is known
         if (!(lutil::IsSwitchChar(str[0]) && str.size() == 1)) {
             if (! IsArgKnown(str)) {
-                if(error) *error = strprintf("Invalid parameter %s", str.c_str());
+                if(error) *error = tfm::format("Invalid parameter %s", str.c_str());
                 return false;
             }
         }
@@ -453,13 +453,13 @@ static bool GetConfigOptions(std::istream &stream, std::string &error, std::vect
                 sections.insert(section);
                 prefix = section + '.';
             } else if (*str.begin() == '-') {
-                error = strprintf("parse error on line %i: %s, options in configuration file must be specified without leading -", linenr, str);
+                error = tfm::format("parse error on line %i: %s, options in configuration file must be specified without leading -", linenr, str);
                 return false;
             } else if ((pos = str.find('=')) != std::string::npos) {
                 std::string name = prefix + TrimString(str.substr(0, pos), pattern);
                 std::string value = TrimString(str.substr(pos + 1), pattern);
                 if (used_hash && name.find("rpcpassword") != std::string::npos) {
-                    error = strprintf("parse error on line %i, using # in rpcpassword can be ambiguous and should be avoided", linenr);
+                    error = tfm::format("parse error on line %i, using # in rpcpassword can be ambiguous and should be avoided", linenr);
                     return false;
                 }
                 options.emplace_back(name, value);
@@ -467,9 +467,9 @@ static bool GetConfigOptions(std::istream &stream, std::string &error, std::vect
                     sections.insert(name.substr(0, pos));
                 }
             } else {
-                error = strprintf("parse error on line %i: %s", linenr, str);
+                error = tfm::format("parse error on line %i: %s", linenr, str);
                 if (str.size() >= 2 && str.substr(0, 2) == "no") {
-                    error += strprintf(", if you intended to specify a negated option, use %s=1 instead", str);
+                    error += tfm::format(", if you intended to specify a negated option, use %s=1 instead", str);
                 }
                 return false;
             }
@@ -598,7 +598,7 @@ bool ArgsManager::ParseParameters(int argc, const char *const argv[], std::strin
         // Check that the arg is known
         if (!(lutil::IsSwitchChar(key[0]) && key.size() == 1)) {
             if (!IsArgKnown(key)) {
-                error = strprintf("Invalid parameter %s", key.c_str());
+                error = tfm::format("Invalid parameter %s", key.c_str());
                 return false;
             }
         }
@@ -821,7 +821,7 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
         // Check that the arg is known
         if (! IsArgKnown(strKey)) {
             if (! ignore_invalid_keys) {
-                error = strprintf("Invalid configuration value %s", option.first.c_str());
+                error = tfm::format("Invalid configuration value %s", option.first.c_str());
                 return false;
             } else {
                 logging::LogPrintf("Ignoring unknown configuration value %s\n", option.first);
@@ -909,7 +909,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*
     // If datadir is changed in .conf file:
     lutil::ClearDatadirCache();
     if (! fs::is_directory(lutil::GetDataDir(false))) {
-        error = strprintf("specified data directory \"%s\" does not exist.", ARGS.GetArg("-datadir", "").c_str());
+        error = tfm::format("specified data directory \"%s\" does not exist.", ARGS.GetArg("-datadir", "").c_str());
         return false;
     }
     return true;

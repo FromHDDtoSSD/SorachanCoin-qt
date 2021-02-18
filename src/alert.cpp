@@ -44,7 +44,7 @@ std::string CUnsignedAlert::ToString() const
     std::string strSetCancel;
     for(int n: setCancel)
     {
-        strSetCancel += strprintf("%d ", n);
+        strSetCancel += tfm::format("%d ", n);
     }
 
     std::string strSetSubVer;
@@ -53,7 +53,7 @@ std::string CUnsignedAlert::ToString() const
         strSetSubVer += "\"" + str + "\" ";
     }
 
-    return strprintf(
+    return tfm::format(
         "CAlert(\n"
         "    nVersion     = %d\n"
         "    nRelayUntil  = %" PRId64 "\n"

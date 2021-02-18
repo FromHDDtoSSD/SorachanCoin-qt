@@ -53,7 +53,7 @@ std::vector<KernelRecord> KernelRecord::decomposeOutput(const CWallet *wallet, c
 
 std::string KernelRecord::getTxID()
 {
-    return hash.ToString() + strprintf("-%03d", idx);
+    return hash.ToString() + tfm::format("-%03d", idx);
 }
 
 int64_t KernelRecord::getAge() const

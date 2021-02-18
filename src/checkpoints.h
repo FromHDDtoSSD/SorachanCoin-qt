@@ -58,7 +58,7 @@ public:
     }
 
     std::string ToString() const {
-        return strprintf(
+        return tfm::format(
                 "CSyncCheckpoint(\n"
                 "    nVersion       = %d\n"
                 "    hashCheckpoint = %s\n"

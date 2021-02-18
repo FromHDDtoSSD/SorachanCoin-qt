@@ -29,7 +29,7 @@ bool CAddrDB::Write(const CAddrMan &addr)
     // Generate random temporary filename
     unsigned short randv = 0;
     latest_crypto::random::GetStrongRandBytes((unsigned char *)&randv, sizeof(randv));
-    std::string tmpfn = strprintf("peers.dat.%04x", randv);
+    std::string tmpfn = tfm::format("peers.dat.%04x", randv);
 
     // serialize addresses, checksum data up to that point, then append csum
     CDataStream ssPeers(0, 0);

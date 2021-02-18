@@ -129,9 +129,9 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
         logging::LogPrintf("Final lk_max_locks is %u, sufficient for (worst case) %d block%s in a single transaction (up to a %d-deep reorganization)\n", nMaxLocks, nBlocks, (nBlocks == 1) ? "" : "s", nDeepReorg);
         if (nDeepReorg < 3) {
             if (nBlocks < 1) {
-                strMessage = strprintfc(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
+                strMessage = tfm::format(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
             } else {
-                strMessage = strprintfc(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a common blockchain reorganization. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
+                strMessage = tfm::format(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a common blockchain reorganization. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
             }
 
             excep::set_strMiscWarning(strMessage);
@@ -173,7 +173,7 @@ void CDBEnv::MakeMock()
         DB_PRIVATE,
         S_IRUSR | S_IWUSR);
     if (ret > 0) {
-        throw std::runtime_error(strprintf("CDBEnv::MakeMock(): error %d opening database environment", ret));
+        throw std::runtime_error(tfm::format("CDBEnv::MakeMock(): error %d opening database environment", ret));
     }
 
     fDbEnvInit = true;
@@ -296,7 +296,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(n
                 DbMpoolFile *mpf = pdb->get_mpf();
                 int ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);
                 if (ret != 0) {
-                    throw std::runtime_error(strprintf("CDB() : failed to configure for no temp file backing for database %s", pszFile));
+                    throw std::runtime_error(tfm::format("CDB() : failed to configure for no temp file backing for database %s", pszFile));
                 }
             }
 
@@ -313,7 +313,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(n
                 pdb = nullptr;
                 --CDBEnv::bitdb.mapFileUseCount[strFile];
                 strFile.clear();
-                throw std::runtime_error(strprintf("CDB() : can't open database file %s, error %d", pszFile, ret));
+                throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", pszFile, ret));
             }
             */
 
@@ -332,7 +332,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : CDBCommon(), pdb(n
                     pdb = nullptr;
                     --CDBEnv::bitdb.mapFileUseCount[strFile];
                     strFile.clear();
-                    throw std::runtime_error(strprintf("CDB() : can't open database file %s, error %d", pszFile, ret));
+                    throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", pszFile, ret));
                 } else {
                     break;
                 }

@@ -44,7 +44,7 @@ void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = fals
         fs::remove_all(directory); // remove directory
         unsigned int nFile = 1;
         for (;;) {
-            fs::path strBlockFile = iofs::GetDataDir() / strprintf("blk%04u.dat", nFile);
+            fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
 
             // Break if no such file
             if (! fs::exists(strBlockFile)) {
@@ -61,7 +61,7 @@ void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = fals
 
     leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CTxDB::txdb);
     if (! status.ok()) {
-        throw std::runtime_error(strprintf("CTxDB::init_blockindex(): error opening database environment %s", status.ToString().c_str()));
+        throw std::runtime_error(tfm::format("CTxDB::init_blockindex(): error opening database environment %s", status.ToString().c_str()));
     }
 }
 

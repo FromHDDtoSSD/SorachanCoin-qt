@@ -109,7 +109,7 @@ json_spirit::Value CRPCTable::getpeerinfo(const json_spirit::Array &params, CBit
     for(const CNodeStats &stats: vstats) {
         json_spirit::Object obj;
         obj.push_back(json_spirit::Pair("addr", stats.addrName));
-        obj.push_back(json_spirit::Pair("services", strprintf("%08" PRIx64, stats.nServices)));
+        obj.push_back(json_spirit::Pair("services", tfm::format("%08" PRIx64, stats.nServices)));
         obj.push_back(json_spirit::Pair("lastsend", (int64_t)stats.nLastSend));
         obj.push_back(json_spirit::Pair("lastrecv", (int64_t)stats.nLastRecv));
         obj.push_back(json_spirit::Pair("bytessent", (int64_t)stats.nSendBytes));

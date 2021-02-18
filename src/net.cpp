@@ -1217,7 +1217,7 @@ void upnp::ThreadMapPort2(void *parg)
 {
     logging::LogPrintf("upup::ThreadMapPort started\n");
 
-    std::string port = strprintf("%u", net_basis::GetListenPort());
+    std::string port = tfm::format("%u", net_basis::GetListenPort());
     const char *multicastif = 0;
     const char *minissdpdpath = 0;
     char lanaddr[64] = { 0 };
@@ -1941,14 +1941,14 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
 
     socklen_t len = sizeof(sockaddr);
     if(!addrBind.GetSockAddr((struct sockaddr *)&sockaddr, &len)) {
-        strError = strprintf("Error: bind address family for %s not supported", addrBind.ToString().c_str());
+        strError = tfm::format("Error: bind address family for %s not supported", addrBind.ToString().c_str());
         logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
 
     SOCKET hListenSocket = ::socket(((struct sockaddr *)&sockaddr)->sa_family, SOCK_STREAM, IPPROTO_TCP);
     if(hListenSocket == INVALID_SOCKET) {
-        strError = strprintf("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
+        strError = tfm::format("Error: Couldn't open socket for incoming connections (socket returned error %d)", WSAGetLastError());
         logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
@@ -1970,7 +1970,7 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
     if(::fcntl(hListenSocket, F_SETFL, O_NONBLOCK) == SOCKET_ERROR)
 #endif
     {
-        strError = strprintf("Error: Couldn't set properties on socket for incoming connections (error %d)", WSAGetLastError());
+        strError = tfm::format("Error: Couldn't set properties on socket for incoming connections (error %d)", WSAGetLastError());
         logging::LogPrintf("%s\n", strError.c_str());
         return false;
     }
@@ -1996,9 +1996,9 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
     if(::bind(hListenSocket, (struct sockaddr*)&sockaddr, len) == SOCKET_ERROR) {
         int nErr = WSAGetLastError();
         if(nErr == WSAEADDRINUSE) {
-            strError = strprintfc(_("Unable to bind to %s on this computer. " strCoinName " is probably already running."), addrBind.ToString().c_str());
+            strError = tfm::format(_("Unable to bind to %s on this computer. " strCoinName " is probably already running."), addrBind.ToString().c_str());
         } else {
-            strError = strprintfc(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString().c_str(), nErr, strerror(nErr));
+            strError = tfm::format(_("Unable to bind to %s on this computer (bind returned error %d, %s)"), addrBind.ToString().c_str(), nErr, strerror(nErr));
         }
 
         logging::LogPrintf("%s\n", strError.c_str());
@@ -2016,7 +2016,7 @@ bool entry::BindListenPort(const CService &addrBind, std::string &strError, bool
 
     // Listen for incoming connections
     if(::listen(hListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-        strError = strprintf("Error: Listening for incoming connections failed (listen returned error %d)", WSAGetLastError());
+        strError = tfm::format("Error: Listening for incoming connections failed (listen returned error %d)", WSAGetLastError());
         logging::LogPrintf("%s\n", strError.c_str());
         netbase::manage::CloseSocket(hListenSocket);
         return false;

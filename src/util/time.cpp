@@ -82,7 +82,7 @@ std::string util::FormatISO8601DateTime(int64_t nTime) {
 #else
     gmtime_r(&time_val, &ts);
 #endif
-    return strprintf("%04i-%02i-%02iT%02i:%02i:%02iZ", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
+    return tfm::format("%04i-%02i-%02iT%02i:%02i:%02iZ", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday, ts.tm_hour, ts.tm_min, ts.tm_sec);
 }
 
 std::string util::FormatISO8601Date(int64_t nTime) {
@@ -93,7 +93,7 @@ std::string util::FormatISO8601Date(int64_t nTime) {
 #else
     gmtime_r(&time_val, &ts);
 #endif
-    return strprintf("%04i-%02i-%02i", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday);
+    return tfm::format("%04i-%02i-%02i", ts.tm_year + 1900, ts.tm_mon + 1, ts.tm_mday);
 }
 
 std::string util::FormatISO8601Time(int64_t nTime) {
@@ -104,5 +104,5 @@ std::string util::FormatISO8601Time(int64_t nTime) {
 #else
     gmtime_r(&time_val, &ts);
 #endif
-    return strprintf("%02i:%02i:%02iZ", ts.tm_hour, ts.tm_min, ts.tm_sec);
+    return tfm::format("%02i:%02i:%02iZ", ts.tm_hour, ts.tm_min, ts.tm_sec);
 }

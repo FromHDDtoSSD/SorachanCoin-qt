@@ -198,7 +198,7 @@ bool irc::RecvCodeLine(SOCKET hSocket, const char *psz1, std::string &strRet)
 
 bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
 {
-    irc::Send(hSocket, strprintf("USERHOST %s\r", strMyName.c_str()).c_str());
+    irc::Send(hSocket, tfm::format("USERHOST %s\r", strMyName.c_str()).c_str());
 
     std::string strLine;
     if (! irc::RecvCodeLine(hSocket, "302", strLine)) {
@@ -315,11 +315,11 @@ void irc::ThreadIRCSeed2(void *parg)
             strMyName = irc::EncodeAddress(ext_ip::GetLocalAddress(&addrConnect));
         }
         if (strMyName.empty()) {
-            strMyName = strprintf("x%" PRIu64 "", bitsystem::GetRand(1000000000));
+            strMyName = tfm::format("x%" PRIu64 "", bitsystem::GetRand(1000000000));
         }
 
-        irc::Send(hSocket, strprintf("NICK %s\r", strMyName.c_str()).c_str());
-        irc::Send(hSocket, strprintf("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str());
+        irc::Send(hSocket, tfm::format("NICK %s\r", strMyName.c_str()).c_str());
+        irc::Send(hSocket, tfm::format("USER %s 8 * : %s\r", strMyName.c_str(), strMyName.c_str()).c_str());
 
         int nRet = irc::RecvUntil(hSocket, " 004 ", " 433 ");
         if (nRet != 1) {
@@ -357,7 +357,7 @@ void irc::ThreadIRCSeed2(void *parg)
                 //
                 ext_ip::AddLocal(addrFromIRC, LOCAL_IRC);
                 strMyName = irc::EncodeAddress(ext_ip::GetLocalAddress(&addrConnect));
-                irc::Send(hSocket, strprintf("NICK %s\r", strMyName.c_str()).c_str());
+                irc::Send(hSocket, tfm::format("NICK %s\r", strMyName.c_str()).c_str());
             }
         }
 

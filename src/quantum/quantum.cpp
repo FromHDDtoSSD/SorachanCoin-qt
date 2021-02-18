@@ -591,17 +591,19 @@ private:
         //
         // tiny format test
         //
+        /*
         int64_t num = 0x1000000000000;
-        std::string tny1 = strprintf("%d", num);
-        std::string tny2 = strprintf("%u", num);
-        //std::string tny3 = strprintf("%", num); // NG
-        std::string tny4 = strprintf("%x", num);
+        std::string tny1 = tfm::format("%d", num);
+        std::string tny2 = tfm::format("%u", num);
+        //std::string tny3 = tfm::format("%", num); // NG
+        std::string tny4 = tfm::format("%x", num);
         debugcs::instance() << "tny1: " << tny1.c_str()
                             << " tny2: " << tny2.c_str()
                             //<< " tny3: " << tny3.c_str()
                             << " tny4: " << tny4.c_str()
                             << debugcs::endl();
         assert(tny1==tny2); // d == u, I64d == d, x(16), %(NG)
+        */
 #endif
     }
     ~Quantum_startup() {}

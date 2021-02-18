@@ -1063,8 +1063,4 @@ std::string format(const std::string &fmt, const Args&... args)
 
 } // namespace tinyformat
 
-/** Format arguments and return the string or write to given std::ostream (see tinyformat::format doc for details) */
-#define strprintf tfm::format
-#define strprintfc(imp, ...) tfm::format(imp, ##__VA_ARGS__)
-
 #endif // TINYFORMAT_H_INCLUDED

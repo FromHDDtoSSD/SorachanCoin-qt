@@ -524,7 +524,7 @@ std::string bitstr::FormatMoney(int64_t n, bool fPlus /*= false*/) {
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs / util::COIN;
     int64_t remainder = n_abs % util::COIN;
-    std::string str = strprintf("%" PRId64 ".%06" PRId64, quotient, remainder);
+    std::string str = tfm::format("%" PRId64 ".%06" PRId64, quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     size_t nTrim = 0;

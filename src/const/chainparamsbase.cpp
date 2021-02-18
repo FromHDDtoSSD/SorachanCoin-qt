@@ -36,7 +36,7 @@ std::unique_ptr<chainparamsbase::CBaseChainParams> chainparamsbase::CreateBaseCh
         else if (chain == CBaseChainParams::REGTEST())
             return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("regtest", 41587)));
         else {
-            throw std::runtime_error(strprintf("%s: Unknown chain %s.", __func__, chain));
+            throw std::runtime_error(tfm::format("%s: Unknown chain %s.", __func__, chain));
             return std::move(std::unique_ptr<CBaseChainParams>(new CBaseChainParams("", 0)));
         }
     } catch (const std::exception &) {

@@ -319,7 +319,7 @@ public:
 private:
     static std::string ValueString(const script_vector &vch) {
         if (vch.size() <= 4)
-            return strprintf("%d", CBigNum(vch).getint32());
+            return tfm::format("%d", CBigNum(vch).getint32());
         else
             return util::HexStr(vch);
     }

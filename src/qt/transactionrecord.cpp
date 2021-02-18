@@ -194,7 +194,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     //
     // Sort order, unrecorded transactions sort to the top
     //
-    status.sortKey = strprintf("%010d-%01d-%010u-%03d",
+    status.sortKey = tfm::format("%010d-%01d-%010u-%03d",
         (pindex ? pindex->get_nHeight() : std::numeric_limits<int>::max()),
         (wtx.IsCoinBase() ? 1 : 0),
         wtx.nTimeReceived,
@@ -251,5 +251,5 @@ bool TransactionRecord::statusUpdateNeeded()
 
 std::string TransactionRecord::getTxID()
 {
-    return hash.ToString() + strprintf("-%03d", idx);
+    return hash.ToString() + tfm::format("-%03d", idx);
 }

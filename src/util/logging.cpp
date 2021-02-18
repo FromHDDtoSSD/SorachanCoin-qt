@@ -175,7 +175,7 @@ std::string BCLog::Logger::LogTimestampStr(const std::string &str) {
         strStamped = util::FormatISO8601DateTime(nTimeMicros/1000000);
         if (m_log_time_micros) {
             strStamped.pop_back();
-            strStamped += strprintf(".%06dZ", nTimeMicros%1000000);
+            strStamped += tfm::format(".%06dZ", nTimeMicros%1000000);
         }
         int64_t mocktime = util::GetMockTime();
         if (mocktime) {
@@ -208,7 +208,7 @@ namespace BCLog {
             if ((ch >= 32 || ch == '\n') && ch != '\x7f') {
                 ret += ch_in;
             } else {
-                ret += strprintf("\\x%02x", ch);
+                ret += tfm::format("\\x%02x", ch);
             }
         }
         return ret;

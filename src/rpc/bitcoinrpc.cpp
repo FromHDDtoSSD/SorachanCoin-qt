@@ -46,7 +46,7 @@ void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Array &params, c
 
         const json_spirit::Value &v = params[i];
         if (!((v.type() == t) || (fAllowNull && (v.type() == json_spirit::null_type)))) {
-            std::string err = strprintf("Expected type %s, got %s", json_spirit::Value_type_name[t], json_spirit::Value_type_name[v.type()]);
+            std::string err = tfm::format("Expected type %s, got %s", json_spirit::Value_type_name[t], json_spirit::Value_type_name[v.type()]);
             data.JSONRPCError(RPC_TYPE_ERROR, err);
             return;
         }
@@ -59,12 +59,12 @@ void bitrpc::RPCTypeCheck(CBitrpcData &data, const json_spirit::Object &o, const
     for(const std::pair<std::string, json_spirit::Value_type> &t: typesExpected) {
         const json_spirit::Value& v = find_value(o, t.first);
         if (!fAllowNull && v.type() == json_spirit::null_type) {
-            data.JSONRPCError(RPC_TYPE_ERROR, strprintf("Missing %s", t.first.c_str()));
+            data.JSONRPCError(RPC_TYPE_ERROR, tfm::format("Missing %s", t.first.c_str()));
             return;
         }
 
         if (!((v.type() == t.second) || (fAllowNull && (v.type() == json_spirit::null_type)))) {
-            std::string err = strprintf("Expected type %s for %s, got %s", json_spirit::Value_type_name[t.second], t.first.c_str(), json_spirit::Value_type_name[v.type()]);
+            std::string err = tfm::format("Expected type %s for %s, got %s", json_spirit::Value_type_name[t.second], t.first.c_str(), json_spirit::Value_type_name[v.type()]);
             data.JSONRPCError(RPC_TYPE_ERROR, err);
             return;
         }
@@ -138,7 +138,7 @@ json_spirit::Value CRPCTable::help(std::string strCommand, CBitrpcData &data) {
         strRet += strHelp + "\n";
     }
     if (strRet.empty())
-        strRet = strprintf("help: unknown command: %s\n", strCommand.c_str());
+        strRet = tfm::format("help: unknown command: %s\n", strCommand.c_str());
     strRet = strRet.substr(0, strRet.size() - 1);
     return data.JSONRPCSuccess(strRet);
 }
@@ -303,7 +303,7 @@ std::string http::HTTPPost(const std::string &strMsg, const std::map<std::string
 
 std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepalive) {
     if (nStatus == HTTP_UNAUTHORIZED) {
-        return strprintf(
+        return tfm::format(
             "HTTP/1.0 401 Authorization Required\r\n"
             "Date: %s\r\n"
             "Server: %s-json-rpc/%s\r\n"
@@ -329,7 +329,7 @@ std::string http::HTTPReply(int nStatus, const std::string &strMsg, bool keepali
     else if (nStatus == HTTP_NOT_FOUND)   cStatus = "Not Found";
     else if (nStatus == HTTP_INTERNAL_SERVER_ERROR) cStatus = "Internal Server Error";
     else cStatus = "";
-    return strprintf(
+    return tfm::format(
         "HTTP/1.1 %d %s\r\n"
         "Date: %s\r\n"
         "Connection: %s\r\n"
@@ -785,11 +785,11 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         std::string strWhatAmI = "To use ";
         strWhatAmI += (strCoinName "d");
         if (map_arg::GetMapArgsCount("-server"))
-            strWhatAmI = strprintfc(_("To use the %s option"), "\"-server\"");
+            strWhatAmI = tfm::format(_("To use the %s option"), "\"-server\"");
         else if (map_arg::GetMapArgsCount("-daemon"))
-            strWhatAmI = strprintfc(_("To use the %s option"), "\"-daemon\"");
+            strWhatAmI = tfm::format(_("To use the %s option"), "\"-daemon\"");
 
-        CClientUIInterface::uiInterface.ThreadSafeMessageBox(strprintfc(
+        CClientUIInterface::uiInterface.ThreadSafeMessageBox(tfm::format(
             _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
             "It is recommended you use the following random password:\n"
             "rpcuser=%srpc\n"
@@ -875,7 +875,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         fListening = true;
     } while (false);
     if(err)
-        strerr = strprintfc(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4"), endpoint.port());
+        strerr = tfm::format(_("An error occurred while setting up the RPC port %u for listening on IPv6, falling back to IPv4"), endpoint.port());
 
     do {
         // If dual IPv6/IPv4 failed (or we're opening loopback interfaces only), open IPv4 separately
@@ -899,7 +899,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         }
     } while (false);
     if(err)
-        strerr = strprintfc(_("An error occurred while setting up the RPC port %u for listening on IPv4"), endpoint.port());
+        strerr = tfm::format(_("An error occurred while setting up the RPC port %u for listening on IPv4"), endpoint.port());
 
     if (! fListening) {
         CClientUIInterface::uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
@@ -1160,7 +1160,7 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params) {
     if (map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
         json_spirit::json_flags status;
-        return data.runtime_error(strprintfc(
+        return data.runtime_error(tfm::format(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
               "If the file does not exist, create it with owner-readable-only file permissions."),
             iofs::GetConfigFile().string().c_str()), 0).get_obj(status);
@@ -1213,7 +1213,7 @@ json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMet
     if (nStatus == HTTP_UNAUTHORIZED)
         return data.runtime_error("incorrect rpcuser or rpcpassword (authorization failed)", 0).get_obj(status);
     else if (nStatus >= 400 && nStatus != HTTP_BAD_REQUEST && nStatus != HTTP_NOT_FOUND && nStatus != HTTP_INTERNAL_SERVER_ERROR)
-        return data.runtime_error(strprintf("server returned HTTP error %d", nStatus), 0).get_obj(status);
+        return data.runtime_error(tfm::format("server returned HTTP error %d", nStatus), 0).get_obj(status);
     else if (strReply.empty())
         return data.runtime_error("no response from server", 0).get_obj(status);
 

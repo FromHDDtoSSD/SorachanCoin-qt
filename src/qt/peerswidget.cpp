@@ -32,7 +32,7 @@ static void GetPeersInfo(std::string &dest) {
         dest += stats.addrName;
         dest += "</td></tr><tr><td>";
         dest += "services: </td><td>";
-        dest += strprintf("%08" PRIx64, stats.nServices);
+        dest += tfm::format("%08" PRIx64, stats.nServices);
         dest += "</td></tr><tr><td>";
         dest += "connection time: </td><td>";
         dest += std::to_string(std::max(stats.nLastRecv-stats.nTimeConnected, stats.nLastSend-stats.nTimeConnected));

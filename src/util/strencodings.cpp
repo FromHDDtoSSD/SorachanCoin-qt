@@ -423,12 +423,12 @@ std::string FormatParagraph(const std::string &in, size_t width, size_t indent)
 
 std::string i64tostr(int64_t n)
 {
-    return strprintf("%d", n);
+    return tfm::format("%d", n);
 }
 
 std::string itostr(int n)
 {
-    return strprintf("%d", n);
+    return tfm::format("%d", n);
 }
 
 int64_t atoi64(const char *psz)

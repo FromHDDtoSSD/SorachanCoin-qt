@@ -22,7 +22,7 @@ int block_transaction::nCoinbaseMaturity = block_transaction::mainnet::nCoinbase
 template <typename T>
 std::string CTransaction_impl<T>::ToStringShort() const {
     std::string str;
-    str += strprintf("%s %s", GetHash().ToString().c_str(), IsCoinBase()? "base" : (IsCoinStake()? "stake" : "user"));
+    str += tfm::format("%s %s", GetHash().ToString().c_str(), IsCoinBase()? "base" : (IsCoinStake()? "stake" : "user"));
     return str;
 }
 
@@ -30,7 +30,7 @@ template <typename T>
 std::string CTransaction_impl<T>::ToString() const {
     std::string str;
     str += IsCoinBase() ? "Coinbase" : (IsCoinStake() ? "Coinstake" : "CTransaction");
-    str += strprintf("(hash=%s, nTime=%d, ver=%d, vin.size=%" PRIszu ", vout.size=%" PRIszu ", nLockTime=%d)\n",
+    str += tfm::format("(hash=%s, nTime=%d, ver=%d, vin.size=%" PRIszu ", vout.size=%" PRIszu ", nLockTime=%d)\n",
         GetHash().ToString().substr(0,10).c_str(),
         nTime,
         nVersion,
@@ -46,19 +46,19 @@ std::string CTransaction_impl<T>::ToString() const {
 
 template <typename T>
 std::string COutPoint_impl<T>::ToString() const noexcept {
-    return strprintf("COutPoint_impl<T>(%s, %u)", hash.ToString().substr(0,10).c_str(), n);
+    return tfm::format("COutPoint_impl<T>(%s, %u)", hash.ToString().substr(0,10).c_str(), n);
 }
 
 std::string CDiskTxPos::ToString() const noexcept {
     if (IsNull())
         return "null";
     else
-        return strprintf("(nFile=%u, nBlockPos=%u, nTxPos=%u)", nFile, nBlockPos, nTxPos);
+        return tfm::format("(nFile=%u, nBlockPos=%u, nTxPos=%u)", nFile, nBlockPos, nTxPos);
 }
 
 template <typename T>
 std::string CTxIn_impl<T>::ToStringShort() const {
-    return strprintf(" %s %d", prevout.get_hash().ToString().c_str(), prevout.get_n());
+    return tfm::format(" %s %d", prevout.get_hash().ToString().c_str(), prevout.get_n());
 }
 
 template <typename T>
@@ -67,25 +67,25 @@ std::string CTxIn_impl<T>::ToString() const {
     str += "CTxIn(";
     str += prevout.ToString();
     if (prevout.IsNull())
-        str += strprintf(", coinbase %s", util::HexStr(scriptSig).c_str());
+        str += tfm::format(", coinbase %s", util::HexStr(scriptSig).c_str());
     else
-        str += strprintf(", scriptSig=%s", scriptSig.ToString().substr(0,24).c_str());
+        str += tfm::format(", scriptSig=%s", scriptSig.ToString().substr(0,24).c_str());
     if (nSequence != std::numeric_limits<unsigned int>::max())
-        str += strprintf(", nSequence=%u", nSequence);
+        str += tfm::format(", nSequence=%u", nSequence);
     str += ")";
     return str;
 }
 
 template <typename T>
 std::string CTxOut_impl<T>::ToStringShort() const {
-    return strprintf(" out %s %s", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
+    return tfm::format(" out %s %s", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
 }
 
 template <typename T>
 std::string CTxOut_impl<T>::ToString() const {
     if (IsEmpty()) return "CTxOut(empty)";
     if (scriptPubKey.size() < 6) return "CTxOut(error)";
-    return strprintf("CTxOut(nValue=%s, scriptPubKey=%s)", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
+    return tfm::format("CTxOut(nValue=%s, scriptPubKey=%s)", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
 }
 
 // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock

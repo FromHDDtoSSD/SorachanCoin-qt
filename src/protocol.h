@@ -178,7 +178,7 @@ public:
             }
         }
         if (i == protocol::vpszTypeName.size()) {
-            throw std::out_of_range(strprintf("CInv::CInv(std::string, uint256) : unknown type '%s'", strType.c_str()));
+            throw std::out_of_range(tfm::format("CInv::CInv(std::string, uint256) : unknown type '%s'", strType.c_str()));
         }
     }
 
@@ -187,12 +187,12 @@ public:
     }
     const char *GetCommand() const {
         if (! IsKnownType()) {
-            throw std::out_of_range(strprintf("CInv::GetCommand() : type=%d unknown type", type));
+            throw std::out_of_range(tfm::format("CInv::GetCommand() : type=%d unknown type", type));
         }
         return protocol::vpszTypeName[type].c_str();
     }
     std::string ToString() const {
-        return strprintf("%s %s", GetCommand(), this->hash.ToString().substr(0,20).c_str());
+        return tfm::format("%s %s", GetCommand(), this->hash.ToString().substr(0,20).c_str());
     }
 
     friend bool operator<(const CInv &a, const CInv &b) {
