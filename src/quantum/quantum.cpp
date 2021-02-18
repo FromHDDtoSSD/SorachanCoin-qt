@@ -2,8 +2,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
-
 #include <bitset>
 #include <thread>
 #include <quantum/quantum.h>
@@ -609,5 +607,3 @@ private:
     ~Quantum_startup() {}
 };
 Quantum_startup Quantum_startup::q_startup;
-
-#endif

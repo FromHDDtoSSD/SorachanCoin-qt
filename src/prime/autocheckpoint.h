@@ -5,8 +5,6 @@
 #ifndef SORACHANCOIN_AUTO_CHECKPOINT_H
 #define SORACHANCOIN_AUTO_CHECKPOINT_H
 
-#if defined(USE_QUANTUM)
-
 #include <stdint.h>
 #include <map>
 #include <uint256.h>
@@ -78,11 +76,5 @@ public:
     bool BuildAutocheckPoints();
 };
 using CAutocheckPoint = CAutocheckPoint_impl<uint256>;
-
-#else
-
-static_assert(false, "After ver3, USE_QUANTUM macro is required.");
-
-#endif // defined(USE_QUANTUM)
 
 #endif // SORACHANCOIN_AUTO_CHECKPOINT_H

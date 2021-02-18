@@ -4,7 +4,6 @@
 
 #ifndef SORACHANCOIN_QUANTUM_H
 #define SORACHANCOIN_QUANTUM_H
-#if defined(USE_QUANTUM) // SorachanCoin-qt.pro
 
 #include <memory>
 #include <assert.h>
@@ -561,5 +560,4 @@ namespace Lamport {
 
 } // namespace latest_crypto
 
-#endif // USE_QUANTUM
 #endif // SORACHANCOIN_QUANTUM_HEADER

@@ -5,8 +5,6 @@
 #ifndef HMAC_QHASH65536_H
 #define HMAC_QHASH65536_H
 
-#if defined(USE_QUANTUM)
-
 # include <const/no_instance.h>
 # include <crypto/sha256.h>
 # include <uint256.h>
@@ -26,7 +24,5 @@ public:
 using HMAC_LAMPORT_PRIVATE_HASH = HMAC_LAMPORT_PRIVATE_HASH_impl<latest_crypto::CSHA256>;
 
 } // latest_crypto
-
-#endif
 
 #endif // HMAC_QHASH65536_H

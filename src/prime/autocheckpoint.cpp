@@ -2,8 +2,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
-
 #include <prime/autocheckpoint.h>
 #include <prevector/prevector.h>
 #include <block/block.h>
@@ -248,5 +246,3 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
 }
 
 template class CAutocheckPoint_impl<uint256>;
-
-#endif // defined(USE_QUANTUM)

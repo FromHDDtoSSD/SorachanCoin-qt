@@ -2,9 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
 #include <crypto/hmac_qhash65536.h>
-//#include <debugcs/debugcs.h>
+#include <debugcs/debugcs.h>
 
 namespace latest_crypto {
 
@@ -23,5 +22,3 @@ uint131072 HMAC_LAMPORT_PRIVATE_HASH_impl<BASE>::CalculateDigest(const byte *inp
 template class HMAC_LAMPORT_PRIVATE_HASH_impl<latest_crypto::CSHA256>;
 
 } // latest_crypto
-
-#endif

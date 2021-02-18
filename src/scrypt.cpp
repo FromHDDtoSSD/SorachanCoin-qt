@@ -42,12 +42,10 @@
     extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
 #else
 
-#if defined(USE_QUANTUM)
-    using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
-    using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
-    using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
-    using pbkdf65536 = pbkdf2_impl<latest_crypto::CQHASH65536>;
-#endif
+using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
+using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
+using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
+using pbkdf65536 = pbkdf2_impl<latest_crypto::CQHASH65536>;
 
 //
 // Generic scrypt_core implementation
@@ -156,7 +154,6 @@ uint256 bitscrypt::scrypt_nosalt(const void *input, size_t inputlen, void *scrat
     return result;
 }
 
-#if defined(USE_QUANTUM)
 uint65536 bitscrypt::scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad)
 {
     unsigned int *V;
@@ -170,7 +167,6 @@ uint65536 bitscrypt::scrypt_nosalt_65536(const void *input, size_t inputlen, voi
 
     return result;
 }
-#endif
 
 uint256 bitscrypt::scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad)
 {
@@ -216,10 +212,8 @@ uint256 bitscrypt::scrypt_blockhash(const void *input)
     return scrypt_nosalt(input, 80, scratchpad);
 }
 
-#if defined(USE_QUANTUM)
 uint65536 bitscrypt::scrypt_blockhash_65536(const void *input)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
     return scrypt_nosalt_65536(input, 80, scratchpad);
 }
-#endif

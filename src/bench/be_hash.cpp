@@ -2,8 +2,6 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
-
 #include <memory>
 #include <prevector/prevector.h>
 #include <bench/bench.h>
@@ -321,5 +319,3 @@ HASH_TEST(SHA256, 50000)
 HASH_TEST(SHA512, 50000)
 
 } // namespace check_hash
-
-#endif // USE_QUANTUM

@@ -2,8 +2,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
-
 # include <crypto/blake2.h>
 # include <blake2.h>
 # include <cleanse/cleanse.h>
@@ -32,5 +30,3 @@ void CBLAKE2::Clean() noexcept {
 }
 
 } // latest_crypto
-
-#endif

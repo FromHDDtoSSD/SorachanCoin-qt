@@ -98,11 +98,8 @@ USE_PREVECTOR_S=1
 
 #
 # OPTION USE
-#
-# QUANTUM: LamportSignature, CQHASH65536 (later Ver2, must be using!)
 # KNOWLEDGE_DB: Blockchain Database (with the "blockchain mini filesystem" library, optional)
 #
-USE_QUANTUM=1
 USE_KNOWLEDGE_DB=-
 
 #
@@ -111,10 +108,8 @@ USE_KNOWLEDGE_DB=-
 contains(RELEASE, 0) {
     DEBUG_ALGO_CHECK=0
     contains(DEBUG_ALGO_BENCHMARK_TEST, 1) {
-        contains(USE_QUANTUM, 1) {
-            contains(USE_LATEST_CRYPTO, 1) {
-                DEBUG_ALGO_CHECK=1
-            }
+        contains(USE_LATEST_CRYPTO, 1) {
+            DEBUG_ALGO_CHECK=1
         }
     }
     DEFINES += DEBUG
@@ -233,13 +228,6 @@ win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 
 #
-# Crypto++ 8.1
-#
-contains(USE_QUANTUM, 1) {
-    DEFINES += CRYPTOPP_NO_ASSIGN_TO_INTEGER
-}
-
-#
 # DSUB and QT_PLUGINS
 #
 contains(USE_DBUS, 1) {
@@ -334,22 +322,8 @@ contains(USE_PREVECTOR_S, 1) {
     message(Building without ptrvector_s support)
 }
 
-#
-# use: qmake "USE_QUANTUM=1" ( enabled by default; default)
-#  or: qmake "USE_QUANTUM=0" (disabled by default)
-#  or: qmake "USE_QUANTUM=-" (not supported)
-#
-# BLAKE2HASH: https://github.com/BLAKE2/libb2
-#
-contains(USE_QUANTUM, -) {
-    message(Building without QUANTUM support)
-} else {
-    message(Building with QUANTUM support)
-    DEFINES += USE_QUANTUM=$$USE_QUANTUM
-
-    INCLUDEPATH += $$BLAKE2_INC_PATH
-    LIBS += -lb2
-}
+INCLUDEPATH += $$BLAKE2_INC_PATH
+LIBS += -lb2
 
 #
 # use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)

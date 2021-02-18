@@ -5,7 +5,6 @@
 #ifndef SORACHANCOIN_QHASH65536_H
 #define SORACHANCOIN_QHASH65536_H
 
-#if defined(USE_QUANTUM)
 #include <quantum/quantum.h>
 
 namespace latest_crypto {
@@ -34,7 +33,5 @@ public:
 };
 
 } // namespace latest_crypto
-
-#endif
 
 #endif // SORACHANCOIN_QHASH65536_H

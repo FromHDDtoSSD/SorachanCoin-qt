@@ -149,13 +149,12 @@ bool block_notify::IsInitialBlockDownload()
 
 template <typename T>
 uint256 CBlockHeader_impl<T>::GetHash() const { // todo: from uint256 to T (please replace bitscrypt to T)
-#if defined(USE_QUANTUM)
     // debug
     //uint65536 tt = bitscrypt::scrypt_blockhash_65536((const uint8_t *)this);
     //assert(0 < tt);
     //debugcs::instance() << "QHASH65536:" << debugcs::endl();
     //debugcs::instance() << tt.GetHex() << debugcs::endl() << "------------------------" << debugcs::endl();
-#endif
+
     assert(sizeof(*this)==80); // uint256 blockheader size.
     return bitscrypt::scrypt_blockhash((const uint8_t *)this);
 }

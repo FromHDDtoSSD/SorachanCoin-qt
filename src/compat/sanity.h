@@ -78,7 +78,6 @@ namespace latest_crypto
     int check_all_aes();
 }
 
-#if defined(USE_QUANTUM)
 namespace latest_crypto
 {
     void Ripemd160Assertcheck(benchmark::State& state);
@@ -87,7 +86,6 @@ namespace latest_crypto
     void Blake2Assertcheck(benchmark::State& state);
     void LamportAssertcheck(benchmark::State& state);
 }
-#endif
 
 namespace latest_json
 {

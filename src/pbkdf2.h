@@ -8,7 +8,6 @@
 #include <cstring>
 #include <stdint.h>
 
-# if defined(USE_QUANTUM)
 template <typename T>
 class pbkdf2_impl
 {
@@ -144,23 +143,5 @@ public:
         PShctx.cleanse();
     }
 };
-# else
-#include <openssl/sha.h>
-class pbkdf2
-{
-private:
-    typedef struct HMAC_SHA256Context {
-        SHA256_CTX ictx;
-        SHA256_CTX octx;
-    } HMAC_SHA256_CTX;
-    static uint32_t be32dec(const void *pp);
-    static void be32enc(void *pp, uint32_t x);
-    static void HMAC_HASH_Init(HMAC_SHA256_CTX *ctx, const void *_K, size_t Klen);
-    static void HMAC_HASH_Update(HMAC_SHA256_CTX *ctx, const void *in, size_t len);
-    static void HMAC_HASH_Final(unsigned char digest[32], HMAC_SHA256_CTX *ctx);
-public:
-    static void PBKDF2_HASH(const uint8_t *passwd, size_t passwdlen, const uint8_t *salt, size_t saltlen, uint64_t c, uint8_t *buf, size_t dkLen);
-};
-# endif
 
 #endif // PBKDF2_H

@@ -4,7 +4,6 @@
 
 #ifndef QT_SECURE_H
 #define QT_SECURE_H
-#if defined(USE_QUANTUM)  // SorachanCoin-qt.pro
 
 #include <quantum/quantum.h> // mlock(), mprotect(), SecureAllocator and malloc()
 #include <cleanse/cleanse.h>
@@ -139,7 +138,5 @@ public:
         QtSecureAllocator::instance().free(p);
     }
 };
-
-#endif // defined(USE_QUANTUM)
 
 #endif

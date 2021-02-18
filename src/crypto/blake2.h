@@ -5,7 +5,6 @@
 #ifndef CRYPTO_BLAKE2_H
 #define CRYPTO_BLAKE2_H
 
-#if defined(USE_QUANTUM)
 #include <blake2.h>
 
 namespace latest_crypto {
@@ -27,7 +26,5 @@ public:
 };
 
 } // latest_crypto
-
-#endif
 
 #endif

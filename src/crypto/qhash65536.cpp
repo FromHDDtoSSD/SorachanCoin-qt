@@ -2,8 +2,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#if defined(USE_QUANTUM)
-
 # include <quantum/quantum.h>
 # include <crypto/sha256.h>
 # include <uint256.h>
@@ -56,5 +54,3 @@ CQHASH65536& CQHASH65536::Reset() noexcept {
 }
 
 } // latest_crypto
-
-#endif

@@ -6,7 +6,6 @@
 
 #ifndef _BITCOIN_PREVECTOR_S_H_
 #define _BITCOIN_PREVECTOR_S_H_
-#if defined(USE_QUANTUM)
 
 #include <cassert>
 #include <cstdint>
@@ -1015,5 +1014,4 @@ const int PREVECTOR_S_N = 512;
 
 } // namespace latest_crypto
 
-#endif
 #endif
