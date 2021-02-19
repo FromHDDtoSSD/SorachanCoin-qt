@@ -109,7 +109,8 @@ CBlockIndex *Checkpoints::manage::GetLastCheckpoint(const std::map<uint256, CBlo
 CBlockIndex *Checkpoints::manage::GetLastSyncCheckpoint() {
     LLOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (! block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint)) {
-        logging::error("Checkpoints::manage::GetSyncCheckpoint: block index missing for current sync-checkpoint %s", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
+        bool ret = logging::error("Checkpoints::manage::GetSyncCheckpoint: block index missing for current sync-checkpoint %s", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
+        (void)ret;
     } else {
         return block_info::mapBlockIndex[Checkpoints::manage::hashSyncCheckpoint];
     }
@@ -171,10 +172,6 @@ bool Checkpoints::manage::WriteSyncCheckpoint(const uint256 &hashCheckpoint) {
         return logging::error("Checkpoints::manage::WriteSyncCheckpoint(): failed to commit to db sync checkpoint %s", hashCheckpoint.ToString().c_str());
     }
 
-#ifndef USE_LEVELDB
-    txdb.Close();
-#endif
-
     Checkpoints::manage::hashSyncCheckpoint = hashCheckpoint;
     return true;
 }
@@ -201,9 +198,7 @@ bool Checkpoints::manage::AcceptPendingSyncCheckpoint() {
             }
         }
 
-#ifndef USE_LEVELDB
-        txdb.Close();
-#endif
+
         if (! Checkpoints::manage::WriteSyncCheckpoint(Checkpoints::hashPendingCheckpoint)) {
             return logging::error("Checkpoints::manage::AcceptPendingSyncCheckpoint(): failed to write sync checkpoint %s", Checkpoints::hashPendingCheckpoint.ToString().c_str());
         }
@@ -303,10 +298,6 @@ bool Checkpoints::manage::ResetSyncCheckpoint() {
         if (! block.SetBestChain(txdb, block_info::mapBlockIndex[hash])) {
             return logging::error("Checkpoints::manage::ResetSyncCheckpoint: SetBestChain failed for hardened checkpoint %s", hash.ToString().c_str());
         }
-
-#ifndef USE_LEVELDB
-        txdb.Close();
-#endif
     } else if (! block_info::mapBlockIndex.count(hash)) {
         //
         // checkpoint block not yet accepted
@@ -459,10 +450,6 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode *pfrom) {
             return logging::error("CSyncCheckpoint::ProcessSyncCheckpoint: SetBestChain failed for sync checkpoint %s", hashCheckpoint.ToString().c_str());
         }
     }
-
-#ifndef USE_LEVELDB
-    txdb.Close();
-#endif
 
     if (! Checkpoints::manage::WriteSyncCheckpoint(hashCheckpoint)) {
         return logging::error("CSyncCheckpoint::ProcessSyncCheckpoint(): failed to write sync checkpoint %s", hashCheckpoint.ToString().c_str());

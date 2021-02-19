@@ -482,10 +482,6 @@ bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, ui
         return tx.DoS(1, logging::error("bitkernel::CheckProofOfStake() : INFO: read txPrev failed"));  // previous transaction not in main chain, may occur during initial download
     }
 
-#ifndef USE_LEVELDB
-    txdb.Close();
-#endif
-
     // Verify signature
     if (! block_check::manage::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0)) {
         return tx.DoS(100, logging::error("bitkernel::CheckProofOfStake() : block_check::manage::VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
@@ -528,16 +524,12 @@ uint32_t bitkernel::GetStakeModifierChecksum(const CBlockIndex *pindex)
 // Check stake modifier hard checkpoints
 bool bitkernel::CheckStakeModifierCheckpoints(int nHeight, uint32_t nStakeModifierChecksum)
 {
-    typedef std::map<int, unsigned int> MapModifierCheckpoints;
-
     MapModifierCheckpoints &checkpoints = (args_bool::fTestNet ? mapStakeModifierCheckpointsTestNet : mapStakeModifierCheckpoints);
-
     if (checkpoints.count(nHeight)) {
         bool ret = (nStakeModifierChecksum == checkpoints[nHeight]);
         if(! ret) {
-            logging::error("CheckStakeModifierCheckpoints error: checksum 0x%x", nStakeModifierChecksum);
+            return logging::error("CheckStakeModifierCheckpoints error: checksum 0x%x", nStakeModifierChecksum);
         }
-        return ret;
     }
 
     return true;

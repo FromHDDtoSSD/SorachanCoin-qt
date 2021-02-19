@@ -9,16 +9,17 @@
 #include <wallet.h>
 #include <block/block_check.h>
 
+using MapModifierCheckpoints = std::map<int, unsigned int>;
 class bitkernel : private no_instance
 {
 private:
     // Hard checkpoints of stake
-    static std::map<int, unsigned int> mapStakeModifierCheckpoints;
-    static std::map<int, unsigned int> mapStakeModifierCheckpointsTestNet;
+    static MapModifierCheckpoints mapStakeModifierCheckpoints;
+    static MapModifierCheckpoints mapStakeModifierCheckpointsTestNet;
 
     // MODIFIER_INTERVAL_RATIO:
     // ratio of group interval length between the last group and the first group
-    static const int MODIFIER_INTERVAL_RATIO = 3;
+    static constexpr int MODIFIER_INTERVAL_RATIO = 3;
 
     // Protocol switch time for fixed kernel modifier interval
     static const unsigned int nModifierSwitchTime  = timestamps::GENESIS_TIME_STAMP;
@@ -36,8 +37,8 @@ private:
     static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, uint256 &hashProofOfStake, uint256 &targetProofOfStake, bool fPrintProofOfStake=false);
 
 public:
-    static const std::map<int, unsigned int> &getMapStakeModifierCheckpoints() {return mapStakeModifierCheckpoints;}
-    static const std::map<int, unsigned int> &getMapStakeModifierCheckpointsTestnet() {return mapStakeModifierCheckpointsTestNet;}
+    static const MapModifierCheckpoints &getMapStakeModifierCheckpoints() {return mapStakeModifierCheckpoints;}
+    static const MapModifierCheckpoints &getMapStakeModifierCheckpointsTestnet() {return mapStakeModifierCheckpointsTestNet;}
 
     // Note: user must upgrade before the protocol switch deadline, otherwise it's required to
     // re-download the blockchain. The timestamp of upgrade is recorded in the blockchain database.

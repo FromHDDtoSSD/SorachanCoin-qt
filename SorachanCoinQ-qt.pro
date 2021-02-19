@@ -84,7 +84,6 @@ WINXP_BUILD=0
 # there is no probrem, all set 1.
 #
 USE_O3=1
-USE_LEVELDB=1
 USE_UPNP=1
 USE_IPV6=1
 USE_QRCODE=1
@@ -136,7 +135,6 @@ contains (64BIT_BUILD, 1) {
 }
 contains (WINXP_BUILD, 1) {
     message(WINXP BUILD MODE LEVELDB 0)
-    USE_LEVELDB=0
     BOOST_PATH_SUFFIX=55_0
     64BIT_BUILD=0
 } else {
@@ -241,22 +239,15 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 }
 
 #
-# LevelDB setting
+# LEVEL DB
 #
-contains(USE_LEVELDB, 1) {
-    message(Building with LevelDB transaction index)
-    DEFINES += USE_LEVELDB
-    INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
-    LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
-    genleveldb.target = $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
-    genleveldb.depends = FORCE
-    PRE_TARGETDEPS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
-    QMAKE_EXTRA_TARGETS += genleveldb
-    SOURCES += src/txdb-leveldb.cpp
-} else {
-    message(Building with Berkeley DB transaction index and wallet database)
-    SOURCES += src/txdb-bdb.cpp
-}
+INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
+LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
+genleveldb.target = $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
+genleveldb.depends = FORCE
+PRE_TARGETDEPS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
+QMAKE_EXTRA_TARGETS += genleveldb
+SOURCES += src/txdb-leveldb.cpp
 
 #
 # use: qmake "USE_IPV6=1" (enabled by default; default)
@@ -419,7 +410,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/key.h \
     src/db.h \
     src/txdb.h \
-    src/txdb-bdb.h \
     src/txdb-leveldb.h \
     src/walletdb.h \
     src/db_addr.h \

@@ -298,10 +298,6 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
                 return logging::error("LoadBlockIndex() : failed to write upgrade info");
             }
         }
-
-#ifndef USE_LEVELDB
-        txdb.Close();
-#endif
     }
 
     return true;

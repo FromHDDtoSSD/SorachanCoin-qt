@@ -114,32 +114,6 @@ bool CDBEnv::Open(boost::filesystem::path pathEnv_)
     fDbEnvInit = true;
     fMockDb = false;
 
-#ifndef USE_LEVELDB
-    //
-    // Check that the number of locks is sufficient (to prevent chain fork possibility, read http://bitcoin.org/may15 for more info)
-    //
-    u_int32_t nMaxLocks;
-    if (! dbenv.get_lk_max_locks(&nMaxLocks)) {
-        int nBlocks, nDeepReorg;
-        std::string strMessage;
-
-        nBlocks = nMaxLocks / 48768;
-        nDeepReorg = (nBlocks - 1) / 2;
-
-        logging::LogPrintf("Final lk_max_locks is %u, sufficient for (worst case) %d block%s in a single transaction (up to a %d-deep reorganization)\n", nMaxLocks, nBlocks, (nBlocks == 1) ? "" : "s", nDeepReorg);
-        if (nDeepReorg < 3) {
-            if (nBlocks < 1) {
-                strMessage = tfm::format(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a single block. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
-            } else {
-                strMessage = tfm::format(_("Warning: DB_CONFIG has set_lk_max_locks %u, which may be too low for a common blockchain reorganization. If this limit is reached, %s may stop working."), nMaxLocks, strCoinName);
-            }
-
-            excep::set_strMiscWarning(strMessage);
-            logging::LogPrintf("*** %s\n", strMessage.c_str());
-        }
-    }
-#endif
-
     return true;
 }
 

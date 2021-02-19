@@ -650,7 +650,7 @@ bool CBlock_impl<T>::AcceptBlock()
 
     // Don't accept blocks with future timestamps
     if (pindexPrev->get_nHeight() > 1 && nMedianTimePast + nMaxOffset < CBlockHeader_impl<T>::GetBlockTime()) {
-        logging::error((std::string("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：")
+        return logging::error((std::string("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：")
                      + std::to_string(nMedianTimePast) + " nMaxOffset：" + std::to_string(nMaxOffset) + " GetBlockTime()："
                      + std::to_string(CBlockHeader_impl<T>::GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->get_nHeight())).c_str());
     }

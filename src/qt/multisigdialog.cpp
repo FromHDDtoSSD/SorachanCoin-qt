@@ -24,12 +24,7 @@
 #include <qt/walletmodel.h>
 #include <net.h>
 #include <allocator/qtsecure.h>
-
-#ifdef USE_LEVELDB
-#include "txdb-leveldb.h"
-#else
-#include "txdb-bdb.h"
-#endif
+#include <txdb-leveldb.h>
 
 MultisigDialog::MultisigDialog(QWidget *parent) : QWidget(parent), ui(new(std::nothrow) Ui::MultisigDialog), model(nullptr)
 {

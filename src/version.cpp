@@ -8,11 +8,7 @@
     //
     // Client version number
     //
-#ifdef USE_LEVELDB
     #define CLIENT_VERSION_SUFFIX   "-leveldb"
-#else
-    #define CLIENT_VERSION_SUFFIX   "-bdb"
-#endif
 
     //
     // Compiler name

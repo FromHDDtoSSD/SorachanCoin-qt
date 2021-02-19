@@ -157,7 +157,7 @@ static inline void LogPrint(const BCLog::LogFlags &category, const Args&... args
 }
 
 template <typename... Args>
-static bool error(const char *fmt, const Args&... args) {
+NODISCARD static bool error(const char *fmt, const Args&... args) {
     std::ostringstream oss;
     tfm::format(oss, fmt, args...);
     logging::LogPrintf("ERROR: %s\n", oss.str().c_str());
