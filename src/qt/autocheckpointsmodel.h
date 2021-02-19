@@ -8,6 +8,7 @@
 #include <QObject>
 #include <checkpoints.h>
 #include <prime/autocheckpoint.h>
+#include <kernel.h>
 
 class OptionsModel;
 class QTimer;
@@ -19,7 +20,7 @@ public:
     ~CheckpointsModel();
 
     const MapCheckpoints &getHardcode() const {return hardcode;}
-    const std::map<int, unsigned int> &getHardstake() const {return hardstake;}
+    const MapModifierCheckpoints &getHardstake() const {return hardstake;}
     const AutoCheckpoints &getAutocheckpoints() const {return autocheck;}
 
 private slots:
@@ -34,7 +35,7 @@ private:
     OptionsModel *options;
     QTimer *timer1, *timer2;
     const MapCheckpoints &hardcode;
-    const std::map<int, unsigned int> &hardstake;
+    const MapModifierCheckpoints &hardstake;
     const AutoCheckpoints &autocheck;
 };
 

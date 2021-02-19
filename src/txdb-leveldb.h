@@ -1,11 +1,15 @@
 // Copyright (c) 2009-2012 The Bitcoin Developers.
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Authored by Google, Inc.
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+// Learn more: http://code.google.com/p/leveldb/
 
 #ifndef BITCOIN_LEVELDB_H
 #define BITCOIN_LEVELDB_H
+
+// SorachanCoin
+// Multi-Threading supported
 
 #include <main.h>
 #include <map>
@@ -13,203 +17,21 @@
 #include <vector>
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
+#include <util/thread.h>
 
-// Class that provides access to a LevelDB. Note that this class is frequently
-// instantiated on the stack and then destroyed again, so instantiation has to
-// be very cheap. Unfortunately that means, a CTxDB instance is actually just a
-// wrapper around some global state.
-//
-// A LevelDB is a key/value store that is optimized for fast usage on hard
-// disks. It prefers long read/writes to seeks and is based on a series of
-// sorted key/value mapping files that are stacked on top of each other, with
-// newer files overriding older files. A background thread compacts them
-// together when too many files stack up.
-//
-// Learn more: http://code.google.com/p/leveldb/
-class CTxDB
+class CTxDB // Note: no necessary virtual.
 {
 public:
     CTxDB(const char *pszMode = "r+");
-    ~CTxDB() {
-        //
-        // Note that this is not the same as Close() because it deletes only
-        // data scoped to this TxDB object.
-        //
-        delete this->activeBatch;
-    }
+    ~CTxDB();
+    void Close(); // Destroys the underlying shared global state accessed by this TxDB.
 
-    //
-    // Destroys the underlying shared global state accessed by this TxDB.
-    //
-    void Close();
-
-private:
-    CTxDB(const CTxDB &)=delete;
-    CTxDB(CTxDB &&)=delete;
-    CTxDB &operator=(const CTxDB &)=delete;
-    CTxDB &operator=(CTxDB &&)=delete;
-
-    //
-    // global pointer for LevelDB object instance
-    //
-    static leveldb::DB *txdb;
-
-    //
-    // Points to the global instance
-    //
-    leveldb::DB *pdb;
-
-    //
-    // A batch stores up writes and deletes for atomic application. When this
-    // field is non-NULL, writes/deletes go there instead of directly to disk.
-    //
-    leveldb::WriteBatch *activeBatch;
-    leveldb::Options options;
-    bool fReadOnly;
-    int nVersion;
-
-    leveldb::Options GetOptions();
-    void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
-    CBlockIndex *InsertBlockIndex(uint256 hash);
-
-protected:
-    //
-    // Returns true and sets (value,false) if activeBatch contains the given key
-    // or leaves value alone and sets deleted = true if activeBatch contains a
-    // delete for it.
-    //
-    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
-
-    template<typename K, typename T>
-    bool Read(const K &key, T &value) {
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
-        std::string strValue;
-
-        bool readFromDb = true;
-        if (this->activeBatch) {
-            //
-            // First we must search for it in the currently pending set of
-            // changes to the db. If not found in the batch, go on to read disk.
-            //
-            bool deleted = false;
-            readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
-            if (deleted) {
-                return false;
-            }
-        }
-        if (readFromDb) {
-            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
-            if (!status.ok()) {
-                if (status.IsNotFound()) {
-                    return false;
-                }
-
-                // Some unexpected error.
-                logging::LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
-                return false;
-            }
-        }
-
-        //
-        // Unserialize value
-        //
-        try {
-            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
-            ssValue >> value;
-        } catch (const std::exception &) {
-            return false;
-        }
-
-        return true;
-    }
-
-    template<typename K, typename T>
-    bool Write(const K &key, const T &value) {
-        if (this->fReadOnly) {
-            assert(!"Write called on database in read-only mode");
-        }
-
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
-
-        CDataStream ssValue(0, 0);
-        ssValue.reserve(10000);
-        ssValue << value;
-
-        if (this->activeBatch) {
-            this->activeBatch->Put(ssKey.str(), ssValue.str());
-            return true;
-        }
-
-        leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
-        if (! status.ok()) {
-            logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
-            return false;
-        }
-
-        return true;
-    }
-
-    template<typename K>
-    bool Erase(const K &key) {
-        if (! this->pdb) {
-            return false;
-        }
-        if (this->fReadOnly) {
-            assert(!"Erase called on database in read-only mode");
-        }
-
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
-        if (this->activeBatch) {
-            this->activeBatch->Delete(ssKey.str());
-            return true;
-        }
-
-        leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
-        return (status.ok() || status.IsNotFound());
-    }
-
-    template<typename K>
-    bool Exists(const K &key) {
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
-        std::string unused;
-
-        if (this->activeBatch) {
-            bool deleted;
-            if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
-                return true;
-            }
-        }
-
-        leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
-        return status.IsNotFound() == false;
-    }
-
-public:
     bool TxnBegin();
     bool TxnCommit();
-    bool TxnAbort() {
-        delete this->activeBatch;
-        this->activeBatch = nullptr;
-        return true;
-    }
+    bool TxnAbort();
 
-    bool ReadVersion(int &nVersion) {
-        nVersion = 0;
-        return Read(std::string("version"), nVersion);
-    }
-
-    bool WriteVersion(int nVersion) {
-        return Write(std::string("version"), nVersion);
-    }
-
+    bool ReadVersion(int &nVersion);
+    bool WriteVersion(int nVersion);
 
     bool ReadTxIndex(uint256 hash, CTxIndex &txindex);
     bool UpdateTxIndex(uint256 hash, const CTxIndex &txindex);
@@ -240,6 +62,74 @@ public:
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
     bool LoadBlockIndex();
+
+private:
+    CTxDB(const CTxDB &)=delete;
+    CTxDB(CTxDB &&)=delete;
+    CTxDB &operator=(const CTxDB &)=delete;
+    CTxDB &operator=(CTxDB &&)=delete;
+
+    // global pointer for LevelDB object instance
+    static leveldb::DB *txdb;
+
+    // Points to the global instance
+    leveldb::DB *pdb;
+
+    // A batch stores up writes and deletes for atomic application. When this
+    // field is non-NULL, writes/deletes go there instead of directly to disk.
+    leveldb::WriteBatch *activeBatch;
+    leveldb::Options options;
+    bool fReadOnly;
+    int nVersion;
+
+    leveldb::Options GetOptions();
+    void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
+
+    // Returns true and sets (value,false) if activeBatch contains the given key
+    // or leaves value alone and sets deleted = true if activeBatch contains a
+    // delete for it.
+    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value);
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value);
+
+    template<typename K>
+    bool Erase(const K &key);
+
+    template<typename K>
+    bool Exists(const K &key);
+};
+
+// multi-threading DB
+class CMTxDB final : public CTxDB
+{
+public:
+    CMTxDB(const char *pszMode = "r+") : thread(&CMTxDB::dbcall), CTxDB(pszMode) {}
+    ~CMTxDB() {}
+
+    bool start() {return thread.start(nullptr, this);}
+    void stop() {thread.stop();}
+    bool signal() const {return thread.signal();}
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value) {
+        LOCK(csTxdb_write);
+        return CTxDB::Write(key, value);
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        LOCK(csTxdb_write);
+        return CTxDB::Erase(key);
+    }
+
+private:
+    static CCriticalSection csTxdb_write; // Write and Erase
+    unsigned int dbcall(cla_thread<CMTxDB>::thread_data *data);
+    cla_thread<CMTxDB> thread;
 };
 
 #endif // BITCOIN_DB_H

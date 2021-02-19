@@ -31,7 +31,7 @@
  * Method: start(), stop(), signal(), waitclose()
  */
 template <typename T>
-class cla_thread {
+class cla_thread final {
 public:
     typedef struct _thread_data {
         void *p;

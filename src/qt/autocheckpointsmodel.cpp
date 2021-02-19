@@ -5,7 +5,6 @@
 #include <QTimer>
 #include <qt/autocheckpointsmodel.h>
 #include <qt/optionsmodel.h>
-#include <kernel.h>
 #include <allocator/qtsecure.h>
 
 constexpr int INTERVAL_AUTOCHECKPOINTS_RELOAD = 600 * 1000; // GUI refresh interval time

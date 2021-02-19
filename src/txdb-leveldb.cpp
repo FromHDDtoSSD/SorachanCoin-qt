@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file license.txt or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,7 +19,9 @@
 #include <main.h>
 #include <util/logging.h>
 #include <file_operate/iofs.h>
+#include <sync/sync.h>
 
+CCriticalSection CMTxDB::csTxdb_write;
 leveldb::DB *CTxDB::txdb = nullptr;
 
 leveldb::Options CTxDB::GetOptions()
@@ -34,9 +37,7 @@ leveldb::Options CTxDB::GetOptions()
 
 void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = false */)
 {
-    //
     // First time init.
-    //
     fs::path directory = iofs::GetDataDir() / "txleveldb";
 
     if (fRemoveOld) {
@@ -64,9 +65,7 @@ void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = fals
     }
 }
 
-//
 // CDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
-//
 CTxDB::CTxDB(const char *pszMode/* ="r+" */)
 {
     assert(pszMode);
@@ -95,9 +94,7 @@ CTxDB::CTxDB(const char *pszMode/* ="r+" */)
         if (nVersion < version::DATABASE_VERSION) {
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
-            //
             // Leveldb instance destruction
-            //
             delete CTxDB::txdb;
             CTxDB::txdb = pdb = nullptr;
             delete this->activeBatch;
@@ -120,6 +117,12 @@ CTxDB::CTxDB(const char *pszMode/* ="r+" */)
     }
 
     logging::LogPrintf("Opened LevelDB successfully\n");
+}
+
+CTxDB::~CTxDB() {
+    // Note that this is not the same as Close() because it deletes only
+    // data scoped to this TxDB object.
+    delete this->activeBatch;
 }
 
 void CTxDB::Close()
@@ -163,13 +166,134 @@ bool CTxDB::TxnCommit()
     return true;
 }
 
-class CBatchScanner : public leveldb::WriteBatch::Handler
+bool CTxDB::TxnAbort() {
+    delete this->activeBatch;
+    this->activeBatch = nullptr;
+    return true;
+}
+
+bool CTxDB::ReadVersion(int &nVersion) {
+    nVersion = 0;
+    return Read(std::string("version"), nVersion);
+}
+
+bool CTxDB::WriteVersion(int nVersion) {
+    return Write(std::string("version"), nVersion);
+}
+
+template<typename K, typename T>
+bool CTxDB::Read(const K &key, T &value) {
+    CDataStream ssKey(0, 0);
+    ssKey.reserve(1000);
+    ssKey << key;
+    std::string strValue;
+
+    bool readFromDb = true;
+    if (this->activeBatch) {
+        // First we must search for it in the currently pending set of
+        // changes to the db. If not found in the batch, go on to read disk.
+        bool deleted = false;
+        readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
+        if (deleted) {
+            return false;
+        }
+    }
+    if (readFromDb) {
+        leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
+        if (!status.ok()) {
+            if (status.IsNotFound()) {
+                return false;
+            }
+
+            // Some unexpected error.
+            logging::LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
+            return false;
+        }
+    }
+
+    // Unserialize value
+    try {
+        CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
+        ssValue >> value;
+    } catch (const std::exception &) {
+        return false;
+    }
+
+    return true;
+}
+
+template<typename K, typename T>
+bool CTxDB::Write(const K &key, const T &value) {
+    if (this->fReadOnly)
+        assert(!"Write called on database in read-only mode");
+
+    CDataStream ssKey(0, 0);
+    ssKey.reserve(1000);
+    ssKey << key;
+
+    CDataStream ssValue(0, 0);
+    ssValue.reserve(10000);
+    ssValue << value;
+
+    if (this->activeBatch) {
+        this->activeBatch->Put(ssKey.str(), ssValue.str());
+        return true;
+    }
+
+    leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
+    if (! status.ok()) {
+        logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
+        return false;
+    }
+
+    return true;
+}
+
+template<typename K>
+bool CTxDB::Erase(const K &key) {
+    if (! this->pdb)
+        return false;
+    if (this->fReadOnly)
+        assert(!"Erase called on database in read-only mode");
+
+    CDataStream ssKey(0, 0);
+    ssKey.reserve(1000);
+    ssKey << key;
+    if (this->activeBatch) {
+        this->activeBatch->Delete(ssKey.str());
+        return true;
+    }
+
+    leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
+    return (status.ok() || status.IsNotFound());
+}
+
+template<typename K>
+bool CTxDB::Exists(const K &key) {
+    CDataStream ssKey(0, 0);
+    ssKey.reserve(1000);
+    ssKey << key;
+    std::string unused;
+
+    if (this->activeBatch) {
+        bool deleted;
+        if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
+            return true;
+        }
+    }
+
+    leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
+    return status.IsNotFound() == false;
+}
+
+namespace {
+class CBatchScanner final : public leveldb::WriteBatch::Handler
 {
 private:
-    CBatchScanner(const CBatchScanner &); // {}
-    CBatchScanner(const CBatchScanner &&); // {}
-    CBatchScanner &operator=(const CBatchScanner &); // {}
-    CBatchScanner &operator=(const CBatchScanner &&); // {}
+    CBatchScanner(const CBatchScanner &)=delete;
+    CBatchScanner(CBatchScanner &&)=delete;
+    CBatchScanner &operator=(const CBatchScanner &)=delete;
+    CBatchScanner &operator=(CBatchScanner &&)=delete;
 
 public:
     std::string needle;
@@ -179,7 +303,7 @@ public:
 
     CBatchScanner() : foundEntry(false) {}
 
-    virtual void Put(const leveldb::Slice &key, const leveldb::Slice &value) {
+    void Put(const leveldb::Slice &key, const leveldb::Slice &value) {
         if (key.ToString() == needle) {
             foundEntry = true;
             *deleted = false;
@@ -187,21 +311,20 @@ public:
         }
     }
 
-    virtual void Delete(const leveldb::Slice &key) {
+    void Delete(const leveldb::Slice &key) {
         if (key.ToString() == needle) {
             foundEntry = true;
             *deleted = true;
         }
     }
 };
+} // namespace
 
-//
 // When performing a read, if we have an active batch we need to check it first
 // before reading from the database, as the rest of the code assumes that once
 // a database transaction begins reads are consistent with it. It would be good
 // to change that assumption in future and avoid the performance hit, though in
 // practice it does not appear to be large.
-//
 bool CTxDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const
 {
     assert(this->activeBatch);
@@ -340,27 +463,19 @@ bool CTxDB::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-CBlockIndex *CTxDB::InsertBlockIndex(uint256 hash)
-{
-    if (hash == 0) {
+static CBlockIndex *InsertBlockIndex(const uint256 &hash) {
+    if (hash == 0)
         return nullptr;
-    }
 
-    //
     // Return existing
-    //
     std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
-    if (mi != block_info::mapBlockIndex.end()) {
+    if (mi != block_info::mapBlockIndex.end())
         return (*mi).second;
-    }
 
-    //
     // Create new
-    //
-    CBlockIndex *pindexNew = new(std::nothrow) CBlockIndex();
-    if (! pindexNew) {
+    CBlockIndex *pindexNew = new(std::nothrow) CBlockIndex;
+    if (! pindexNew)
         throw std::runtime_error("LoadBlockIndex() : CBlockIndex failed to allocate memory");
-    }
 
     mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     pindexNew->set_phashBlock(&((*mi).first));
@@ -371,10 +486,7 @@ CBlockIndex *CTxDB::InsertBlockIndex(uint256 hash)
 bool CTxDB::LoadBlockIndex()
 {
     if (block_info::mapBlockIndex.size() > 0) {
-        //
-        // Already loaded once in this session. It can happen during migration
-        // from BDB.
-        //
+        // Already loaded once in this session. It can happen during migration from BDB.
         return true;
     }
 
@@ -646,4 +758,11 @@ bool CTxDB::LoadBlockIndex()
     }
 
     return true;
+}
+
+// multi-threading DB
+unsigned int CMTxDB::dbcall(cla_thread<CMTxDB>::thread_data *data) {
+
+
+    return 0;
 }

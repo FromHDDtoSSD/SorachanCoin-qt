@@ -61,7 +61,7 @@ void AutocheckpointsWidget::setCheckpointsModel(CheckpointsModel *checkpointsMod
 }
 
 // slot (callback: AutocheckpointsModel: CheckpointsHardcode)
-void AutocheckpointsWidget::update1(const MapCheckpoints &hardcode, const std::map<int, unsigned int> &hardstake) {
+void AutocheckpointsWidget::update1(const MapCheckpoints &hardcode, const MapModifierCheckpoints &hardstake) {
     try {
         model1->clear();
         model1->setColumnCount(3);
