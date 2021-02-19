@@ -123,7 +123,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
         return false;
     }
     if (! txdb.TxnCommit()) {
-        return print::error("SetBestChain() : TxnCommit failed");
+        return logging::error("SetBestChain() : TxnCommit failed");
     }
 
     // Add to current best branch
@@ -238,21 +238,21 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         unsigned int nFile;
         unsigned int nBlockPos;
         if (! block.WriteToDisk(nFile, nBlockPos)) {
-            return print::error("LoadBlockIndex() : writing genesis block to disk failed");
+            return logging::error("LoadBlockIndex() : writing genesis block to disk failed");
         }
         if (! block.AddToBlockIndex(nFile, nBlockPos)) {
-            return print::error("LoadBlockIndex() : genesis block not accepted");
+            return logging::error("LoadBlockIndex() : genesis block not accepted");
         }
 
         // initialize synchronized checkpoint
         if (! Checkpoints::manage::WriteSyncCheckpoint((!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet))) {
-            return print::error("LoadBlockIndex() : failed to init sync checkpoint");
+            return logging::error("LoadBlockIndex() : failed to init sync checkpoint");
         }
 
         // upgrade time set to zero if txdb initialized
         {
             if (! txdb.WriteModifierUpgradeTime(0)) {
-                return print::error("LoadBlockIndex() : failed to init upgrade info");
+                return logging::error("LoadBlockIndex() : failed to init upgrade info");
             }
             logging::LogPrintf(" Upgrade Info: ModifierUpgradeTime txdb initialization\n");
         }
@@ -272,13 +272,13 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
             //
             txdb.TxnBegin();
             if (! txdb.WriteCheckpointPubKey(CSyncCheckpoint::Get_strMasterPubKey())) {
-                return print::error("LoadBlockIndex() : failed to write new checkpoint master key to db");
+                return logging::error("LoadBlockIndex() : failed to write new checkpoint master key to db");
             }
             if (! txdb.TxnCommit()) {
-                return print::error("LoadBlockIndex() : failed to commit new checkpoint master key to db");
+                return logging::error("LoadBlockIndex() : failed to commit new checkpoint master key to db");
             }
             if ((!args_bool::fTestNet) && !Checkpoints::manage::ResetSyncCheckpoint()) {
-                return print::error("LoadBlockIndex() : failed to reset sync-checkpoint");
+                return logging::error("LoadBlockIndex() : failed to reset sync-checkpoint");
             }
         }
 
@@ -295,7 +295,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
             bitkernel::nModifierUpgradeTime = bitsystem::GetTime();
             logging::LogPrintf(" Upgrade Info: upgrading blocktreedb at timestamp %u\n", bitkernel::nModifierUpgradeTime);
             if (! txdb.WriteModifierUpgradeTime(bitkernel::nModifierUpgradeTime)) {
-                return print::error("LoadBlockIndex() : failed to write upgrade info");
+                return logging::error("LoadBlockIndex() : failed to write upgrade info");
             }
         }
 

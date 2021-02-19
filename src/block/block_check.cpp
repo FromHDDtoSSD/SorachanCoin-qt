@@ -52,12 +52,12 @@ bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
     while (pfork != plonger) {
         while (plonger->get_nHeight() > pfork->get_nHeight()) {
             if ((plonger = plonger->set_pprev()) == nullptr)
-                return print::error("block_check::manage::Reorganize() : plonger->pprev is null");
+                return logging::error("block_check::manage::Reorganize() : plonger->pprev is null");
         }
         if (pfork == plonger)
             break;
         if ((pfork = pfork->set_pprev()) == nullptr)
-            return print::error("block_check::manage::Reorganize() : pfork->pprev is null");
+            return logging::error("block_check::manage::Reorganize() : pfork->pprev is null");
     }
 
     // List of what to disconnect
@@ -79,9 +79,9 @@ bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
     for(CBlockIndex *pindex: vDisconnect) {
         CBlock block;
         if (! block.ReadFromDisk(pindex))
-            return print::error("block_check::manage::Reorganize() : ReadFromDisk for disconnect failed");
+            return logging::error("block_check::manage::Reorganize() : ReadFromDisk for disconnect failed");
         if (! block.DisconnectBlock(txdb, pindex))
-            return print::error("block_check::manage::Reorganize() : DisconnectBlock %s failed", pindex->GetBlockHash().ToString().substr(0,20).c_str());
+            return logging::error("block_check::manage::Reorganize() : DisconnectBlock %s failed", pindex->GetBlockHash().ToString().substr(0,20).c_str());
 
         // Queue memory transactions to resurrect
         for(const CTransaction &tx: block.get_vtx()) {
@@ -96,20 +96,20 @@ bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
         CBlockIndex *pindex = vConnect[i];
         CBlock block;
         if (! block.ReadFromDisk(pindex))
-            return print::error("block_check::manage::Reorganize() : ReadFromDisk for connect failed");
+            return logging::error("block_check::manage::Reorganize() : ReadFromDisk for connect failed");
         if (! block.ConnectBlock(txdb, pindex)) // Invalid block
-            return print::error("block_check::manage::Reorganize() : ConnectBlock %s failed", pindex->GetBlockHash().ToString().substr(0,20).c_str());
+            return logging::error("block_check::manage::Reorganize() : ConnectBlock %s failed", pindex->GetBlockHash().ToString().substr(0,20).c_str());
 
         // Queue memory transactions to delete
         for(const CTransaction &tx: block.get_vtx())
             vDelete.push_back(tx);
     }
     if (! txdb.WriteHashBestChain(pindexNew->GetBlockHash()))
-        return print::error("block_check::manage::Reorganize() : WriteHashBestChain failed");
+        return logging::error("block_check::manage::Reorganize() : WriteHashBestChain failed");
 
     // Make sure it's successfully written to disk before changing memory structure
     if (! txdb.TxnCommit())
-        return print::error("block_check::manage::Reorganize() : TxnCommit failed");
+        return logging::error("block_check::manage::Reorganize() : TxnCommit failed");
 
     // Disconnect shorter branch
     for(CBlockIndex *pindex: vDisconnect) {

@@ -173,7 +173,7 @@ bool CBlock_impl<T>::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
         CDiskBlockIndex blockindexPrev(pindex->set_pprev());
         blockindexPrev.set_hashNext(0);
         if (! txdb.WriteBlockIndex(blockindexPrev))
-            return print::error("DisconnectBlock() : WriteBlockIndex failed");
+            return logging::error("DisconnectBlock() : WriteBlockIndex failed");
     }
 
     // ppcoin: clean up wallet after disconnecting coinstake
@@ -233,7 +233,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
 
         nSigOps += tx.GetLegacySigOpCount();
         if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
-            return DoS(100, print::error("ConnectBlock() : too many sigops"));
+            return DoS(100, logging::error("ConnectBlock() : too many sigops"));
 
         CDiskTxPos posThisTx(pindex->get_nFile(), pindex->get_nBlockPos(), nTxPos);
         if (! fJustCheck)
@@ -252,7 +252,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
             // an incredibly-expensive-to-validate block.
             nSigOps += tx.GetP2SHSigOpCount(mapInputs);
             if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
-                return DoS(100, print::error("ConnectBlock() : too many sigops"));
+                return DoS(100, logging::error("ConnectBlock() : too many sigops"));
 
             int64_t nTxValueIn = tx.GetValueIn(mapInputs);
             int64_t nTxValueOut = tx.GetValueOut();
@@ -282,14 +282,14 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
         int64_t nBlockReward = diff::reward::GetProofOfWorkReward(CBlockHeader<T>::nBits, nFees);
         // Check coinbase reward
         if (Merkle_t::vtx[0].GetValueOut() > nBlockReward)
-            return print::error("CheckBlock() : coinbase reward exceeded (actual=%" PRId64 " vs calculated=%" PRId64 ")", Merkle_t::vtx[0].GetValueOut(), nBlockReward);
+            return logging::error("CheckBlock() : coinbase reward exceeded (actual=%" PRId64 " vs calculated=%" PRId64 ")", Merkle_t::vtx[0].GetValueOut(), nBlockReward);
     }
 
     // track money supply and mint amount info
     pindex->set_nMint(nValueOut - nValueIn + nFees);
     pindex->set_nMoneySupply((pindex->get_pprev()? pindex->get_pprev()->get_nMoneySupply() : 0) + nValueOut - nValueIn);
     if (! txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
-        return print::error("Connect() : WriteBlockIndex for pindex failed");
+        return logging::error("Connect() : WriteBlockIndex for pindex failed");
 
     // fees are not collected by proof-of-stake miners
     // fees are destroyed to compensate the entire network
@@ -300,7 +300,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
 
     // Write queued txindex changes
     for (typename std::map<T, CTxIndex>::iterator mi = mapQueuedChanges.begin(); mi != mapQueuedChanges.end(); ++mi) {
-        if (! txdb.UpdateTxIndex((*mi).first, (*mi).second)) return print::error("ConnectBlock() : UpdateTxIndex failed");
+        if (! txdb.UpdateTxIndex((*mi).first, (*mi).second)) return logging::error("ConnectBlock() : UpdateTxIndex failed");
     }
 
     // Update block index on disk without changing it in memory.
@@ -309,7 +309,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
         CDiskBlockIndex blockindexPrev(pindex->set_pprev());
         blockindexPrev.set_hashNext(pindex->GetBlockHash());
         if (! txdb.WriteBlockIndex(blockindexPrev))
-            return print::error("ConnectBlock() : WriteBlockIndex failed");
+            return logging::error("ConnectBlock() : WriteBlockIndex failed");
     }
 
     // Watch for transactions paying to me
@@ -329,7 +329,7 @@ bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransacti
     if (! ReadFromDisk(pindex->get_nFile(), pindex->get_nBlockPos(), fReadTransactions))
         return false;
     if (CBlockHeader_impl<T>::GetHash() != pindex->GetBlockHash())
-        return print::error("CBlock::ReadFromDisk() : GetHash() doesn't match index");
+        return logging::error("CBlock::ReadFromDisk() : GetHash() doesn't match index");
 
     return true;
 }
@@ -339,16 +339,16 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     T hash = CBlockHeader_impl<T>::GetHash();
     if (! txdb.TxnBegin())
-        return print::error("SetBestChain() : TxnBegin failed");
+        return logging::error("SetBestChain() : TxnBegin failed");
 
     if (block_info::pindexGenesisBlock == NULL && hash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
         txdb.WriteHashBestChain(hash);
         if (! txdb.TxnCommit())
-            return print::error("SetBestChain() : TxnCommit failed");
+            return logging::error("SetBestChain() : TxnCommit failed");
         block_info::pindexGenesisBlock = pindexNew;
     } else if (CBlockHeader<T>::hashPrevBlock == block_info::hashBestChain) {
         if (! SetBestChainInner(txdb, pindexNew))
-            return print::error("SetBestChain() : SetBestChainInner failed");
+            return logging::error("SetBestChain() : SetBestChainInner failed");
     } else {
         // the first block in the new chain that will cause it to become the new best chain
         CBlockIndex *pindexIntermediate = pindexNew;
@@ -369,7 +369,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
         if (! block_check::manage::Reorganize(txdb, pindexIntermediate)) {
             txdb.TxnAbort();
             block_check::manage::InvalidChainFound(pindexNew);
-            return print::error("SetBestChain() : block_check::manage::Reorganize failed");
+            return logging::error("SetBestChain() : block_check::manage::Reorganize failed");
         }
 
         // Connect further blocks
@@ -445,12 +445,12 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     // Check for duplicate
     T hash = CBlockHeader_impl<T>::GetHash();
     if (block_info::mapBlockIndex.count(hash))
-        return print::error("AddToBlockIndex() : %s already exists", hash.ToString().substr(0,20).c_str());
+        return logging::error("AddToBlockIndex() : %s already exists", hash.ToString().substr(0,20).c_str());
 
     // Construct new block index object
     CBlockIndex *pindexNew = new(std::nothrow) CBlockIndex(nFile, nBlockPos, *this);
     if (! pindexNew)
-        return print::error("AddToBlockIndex() : new CBlockIndex failed");
+        return logging::error("AddToBlockIndex() : new CBlockIndex failed");
 
     pindexNew->set_phashBlock(&hash);
     typename std::map<T, CBlockIndex *>::iterator miPrev = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
@@ -464,12 +464,12 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
 
     // ppcoin: compute stake entropy bit for stake modifier
     if (! pindexNew->SetStakeEntropyBit(GetStakeEntropyBit(pindexNew->get_nHeight())))
-        return print::error("AddToBlockIndex() : SetStakeEntropyBit() failed");
+        return logging::error("AddToBlockIndex() : SetStakeEntropyBit() failed");
 
     // ppcoin: record proof-of-stake hash value
     if (pindexNew->IsProofOfStake()) {
         if (! block_process::mapProofOfStake.count(hash))
-            return print::error("AddToBlockIndex() : hashProofOfStake not found in map");
+            return logging::error("AddToBlockIndex() : hashProofOfStake not found in map");
         pindexNew->set_hashProofOfStake(block_process::mapProofOfStake[hash]);
     }
 
@@ -477,12 +477,12 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
     if (! bitkernel::ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier))
-        return print::error("AddToBlockIndex() : bitkernel::ComputeNextStakeModifier() failed");
+        return logging::error("AddToBlockIndex() : bitkernel::ComputeNextStakeModifier() failed");
 
     pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
     pindexNew->set_nStakeModifierChecksum(bitkernel::GetStakeModifierChecksum(pindexNew));
     if (! bitkernel::CheckStakeModifierCheckpoints(pindexNew->get_nHeight(), pindexNew->get_nStakeModifierChecksum()))
-        return print::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
+        return logging::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
 
     // Add to block_info::mapBlockIndex
     typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
@@ -526,15 +526,15 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
 
     // Size limits
     if (Merkle_t::vtx.empty() || Merkle_t::vtx.size() > block_params::MAX_BLOCK_SIZE || ::GetSerializeSize(*this) > block_params::MAX_BLOCK_SIZE)
-        return DoS(100, print::error("CheckBlock() : size limits failed"));
+        return DoS(100, logging::error("CheckBlock() : size limits failed"));
 
     bool fProofOfStake = IsProofOfStake();
 
     // First transaction must be coinbase, the rest must not be
     if (! Merkle_t::vtx[0].IsCoinBase())
-        return DoS(100, print::error("CheckBlock() : first tx is not coinbase"));
+        return DoS(100, logging::error("CheckBlock() : first tx is not coinbase"));
     if (! Merkle_t::vtx[0].CheckTransaction())
-        return DoS(Merkle_t::vtx[0].nDoS, print::error("CheckBlock() : CheckTransaction failed on coinbase"));
+        return DoS(Merkle_t::vtx[0].nDoS, logging::error("CheckBlock() : CheckTransaction failed on coinbase"));
 
     uniqueTx.insert(Merkle_t::vtx[0].GetHash());
     nSigOps += Merkle_t::vtx[0].GetLegacySigOpCount();
@@ -543,37 +543,37 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         // check the type of 1st transaction because it's performed earlier by IsProofOfStake()
         // note: nNonce must be zero for proof-of-stake blocks
         if (CBlockHeader<T>::nNonce != 0)
-            return DoS(100, print::error("CheckBlock() : non-zero nonce in proof-of-stake block"));
+            return DoS(100, logging::error("CheckBlock() : non-zero nonce in proof-of-stake block"));
 
         // Coinbase output should be empty if proof-of-stake block
         if (Merkle_t::vtx[0].get_vout().size() != 1 || !Merkle_t::vtx[0].get_vout(0).IsEmpty())
-            return DoS(100, print::error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
+            return DoS(100, logging::error("CheckBlock() : coinbase output not empty for proof-of-stake block"));
 
         // Check coinstake timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() != (int64_t)Merkle_t::vtx[1].get_nTime())
-            return DoS(50, print::error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", CBlockHeader_impl<T>::GetBlockTime(), Merkle_t::vtx[1].get_nTime()));
+            return DoS(50, logging::error("CheckBlock() : coinstake timestamp violation nTimeBlock=%" PRId64 " nTimeTx=%u", CBlockHeader_impl<T>::GetBlockTime(), Merkle_t::vtx[1].get_nTime()));
 
         // ppcoin: check proof-of-stake block signature
         if (fCheckSig && !CheckBlockSignature())
-            return DoS(100, print::error("CheckBlock() : bad proof-of-stake block signature"));
+            return DoS(100, logging::error("CheckBlock() : bad proof-of-stake block signature"));
 
         if (! Merkle_t::vtx[1].CheckTransaction())
-            return DoS(Merkle_t::vtx[1].nDoS, print::error("CheckBlock() : CheckTransaction failed on coinstake"));
+            return DoS(Merkle_t::vtx[1].nDoS, logging::error("CheckBlock() : CheckTransaction failed on coinstake"));
 
         uniqueTx.insert(Merkle_t::vtx[1].GetHash());
         nSigOps += Merkle_t::vtx[1].GetLegacySigOpCount();
     } else {
         // Check proof of work matches claimed amount
         if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
-            return DoS(50, print::error("CheckBlock() : proof of work failed"));
+            return DoS(50, logging::error("CheckBlock() : proof of work failed"));
 
         // Check timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
-            return print::error("CheckBlock() : block timestamp too far in the future");
+            return logging::error("CheckBlock() : block timestamp too far in the future");
 
         // Check coinbase timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
-            return DoS(50, print::error("CheckBlock() : coinbase timestamp is too late"));
+            return DoS(50, logging::error("CheckBlock() : coinbase timestamp is too late"));
     }
 
     // Iterate all transactions starting from second for proof-of-stake block or first for proof-of-work block
@@ -582,19 +582,19 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
 
         // Reject coinbase transactions at non-zero index
         if (tx.IsCoinBase())
-            return DoS(100, print::error("CheckBlock() : coinbase at wrong index"));
+            return DoS(100, logging::error("CheckBlock() : coinbase at wrong index"));
 
         // Reject coinstake transactions at index != 1
         if (tx.IsCoinStake())
-            return DoS(100, print::error("CheckBlock() : coinstake at wrong index"));
+            return DoS(100, logging::error("CheckBlock() : coinstake at wrong index"));
 
         // Check transaction timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() < (int64_t)tx.get_nTime())
-            return DoS(50, print::error("CheckBlock() : block timestamp earlier than transaction timestamp"));
+            return DoS(50, logging::error("CheckBlock() : block timestamp earlier than transaction timestamp"));
 
         // Check transaction consistency
         if (! tx.CheckTransaction())
-            return DoS(tx.nDoS, print::error("CheckBlock() : CheckTransaction failed"));
+            return DoS(tx.nDoS, logging::error("CheckBlock() : CheckTransaction failed"));
 
         // Add transaction hash into list of unique transaction IDs
         uniqueTx.insert(tx.GetHash());
@@ -606,15 +606,15 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
     // Check for duplicate txids. This is caught by ConnectInputs(),
     // but catching it earlier avoids a potential DoS attack:
     if (uniqueTx.size() != Merkle_t::vtx.size())
-        return DoS(100, print::error("CheckBlock() : duplicate transaction"));
+        return DoS(100, logging::error("CheckBlock() : duplicate transaction"));
 
     // Reject block if validation would consume too much resources.
     if (nSigOps > block_params::MAX_BLOCK_SIGOPS)
-        return DoS(100, print::error("CheckBlock() : out-of-bounds SigOpCount"));
+        return DoS(100, logging::error("CheckBlock() : out-of-bounds SigOpCount"));
 
     // Check merkle root
     if (fCheckMerkleRoot && CBlockHeader<T>::hashMerkleRoot != Merkle_t::BuildMerkleTree())
-        return DoS(100, print::error("CheckBlock() : hashMerkleRoot mismatch"));
+        return DoS(100, logging::error("CheckBlock() : hashMerkleRoot mismatch"));
 
     return true;
 }
@@ -625,19 +625,19 @@ bool CBlock_impl<T>::AcceptBlock()
     // Check for duplicate
     T hash = CBlockHeader_impl<T>::GetHash();
     if (block_info::mapBlockIndex.count(hash))
-        return print::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
+        return logging::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
 
     // Get prev block index
     typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
     if (mi == block_info::mapBlockIndex.end())
-        return DoS(10, print::error("CBlock::AcceptBlock() : prev block not found"));
+        return DoS(10, logging::error("CBlock::AcceptBlock() : prev block not found"));
 
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
 
     // Check proof-of-work or proof-of-stake
     if (CBlockHeader<T>::nBits != diff::spacing::GetNextTargetRequired(pindexPrev, IsProofOfStake()))
-        return DoS(100, print::error("CBlock::AcceptBlock() : incorrect %s", IsProofOfWork() ? "proof-of-work" : "proof-of-stake"));
+        return DoS(100, logging::error("CBlock::AcceptBlock() : incorrect %s", IsProofOfWork() ? "proof-of-work" : "proof-of-stake"));
 
     int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
     int nMaxOffset = (args_bool::fTestNet || pindexPrev->get_nTime() < timestamps::BLOCKS_ADMIT_HOURS_SWITCH_TIME) ?
@@ -646,11 +646,11 @@ bool CBlock_impl<T>::AcceptBlock()
 
     // Check timestamp against prev
     if (CBlockHeader_impl<T>::GetBlockTime() <= nMedianTimePast || block_check::manage::FutureDrift(CBlockHeader_impl<T>::GetBlockTime()) < pindexPrev->GetBlockTime())
-        return print::error("CBlock::AcceptBlock() : block's timestamp is too early");
+        return logging::error("CBlock::AcceptBlock() : block's timestamp is too early");
 
     // Don't accept blocks with future timestamps
     if (pindexPrev->get_nHeight() > 1 && nMedianTimePast + nMaxOffset < CBlockHeader_impl<T>::GetBlockTime()) {
-        print::error((std::string("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：")
+        logging::error((std::string("CBlock::AcceptBlock() : block's timestamp is too far in the future ___ nMedianTimePast：")
                      + std::to_string(nMedianTimePast) + " nMaxOffset：" + std::to_string(nMaxOffset) + " GetBlockTime()："
                      + std::to_string(CBlockHeader_impl<T>::GetBlockTime()) + " nHeight：" + std::to_string(pindexPrev->get_nHeight())).c_str());
     }
@@ -658,36 +658,36 @@ bool CBlock_impl<T>::AcceptBlock()
     // Check that all transactions are finalized
     for(const CTransaction &tx: Merkle_t::vtx) {
         if (! tx.IsFinal(nHeight, CBlockHeader_impl<T>::GetBlockTime()))
-            return DoS(10, print::error("CBlock::AcceptBlock() : contains a non-final transaction"));
+            return DoS(10, logging::error("CBlock::AcceptBlock() : contains a non-final transaction"));
     }
 
     // Check that the block chain matches the known block chain up to a checkpoint
     if (! Checkpoints::manage::CheckHardened(nHeight, hash))
-        return DoS(100, print::error("CBlock::AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
+        return DoS(100, logging::error("CBlock::AcceptBlock() : rejected by hardened checkpoint lock-in at %d", nHeight));
 
     bool cpSatisfies = Checkpoints::manage::CheckSync(hash, pindexPrev);
 
     // Check that the block satisfies synchronized checkpoint
     if (Checkpoints::CheckpointsMode == Checkpoints::STRICT && !cpSatisfies)
-        return print::error("CBlock::AcceptBlock() : rejected by synchronized checkpoint");
+        return logging::error("CBlock::AcceptBlock() : rejected by synchronized checkpoint");
     if (Checkpoints::CheckpointsMode == Checkpoints::ADVISORY && !cpSatisfies)
         excep::set_strMiscWarning( _("WARNING: syncronized checkpoint violation detected, but skipped!") );
 
     // Enforce rule that the coinbase starts with serialized block height
     CScript expect = CScript() << nHeight;
     if (Merkle_t::vtx[0].get_vin(0).get_scriptSig().size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].get_vin(0).get_scriptSig().begin()))
-        return DoS(100, print::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
+        return DoS(100, logging::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
 
     // Write block to history file
     if (! file_open::CheckDiskSpace(::GetSerializeSize(*this)))
-        return print::error("CBlock::AcceptBlock() : out of disk space");
+        return logging::error("CBlock::AcceptBlock() : out of disk space");
 
     unsigned int nFile = std::numeric_limits<unsigned int>::max();
     unsigned int nBlockPos = 0;
     if (! WriteToDisk(nFile, nBlockPos))
-        return print::error("CBlock::AcceptBlock() : WriteToDisk failed");
+        return logging::error("CBlock::AcceptBlock() : WriteToDisk failed");
     if (! AddToBlockIndex(nFile, nBlockPos))
-        return print::error("CBlock::AcceptBlock() : AddToBlockIndex failed");
+        return logging::error("CBlock::AcceptBlock() : AddToBlockIndex failed");
 
     // Relay inventory, but don't relay old inventory during initial block download
     int nBlockEstimate = Checkpoints::manage::GetTotalBlocksEstimate();
@@ -761,7 +761,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
         return false;
     }
     if (! txdb.TxnCommit())
-        return print::error("SetBestChain() : TxnCommit failed");
+        return logging::error("SetBestChain() : TxnCommit failed");
 
     // Add to current best branch
     pindexNew->set_pprev()->set_pnext(pindexNew);
@@ -777,13 +777,13 @@ template<typename T>
 bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet) {
     // Open history file to append
     CAutoFile fileout = CAutoFile(file_open::AppendBlockFile(nFileRet), SER_DISK, version::CLIENT_VERSION);
-    if (! fileout) return print::error("CBlock::WriteToDisk() : file_open::AppendBlockFile failed");
+    if (! fileout) return logging::error("CBlock::WriteToDisk() : file_open::AppendBlockFile failed");
     // Write index header
     unsigned int nSize = fileout.GetSerializeSize(*this);
     fileout << FLATDATA(block_info::gpchMessageStart) << nSize;
     // Write block
     long fileOutPos = ::ftell(fileout);
-    if (fileOutPos < 0) return print::error("CBlock::WriteToDisk() : ftell failed");
+    if (fileOutPos < 0) return logging::error("CBlock::WriteToDisk() : ftell failed");
     nBlockPosRet = fileOutPos;
     fileout << *this;
     // Flush stdio buffers and commit to disk before returning
@@ -798,17 +798,17 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
     SetNull();
     // Open history file to read
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(nFile, nBlockPos, "rb"), SER_DISK, version::CLIENT_VERSION);
-    if (! filein) return print::error("CBlock::ReadFromDisk() : file_open::OpenBlockFile failed");
+    if (! filein) return logging::error("CBlock::ReadFromDisk() : file_open::OpenBlockFile failed");
     if (! fReadTransactions) filein.AddType(SER_BLOCKHEADERONLY);
     // Read block
     try {
         filein >> *this;
     } catch (const std::exception &) {
-        return print::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
+        return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
     // Check the header
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
-        return print::error("CBlock::ReadFromDisk() : errors in block header");
+        return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
 }
 

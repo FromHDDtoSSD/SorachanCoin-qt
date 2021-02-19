@@ -166,7 +166,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
             return true;
         if (vAddr.size() > 1000) {
             pfrom->Misbehaving(20);
-            return print::error("message addr size() = %" PRIszu "", vAddr.size());
+            return logging::error("message addr size() = %" PRIszu "", vAddr.size());
         }
 
         // Store the new addresses
@@ -223,7 +223,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         vRecv >> vInv;
         if (vInv.size() > block_params::MAX_INV_SZ) {
             pfrom->Misbehaving(20);
-            return print::error("message inv size() = %" PRIszu "", vInv.size());
+            return logging::error("message inv size() = %" PRIszu "", vInv.size());
         }
 
         // find last block in inv vector
@@ -264,7 +264,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         vRecv >> vInv;
         if (vInv.size() > block_params::MAX_INV_SZ) {
             pfrom->Misbehaving(20);
-            return print::error("message getdata size() = %" PRIszu "", vInv.size());
+            return logging::error("message getdata size() = %" PRIszu "", vInv.size());
         }
         if (args_bool::fDebugNet || (vInv.size() != 1))
             logging::LogPrintf("received getdata (%" PRIszu " invsz)\n", vInv.size());
@@ -932,21 +932,21 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 
     // Check for duplicate
     if (block_info::mapBlockIndex.count(hash))
-        return print::error("block_process::manage::ProcessBlock() : already have block %d %s", block_info::mapBlockIndex[hash]->get_nHeight(), hash.ToString().substr(0,20).c_str());
+        return logging::error("block_process::manage::ProcessBlock() : already have block %d %s", block_info::mapBlockIndex[hash]->get_nHeight(), hash.ToString().substr(0,20).c_str());
     if (block_process::mapOrphanBlocks.count(hash))
-        return print::error("block_process::manage::ProcessBlock() : already have block (orphan) %s", hash.ToString().substr(0,20).c_str());
+        return logging::error("block_process::manage::ProcessBlock() : already have block (orphan) %s", hash.ToString().substr(0,20).c_str());
     // Check that block isn't listed as unconditionally banned.
     if (! Checkpoints::manage::CheckBanned(hash)) {
         if (pfrom)
             pfrom->Misbehaving(100);
-        return print::error("block_process::manage::ProcessBlock() : block %s is rejected by hard-coded banlist", hash.GetHex().substr(0,20).c_str());
+        return logging::error("block_process::manage::ProcessBlock() : block %s is rejected by hard-coded banlist", hash.GetHex().substr(0,20).c_str());
     }
 
     // Check proof-of-stake
     // Limited duplicity on stake: prevents block flood attack
     // Duplicate stake allowed only when there is orphan child block
     if (pblock->IsProofOfStake() && block_info::setStakeSeen.count(pblock->GetProofOfStake()) && !block_process::manage::mapOrphanBlocksByPrev.count(hash) && !Checkpoints::manage::WantedByPendingSyncCheckpoint(hash))
-        return print::error("block_process::manage::ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
+        return logging::error("block_process::manage::ProcessBlock() : duplicate proof-of-stake (%s, %d) for block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
 
     // Strip the garbage from newly received blocks, if we found some
     if (! block_process::manage::IsCanonicalBlockSignature(pblock)) {
@@ -956,7 +956,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 
     // Preliminary checks
     if (! pblock->CheckBlock(true, true, (pblock->get_nTime() > Checkpoints::manage::GetLastCheckpointTime())))
-        return print::error("block_process::manage::ProcessBlock() : CheckBlock FAILED");
+        return logging::error("block_process::manage::ProcessBlock() : CheckBlock FAILED");
 
     // ppcoin: verify hash target and signature of coinstake tx
     if (pblock->IsProofOfStake()) {
@@ -984,7 +984,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
         if (bnNewBlock > bnRequired) {
             if (pfrom)
                 pfrom->Misbehaving(100);
-            return print::error("block_process::manage::ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
+            return logging::error("block_process::manage::ProcessBlock() : block with too little %s", pblock->IsProofOfStake()? "proof-of-stake" : "proof-of-work");
         }
     }
 
@@ -1001,14 +1001,14 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
             // Limited duplicity on stake: prevents block flood attack
             // Duplicate stake allowed only when there is orphan child block
             if (block_process::manage::setStakeSeenOrphan.count(pblock->GetProofOfStake()) && !block_process::manage::mapOrphanBlocksByPrev.count(hash) && !Checkpoints::manage::WantedByPendingSyncCheckpoint(hash))
-                return print::error("block_process::manage::ProcessBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
+                return logging::error("block_process::manage::ProcessBlock() : duplicate proof-of-stake (%s, %d) for orphan block %s", pblock->GetProofOfStake().first.ToString().c_str(), pblock->GetProofOfStake().second, hash.ToString().c_str());
             else
                 block_process::manage::setStakeSeenOrphan.insert(pblock->GetProofOfStake());
         }
 
         CBlock *pblock2 = new (std::nothrow) CBlock(*pblock);
         if(! pblock2)
-            return print::error("block_process::manage::ProcessBlock() : bad alloc for orphan block");
+            return logging::error("block_process::manage::ProcessBlock() : bad alloc for orphan block");
 
         block_process::mapOrphanBlocks.insert(std::make_pair(hash, pblock2));
         block_process::manage::mapOrphanBlocksByPrev.insert(std::make_pair(pblock2->get_hashPrevBlock(), pblock2));
@@ -1027,7 +1027,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 
     // Store to disk
     if (! pblock->AcceptBlock())
-        return print::error("block_process::manage::ProcessBlock() : AcceptBlock FAILED");
+        return logging::error("block_process::manage::ProcessBlock() : AcceptBlock FAILED");
 
     // Recursively process any orphan blocks that depended on this one
     std::vector<uint256> vWorkQueue;

@@ -59,11 +59,11 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
 
     // Check range
     if (bnTarget <= 0 || bnTarget > diff::bnProofOfWorkLimit)
-        return print::error("diff::check::CheckProofOfWork() : nBits below minimum work");
+        return logging::error("diff::check::CheckProofOfWork() : nBits below minimum work");
 
     // Check proof of work matches claimed amount
     if (hash > bnTarget.getuint256())
-        return print::error("diff::check::CheckProofOfWork() : hash doesn't match nBits");
+        return logging::error("diff::check::CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
 }

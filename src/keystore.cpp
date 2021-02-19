@@ -32,7 +32,7 @@ bool CBasicKeyStore::AddMalleableKey(const CMalleableKeyView &keyView, const CSe
 bool CBasicKeyStore::AddCScript(const CScript &redeemScript)
 {
     if (redeemScript.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
-        return print::error("CBasicKeyStore::AddCScript() : redeemScripts > %i bytes are invalid", Script_const::MAX_SCRIPT_ELEMENT_SIZE);
+        return logging::error("CBasicKeyStore::AddCScript() : redeemScripts > %i bytes are invalid", Script_const::MAX_SCRIPT_ELEMENT_SIZE);
     }
 
     {

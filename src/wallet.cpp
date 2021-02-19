@@ -601,12 +601,12 @@ bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const Sec
 {
     BIO *pemOut = BIO_new_file(fileName.c_str(), "w");
     if (pemOut == NULL) {
-        return print::error("GetPEM() : failed to create file %s\n", fileName.c_str());
+        return logging::error("GetPEM() : failed to create file %s\n", fileName.c_str());
     }
 
     CKey key;
     if (! GetKey(keyID, key)) {
-        return print::error("GetPEM() : failed to get key for address=%s\n", CBitcoinAddress(keyID).ToString().c_str());
+        return logging::error("GetPEM() : failed to get key for address=%s\n", CBitcoinAddress(keyID).ToString().c_str());
     }
 
     bool result = key.WritePEM(pemOut, strPassKey);
@@ -2477,7 +2477,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
 {
     CWalletTx wtx;
     if (! GetTransaction(hashTx, wtx)) {
-        return print::error("Transaction %s is not found\n", hashTx.GetHex().c_str());
+        return logging::error("Transaction %s is not found\n", hashTx.GetHex().c_str());
     }
 
     Script_util::statype vSolutions;
@@ -2485,7 +2485,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     CScript scriptPubKeyOut;
     CScript scriptPubKeyKernel = wtx.get_vout(nOut).get_scriptPubKey();
     if (! Script_util::Solver(scriptPubKeyKernel, whichType, vSolutions)) {
-        return print::error("CreateCoinStake : failed to parse kernel\n");
+        return logging::error("CreateCoinStake : failed to parse kernel\n");
     }
 
     if (args_bool::fDebug && map_arg::GetBoolArg("-printcoinstake")) {
@@ -2493,7 +2493,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     }
 
     if (whichType != TxnOutputType::TX_PUBKEY && whichType != TxnOutputType::TX_PUBKEYHASH) {
-        return print::error("CreateCoinStake : no support for kernel type=%d\n", whichType);
+        return logging::error("CreateCoinStake : no support for kernel type=%d\n", whichType);
     }
 
     if (whichType == TxnOutputType::TX_PUBKEYHASH) { // pay to address type
@@ -2501,7 +2501,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         // convert to pay to public key type
         //
         if (! GetKey(uint160(vSolutions[0]), key)) {
-            return print::error("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
+            return logging::error("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
         }
 
         scriptPubKeyOut << key.GetPubKey() << ScriptOpcodes::OP_CHECKSIG;
@@ -2509,10 +2509,10 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     if (whichType == TxnOutputType::TX_PUBKEY) {
         Script_util::valtype &vchPubKey = vSolutions[0];
         if (! GetKey(hash_basis::Hash160(vchPubKey), key)) {
-            return print::error("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
+            return logging::error("CreateCoinStake : failed to get key for kernel type=%d\n", whichType);
         }
         if (key.GetPubKey() != vchPubKey) {
-            return print::error("CreateCoinStake : invalid key for kernel type=%d\n", whichType); // keys mismatch
+            return logging::error("CreateCoinStake : invalid key for kernel type=%d\n", whichType); // keys mismatch
         }
 
         scriptPubKeyOut = scriptPubKeyKernel;
@@ -2640,7 +2640,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     uint64_t nCoinAge;
     CTxDB txdb("r");
     if (! txNew.GetCoinAge(txdb, nCoinAge)) {
-        return print::error("CreateCoinStake : failed to calculate coin age\n");
+        return logging::error("CreateCoinStake : failed to calculate coin age\n");
     }
 
     nCredit += diff::reward::GetProofOfStakeReward(nCoinAge, nBits, nGenerationTime);
@@ -2661,7 +2661,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         for(const CWalletTx *pcoin: vwtxPrev)
         {
             if (! Script_util::SignSignature(*this, *pcoin, txNew, nIn++)) {
-                return print::error("CreateCoinStake : failed to sign coinstake\n");
+                return logging::error("CreateCoinStake : failed to sign coinstake\n");
             }
         }
 
@@ -2669,7 +2669,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
         //unsigned int nBytes = ::GetSerializeSize(txNew, SER_NETWORK, version::PROTOCOL_VERSION);
         unsigned int nBytes = ::GetSerializeSize(txNew);
         if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
-            return print::error("CreateCoinStake : exceeded coinstake size limit\n");
+            return logging::error("CreateCoinStake : exceeded coinstake size limit\n");
         }
 
         // Check enough fee is paid

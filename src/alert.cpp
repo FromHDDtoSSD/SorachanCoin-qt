@@ -158,7 +158,7 @@ bool CAlert::CheckSignature() const
     CPubKey key;
     key.Set(hex::ParseHex(args_bool::fTestNet ? pszTestKey : pszMainKey));
     if (! key.Verify(hash_basis::Hash(vchMsg.begin(), vchMsg.end()), vchSig)) {
-        return print::error("CAlert::CheckSignature() : verify signature failed");
+        return logging::error("CAlert::CheckSignature() : verify signature failed");
     }
 
     // Now unserialize the data

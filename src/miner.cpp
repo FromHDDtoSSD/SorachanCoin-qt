@@ -504,10 +504,10 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     if(! pblock->IsProofOfWork()) {
-        return print::error("miner::CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex().c_str());
+        return logging::error("miner::CheckWork() : %s is not a proof-of-work block", hashBlock.GetHex().c_str());
     }
     if (hashBlock > hashTarget) {
-        return print::error("miner::CheckWork() : proof-of-work not meeting target");
+        return logging::error("miner::CheckWork() : proof-of-work not meeting target");
     }
 
     //// debug print
@@ -521,7 +521,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     {
         LOCK(block_process::cs_main);
         if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
-            return print::error("miner::CheckWork() : generated block is stale");
+            return logging::error("miner::CheckWork() : generated block is stale");
         }
 
         // Remove key from key pool
@@ -535,7 +535,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 
         // Process this block the same as if we had received it from another node
         if (! block_process::manage::ProcessBlock(NULL, pblock)) {
-            return print::error("miner::CheckWork() : ProcessBlock, block not accepted");
+            return logging::error("miner::CheckWork() : ProcessBlock, block not accepted");
         }
     }
 
@@ -548,12 +548,12 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     uint256 hashBlock = pblock->GetHash();
 
     if (! pblock->IsProofOfStake()) {
-        return print::error("miner::CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex().c_str());
+        return logging::error("miner::CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex().c_str());
     }
 
     // verify hash target and signature of coinstake tx
     if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
-        return print::error("miner::CheckStake() : proof-of-stake checking failed");
+        return logging::error("miner::CheckStake() : proof-of-stake checking failed");
     }
 
     //// debug print
@@ -565,7 +565,7 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     {
         LOCK(block_process::cs_main);
         if (pblock->get_hashPrevBlock() != block_info::hashBestChain) {
-            return print::error("miner::CheckStake() : generated block is stale");
+            return logging::error("miner::CheckStake() : generated block is stale");
         }
 
         // Track how many getdata requests this block gets
@@ -576,7 +576,7 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
 
         // Process this block the same as if we had received it from another node
         if (! block_process::manage::ProcessBlock(NULL, pblock)) {
-            return print::error("miner::CheckStake() : ProcessBlock, block not accepted");
+            return logging::error("miner::CheckStake() : ProcessBlock, block not accepted");
         }
     }
 
@@ -602,7 +602,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
         CoinsSet setCoins;
         int64_t nValueIn = 0;
         if (! pwallet->SelectCoinsSimple(nBalance - nReserveBalance, block_params::MIN_TX_FEE, block_params::MAX_MONEY, nUpperTime, block_transaction::nCoinbaseMaturity * 10, setCoins, nValueIn)) {
-            return print::error("FillMap() : SelectCoinsSimple failed");
+            return logging::error("FillMap() : SelectCoinsSimple failed");
         }
         if (setCoins.empty()) {
             return false;

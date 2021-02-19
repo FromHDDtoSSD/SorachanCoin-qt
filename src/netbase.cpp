@@ -188,7 +188,7 @@ bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
     logging::LogPrintf("SOCKS4 connecting %s\n", addrDest.ToString().c_str());
     if (! addrDest.IsIPv4()) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Proxy destination is not IPv4");
+        return logging::error("Proxy destination is not IPv4");
     }
 
     char pszSocks4IP[] = "\4\1\0\0\0\0\0\0user";
@@ -196,7 +196,7 @@ bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
     socklen_t len = sizeof(addr);
     if (!addrDest.GetSockAddr((struct sockaddr *)&addr, &len) || addr.sin_family != AF_INET) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Cannot get proxy destination address");
+        return logging::error("Cannot get proxy destination address");
     }
 
     std::memcpy(pszSocks4IP + 2, &addr.sin_port, 2);
@@ -207,13 +207,13 @@ bool netbase::manage::Socks4(const CService &addrDest, SOCKET &hSocket)
     int ret = ::send(hSocket, pszSocks4, nSize, MSG_NOSIGNAL);
     if (ret != nSize) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error sending to proxy");
+        return logging::error("Error sending to proxy");
     }
 
     char pchRet[8];
     if (::recv(hSocket, pchRet, 8, 0) != 8) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error reading proxy response");
+        return logging::error("Error reading proxy response");
     }
     if (pchRet[1] != 0x5a) {
         netbase::manage::CloseSocket(hSocket);
@@ -232,24 +232,24 @@ bool netbase::manage::Socks5(std::string strDest, uint16_t port, SOCKET &hSocket
     logging::LogPrintf("SOCKS5 connecting %s\n", strDest.c_str());
     if (strDest.size() > 255) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Hostname too long");
+        return logging::error("Hostname too long");
     }
 
     const char pszSocks5Init[] = "\5\1\0";
     ssize_t ret = ::send(hSocket, pszSocks5Init, 3, MSG_NOSIGNAL);
     if (ret != 3) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error sending to proxy");
+        return logging::error("Error sending to proxy");
     }
 
     char pchRet1[2];
     if (recv(hSocket, pchRet1, 2, 0) != 2) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error reading proxy response");
+        return logging::error("Error reading proxy response");
     }
     if (pchRet1[0] != 0x05 || pchRet1[1] != 0x00) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Proxy failed to initialize");
+        return logging::error("Proxy failed to initialize");
     }
 
     std::string strSocks5("\5\1");
@@ -261,38 +261,38 @@ bool netbase::manage::Socks5(std::string strDest, uint16_t port, SOCKET &hSocket
     ret = ::send(hSocket, strSocks5.data(), strSocks5.size(), MSG_NOSIGNAL);
     if (ret != (ssize_t)strSocks5.size()) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error sending to proxy");
+        return logging::error("Error sending to proxy");
     }
 
     char pchRet2[4];
     if (::recv(hSocket, pchRet2, 4, 0) != 4) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error reading proxy response");
+        return logging::error("Error reading proxy response");
     }
     if (pchRet2[0] != 0x05) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Proxy failed to accept request");
+        return logging::error("Proxy failed to accept request");
     }
     if (pchRet2[1] != 0x00) {
         netbase::manage::CloseSocket(hSocket);
         switch (pchRet2[1])
         {
-        case 0x01: return print::error("Proxy error: general failure");
-        case 0x02: return print::error("Proxy error: connection not allowed");
-        case 0x03: return print::error("Proxy error: network unreachable");
-        case 0x04: return print::error("Proxy error: host unreachable");
-        case 0x05: return print::error("Proxy error: connection refused");
-        case 0x06: return print::error("Proxy error: TTL expired");
-        case 0x07: return print::error("Proxy error: protocol error");
-        case 0x08: return print::error("Proxy error: address type not supported");
-        default:   return print::error("Proxy error: unknown");
+        case 0x01: return logging::error("Proxy error: general failure");
+        case 0x02: return logging::error("Proxy error: connection not allowed");
+        case 0x03: return logging::error("Proxy error: network unreachable");
+        case 0x04: return logging::error("Proxy error: host unreachable");
+        case 0x05: return logging::error("Proxy error: connection refused");
+        case 0x06: return logging::error("Proxy error: TTL expired");
+        case 0x07: return logging::error("Proxy error: protocol error");
+        case 0x08: return logging::error("Proxy error: address type not supported");
+        default:   return logging::error("Proxy error: unknown");
         }
         /// return;
     }
 
     if (pchRet2[2] != 0x00) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error: malformed proxy response");
+        return logging::error("Error: malformed proxy response");
     }
 
     char pchRet3[256];
@@ -305,22 +305,22 @@ bool netbase::manage::Socks5(std::string strDest, uint16_t port, SOCKET &hSocket
             ret = ::recv(hSocket, pchRet3, 1, 0) != 1;
             if (ret) {
                 netbase::manage::CloseSocket(hSocket);
-                return print::error("Error reading from proxy");
+                return logging::error("Error reading from proxy");
             }
             int nRecv = pchRet3[0];
             ret = ::recv(hSocket, pchRet3, nRecv, 0) != nRecv;
             break;
         }
-    default: netbase::manage::CloseSocket(hSocket); return print::error("Error: malformed proxy response");
+    default: netbase::manage::CloseSocket(hSocket); return logging::error("Error: malformed proxy response");
     }
 
     if (ret) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error reading from proxy");
+        return logging::error("Error reading from proxy");
     }
     if (::recv(hSocket, pchRet3, 2, 0) != 2) {
         netbase::manage::CloseSocket(hSocket);
-        return print::error("Error reading from proxy");
+        return logging::error("Error reading from proxy");
     }
 
     logging::LogPrintf("SOCKS5 connected %s\n", strDest.c_str());

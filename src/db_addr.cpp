@@ -42,14 +42,14 @@ bool CAddrDB::Write(const CAddrMan &addr)
     boost::filesystem::path pathTmp = iofs::GetDataDir() / tmpfn;
     CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);
     if(! fileout) {
-        return print::error("CAddrman::Write() : open failed");
+        return logging::error("CAddrman::Write() : open failed");
     }
 
     // Write and commit header, data
     try {
         fileout << ssPeers;
     } catch(const std::exception &) {
-        return print::error("CAddrman::Write() : I/O error");
+        return logging::error("CAddrman::Write() : I/O error");
     }
 
     iofs::FileCommit(fileout);
@@ -57,7 +57,7 @@ bool CAddrDB::Write(const CAddrMan &addr)
 
     // replace existing peers.dat, if any, with new peers.dat.XXXX
     if(! iofs::RenameOver(pathTmp, pathAddr)) {
-        return print::error("CAddrman::Write() : Rename-into-place failed");
+        return logging::error("CAddrman::Write() : Rename-into-place failed");
     }
     return true;
 }
@@ -67,7 +67,7 @@ bool CAddrDB::Read(CAddrMan &addr)
     // open input file, and associate with CAutoFile
     CAutoFile filein = CAutoFile(::fopen(pathAddr.string().c_str(), "rb"), 0, 0);
     if(! filein) {
-        return print::error("CAddrman::Read() : open failed");
+        return logging::error("CAddrman::Read() : open failed");
     }
 
     // use file size to size memory buffer
@@ -85,7 +85,7 @@ bool CAddrDB::Read(CAddrMan &addr)
         filein.read((char *)&vchData[0], dataSize);
         filein >> hashIn;
     } catch(const std::exception &) {
-        return print::error("CAddrman::Read() 2 : I/O error or stream data corrupted");
+        return logging::error("CAddrman::Read() 2 : I/O error or stream data corrupted");
     }
     filein.fclose();
 
@@ -94,7 +94,7 @@ bool CAddrDB::Read(CAddrMan &addr)
     // verify stored checksum matches input data
     uint256 hashTmp = hash_basis::Hash(ssPeers.begin(), ssPeers.end());
     if(hashIn != hashTmp) {
-        return print::error("CAddrman::Read() : checksum mismatch; data corrupted");
+        return logging::error("CAddrman::Read() : checksum mismatch; data corrupted");
     }
 
     unsigned char pchMsgTmp[4];
@@ -104,13 +104,13 @@ bool CAddrDB::Read(CAddrMan &addr)
 
         // verify the network matches ours
         if(::memcmp(pchMsgTmp, block_info::gpchMessageStart, sizeof(pchMsgTmp))) {
-            return print::error("CAddrman::Read() : invalid network magic number");
+            return logging::error("CAddrman::Read() : invalid network magic number");
         }
 
         // de-serialize address data into one CAddrMan object
         ssPeers >> addr;
     } catch(const std::exception &) {
-        return print::error("CAddrman::Read() : I/O error or stream data corrupted");
+        return logging::error("CAddrman::Read() : I/O error or stream data corrupted");
     }
     return true;
 }

@@ -44,18 +44,6 @@
 #include <random/random.h>
 #include <util/c_overload.h>
 
-class print
-{
-public:
-    template <typename... Args>
-    static bool error(const char *fmt, const Args&... args) {
-        std::ostringstream oss;
-        tfm::format(oss, fmt, args...);
-        logging::LogPrintf("ERROR: %s\n", oss.str().c_str());
-        return false;
-    }
-};
-
 //
 // API overload
 //

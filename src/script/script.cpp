@@ -447,18 +447,18 @@ bool Script_util::IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags
     }
 
     if (vchPubKey.size() < 33) {
-        return print::error("Non-canonical public key: too short");
+        return logging::error("Non-canonical public key: too short");
     }
     if (vchPubKey[0] == 0x04) {
         if (vchPubKey.size() != 65) {
-            return print::error("Non-canonical public key: invalid length for uncompressed key");
+            return logging::error("Non-canonical public key: invalid length for uncompressed key");
         }
     } else if (vchPubKey[0] == 0x02 || vchPubKey[0] == 0x03) {
         if (vchPubKey.size() != 33) {
-            return print::error("Non-canonical public key: invalid length for compressed key");
+            return logging::error("Non-canonical public key: invalid length for compressed key");
         }
     } else {
-        return print::error("Non-canonical public key: compressed nor uncompressed");
+        return logging::error("Non-canonical public key: compressed nor uncompressed");
     }
     return true;
 }
@@ -470,60 +470,60 @@ bool Script_util::IsDERSignature(const valtype &vchSig, bool fWithHashType/*= fa
     // excessively padded (do not start with a 0 byte, unless an otherwise negative number follows,
     // in which case a single 0 byte is necessary and even required).
     if (vchSig.size() < 9) {
-        return print::error("Non-canonical signature: too short");
+        return logging::error("Non-canonical signature: too short");
     }
     if (vchSig.size() > 73) {
-        return print::error("Non-canonical signature: too long");
+        return logging::error("Non-canonical signature: too long");
     }
     if (vchSig[0] != 0x30) {
-        return print::error("Non-canonical signature: wrong type");
+        return logging::error("Non-canonical signature: wrong type");
     }
     if (vchSig[1] != vchSig.size() - (fWithHashType ? 3 : 2)) {
-        return print::error("Non-canonical signature: wrong length marker");
+        return logging::error("Non-canonical signature: wrong length marker");
     }
     if (fWithHashType) {
         unsigned char nHashType = vchSig[vchSig.size() - 1] & (~(Script_param::SIGHASH_ANYONECANPAY));
         if (nHashType < Script_param::SIGHASH_ALL || nHashType > Script_param::SIGHASH_SINGLE) {
-            return print::error("Non-canonical signature: unknown hashtype byte");
+            return logging::error("Non-canonical signature: unknown hashtype byte");
         }
     }
 
     unsigned int nLenR = vchSig[3];
     if (5 + nLenR >= vchSig.size()) {
-        return print::error("Non-canonical signature: S length misplaced");
+        return logging::error("Non-canonical signature: S length misplaced");
     }
 
     unsigned int nLenS = vchSig[5+nLenR];
     if ((nLenR + nLenS + (fWithHashType ? 7 : 6)) != vchSig.size()) {
-        return print::error("Non-canonical signature: R+S length mismatch");
+        return logging::error("Non-canonical signature: R+S length mismatch");
     }
 
     const unsigned char *R = &vchSig[4];
     if (R[-2] != 0x02) {
-        return print::error("Non-canonical signature: R value type mismatch");
+        return logging::error("Non-canonical signature: R value type mismatch");
     }
     if (nLenR == 0) {
-        return print::error("Non-canonical signature: R length is zero");
+        return logging::error("Non-canonical signature: R length is zero");
     }
     if (R[0] & 0x80) {
-        return print::error("Non-canonical signature: R value negative");
+        return logging::error("Non-canonical signature: R value negative");
     }
     if (nLenR > 1 && (R[0] == 0x00) && !(R[1] & 0x80)) {
-        return print::error("Non-canonical signature: R value excessively padded");
+        return logging::error("Non-canonical signature: R value excessively padded");
     }
 
     const unsigned char *S = &vchSig[6+nLenR];
     if (S[-2] != 0x02) {
-        return print::error("Non-canonical signature: S value type mismatch");
+        return logging::error("Non-canonical signature: S value type mismatch");
     }
     if (nLenS == 0) {
-        return print::error("Non-canonical signature: S length is zero");
+        return logging::error("Non-canonical signature: S length is zero");
     }
     if (S[0] & 0x80) {
-        return print::error("Non-canonical signature: S value negative");
+        return logging::error("Non-canonical signature: S value negative");
     }
     if (nLenS > 1 && (S[0] == 0x00) && !(S[1] & 0x80)) {
-        return print::error("Non-canonical signature: S value excessively padded");
+        return logging::error("Non-canonical signature: S value excessively padded");
     }
 
     if (fCheckLow) {
@@ -535,7 +535,7 @@ bool Script_util::IsDERSignature(const valtype &vchSig, bool fWithHashType/*= fa
         // complement modulo the order could have been used instead, which is
         // one byte shorter when encoded correctly.
         if (! CKey::CheckSignatureElement(S, nLenS, true)) {
-            return print::error("Non-canonical signature: S value is unnecessarily high");
+            return logging::error("Non-canonical signature: S value is unnecessarily high");
         }
     }
 
@@ -1490,7 +1490,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             return false;
                         }
                         if ((flags & Script_param::SCRIPT_VERIFY_NULLDUMMY) && stacktop(-1).size()) {
-                            return print::error("CHECKMULTISIG dummy argument not null");
+                            return logging::error("CHECKMULTISIG dummy argument not null");
                         }
                         popstack(stack);
 

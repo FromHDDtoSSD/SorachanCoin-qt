@@ -141,26 +141,26 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
 
     // Time (prevent mempool memory exhaustion attack)
     if (tx.get_nTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
-        return tx.DoS(10, print::error("CTxMemPool::accept() : transaction timestamp is too far in the future"));
+        return tx.DoS(10, logging::error("CTxMemPool::accept() : transaction timestamp is too far in the future"));
     if (! tx.CheckTransaction())
-        return print::error("CTxMemPool::accept() : CheckTransaction failed");
+        return logging::error("CTxMemPool::accept() : CheckTransaction failed");
 
     // Coinbase is only valid in a block, not as a loose transaction
     if (tx.IsCoinBase())
-        return tx.DoS(100, print::error("CTxMemPool::accept() : coinbase as individual tx"));
+        return tx.DoS(100, logging::error("CTxMemPool::accept() : coinbase as individual tx"));
 
     // ppcoin: coinstake is also only valid in a block, not as a loose transaction
     if (tx.IsCoinStake())
-        return tx.DoS(100, print::error("CTxMemPool::accept() : coinstake as individual tx"));
+        return tx.DoS(100, logging::error("CTxMemPool::accept() : coinstake as individual tx"));
 
     // To help v0.1.5 clients who would see it as a negative number
     if ((int64_t)tx.get_nLockTime() > std::numeric_limits<int>::max())
-        return print::error("CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet");
+        return logging::error("CTxMemPool::accept() : not accepting nLockTime beyond 2038 yet");
 
     // Rather not work on nonstandard transactions (unless -testnet)
     std::string strNonStd;
     if (!args_bool::fTestNet && !tx.IsStandard(strNonStd))
-        return print::error("CTxMemPool::accept() : nonstandard transaction (%s)", strNonStd.c_str());
+        return logging::error("CTxMemPool::accept() : nonstandard transaction (%s)", strNonStd.c_str());
 
     // Do we already have it?
     T hash = tx.GetHash();
@@ -203,7 +203,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         bool fInvalid = false;
         if (! tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
             if (fInvalid)
-                return print::error("CTxMemPool::accept() : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
+                return logging::error("CTxMemPool::accept() : FetchInputs found invalid tx %s", hash.ToString().substr(0,10).c_str());
             if (pfMissingInputs)
                 *pfMissingInputs = true;
             return false;
@@ -211,7 +211,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
 
         // Check for non-standard pay-to-script-hash in inputs
         if (!tx.AreInputsStandard(mapInputs) && !args_bool::fTestNet)
-            return print::error("CTxMemPool::accept() : nonstandard transaction input");
+            return logging::error("CTxMemPool::accept() : nonstandard transaction input");
 
         // Note: if you modify this code to accept non-standard transactions, then
         // you should add code here to check that the transaction does a
@@ -222,7 +222,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         // Don't accept it if it can't get into a block
         int64_t txMinFee = tx.GetMinFee(1000, true, CTransaction_impl<T>::GMF_RELAY, nSize);
         if (nFees < txMinFee)
-            return print::error("CTxMemPool::accept() : not enough fees %s, %" PRId64 " < %" PRId64, hash.ToString().c_str(), nFees, txMinFee);
+            return logging::error("CTxMemPool::accept() : not enough fees %s, %" PRId64 " < %" PRId64, hash.ToString().c_str(), nFees, txMinFee);
 
         // Continuously rate-limit free transactions
         // This mitigates 'penny-flooding' -- sending thousands of free transactions just to
@@ -242,7 +242,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
                 // -limitfreerelay unit is thousand-bytes-per-minute
                 // At default rate it would take over a month to fill 1GB
                 if (dFreeCount > map_arg::GetArg("-limitfreerelay", 15) * 10 * 1000 && !IsFromMe(tx))
-                    return print::error("CTxMemPool::accept() : free transaction rejected by rate limiter");
+                    return logging::error("CTxMemPool::accept() : free transaction rejected by rate limiter");
                 if (args_bool::fDebug)
                     logging::LogPrintf("Rate limit dFreeCount: %g => %g\n", dFreeCount, dFreeCount+nSize);
                 dFreeCount += nSize;
@@ -252,7 +252,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         // Check against previous transactions
         // This is done last to help prevent CPU exhaustion denial-of-service attacks.
         if (! tx.ConnectInputs(txdb, mapInputs, mapUnused, CDiskTxPos(1,1,1), block_info::pindexBest, false, false, true, Script_param::STRICT_FLAGS))
-            return print::error("CTxMemPool::accept() : ConnectInputs failed %s", hash.ToString().substr(0,10).c_str());
+            return logging::error("CTxMemPool::accept() : ConnectInputs failed %s", hash.ToString().substr(0,10).c_str());
     }
 
     // Store transaction in memory
@@ -564,19 +564,19 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
 template <typename T>
 bool CTransaction_impl<T>::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(pos.get_nFile(), 0, pfileRet ? "rb+" : "rb"), SER_DISK, version::CLIENT_VERSION);
-    if (! filein) return print::error("CTransaction_impl<T>::ReadFromDisk() : file_open::OpenBlockFile failed");
+    if (! filein) return logging::error("CTransaction_impl<T>::ReadFromDisk() : file_open::OpenBlockFile failed");
 
     // Read transaction
-    if (fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return print::error("CTransaction_impl<T>::ReadFromDisk() : fseek failed");
+    if (fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction_impl<T>::ReadFromDisk() : fseek failed");
     try {
         filein >> *this;
     } catch (const std::exception &) {
-        return print::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
+        return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
 
     // Return file pointer
     if (pfileRet) {
-        if (::fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return print::error("CTransaction_impl<T>::ReadFromDisk() : second fseek failed");
+        if (::fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction_impl<T>::ReadFromDisk() : second fseek failed");
         *pfileRet = filein.release();
     }
     return true;
@@ -621,16 +621,16 @@ bool CTransaction_impl<T>::DisconnectInputs(CTxDB &txdb)
             // Get prev txindex from disk
             CTxIndex txindex;
             if (! txdb.ReadTxIndex(prevout.get_hash(), txindex))
-                return print::error("DisconnectInputs() : ReadTxIndex failed");
+                return logging::error("DisconnectInputs() : ReadTxIndex failed");
             if (prevout.get_n() >= txindex.get_vSpent().size())
-                return print::error("DisconnectInputs() : prevout.n out of range");
+                return logging::error("DisconnectInputs() : prevout.n out of range");
 
             // Mark outpoint as not spent
             txindex.set_vSpent(prevout.get_n()).SetNull();
 
             // Write back
             if (! txdb.UpdateTxIndex(prevout.get_hash(), txindex))
-                return print::error("DisconnectInputs() : UpdateTxIndex failed");
+                return logging::error("DisconnectInputs() : UpdateTxIndex failed");
         }
     }
 
@@ -670,7 +670,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
             fFound = txdb.ReadTxIndex(prevout.get_hash(), txindex);
         }
         if (!fFound && (fBlock || fMiner))
-            return fMiner ? false : print::error("FetchInputs() : %s prev tx %s index entry not found", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
+            return fMiner ? false : logging::error("FetchInputs() : %s prev tx %s index entry not found", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
 
         // Read txPrev
         CTransaction_impl<T> &txPrev = inputsRet[prevout.get_hash()].second;
@@ -679,7 +679,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
             {
                 LOCK(CTxMemPool_impl<T>::mempool.get_cs());
                 if (! CTxMemPool_impl<T>::mempool.exists(prevout.get_hash()))
-                    return print::error("FetchInputs() : %s CTxMemPool::mempool Tx prev not found %s", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
+                    return logging::error("FetchInputs() : %s CTxMemPool::mempool Tx prev not found %s", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
                 txPrev = CTxMemPool_impl<T>::mempool.lookup(prevout.get_hash());
             }
             if (! fFound)
@@ -687,7 +687,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
         } else {
             // Get prev tx from disk
             if (! txPrev.ReadFromDisk(txindex.get_pos()))
-                return print::error("FetchInputs() : %s ReadFromDisk prev tx %s failed", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
+                return logging::error("FetchInputs() : %s ReadFromDisk prev tx %s failed", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
         }
     }
 
@@ -701,7 +701,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
             // Revisit this if/when transaction replacement is implemented and allows
             // adding inputs:
             fInvalid = true;
-            return DoS(100, print::error("FetchInputs() : %s prevout.n out of range %d %" PRIszu " %" PRIszu " prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.get_n(), txPrev.vout.size(), txindex.get_vSpent().size(), prevout.get_hash().ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
+            return DoS(100, logging::error("FetchInputs() : %s prevout.n out of range %d %" PRIszu " %" PRIszu " prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.get_n(), txPrev.vout.size(), txindex.get_vSpent().size(), prevout.get_hash().ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
         }
     }
 
@@ -724,24 +724,24 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
             CTxIndex &txindex = inputs[prevout.get_hash()].first;
             CTransaction_impl<T> &txPrev = inputs[prevout.get_hash()].second;
             if (prevout.get_n() >= txPrev.vout.size() || prevout.get_n() >= txindex.get_vSpent().size())
-                return DoS(100, print::error("ConnectInputs() : %s prevout.n out of range %d %" PRIszu " %" PRIszu " prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.get_n(), txPrev.vout.size(), txindex.get_vSpent().size(), prevout.get_hash().ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
+                return DoS(100, logging::error("ConnectInputs() : %s prevout.n out of range %d %" PRIszu " %" PRIszu " prev tx %s\n%s", GetHash().ToString().substr(0,10).c_str(), prevout.get_n(), txPrev.vout.size(), txindex.get_vSpent().size(), prevout.get_hash().ToString().substr(0,10).c_str(), txPrev.ToString().c_str()));
 
             // If prev is coinbase or coinstake, check that it's matured
             if (txPrev.IsCoinBase() || txPrev.IsCoinStake()) {
                 for (const CBlockIndex *pindex = pindexBlock; pindex && pindexBlock->get_nHeight() - pindex->get_nHeight() < block_transaction::nCoinbaseMaturity; pindex = pindex->get_pprev()) {
                     if (pindex->get_nBlockPos() == txindex.get_pos().get_nBlockPos() && pindex->get_nFile() == txindex.get_pos().get_nFile())
-                        return print::error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : "coinstake", pindexBlock->get_nHeight() - pindex->get_nHeight());
+                        return logging::error("ConnectInputs() : tried to spend %s at depth %d", txPrev.IsCoinBase() ? "coinbase" : "coinstake", pindexBlock->get_nHeight() - pindex->get_nHeight());
                 }
             }
 
             // ppcoin: check transaction timestamp
             if (txPrev.nTime > nTime)
-                return DoS(100, print::error("ConnectInputs() : transaction timestamp earlier than input transaction"));
+                return DoS(100, logging::error("ConnectInputs() : transaction timestamp earlier than input transaction"));
 
             // Check for negative or overflow input values
             nValueIn += txPrev.vout[prevout.get_n()].get_nValue();
             if (!block_transaction::manage::MoneyRange(txPrev.vout[prevout.get_n()].get_nValue()) || !block_transaction::manage::MoneyRange(nValueIn))
-                return DoS(100, print::error("ConnectInputs() : txin values out of range"));
+                return DoS(100, logging::error("ConnectInputs() : txin values out of range"));
         }
         if (pvChecks)
             pvChecks->reserve(vin.size());
@@ -759,7 +759,7 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
             // This doesn't trigger the DoS code on purpose; if it did, it would make it easier
             // for an attacker to attempt to split the network.
             if (! txindex.get_vSpent(prevout.get_n()).IsNull())
-                return fMiner ? false : print::error("ConnectInputs() : %s prev tx already used at %s", GetHash().ToString().substr(0,10).c_str(), txindex.get_vSpent(prevout.get_n()).ToString().c_str());
+                return fMiner ? false : logging::error("ConnectInputs() : %s prev tx already used at %s", GetHash().ToString().substr(0,10).c_str(), txindex.get_vSpent(prevout.get_n()).ToString().c_str());
 
             // Skip ECDSA signature verification when connecting blocks (fBlock=true)
             // before the last blockchain checkpoint. This is safe because block merkle hashes are
@@ -775,9 +775,9 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
                         // Don't trigger DoS code in case of Script_param::STRICT_FLAGS caused failure.
                         CScriptCheck check(txPrev, *this, i, flags & ~Script_param::STRICT_FLAGS, 0);
                         if (check())
-                            return print::error("ConnectInputs() : %s strict block_check::manage::VerifySignature failed", GetHash().ToString().substr(0,10).c_str());
+                            return logging::error("ConnectInputs() : %s strict block_check::manage::VerifySignature failed", GetHash().ToString().substr(0,10).c_str());
                     }
-                    return DoS(100,print::error("ConnectInputs() : %s block_check::manage::VerifySignature failed", GetHash().ToString().substr(0,10).c_str()));
+                    return DoS(100, logging::error("ConnectInputs() : %s block_check::manage::VerifySignature failed", GetHash().ToString().substr(0,10).c_str()));
                 }
             }
 
@@ -795,25 +795,25 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
                 // coin stake tx earns reward instead of paying fee
                 uint64_t nCoinAge;
                 if (! GetCoinAge(txdb, nCoinAge))
-                    return print::error("ConnectInputs() : %s unable to get %s age for coinstake", GetHash().ToString().substr(0,10).c_str(), strCoinName);
+                    return logging::error("ConnectInputs() : %s unable to get %s age for coinstake", GetHash().ToString().substr(0,10).c_str(), strCoinName);
 
                 int64_t nReward = GetValueOut() - nValueIn;
                 int64_t nCalculatedReward = diff::reward::GetProofOfStakeReward(nCoinAge, pindexBlock->get_nBits(), nTime) - GetMinFee(1, false, GMF_BLOCK, nTxSize) + util::CENT;
                 if (nReward > nCalculatedReward)
-                    return DoS(100, print::error("ConnectInputs() : coinstake pays too much(actual=%" PRId64 " vs calculated=%" PRId64 ")", nReward, nCalculatedReward));
+                    return DoS(100, logging::error("ConnectInputs() : coinstake pays too much(actual=%" PRId64 " vs calculated=%" PRId64 ")", nReward, nCalculatedReward));
             }
         } else {
             if (nValueIn < GetValueOut())
-                return DoS(100, print::error("ConnectInputs() : %s value in < value out", GetHash().ToString().substr(0,10).c_str()));
+                return DoS(100, logging::error("ConnectInputs() : %s value in < value out", GetHash().ToString().substr(0,10).c_str()));
 
             // Tally transaction fees
             int64_t nTxFee = nValueIn - GetValueOut();
             if (nTxFee < 0)
-                return DoS(100, print::error("ConnectInputs() : %s nTxFee < 0", GetHash().ToString().substr(0,10).c_str()));
+                return DoS(100, logging::error("ConnectInputs() : %s nTxFee < 0", GetHash().ToString().substr(0,10).c_str()));
 
             nFees += nTxFee;
             if (! block_transaction::manage::MoneyRange(nFees))
-                return DoS(100, print::error("ConnectInputs() : nFees out of range"));
+                return DoS(100, logging::error("ConnectInputs() : nFees out of range"));
         }
     }
 
@@ -840,21 +840,21 @@ bool CTransaction_impl<T>::ClientConnectInputs()
 
             // Verify signature
             if (! block_check::manage::VerifySignature(txPrev, *this, i, Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH, 0))
-                return print::error("ClientConnectInputs() : block_check::manage::VerifySignature failed");
+                return logging::error("ClientConnectInputs() : block_check::manage::VerifySignature failed");
 
             // this is redundant with the CTxMemPool::mempool.mapNextTx stuff,
             // not sure which I want to get rid of
             // this has to go away now that posNext is gone
             // Check for conflicts
             // if (!txPrev.vout[prevout.n].posNext.IsNull())
-            //     return print::error("ConnectInputs() : prev tx already used");
+            //     return logging::error("ConnectInputs() : prev tx already used");
             //
             // Flag outpoints as used
             // txPrev.vout[prevout.n].posNext = posThisTx;
 
             nValueIn += txPrev.vout[prevout.get_n()].get_nValue();
             if (!block_transaction::manage::MoneyRange(txPrev.vout[prevout.get_n()].get_nValue()) || !block_transaction::manage::MoneyRange(nValueIn))
-                return print::error("ClientConnectInputs() : txin values out of range");
+                return logging::error("ClientConnectInputs() : txin values out of range");
         }
         if (GetValueOut() > nValueIn)
             return false;
@@ -868,27 +868,27 @@ bool CTransaction_impl<T>::CheckTransaction() const
 {
     // Basic checks that don't depend on any context
     if (vin.empty())
-        return DoS(10, print::error("CTransaction_impl<T>::CheckTransaction() : vin empty"));
+        return DoS(10, logging::error("CTransaction_impl<T>::CheckTransaction() : vin empty"));
     if (vout.empty())
-        return DoS(10, print::error("CTransaction_impl<T>::CheckTransaction() : vout empty"));
+        return DoS(10, logging::error("CTransaction_impl<T>::CheckTransaction() : vout empty"));
 
     // Size limits
     if (::GetSerializeSize(*this) > block_params::MAX_BLOCK_SIZE)
-        return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : size limits failed"));
+        return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : size limits failed"));
 
     // Check for negative or overflow output values
     int64_t nValueOut = 0;
     for (unsigned int i = 0; i < vout.size(); ++i) {
         const CTxOut_impl<T> &txout = vout[i];
         if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake())
-            return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout empty for user transaction"));
+            return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : txout empty for user transaction"));
         if (txout.get_nValue() < 0)
-            return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue is negative"));
+            return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue is negative"));
         if (txout.get_nValue() > block_params::MAX_MONEY)
-            return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue too high"));
+            return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : txout.nValue too high"));
         nValueOut += txout.get_nValue();
         if (! block_transaction::manage::MoneyRange(nValueOut))
-            return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : txout total out of range"));
+            return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : txout total out of range"));
     }
 
     // Check for duplicate inputs
@@ -900,11 +900,11 @@ bool CTransaction_impl<T>::CheckTransaction() const
     }
     if (IsCoinBase()) {
         if (vin[0].get_scriptSig().size() < 2 || vin[0].get_scriptSig().size() > 100)
-            return DoS(100, print::error("CTransaction_impl<T>::CheckTransaction() : coinbase script size is invalid"));
+            return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : coinbase script size is invalid"));
     } else {
         for(const CTxIn_impl<T> &txin: this->vin) {
             if (txin.get_prevout().IsNull())
-                return DoS(10, print::error("CTransaction_impl<T>::CheckTransaction() : prevout is null"));
+                return DoS(10, logging::error("CTransaction_impl<T>::CheckTransaction() : prevout is null"));
         }
     }
 
@@ -978,7 +978,7 @@ bool CScriptCheck::operator()() const
 {
     const CScript &scriptSig = ptxTo->get_vin(nIn).get_scriptSig();
     if (! Script_util::VerifyScript(scriptSig, scriptPubKey, *ptxTo, nIn, nFlags, nHashType))
-        return print::error("CScriptCheck() functor : %s block_check::manage::VerifySignature failed", ptxTo->GetHash().ToString().substr(0,10).c_str());
+        return logging::error("CScriptCheck() functor : %s block_check::manage::VerifySignature failed", ptxTo->GetHash().ToString().substr(0,10).c_str());
     return true;
 }
 

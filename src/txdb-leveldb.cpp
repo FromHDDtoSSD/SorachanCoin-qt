@@ -438,7 +438,7 @@ bool CTxDB::LoadBlockIndex()
 
         if (! pindexNew->CheckIndex()) {
             delete iterator;
-            return print::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
+            return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
         }
 
         // ppcoin: build block_info::setStakeSeen
@@ -470,7 +470,7 @@ bool CTxDB::LoadBlockIndex()
         // calculate stake modifier checksum
         pindex->set_nStakeModifierChecksum(bitkernel::GetStakeModifierChecksum(pindex));
         if (!bitkernel::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum())) {
-            return print::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindex->get_nHeight(), pindex->get_nStakeModifier());
+            return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindex->get_nHeight(), pindex->get_nStakeModifier());
         }
     }
 
@@ -482,11 +482,11 @@ bool CTxDB::LoadBlockIndex()
             return true;
         }
 
-        return print::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not loaded");
+        return logging::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not loaded");
     }
 
     if (! block_info::mapBlockIndex.count(block_info::hashBestChain)) {
-        return print::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not found in the block index");
+        return logging::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not found in the block index");
     }
     block_info::pindexBest = block_info::mapBlockIndex[block_info::hashBestChain];
     block_info::nBestHeight = block_info::pindexBest->get_nHeight();
@@ -496,7 +496,7 @@ bool CTxDB::LoadBlockIndex()
 
     // load hashSyncCheckpoint
     if (! ReadSyncCheckpoint(Checkpoints::manage::getHashSyncCheckpoint())) {
-        return print::error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
+        return logging::error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
     }
     logging::LogPrintf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::manage::getHashSyncCheckpoint().ToString().c_str());
 
@@ -526,7 +526,7 @@ bool CTxDB::LoadBlockIndex()
 
         CBlock block;
         if (! block.ReadFromDisk(pindex)) {
-            return print::error("LoadBlockIndex() : block.ReadFromDisk failed");
+            return logging::error("LoadBlockIndex() : block.ReadFromDisk failed");
         }
 
         //
@@ -639,7 +639,7 @@ bool CTxDB::LoadBlockIndex()
         logging::LogPrintf("LoadBlockIndex() : *** moving best chain pointer back to block %d\n", pindexFork->get_nHeight());
         CBlock block;
         if (! block.ReadFromDisk(pindexFork)) {
-            return print::error("LoadBlockIndex() : block.ReadFromDisk failed");
+            return logging::error("LoadBlockIndex() : block.ReadFromDisk failed");
         }
 
         CTxDB txdb;
