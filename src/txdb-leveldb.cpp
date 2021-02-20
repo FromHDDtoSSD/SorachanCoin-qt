@@ -22,9 +22,10 @@
 #include <sync/sync.h>
 
 CCriticalSection CMTxDB::csTxdb_write;
-leveldb::DB *CTxDB::txdb = nullptr;
+template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::txdb = nullptr;
 
-leveldb::Options CTxDB::GetOptions()
+template <typename HASH>
+leveldb::Options CTxDB_impl<HASH>::GetOptions()
 {
     leveldb::Options options;
     int nCacheSizeMB = map_arg::GetArgInt("-dbcache", 25);
@@ -35,7 +36,8 @@ leveldb::Options CTxDB::GetOptions()
     return options;
 }
 
-void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = false */)
+template <typename HASH>
+void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = false */)
 {
     // First time init.
     fs::path directory = iofs::GetDataDir() / "txleveldb";
@@ -66,14 +68,15 @@ void CTxDB::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = fals
 }
 
 // CDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
-CTxDB::CTxDB(const char *pszMode/* ="r+" */)
+template <typename HASH>
+CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
 {
     assert(pszMode);
 
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    if (CTxDB::txdb) {
-        pdb = CTxDB::txdb;
+    if (CTxDB_impl<HASH>::txdb) {
+        pdb = CTxDB_impl<HASH>::txdb;
         return;
     }
 
@@ -85,7 +88,7 @@ CTxDB::CTxDB(const char *pszMode/* ="r+" */)
 
     init_blockindex(options); // Init directory
 
-    pdb = CTxDB::txdb;
+    pdb = CTxDB_impl<HASH>::txdb;
 
     if (Exists(std::string("version"))) {
         ReadVersion(nVersion);
@@ -95,13 +98,13 @@ CTxDB::CTxDB(const char *pszMode/* ="r+" */)
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
             // Leveldb instance destruction
-            delete CTxDB::txdb;
-            CTxDB::txdb = pdb = nullptr;
+            delete CTxDB_impl<HASH>::txdb;
+            CTxDB_impl<HASH>::txdb = pdb = nullptr;
             delete this->activeBatch;
             this->activeBatch = nullptr;
 
             init_blockindex(options, true); // Remove directory and create new database
-            pdb = CTxDB::txdb;
+            pdb = CTxDB_impl<HASH>::txdb;
 
             bool fTmp = fReadOnly;
             fReadOnly = false;
@@ -119,16 +122,18 @@ CTxDB::CTxDB(const char *pszMode/* ="r+" */)
     logging::LogPrintf("Opened LevelDB successfully\n");
 }
 
-CTxDB::~CTxDB() {
+template <typename HASH>
+CTxDB_impl<HASH>::~CTxDB_impl() {
     // Note that this is not the same as Close() because it deletes only
     // data scoped to this TxDB object.
     delete this->activeBatch;
 }
 
-void CTxDB::Close()
+template <typename HASH>
+void CTxDB_impl<HASH>::Close()
 {
-    delete CTxDB::txdb;
-    CTxDB::txdb = pdb = nullptr;
+    delete CTxDB_impl<HASH>::txdb;
+    CTxDB_impl<HASH>::txdb = pdb = nullptr;
 
     delete this->options.filter_policy;
     this->options.filter_policy = nullptr;
@@ -140,7 +145,8 @@ void CTxDB::Close()
     this->activeBatch = nullptr;
 }
 
-bool CTxDB::TxnBegin()
+template <typename HASH>
+bool CTxDB_impl<HASH>::TxnBegin()
 {
     assert(!this->activeBatch);
     this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
@@ -151,7 +157,8 @@ bool CTxDB::TxnBegin()
     return true;
 }
 
-bool CTxDB::TxnCommit()
+template <typename HASH>
+bool CTxDB_impl<HASH>::TxnCommit()
 {
     assert(this->activeBatch);
 
@@ -166,23 +173,27 @@ bool CTxDB::TxnCommit()
     return true;
 }
 
-bool CTxDB::TxnAbort() {
+template <typename HASH>
+bool CTxDB_impl<HASH>::TxnAbort() {
     delete this->activeBatch;
     this->activeBatch = nullptr;
     return true;
 }
 
-bool CTxDB::ReadVersion(int &nVersion) {
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadVersion(int &nVersion) {
     nVersion = 0;
     return Read(std::string("version"), nVersion);
 }
 
-bool CTxDB::WriteVersion(int nVersion) {
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteVersion(int nVersion) {
     return Write(std::string("version"), nVersion);
 }
 
+template<typename HASH>
 template<typename K, typename T>
-bool CTxDB::Read(const K &key, T &value) {
+bool CTxDB_impl<HASH>::Read(const K &key, T &value) {
     CDataStream ssKey(0, 0);
     ssKey.reserve(1000);
     ssKey << key;
@@ -222,8 +233,9 @@ bool CTxDB::Read(const K &key, T &value) {
     return true;
 }
 
+template<typename HASH>
 template<typename K, typename T>
-bool CTxDB::Write(const K &key, const T &value) {
+bool CTxDB_impl<HASH>::Write(const K &key, const T &value) {
     if (this->fReadOnly)
         assert(!"Write called on database in read-only mode");
 
@@ -249,8 +261,9 @@ bool CTxDB::Write(const K &key, const T &value) {
     return true;
 }
 
+template<typename HASH>
 template<typename K>
-bool CTxDB::Erase(const K &key) {
+bool CTxDB_impl<HASH>::Erase(const K &key) {
     if (! this->pdb)
         return false;
     if (this->fReadOnly)
@@ -268,8 +281,9 @@ bool CTxDB::Erase(const K &key) {
     return (status.ok() || status.IsNotFound());
 }
 
+template<typename HASH>
 template<typename K>
-bool CTxDB::Exists(const K &key) {
+bool CTxDB_impl<HASH>::Exists(const K &key) {
     CDataStream ssKey(0, 0);
     ssKey.reserve(1000);
     ssKey << key;
@@ -325,7 +339,8 @@ public:
 // a database transaction begins reads are consistent with it. It would be good
 // to change that assumption in future and avoid the performance hit, though in
 // practice it does not appear to be large.
-bool CTxDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const
+template <typename HASH>
+bool CTxDB_impl<HASH>::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const
 {
     assert(this->activeBatch);
 
@@ -342,7 +357,8 @@ bool CTxDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted)
     return scanner.foundEntry;
 }
 
-bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex &txindex)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadTxIndex(uint256 hash, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
 
@@ -350,13 +366,15 @@ bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex &txindex)
     return Read(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-bool CTxDB::UpdateTxIndex(uint256 hash, const CTxIndex &txindex)
+template <typename HASH>
+bool CTxDB_impl<HASH>::UpdateTxIndex(uint256 hash, const CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-bool CTxDB::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight)
+template <typename HASH>
+bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight)
 {
     assert(!args_bool::fClient);
 
@@ -366,7 +384,8 @@ bool CTxDB::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeigh
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-bool CTxDB::EraseTxIndex(const CTransaction &tx)
+template <typename HASH>
+bool CTxDB_impl<HASH>::EraseTxIndex(const CTransaction &tx)
 {
     assert(!args_bool::fClient);
     uint256 hash = tx.GetHash();
@@ -374,13 +393,15 @@ bool CTxDB::EraseTxIndex(const CTransaction &tx)
     return Erase(std::make_pair(std::string("tx"), hash));
 }
 
-bool CTxDB::ContainsTx(uint256 hash)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ContainsTx(uint256 hash)
 {
     assert(!args_bool::fClient);
     return Exists(std::make_pair(std::string("tx"), hash));
 }
 
-bool CTxDB::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     tx.SetNull();
@@ -391,74 +412,88 @@ bool CTxDB::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex)
     return (tx.ReadFromDisk(txindex.get_pos()));
 }
 
-bool CTxDB::ReadDiskTx(uint256 hash, CTransaction &tx)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadDiskTx(uint256 hash, CTransaction &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(hash, tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex)
 {
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction &tx)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint outpoint, CTransaction &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-bool CTxDB::WriteBlockIndex(const CDiskBlockIndex &blockindex)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteBlockIndex(const CDiskBlockIndex &blockindex)
 {
     return Write(std::make_pair(std::string("blockindex"), blockindex.GetBlockHash()), blockindex);
 }
 
-bool CTxDB::ReadHashBestChain(uint256 &hashBestChain)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadHashBestChain(uint256 &hashBestChain)
 {
     return Read(std::string("hashBestChain"), hashBestChain);
 }
 
-bool CTxDB::WriteHashBestChain(uint256 hashBestChain)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteHashBestChain(uint256 hashBestChain)
 {
     return Write(std::string("hashBestChain"), hashBestChain);
 }
 
-bool CTxDB::ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust)
 {
     return Read(std::string("bnBestInvalidTrust"), bnBestInvalidTrust);
 }
 
-bool CTxDB::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
 {
     return Write(std::string("bnBestInvalidTrust"), bnBestInvalidTrust);
 }
 
-bool CTxDB::ReadSyncCheckpoint(uint256 &hashCheckpoint)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadSyncCheckpoint(uint256 &hashCheckpoint)
 {
     return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
-bool CTxDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteSyncCheckpoint(uint256 hashCheckpoint)
 {
     return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
-bool CTxDB::ReadCheckpointPubKey(std::string &strPubKey)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadCheckpointPubKey(std::string &strPubKey)
 {
     return Read(std::string("strCheckpointPubKey"), strPubKey);
 }
 
-bool CTxDB::WriteCheckpointPubKey(const std::string &strPubKey)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteCheckpointPubKey(const std::string &strPubKey)
 {
     return Write(std::string("strCheckpointPubKey"), strPubKey);
 }
 
-bool CTxDB::ReadModifierUpgradeTime(unsigned int &nUpgradeTime)
+template <typename HASH>
+bool CTxDB_impl<HASH>::ReadModifierUpgradeTime(unsigned int &nUpgradeTime)
 {
     return Read(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-bool CTxDB::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
 {
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
@@ -483,7 +518,8 @@ static CBlockIndex *InsertBlockIndex(const uint256 &hash) {
     return pindexNew;
 }
 
-bool CTxDB::LoadBlockIndex()
+template <typename HASH>
+bool CTxDB_impl<HASH>::LoadBlockIndex()
 {
     if (block_info::mapBlockIndex.size() > 0) {
         // Already loaded once in this session. It can happen during migration from BDB.
@@ -766,3 +802,8 @@ unsigned int CMTxDB::dbcall(cla_thread<CMTxDB>::thread_data *data) {
 
     return 0;
 }
+
+
+
+template class CTxDB_impl<uint256>;
+template class CTxDB_impl<uint65536>;

@@ -19,11 +19,12 @@
 #include <leveldb/write_batch.h>
 #include <util/thread.h>
 
-class CTxDB // Note: no necessary virtual.
+template <typename HASH>
+class CTxDB_impl // Note: no necessary virtual.
 {
 public:
-    CTxDB(const char *pszMode = "r+");
-    ~CTxDB();
+    CTxDB_impl(const char *pszMode = "r+");
+    ~CTxDB_impl();
     void Close(); // Destroys the underlying shared global state accessed by this TxDB.
 
     bool TxnBegin();
@@ -36,7 +37,7 @@ public:
     bool ReadTxIndex(uint256 hash, CTxIndex &txindex);
     bool UpdateTxIndex(uint256 hash, const CTxIndex &txindex);
     bool AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight);
-    bool EraseTxIndex(const CTransaction& tx);
+    bool EraseTxIndex(const CTransaction &tx);
     bool ContainsTx(uint256 hash);
 
     bool ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex);
@@ -64,10 +65,10 @@ public:
     bool LoadBlockIndex();
 
 private:
-    CTxDB(const CTxDB &)=delete;
-    CTxDB(CTxDB &&)=delete;
-    CTxDB &operator=(const CTxDB &)=delete;
-    CTxDB &operator=(CTxDB &&)=delete;
+    CTxDB_impl(const CTxDB_impl &)=delete;
+    CTxDB_impl(CTxDB_impl &&)=delete;
+    CTxDB_impl &operator=(const CTxDB_impl &)=delete;
+    CTxDB_impl &operator=(CTxDB_impl &&)=delete;
 
     // global pointer for LevelDB object instance
     static leveldb::DB *txdb;
@@ -102,6 +103,8 @@ private:
     template<typename K>
     bool Exists(const K &key);
 };
+using CTxDB = CTxDB_impl<uint256>; // mainchain
+using CTxDB_finexDriveChain = CTxDB_impl<uint65536>; // sidechain-1
 
 // multi-threading DB
 class CMTxDB final : public CTxDB
