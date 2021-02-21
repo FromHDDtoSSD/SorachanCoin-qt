@@ -358,7 +358,7 @@ bool CTxDB_impl<HASH>::ScanBatch(const CDataStream &key, std::string *value, boo
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadTxIndex(uint256 hash, CTxIndex &txindex)
+bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
 
@@ -367,7 +367,7 @@ bool CTxDB_impl<HASH>::ReadTxIndex(uint256 hash, CTxIndex &txindex)
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::UpdateTxIndex(uint256 hash, const CTxIndex &txindex)
+bool CTxDB_impl<HASH>::UpdateTxIndex(HASH hash, const CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     return Write(std::make_pair(std::string("tx"), hash), txindex);
@@ -379,7 +379,7 @@ bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos,
     assert(!args_bool::fClient);
 
     // Add to tx index
-    uint256 hash = tx.GetHash();
+    HASH hash = tx.GetHash();
     CTxIndex txindex(pos, tx.get_vout().size());
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
@@ -388,20 +388,20 @@ template <typename HASH>
 bool CTxDB_impl<HASH>::EraseTxIndex(const CTransaction &tx)
 {
     assert(!args_bool::fClient);
-    uint256 hash = tx.GetHash();
+    HASH hash = tx.GetHash();
 
     return Erase(std::make_pair(std::string("tx"), hash));
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ContainsTx(uint256 hash)
+bool CTxDB_impl<HASH>::ContainsTx(HASH hash)
 {
     assert(!args_bool::fClient);
     return Exists(std::make_pair(std::string("tx"), hash));
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex)
+bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction &tx, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     tx.SetNull();
@@ -413,7 +413,7 @@ bool CTxDB_impl<HASH>::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txin
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(uint256 hash, CTransaction &tx)
+bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(hash, tx, txindex);
@@ -439,13 +439,13 @@ bool CTxDB_impl<HASH>::WriteBlockIndex(const CDiskBlockIndex &blockindex)
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadHashBestChain(uint256 &hashBestChain)
+bool CTxDB_impl<HASH>::ReadHashBestChain(HASH &hashBestChain)
 {
     return Read(std::string("hashBestChain"), hashBestChain);
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::WriteHashBestChain(uint256 hashBestChain)
+bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
     return Write(std::string("hashBestChain"), hashBestChain);
 }
@@ -463,13 +463,13 @@ bool CTxDB_impl<HASH>::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadSyncCheckpoint(uint256 &hashCheckpoint)
+bool CTxDB_impl<HASH>::ReadSyncCheckpoint(HASH &hashCheckpoint)
 {
     return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::WriteSyncCheckpoint(uint256 hashCheckpoint)
+bool CTxDB_impl<HASH>::WriteSyncCheckpoint(HASH hashCheckpoint)
 {
     return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
@@ -498,12 +498,13 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-static CBlockIndex *InsertBlockIndex(const uint256 &hash) {
+template <typename HASH>
+static CBlockIndex *InsertBlockIndex(const HASH &hash) {
     if (hash == 0)
         return nullptr;
 
     // Return existing
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
+    typename std::map<HASH, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
     if (mi != block_info::mapBlockIndex.end())
         return (*mi).second;
 
@@ -533,7 +534,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
 
     // Seek to start key.
     CDataStream ssStartKey(0, 0);
-    ssStartKey << std::make_pair(std::string("blockindex"), uint256(0));
+    ssStartKey << std::make_pair(std::string("blockindex"), HASH(0));
     iterator->Seek(ssStartKey.str());
 
     // Now read each entry.
@@ -555,7 +556,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
         CDiskBlockIndex diskindex;
         ssValue >> diskindex;
 
-        uint256 blockHash = diskindex.GetBlockHash();
+        HASH blockHash = diskindex.GetBlockHash();
 
         // Construct block index object
         CBlockIndex *pindexNew = InsertBlockIndex(blockHash);
@@ -604,7 +605,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
     // Calculate nChainTrust
     std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(block_info::mapBlockIndex.size());
-    for(const std::pair<uint256, CBlockIndex *>&item: block_info::mapBlockIndex) {
+    for(const std::pair<HASH, CBlockIndex *>&item: block_info::mapBlockIndex) {
         CBlockIndex *pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
@@ -693,7 +694,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
             mapBlockPos[pos] = pindex;
             for(const CTransaction &tx: block.get_vtx())
             {
-                uint256 hashTx = tx.GetHash();
+                HASH hashTx = tx.GetHash();
                 CTxIndex txindex;
                 if (ReadTxIndex(hashTx, txindex)) {
                     //
@@ -806,4 +807,4 @@ unsigned int CMTxDB::dbcall(cla_thread<CMTxDB>::thread_data *data) {
 
 
 template class CTxDB_impl<uint256>;
-template class CTxDB_impl<uint65536>;
+//template class CTxDB_impl<uint65536>;
