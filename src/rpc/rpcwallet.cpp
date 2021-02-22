@@ -549,7 +549,7 @@ json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, CBit
     if (! key.SignCompact(hash_basis::Hash(ss.begin(), ss.end()), vchSig))
         return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
 
-    return data.JSONRPCSuccess(base64::EncodeBase64(&vchSig[0], vchSig.size()));
+    return data.JSONRPCSuccess(strenc::EncodeBase64(&vchSig[0], vchSig.size()));
 }
 
 json_spirit::Value CRPCTable::verifymessage(const json_spirit::Array &params, CBitrpcData &data) {
@@ -576,7 +576,7 @@ json_spirit::Value CRPCTable::verifymessage(const json_spirit::Array &params, CB
         return data.JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
 
     bool fInvalid = false;
-    std::vector<unsigned char> vchSig = base64::DecodeBase64(strSign.c_str(), &fInvalid);
+    std::vector<unsigned char> vchSig = strenc::DecodeBase64(strSign.c_str(), &fInvalid);
 
     if (fInvalid)
         return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Malformed base64 encoding");

@@ -19,6 +19,7 @@
 #include <QClipboard>
 #include <QKeyEvent>
 #include <allocator/qtsecure.h>
+#include <util/strencodings.h>
 
 SignVerifyMessageDialog::SignVerifyMessageDialog(QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
@@ -159,7 +160,7 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()
     ui->statusLabel_SM->setStyleSheet("QLabel { color: green; }");
     ui->statusLabel_SM->setText(QString("<nobr>") + tr("Message signed.") + QString("</nobr>"));
 
-    ui->signatureOut_SM->setText(QString::fromStdString(base64::EncodeBase64(&vchSig[0], vchSig.size())));
+    ui->signatureOut_SM->setText(QString::fromStdString(strenc::EncodeBase64(&vchSig[0], vchSig.size())));
 }
 
 void SignVerifyMessageDialog::on_copySignatureButton_SM_clicked()
@@ -207,7 +208,7 @@ void SignVerifyMessageDialog::on_verifyMessageButton_VM_clicked()
     }
 
     bool fInvalid = false;
-    std::vector<unsigned char> vchSig = base64::DecodeBase64(ui->signatureIn_VM->text().toStdString().c_str(), &fInvalid);
+    std::vector<unsigned char> vchSig = strenc::DecodeBase64(ui->signatureIn_VM->text().toStdString().c_str(), &fInvalid);
 
     if (fInvalid) {
         ui->signatureIn_VM->setValid(false);

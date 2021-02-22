@@ -36,14 +36,14 @@ public:
 
     bool ReadTxIndex(HASH hash, CTxIndex &txindex);
     bool UpdateTxIndex(HASH hash, const CTxIndex &txindex);
-    bool AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight);
-    bool EraseTxIndex(const CTransaction &tx);
+    bool AddTxIndex(const CTransaction_impl<HASH> &tx, const CDiskTxPos &pos, int nHeight);
+    bool EraseTxIndex(const CTransaction_impl<HASH> &tx);
     bool ContainsTx(HASH hash);
 
-    bool ReadDiskTx(HASH hash, CTransaction &tx, CTxIndex &txindex);
-    bool ReadDiskTx(HASH hash, CTransaction &tx);
-    bool ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex);
-    bool ReadDiskTx(COutPoint outpoint, CTransaction &tx);
+    bool ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx, CTxIndex &txindex);
+    bool ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx);
+    bool ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx, CTxIndex &txindex);
+    bool ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx);
 
     bool WriteBlockIndex(const CDiskBlockIndex &blockindex);
 

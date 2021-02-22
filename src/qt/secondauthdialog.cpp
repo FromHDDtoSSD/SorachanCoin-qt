@@ -18,6 +18,7 @@
 #include <vector>
 #include <QClipboard>
 #include <QKeyEvent>
+#include <util/strencodings.h>
 #include <allocator/qtsecure.h>
 
 SecondAuthDialog::SecondAuthDialog(QWidget *parent) :
@@ -131,7 +132,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
     ui->statusLabel->setStyleSheet("QLabel { color: green; }");
     ui->statusLabel->setText(QString("<nobr>") + tr("Message signed.") + QString("</nobr>"));
 
-    ui->signatureOut->setText(QString::fromStdString(base64::EncodeBase64(&vchSig[0], vchSig.size())));
+    ui->signatureOut->setText(QString::fromStdString(strenc::EncodeBase64(&vchSig[0], vchSig.size())));
 }
 
 void SecondAuthDialog::on_copySignatureButton_clicked()

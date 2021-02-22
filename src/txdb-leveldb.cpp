@@ -374,7 +374,7 @@ bool CTxDB_impl<HASH>::UpdateTxIndex(HASH hash, const CTxIndex &txindex)
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight)
+bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction_impl<HASH> &tx, const CDiskTxPos &pos, int nHeight)
 {
     assert(!args_bool::fClient);
 
@@ -385,7 +385,7 @@ bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos,
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::EraseTxIndex(const CTransaction &tx)
+bool CTxDB_impl<HASH>::EraseTxIndex(const CTransaction_impl<HASH> &tx)
 {
     assert(!args_bool::fClient);
     HASH hash = tx.GetHash();
@@ -401,7 +401,7 @@ bool CTxDB_impl<HASH>::ContainsTx(HASH hash)
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction &tx, CTxIndex &txindex)
+bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     tx.SetNull();
@@ -413,20 +413,20 @@ bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction &tx, CTxIndex &txindex
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction &tx)
+bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(hash, tx, txindex);
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex)
+bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx, CTxIndex &txindex)
 {
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint outpoint, CTransaction &tx)
+bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
@@ -499,7 +499,7 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 }
 
 template <typename HASH>
-static CBlockIndex *InsertBlockIndex(const HASH &hash) {
+static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash) {
     if (hash == 0)
         return nullptr;
 
@@ -553,13 +553,13 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
             break;
         }
 
-        CDiskBlockIndex diskindex;
+        CDiskBlockIndex_impl<HASH> diskindex;
         ssValue >> diskindex;
 
         HASH blockHash = diskindex.GetBlockHash();
 
         // Construct block index object
-        CBlockIndex *pindexNew = InsertBlockIndex(blockHash);
+        CBlockIndex_impl<HASH> *pindexNew = InsertBlockIndex(blockHash);
         pindexNew->set_pprev(InsertBlockIndex(diskindex.get_hashPrev()));
         pindexNew->set_pnext(InsertBlockIndex(diskindex.get_hashNext()));
         pindexNew->set_nFile(diskindex.get_nFile());

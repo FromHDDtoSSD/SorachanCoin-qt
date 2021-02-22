@@ -3,9 +3,10 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "netbase.h"
-#include "util.h"
-#include "hash.h"
+#include <netbase.h>
+#include <util.h>
+#include <hash.h>
+#include <util/strencodings.h>
 
 #ifndef WIN32
 #ifdef ANDROID
@@ -612,7 +613,7 @@ void CNetAddr::SetIP(const CNetAddr &ipIn)
 bool CNetAddr::SetSpecial(const std::string &strName)
 {
     if (strName.size() > 6 && strName.substr(strName.size() - 6, 6) == ".onion") {
-        std::vector<unsigned char> vchAddr = base32::DecodeBase32(strName.substr(0, strName.size() - 6).c_str());
+        std::vector<unsigned char> vchAddr = strenc::DecodeBase32(strName.substr(0, strName.size() - 6).c_str());
         if (vchAddr.size() != 16 - sizeof(pchOnionCat)) {
             return false;
         }
@@ -626,7 +627,7 @@ bool CNetAddr::SetSpecial(const std::string &strName)
     }
 
     if (strName.size() > 11 && strName.substr(strName.size() - 11, 11) == ".oc.b32.i2p") {
-        std::vector<unsigned char> vchAddr = base32::DecodeBase32(strName.substr(0, strName.size() - 11).c_str());
+        std::vector<unsigned char> vchAddr = strenc::DecodeBase32(strName.substr(0, strName.size() - 11).c_str());
         if (vchAddr.size() != 16 - sizeof(pchGarliCat)) {
             return false;
         }
@@ -851,10 +852,10 @@ enum netbase::Network CNetAddr::GetNetwork() const
 std::string CNetAddr::ToStringIP() const
 {
     if (IsTor()) {
-        return base32::EncodeBase32(&ip[6], 10) + ".onion";
+        return strenc::EncodeBase32(&ip[6], 10) + ".onion";
     }
     if (IsI2P()) {
-        return base32::EncodeBase32(&ip[6], 10) + ".oc.b32.i2p";
+        return strenc::EncodeBase32(&ip[6], 10) + ".oc.b32.i2p";
     }
 
     CService serv(*this, (uint16_t)0);

@@ -15,6 +15,7 @@
 #include <boot/shutdown.h>
 #include <block/block_process.h>
 #include <block/block_alert.h>
+#include <util/strencodings.h>
 #include <list>
 #include <boost/asio/ip/v6_only.hpp>
 #include <boost/bind.hpp>
@@ -425,7 +426,7 @@ bool bitrpc::HTTPAuthorized(std::map<std::string, std::string> &mapHeaders) {
         return false;
 
     std::string strUserPass64 = strAuth.substr(6); boost::trim(strUserPass64);
-    std::string strUserPass = base64::DecodeBase64(strUserPass64);
+    std::string strUserPass = strenc::DecodeBase64(strUserPass64);
     return map_arg::TimingResistantEqual(strUserPass, strRPCUserColonPass);
 }
 
@@ -1192,7 +1193,7 @@ json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMet
     }
 
     // HTTP basic authentication
-    std::string strUserPass64 = base64::EncodeBase64(map_arg::GetMapArgsString("-rpcuser") + ":" + map_arg::GetMapArgsString("-rpcpassword"));
+    std::string strUserPass64 = strenc::EncodeBase64(map_arg::GetMapArgsString("-rpcuser") + ":" + map_arg::GetMapArgsString("-rpcpassword"));
     std::map<std::string, std::string> mapRequestHeaders;
     mapRequestHeaders["Authorization"] = std::string("Basic ") + strUserPass64;
 
