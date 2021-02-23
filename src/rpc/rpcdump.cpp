@@ -108,8 +108,8 @@ json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, CB
         if (address.IsPair())
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "It's senseless to import pubkey pair address.");
         script.SetAddress(address);
-    } else if (hex::IsHex(hexparam0)) {
-        rpctable_vector data(hex::ParseHex(hexparam0));
+    } else if (strenc::IsHex(hexparam0)) {
+        rpctable_vector data(strenc::ParseHex(hexparam0));
         script = CScript(data.begin(), data.end());
     } else
         return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid " strCoinName " address or script");
@@ -171,8 +171,8 @@ json_spirit::Value CRPCTable::removeaddress(const json_spirit::Array &params, CB
         if (address.IsPair())
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Pubkey pair addresses aren't supported.");
         script.SetAddress(address);
-    } else if (hex::IsHex(hexparam0)) {
-        rpctable_vector data(hex::ParseHex(hexparam0));
+    } else if (strenc::IsHex(hexparam0)) {
+        rpctable_vector data(strenc::ParseHex(hexparam0));
         script = CScript(data.begin(), data.end());
     } else
         return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid Bitcoin address or script");

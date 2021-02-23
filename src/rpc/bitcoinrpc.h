@@ -18,6 +18,7 @@
 #include <util.h>
 #include <checkpoints.h>
 #include <address/base58.h>
+#include <util/strencodings.h>
 
 //
 // HTTP status codes
@@ -228,7 +229,7 @@ public:
                 return err_h;
             }
         }
-        if (! hex::IsHex(strHex)) { // Note: IsHex("") is false
+        if (! strenc::IsHex(strHex)) { // Note: IsHex("") is false
             data.JSONRPCError(RPCErrorCode::RPC_INVALID_PARAMETER, strName + " must be hexadecimal string (not '" + strHex + "')");
             return err_h;
         }
@@ -253,12 +254,12 @@ public:
                 return err_v;
             }
         }
-        if (! hex::IsHex(strHex)) {
+        if (! strenc::IsHex(strHex)) {
             data.JSONRPCError(RPCErrorCode::RPC_INVALID_PARAMETER, strName + " must be hexadecimal string (not '" + strHex + "')");
             return err_v;
         }
         data.JSONRPCSuccess(strHex);
-        return hex::ParseHex(strHex);
+        return strenc::ParseHex(strHex);
     }
 
     static hexrpc_vector ParseHexO(const json_spirit::Object &o, std::string strKey, CBitrpcData &data) {

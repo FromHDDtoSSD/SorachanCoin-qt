@@ -12,6 +12,7 @@
 #include <main.h>
 #include <net.h>
 #include <wallet.h>
+#include <util/strencodings.h>
 
 void CRPCTable::ScriptPubKeyToJSON(const CScript &scriptPubKey, json_spirit::Object &out, bool fIncludeHex) {
     TxnOutputType::txnouttype type;
@@ -264,7 +265,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
         
         std::string txid = txid_v.get_str(status);
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        if (! hex::IsHex(txid))
+        if (! strenc::IsHex(txid))
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex txid");
 
         const json_spirit::Value& vout_v = find_value(o, "vout");
@@ -309,7 +310,7 @@ json_spirit::Value CRPCTable::createrawtransaction(const json_spirit::Array &par
         json_spirit::json_flags status;
         std::string str = params[2].get_str(status);
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        scriptPubKey << ScriptOpcodes::OP_RETURN << hex::ParseHex(str);
+        scriptPubKey << ScriptOpcodes::OP_RETURN << strenc::ParseHex(str);
         CTxOut out(0, scriptPubKey);
         rawTx.set_vout().push_back(out);
     }
@@ -332,7 +333,7 @@ json_spirit::Value CRPCTable::decoderawtransaction(const json_spirit::Array &par
     json_spirit::json_flags status;
     std::string str = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    rpctable_vector txData(hex::ParseHex(str));
+    rpctable_vector txData(strenc::ParseHex(str));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
     try {
@@ -397,7 +398,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
     json_spirit::json_flags status;
     std::string str = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    rpctable_vector txData(hex::ParseHex(str));
+    rpctable_vector txData(strenc::ParseHex(str));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     std::vector<CTransaction> txVariants;
     while (! ssData.empty()) {
@@ -482,7 +483,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
             json_spirit::json_flags status;
             std::string txidHex = find_value(prevOut, "txid").get_str(status);
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-            if (! hex::IsHex(txidHex))
+            if (! strenc::IsHex(txidHex))
                 return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "txid must be hexadecimal");
 
             uint256 txid;
@@ -494,10 +495,10 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
 
             std::string pkHex = find_value(prevOut, "scriptPubKey").get_str(status);
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-            if (! hex::IsHex(pkHex))
+            if (! strenc::IsHex(pkHex))
                 return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "scriptPubKey must be hexadecimal");
 
-            rpctable_vector pkData(hex::ParseHex(pkHex));
+            rpctable_vector pkData(strenc::ParseHex(pkHex));
             CScript scriptPubKey(pkData.begin(), pkData.end());
             COutPoint outpoint(txid, nOut);
             if (mapPrevOut.count(outpoint)) {
@@ -594,7 +595,7 @@ json_spirit::Value CRPCTable::sendrawtransaction(const json_spirit::Array &param
     json_spirit::json_flags status;
     std::string hex = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    rpctable_vector txData(hex::ParseHex(hex));
+    rpctable_vector txData(strenc::ParseHex(hex));
     CDataStream ssData(txData, SER_NETWORK, version::PROTOCOL_VERSION);
     CTransaction tx;
 
@@ -670,9 +671,9 @@ json_spirit::Value CRPCTable::createmultisig(const json_spirit::Array &params, C
                 return data.runtime_error(std::string(" Invalid public key: ") + ks);
 
             pubkeys[i] = vchPubKey;
-        } else if (hex::IsHex(ks)) {
+        } else if (strenc::IsHex(ks)) {
             // Case 2: hex public key
-            CPubKey vchPubKey(hex::ParseHex(ks));
+            CPubKey vchPubKey(strenc::ParseHex(ks));
             if (! vchPubKey.IsFullyValid())
                 return data.runtime_error(" Invalid public key: "+ks);
             pubkeys[i] = vchPubKey;

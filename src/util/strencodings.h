@@ -14,6 +14,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <prevector/prevector.h>
 
 namespace strenc {
 
@@ -33,10 +34,15 @@ enum SafeChars
 * @param[in] rule   The set of safe chars to choose (default: least restrictive)
 * @return           A new string without unsafe chars
 */
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+using hex_vector = prevector<PREVECTOR_N, uint8_t>;
+#else
+using hex_vector = std::vector<uint8_t>;
+#endif
 std::string SanitizeString(const std::string &str, int rule = SAFE_CHARS_DEFAULT);
-std::vector<unsigned char> ParseHex(const char *psz);
-std::vector<unsigned char> ParseHex(const std::string &str);
-signed char HexDigit(char c);
+hex_vector ParseHex(const char *psz);
+hex_vector ParseHex(const std::string &str);
+
 /* Returns true if each character in str is a hex character, and has an even
  * number of hex digits.*/
 bool IsHex(const std::string &str);

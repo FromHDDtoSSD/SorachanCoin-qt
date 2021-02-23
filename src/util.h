@@ -346,49 +346,6 @@ namespace bitstr
     bool ParseMoney(const char *pszIn, int64_t &nRet);
 }
 
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-using hex_vector = prevector<PREVECTOR_N, uint8_t>;
-#else
-using hex_vector = std::vector<uint8_t>;
-#endif
-class hex : private no_instance
-{
-private:
-    static const signed char phexdigit[256];
-public:
-    static hex_vector ParseHex(const char *psz) {
-        // convert hex dump to vector
-        hex_vector vch;
-        for (;;) {
-            while (::isspace(*psz))
-                ++psz;
-
-            signed char c = phexdigit[(unsigned char)*psz++];
-            if (c == (signed char)-1)
-                break;
-
-            unsigned char n = (c << 4);
-            c = phexdigit[(unsigned char)*psz++];
-            if (c == (signed char)-1)
-                break;
-
-            n |= c;
-            vch.push_back(n);
-        }
-        return vch;
-    }
-    static hex_vector ParseHex(const std::string &str) {
-        return hex::ParseHex(str.c_str());
-    }
-    static bool IsHex(const std::string &str) noexcept {
-        for(unsigned char c: str) {
-            if (hex::phexdigit[c] < 0)
-                return false;
-        }
-        return (str.size() > 0) && (str.size() % 2 == 0);
-    }
-};
-
 class dump : private no_instance
 {
 private:

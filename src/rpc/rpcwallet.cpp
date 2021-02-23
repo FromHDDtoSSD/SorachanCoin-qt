@@ -1019,9 +1019,9 @@ json_spirit::Value CRPCTable::addmultisigaddress(const json_spirit::Array &param
             if (! vchPubKey.IsValid())
                 return data.runtime_error(std::string(" Invalid public key: ") + ks);
             pubkeys[i] = vchPubKey;
-        } else if (hex::IsHex(ks)) {
+        } else if (strenc::IsHex(ks)) {
             // Case 2: hex public key
-            CPubKey vchPubKey(hex::ParseHex(ks));
+            CPubKey vchPubKey(strenc::ParseHex(ks));
             if (! vchPubKey.IsValid())
                 return data.runtime_error(" Invalid public key: "+ks);
             pubkeys[i] = vchPubKey;
@@ -2197,8 +2197,8 @@ json_spirit::Value CRPCTable::adjustmalleablekey(const json_spirit::Array &param
     CMalleableKey malleableKey;
     malleableKey.SetString(jparam0);
     CKey privKeyVariant;
-    CPubKey vchPubKeyVariant = CPubKey(hex::ParseHex(jparam1));
-    CPubKey R(hex::ParseHex(jparam2));
+    CPubKey vchPubKeyVariant = CPubKey(strenc::ParseHex(jparam1));
+    CPubKey R(strenc::ParseHex(jparam2));
     if (! malleableKey.CheckKeyVariant(R,vchPubKeyVariant, privKeyVariant))
         return data.runtime_error("Unable to calculate the private key");
 

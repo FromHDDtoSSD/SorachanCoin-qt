@@ -14,6 +14,7 @@
 #include <miner/diff.h>
 #include <block/block_alert.h>
 #include <boost/format.hpp>
+#include <util/strencodings.h>
 
 json_spirit::Value CRPCTable::getsubsidy(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() > 1) {
@@ -88,7 +89,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
 
     std::string txid = txid_v.get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    if (! hex::IsHex(txid))
+    if (! strenc::IsHex(txid))
         return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, expected hex txid");
 
     uint256 hash(txid);
@@ -292,12 +293,12 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         json_spirit::json_flags status;
         std::string str = params[0].get_str(status);
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        rpctable_vector vchData = hex::ParseHex(str);
+        rpctable_vector vchData = strenc::ParseHex(str);
         rpctable_vector coinbase;
         if(params.size() == 2) {
             str = params[1].get_str(status);
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-            coinbase = hex::ParseHex(str);
+            coinbase = strenc::ParseHex(str);
         }
         if (vchData.size() != 128)
             return data.JSONRPCError(-8, "Invalid parameter");
@@ -416,7 +417,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         json_spirit::json_flags status;
         std::string str = params[0].get_str(status);
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        rpctable_vector vchData = hex::ParseHex(str);
+        rpctable_vector vchData = strenc::ParseHex(str);
         if (vchData.size() != 128)
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
 
@@ -595,7 +596,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
     json_spirit::json_flags status;
     std::string hex = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    rpctable_vector blockData(hex::ParseHex(hex));
+    rpctable_vector blockData(strenc::ParseHex(hex));
     CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
     CBlock block;
     try {

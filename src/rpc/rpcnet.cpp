@@ -11,6 +11,7 @@
 #include <net.h>
 #include <ntp.h>
 #include <util/time.h>
+#include <util/strencodings.h>
 
 json_spirit::Value CRPCTable::getconnectioncount(const json_spirit::Array &params, CBitrpcData &data) noexcept {
     if (data.fHelp() || params.size() != 0) {
@@ -293,7 +294,7 @@ json_spirit::Value CRPCTable::sendalert(const json_spirit::Array &params, CBitrp
 
     std::string hex = params[1].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    key_vector vchPrivKey = hex::ParseHex(hex);
+    key_vector vchPrivKey = strenc::ParseHex(hex);
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (! key.Sign(hash_basis::Hash(alert.vchMsg.begin(), alert.vchMsg.end()), alert.vchSig))
         return data.runtime_error("Unable to sign alert, check private key?\n");

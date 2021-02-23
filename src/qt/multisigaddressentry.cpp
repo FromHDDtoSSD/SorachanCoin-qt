@@ -15,6 +15,7 @@
 #include <qt/multisigaddressentry.h>
 #include <ui_multisigaddressentry.h>
 #include <qt/walletmodel.h>
+#include <util/strencodings.h>
 #include <allocator/qtsecure.h>
 
 MultisigAddressEntry::MultisigAddressEntry(QWidget *parent) : QFrame(parent), ui(new(std::nothrow) Ui::MultisigAddressEntry), model(0)
@@ -85,7 +86,7 @@ void MultisigAddressEntry::on_addressBookButton_clicked()
 void MultisigAddressEntry::on_pubkey_textChanged(const QString &pubkey)
 {
     // Compute address from public key
-    key_vector vchPubKey(hex::ParseHex(pubkey.toStdString().c_str()));
+    key_vector vchPubKey(strenc::ParseHex(pubkey.toStdString().c_str()));
     CPubKey pkey(vchPubKey);
     CKeyID keyID = pkey.GetID();
     CBitcoinAddress address(keyID);

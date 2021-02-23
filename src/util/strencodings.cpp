@@ -59,20 +59,9 @@ inline bool ProcessMantissaDigit(char ch, int64_t &mantissa, int &mantissa_tzero
     }
     return true;
 }
-} // namespace
 
-namespace strenc {
-std::string SanitizeString(const std::string &str, int rule)
+inline signed char HexDigit(char c)
 {
-    std::string strResult;
-    for (std::string::size_type i = 0; i < str.size(); i++)
-    {
-        if (SAFE_CHARS[rule].find(str[i]) != std::string::npos)
-            strResult.push_back(str[i]);
-    }
-    return strResult;
-}
-
 const signed char p_util_hexdigit[256] =
 { -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
@@ -91,9 +80,21 @@ const signed char p_util_hexdigit[256] =
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,
   -1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1,-1, };
 
-signed char HexDigit(char c)
-{
     return p_util_hexdigit[(unsigned char)c];
+}
+
+} // namespace
+
+namespace strenc {
+std::string SanitizeString(const std::string &str, int rule)
+{
+    std::string strResult;
+    for (std::string::size_type i = 0; i < str.size(); i++)
+    {
+        if (SAFE_CHARS[rule].find(str[i]) != std::string::npos)
+            strResult.push_back(str[i]);
+    }
+    return strResult;
 }
 
 bool IsHex(const std::string &str)
@@ -119,11 +120,11 @@ bool IsHexNumber(const std::string &str)
     return (str.size() > starting_location);
 }
 
-std::vector<unsigned char> ParseHex(const char *psz)
+hex_vector ParseHex(const char *psz)
 {
     // convert hex dump to vector
-    std::vector<unsigned char> vch;
-    while (true)
+    hex_vector vch;
+    for(;;)
     {
         while (IsSpace(*psz))
             psz++;
@@ -140,7 +141,7 @@ std::vector<unsigned char> ParseHex(const char *psz)
     return vch;
 }
 
-std::vector<unsigned char> ParseHex(const std::string &str)
+hex_vector ParseHex(const std::string &str)
 {
     return ParseHex(str.c_str());
 }

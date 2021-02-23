@@ -212,9 +212,9 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive, std::vector<CDBEnv::
         if (keyHex != "DATA=END") {
             std::getline(strDump, valueHex);
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-            vResult.push_back(std::make_pair(hex::ParseHex(keyHex).get_std_vector(), hex::ParseHex(valueHex).get_std_vector()));
+            vResult.push_back(std::make_pair(strenc::ParseHex(keyHex).get_std_vector(), strenc::ParseHex(valueHex).get_std_vector()));
 #else
-            vResult.push_back(std::make_pair(hex::ParseHex(keyHex), hex::ParseHex(valueHex)));
+            vResult.push_back(std::make_pair(strenc::ParseHex(keyHex), strenc::ParseHex(valueHex)));
 #endif
         }
     }

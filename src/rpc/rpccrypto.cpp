@@ -8,6 +8,7 @@
 #include <rpc/bitcoinrpc.h>
 #include <init.h>
 #include <address/base58.h>
+#include <util/strencodings.h>
 
 json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() != 2) {
@@ -19,11 +20,11 @@ json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBit
     json_spirit::json_flags status;
     std::string hex = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CPubKey pubKey(hex::ParseHex(hex));
+    CPubKey pubKey(strenc::ParseHex(hex));
     rpctable_vector vchEncrypted;
     hex = params[1].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    pubKey.EncryptData(hex::ParseHex(hex), vchEncrypted);
+    pubKey.EncryptData(strenc::ParseHex(hex), vchEncrypted);
     return data.JSONRPCSuccess(util::HexStr(vchEncrypted));
 }
 
@@ -60,7 +61,7 @@ json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, CBit
     rpctable_vector vchDecrypted;
     str = params[1].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    key.DecryptData(hex::ParseHex(str), vchDecrypted);
+    key.DecryptData(strenc::ParseHex(str), vchDecrypted);
     return data.JSONRPCSuccess(util::HexStr(vchDecrypted));
 }
 
@@ -74,7 +75,7 @@ json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, C
     json_spirit::json_flags status;
     std::string hex = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CPubKey pubKey(hex::ParseHex(hex));
+    CPubKey pubKey(strenc::ParseHex(hex));
     rpctable_vector vchEncrypted;
     std::string strData = params[1].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);

@@ -10,6 +10,7 @@
 #include <txdb.h>
 #include <main.h>
 #include <uint256.h>
+#include <util/strencodings.h>
 
 uint256 Checkpoints::manage::hashSyncCheckpoint = 0;
 uint256 Checkpoints::manage::hashInvalidCheckpoint = 0;
@@ -338,7 +339,7 @@ bool Checkpoints::manage::SetCheckpointPrivKey(std::string strPrivKey) {
     sMsg << (CUnsignedSyncCheckpoint)checkpoint;
     checkpoint.Set_vchMsg(sMsg.begin(), sMsg.end());
 
-    checkpoints_vector vchPrivKey = hex::ParseHex(strPrivKey);
+    checkpoints_vector vchPrivKey = strenc::ParseHex(strPrivKey);
 
     CKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
@@ -361,7 +362,7 @@ bool Checkpoints::manage::SendSyncCheckpoint(uint256 hashCheckpoint) {
     if (CSyncCheckpoint::Get_strMasterPrivKey().empty()) {
         return logging::error("Checkpoints::manage::SendSyncCheckpoint: Checkpoint master key unavailable.");
     }
-    checkpoints_vector vchPrivKey = hex::ParseHex(CSyncCheckpoint::Get_strMasterPrivKey());
+    checkpoints_vector vchPrivKey = strenc::ParseHex(CSyncCheckpoint::Get_strMasterPrivKey());
 
     CKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
@@ -399,7 +400,7 @@ bool Checkpoints::manage::IsMatureSyncCheckpoint() {
 
 // ppcoin: verify signature of sync-checkpoint message
 bool CSyncCheckpoint::CheckSignature() {
-    CPubKey key(hex::ParseHex(CSyncCheckpoint::strMasterPubKey));
+    CPubKey key(strenc::ParseHex(CSyncCheckpoint::strMasterPubKey));
     if (! key.Verify(hash_basis::Hash(vchMsg.begin(), vchMsg.end()), vchSig)) {
         return logging::error("CSyncCheckpoint::CheckSignature() : verify signature failed");
     }

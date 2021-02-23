@@ -1,13 +1,17 @@
+// Copyright (c) 2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 //
 // Alert system
 //
 
 #include <map>
-
-#include "alert.h"
-#include "key.h"
-#include "net.h"
-#include "ui_interface.h"
+#include <alert.h>
+#include <key.h>
+#include <net.h>
+#include <ui_interface.h>
 
 CCriticalSection CUnsignedAlert::cs_mapAlerts;
 std::map<uint256, CAlert> CAlert::mapAlerts;
@@ -156,7 +160,7 @@ bool CAlert::RelayTo(CNode* pnode) const
 bool CAlert::CheckSignature() const
 {
     CPubKey key;
-    key.Set(hex::ParseHex(args_bool::fTestNet ? pszTestKey : pszMainKey));
+    key.Set(strenc::ParseHex(args_bool::fTestNet ? pszTestKey : pszMainKey));
     if (! key.Verify(hash_basis::Hash(vchMsg.begin(), vchMsg.end()), vchSig)) {
         return logging::error("CAlert::CheckSignature() : verify signature failed");
     }
