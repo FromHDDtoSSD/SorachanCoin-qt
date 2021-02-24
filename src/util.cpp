@@ -52,8 +52,20 @@ CMedianFilter<int64_t> bitsystem::vTimeOffsets(200,0);
 
 void seed::RandAddSeed()
 {
+    auto GetPerformanceCounter = []() {
+        int64_t nCounter = 0;
+#ifdef WIN32
+        ::QueryPerformanceCounter((LARGE_INTEGER *)&nCounter);
+#else
+        timeval t;
+        ::gettimeofday(&t, nullptr);
+        nCounter = (int64_t)t.tv_sec * 1000000 + t.tv_usec;
+#endif
+        return nCounter;
+    };
+
     // Seed with CPU performance counter
-    int64_t nCounter = ::GetPerformanceCounter();
+    int64_t nCounter = GetPerformanceCounter();
     ::RAND_add(&nCounter, sizeof(nCounter), 1.5);
     cleanse::OPENSSL_cleanse(&nCounter, sizeof(nCounter));
 }

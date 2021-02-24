@@ -44,22 +44,6 @@
 #include <random/random.h>
 #include <util/c_overload.h>
 
-//
-// API overload
-//
-inline int64_t GetPerformanceCounter()
-{
-    int64_t nCounter = 0;
-#ifdef WIN32
-    ::QueryPerformanceCounter((LARGE_INTEGER *)&nCounter);
-#else
-    timeval t;
-    ::gettimeofday(&t, nullptr);
-    nCounter = (int64_t)t.tv_sec * 1000000 + t.tv_usec;
-#endif
-    return nCounter;
-}
-
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using util_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
