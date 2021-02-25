@@ -179,7 +179,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     // cost to you of processing a transaction.
     int64_t nMinTxFee = block_params::MIN_TX_FEE;
     if (map_arg::GetMapArgsCount("-mintxfee")) {
-        bitstr::ParseMoney(map_arg::GetMapArgsString("-mintxfee").c_str(), nMinTxFee);
+        strenc::ParseMoney(map_arg::GetMapArgsString("-mintxfee").c_str(), nMinTxFee);
     }
 
     CBlockIndex *pindexPrev = block_info::pindexBest;
@@ -513,7 +513,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     //// debug print
     logging::LogPrintf("miner::CheckWork() : new proof-of-work block found  \n  hash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    logging::LogPrintf("generated %s\n", bitstr::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
+    logging::LogPrintf("generated %s\n", strenc::FormatMoney(pblock->get_vtx(0).get_vout(0).get_nValue()).c_str());
 
     //
     // Found a solution
@@ -559,7 +559,7 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     //// debug print
     logging::LogPrintf("miner::CheckStake() : new proof-of-stake block found  \n  hash: %s \nproofhash: %s  \ntarget: %s\n", hashBlock.GetHex().c_str(), proofHash.GetHex().c_str(), hashTarget.GetHex().c_str());
     pblock->print();
-    logging::LogPrintf("out %s\n", bitstr::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
+    logging::LogPrintf("out %s\n", strenc::FormatMoney(pblock->get_vtx(1).GetValueOut()).c_str());
 
     // Found a solution
     {

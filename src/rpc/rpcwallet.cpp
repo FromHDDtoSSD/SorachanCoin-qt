@@ -398,7 +398,7 @@ json_spirit::Value CRPCTable::mergecoins(const json_spirit::Array& params, CBitr
             "<amount> is resulting inputs sum\n"
             "<minvalue> is minimum value of inputs which are used in join process\n"
             "<outputvalue> is resulting value of inputs which will be created\n"
-            "All values are real and and rounded to the nearest " + bitstr::FormatMoney(block_info::nMinimumInputValue)
+            "All values are real and and rounded to the nearest " + strenc::FormatMoney(block_info::nMinimumInputValue)
             + HelpRequiringPassphrase());
     }
 
@@ -444,7 +444,7 @@ json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CB
     if (data.fHelp() || params.size() < 2 || params.size() > 4) {
         return data.JSONRPCSuccess(
             "sendtoaddress <coinaddress> <amount> [comment] [comment-to]\n"
-            "<amount> is a real and is rounded to the nearest " + bitstr::FormatMoney(block_info::nMinimumInputValue)
+            "<amount> is a real and is rounded to the nearest " + strenc::FormatMoney(block_info::nMinimumInputValue)
             + HelpRequiringPassphrase());
     }
 
@@ -843,7 +843,7 @@ json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpc
     if (data.fHelp() || params.size() < 3 || params.size() > 6) {
         return data.JSONRPCSuccess(
             "sendfrom <from account> <to coinaddress> <amount> [minconf=1] [comment] [comment-to]\n"
-            "<amount> is a real and is rounded to the nearest " + bitstr::FormatMoney(block_info::nMinimumInputValue)
+            "<amount> is a real and is rounded to the nearest " + strenc::FormatMoney(block_info::nMinimumInputValue)
             + HelpRequiringPassphrase());
     }
 
@@ -2027,7 +2027,7 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, C
             if (nAmount < 0)
                 return data.runtime_error("amount cannot be negative.\n");
 
-            map_arg::SetMapArgsString("-reservebalance", bitstr::FormatMoney(nAmount));
+            map_arg::SetMapArgsString("-reservebalance", strenc::FormatMoney(nAmount));
         } else {
             if (params.size() > 1)
                 return data.runtime_error("cannot specify amount to turn off reserve.\n");
@@ -2036,11 +2036,11 @@ json_spirit::Value CRPCTable::reservebalance(const json_spirit::Array &params, C
         }
     }
 
-    debugcs::instance() << "RPC, reservebalance: " << bitstr::FormatMoney(1000).c_str() << debugcs::endl();
+    debugcs::instance() << "RPC, reservebalance: " << strenc::FormatMoney(1000).c_str() << debugcs::endl();
 
     json_spirit::Object result;
     if (map_arg::GetMapArgsCount("-reservebalance") &&
-        !bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance))
+        !strenc::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance))
         return data.runtime_error("invalid reserve balance amount\n");
 
     result.push_back(json_spirit::Pair("reserve", (miner::nReserveBalance > 0)));

@@ -409,7 +409,7 @@ void entry::SetupServerArgs()
     //ARGS.AddArg("-maxsigcachesize=<n>", tfm::format("Limit sum of signature cache and script execution cache sizes to <n> MiB (default: %u)", DEFAULT_MAX_SIG_CACHE_SIZE), true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-maxtipage=<n>", tfm::format("Maximum tip age in seconds to consider node in initial block download (default: %u)", DEFAULT_MAX_TIP_AGE), true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-maxtxfee=<amt>", tfm::format("Maximum total fees (in %s) to use in a single wallet transaction or raw transaction; setting this too low may abort large transactions (default: %s)",
-    //    CURRENCY_UNIT, FormatMoney(DEFAULT_TRANSACTION_MAXFEE)), false, OptionsCategory::DEBUG_TEST);
+    //    CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_TRANSACTION_MAXFEE)), false, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-printpriority", tfm::format("Log transaction fee per kB when mining blocks (default: %u)", DEFAULT_PRINTPRIORITY), true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-printtoconsole", "Send trace/debug info to console (default: 1 when no -daemon. To disable logging to file, set -nodebuglogfile)", false, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-shrinkdebugfile", "Shrink debug.log file on client startup (default: 1 when no -debug)", false, OptionsCategory::DEBUG_TEST);
@@ -418,20 +418,20 @@ void entry::SetupServerArgs()
     chainparamsbase::SetupChainParamsBaseOptions();
 
     ARGS.AddArg("-acceptnonstdtxn", tfm::format("Relay and mine \"non-standard\" transactions (%sdefault: %u)", "testnet/regtest only; ", !testnetChainParams->RequireStandard()), true, OptionsCategory::NODE_RELAY);
-    //ARGS.AddArg("-incrementalrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to define cost of relay, used for mempool limiting and BIP 125 replacement. (default: %s)", CURRENCY_UNIT, FormatMoney(DEFAULT_INCREMENTAL_RELAY_FEE)), true, OptionsCategory::NODE_RELAY);
-    //ARGS.AddArg("-dustrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to defined dust, the value of an output such that it will cost more than its value in fees at this fee rate to spend it. (default: %s)", CURRENCY_UNIT, FormatMoney(DUST_RELAY_TX_FEE)), true, OptionsCategory::NODE_RELAY);
+    //ARGS.AddArg("-incrementalrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to define cost of relay, used for mempool limiting and BIP 125 replacement. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_INCREMENTAL_RELAY_FEE)), true, OptionsCategory::NODE_RELAY);
+    //ARGS.AddArg("-dustrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to defined dust, the value of an output such that it will cost more than its value in fees at this fee rate to spend it. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DUST_RELAY_TX_FEE)), true, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-bytespersigop", tfm::format("Equivalent bytes per sigop in transactions for relay and mining (default: %u)", DEFAULT_BYTES_PER_SIGOP), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-datacarrier", tfm::format("Relay and mine data carrier transactions (default: %u)", DEFAULT_ACCEPT_DATACARRIER), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-datacarriersize", tfm::format("Maximum size of data in data carrier transactions we relay and mine (default: %u)", MAX_OP_RETURN_RELAY), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-mempoolreplacement", tfm::format("Enable transaction replacement in the memory pool (default: %u)", DEFAULT_ENABLE_REPLACEMENT), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-minrelaytxfee=<amt>", tfm::format("Fees (in %s/kB) smaller than this are considered zero fee for relaying, mining and transaction creation (default: %s)",
-    //    CURRENCY_UNIT, FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)), false, OptionsCategory::NODE_RELAY);
+    //    CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-whitelistforcerelay", tfm::format("Force relay of transactions from whitelisted peers even if the transactions were already in the mempool or violate local relay policy (default: %d)", DEFAULT_WHITELISTFORCERELAY), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-whitelistrelay", tfm::format("Accept relayed transactions received from whitelisted peers even when not relaying transactions (default: %d)", DEFAULT_WHITELISTRELAY), false, OptionsCategory::NODE_RELAY);
 
 
     //ARGS.AddArg("-blockmaxweight=<n>", tfm::format("Set maximum BIP141 block weight (default: %d)", DEFAULT_BLOCK_MAX_WEIGHT), false, OptionsCategory::BLOCK_CREATION);
-    //ARGS.AddArg("-blockmintxfee=<amt>", tfm::format("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)", CURRENCY_UNIT, FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)), false, OptionsCategory::BLOCK_CREATION);
+    //ARGS.AddArg("-blockmintxfee=<amt>", tfm::format("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)), false, OptionsCategory::BLOCK_CREATION);
     ARGS.AddArg("-blockversion=<n>", "Override block version to test forking scenarios", true, OptionsCategory::BLOCK_CREATION);
 
     //ARGS.AddArg("-rest", tfm::format("Accept public REST requests (default: %u)", DEFAULT_REST_ENABLE), false, OptionsCategory::RPC);
@@ -506,7 +506,7 @@ std::string entry::HelpMessage()
 #endif
 
         "  -paytxfee=<amt>        " + _("Fee per KB to add to transactions you send") + "\n" +
-        "  -mininput=<amt>        " + str(boost::format(_("When creating transactions, ignore inputs with value less than this (default: %s)")) % bitstr::FormatMoney(block_params::MIN_TXOUT_AMOUNT)) + "\n" +
+        "  -mininput=<amt>        " + str(boost::format(_("When creating transactions, ignore inputs with value less than this (default: %s)")) % strenc::FormatMoney(block_params::MIN_TXOUT_AMOUNT)) + "\n" +
 #ifdef QT_GUI
         "  -server                " + _("Accept command line and JSON-RPC commands") + "\n" +
 #endif
@@ -768,7 +768,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     block_info::COINBASE_FLAGS << version::PROTOCOL_VERSION << DISPLAY_VERSION_MAJOR << DISPLAY_VERSION_MINOR << DISPLAY_VERSION_REVISION;
 
     if (map_arg::GetMapArgsCount("-paytxfee")) {
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-paytxfee").c_str(), block_info::nTransactionFee)) {
+        if (! strenc::ParseMoney(map_arg::GetMapArgsString("-paytxfee").c_str(), block_info::nTransactionFee)) {
             return InitError(tfm::format(_("Invalid amount for -paytxfee=<amount>: '%s'"), map_arg::GetMapArgsString("-paytxfee").c_str()));
         }
         if (block_info::nTransactionFee > 0.25 * util::COIN) {
@@ -779,7 +779,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     args_bool::fConfChange = map_arg::GetBoolArg("-confchange", false);
 
     if (map_arg::GetMapArgsCount("-mininput")) {
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-mininput").c_str(), block_info::nMinimumInputValue)) {
+        if (! strenc::ParseMoney(map_arg::GetMapArgsString("-mininput").c_str(), block_info::nMinimumInputValue)) {
             return InitError(tfm::format(_("Invalid amount for -mininput=<amount>: '%s'"), map_arg::GetMapArgsString("-mininput").c_str()));
         }
     }
@@ -1048,7 +1048,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
     if (map_arg::GetMapArgsCount("-reservebalance")) { // ppcoin: reserve balance amount
-        if (! bitstr::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance)) {
+        if (! strenc::ParseMoney(map_arg::GetMapArgsString("-reservebalance").c_str(), miner::nReserveBalance)) {
             InitError(_("Invalid amount for -reservebalance=<amount>"));
             return false;
         }

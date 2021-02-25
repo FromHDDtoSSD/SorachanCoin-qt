@@ -306,30 +306,6 @@ public:
     static void AddTimeData(const CNetAddr &ip, int64_t nTime);
 };
 
-namespace bitstr
-{
-    inline void ParseString(const std::string &str, char c, std::vector<std::string> &v) {
-        if (str.empty()) {
-            return;
-        }
-
-        std::string::size_type i1 = 0;
-        std::string::size_type i2;
-        for (;;) {
-            i2 = str.find(c, i1);
-            if (i2 == str.npos) {
-                v.push_back(str.substr(i1));
-                return;
-            }
-            v.push_back(str.substr(i1, i2 - i1));
-            i1 = i2 + 1;
-        }
-    }
-
-    std::string FormatMoney(int64_t n, bool fPlus = false);
-    bool ParseMoney(const char *pszIn, int64_t &nRet);
-}
-
 class dump : private no_instance
 {
 private:
@@ -366,6 +342,7 @@ namespace cmd
     void runCommand(std::string strCommand);
 }
 
+/*
 #ifndef THROW_WITH_STACKTRACE
 # define THROW_WITH_STACKTRACE(exception)  \
 {                                          \
@@ -373,6 +350,7 @@ namespace cmd
     throw (exception);                     \
 }
 #endif
+*/
 
 //
 // tiny format

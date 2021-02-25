@@ -666,7 +666,7 @@ void CWallet::WalletUpdateSpent(const CTransaction &tx, bool fBlock)
                 if (txin.get_prevout().get_n() >= wtx.get_vout().size()) {
                     logging::LogPrintf("WalletUpdateSpent: bad wtx %s\n", wtx.GetHash().ToString().c_str());
                 } else if (!wtx.IsSpent(txin.get_prevout().get_n()) && IsMine(wtx.get_vout(txin.get_prevout().get_n()))) {
-                    logging::LogPrintf("WalletUpdateSpent found spent %s %ssora %s\n", strCoinName, bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
+                    logging::LogPrintf("WalletUpdateSpent found spent %s %ssora %s\n", strCoinName, strenc::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkSpent(txin.get_prevout().get_n());
                     wtx.WriteToDisk();
                     NotifyTransactionChanged(this, txin.get_prevout().get_hash(), CT_UPDATED);
@@ -1596,7 +1596,7 @@ void CWallet::ReacceptWalletTransactions()
                     }
                 }
                 if (fUpdated) {
-                    logging::LogPrintf("ReacceptWalletTransactions found spent %s %ssora %s\n", strCoinName, bitstr::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
+                    logging::LogPrintf("ReacceptWalletTransactions found spent %s %ssora %s\n", strCoinName, strenc::FormatMoney(wtx.GetCredit(MINE_ALL)).c_str(), wtx.GetHash().ToString().c_str());
                     wtx.MarkDirty();
                     wtx.WriteToDisk();
                 }
@@ -2087,10 +2087,10 @@ bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, 
             for (unsigned int i = 0; i < vValue.size(); ++i)
             {
                 if (vfBest[i]) {
-                    logging::LogPrintf("%s ", bitstr::FormatMoney(vValue[i].first).c_str());
+                    logging::LogPrintf("%s ", strenc::FormatMoney(vValue[i].first).c_str());
                 }
             }
-            logging::LogPrintf("total %s\n", bitstr::FormatMoney(nBest).c_str());
+            logging::LogPrintf("total %s\n", strenc::FormatMoney(nBest).c_str());
         }
     }
 
@@ -2678,7 +2678,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
             continue; // try signing again
         } else {
             if (args_bool::fDebug && map_arg::GetBoolArg("-printfee")) {
-                logging::LogPrintf("CreateCoinStake : fee for coinstake %s\n", bitstr::FormatMoney(nMinFee).c_str());
+                logging::LogPrintf("CreateCoinStake : fee for coinstake %s\n", strenc::FormatMoney(nMinFee).c_str());
             }
             break;
         }
@@ -2773,7 +2773,7 @@ std::string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &
     if (! CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired)) {
         std::string strError;
         if (nValue + nFeeRequired > GetBalance()) {
-            strError = tfm::format(_("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  "), bitstr::FormatMoney(nFeeRequired).c_str());
+            strError = tfm::format(_("Error: This transaction requires a transaction fee of at least %s because of its amount, complexity, or use of recently received funds  "), strenc::FormatMoney(nFeeRequired).c_str());
         } else {
             strError = _("Error: Transaction creation failed  ");
         }
@@ -3280,7 +3280,7 @@ void CWallet::FixSpentCoins(int &nMismatchFound, int64_t &nBalanceInQuestion, bo
         for (unsigned int n=0; n < pcoin->get_vout().size(); ++n)
         {
             if (IsMine(pcoin->get_vout(n)) && pcoin->IsSpent(n) && (txindex.get_vSpent().size() <= n || txindex.get_vSpent(n).IsNull())) {
-                logging::LogPrintf("FixSpentCoins found lost coin %sppc %s[%u], %s\n", bitstr::FormatMoney(pcoin->get_vout(n).get_nValue()).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
+                logging::LogPrintf("FixSpentCoins found lost coin %sppc %s[%u], %s\n", strenc::FormatMoney(pcoin->get_vout(n).get_nValue()).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->get_vout(n).get_nValue();
@@ -3289,7 +3289,7 @@ void CWallet::FixSpentCoins(int &nMismatchFound, int64_t &nBalanceInQuestion, bo
                     pcoin->WriteToDisk();
                 }
             } else if (IsMine(pcoin->get_vout(n)) && !pcoin->IsSpent(n) && (txindex.get_vSpent().size() > n && !txindex.get_vSpent(n).IsNull())) {
-                logging::LogPrintf("FixSpentCoins found spent coin %sppc %s[%u], %s\n", bitstr::FormatMoney(pcoin->get_vout(n).get_nValue()).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
+                logging::LogPrintf("FixSpentCoins found spent coin %sppc %s[%u], %s\n", strenc::FormatMoney(pcoin->get_vout(n).get_nValue()).c_str(), pcoin->GetHash().ToString().c_str(), n, fCheckOnly? "repair not attempted" : "repairing");
                 
                 nMismatchFound++;
                 nBalanceInQuestion += pcoin->get_vout(n).get_nValue();

@@ -183,7 +183,7 @@ json_spirit::Value CRPCTable::settxfee(const json_spirit::Array &params, CBitrpc
     if (data.fHelp() || params.size() < 1 || params.size() > 1 || AmountFromValue(params[0], data) < block_params::MIN_TX_FEE) {
         return data.JSONRPCSuccess(
             "settxfee <amount>\n"
-            "<amount> is a real and is rounded to the nearest " + bitstr::FormatMoney(block_params::MIN_TX_FEE));
+            "<amount> is a real and is rounded to the nearest " + strenc::FormatMoney(block_params::MIN_TX_FEE));
     }
     if(! data.fSuccess()) return data.JSONRPCError();
 

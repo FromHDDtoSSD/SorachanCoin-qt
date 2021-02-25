@@ -661,7 +661,7 @@ public:
     }
 
     std::string ToString() const {
-        return tfm::format("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, bitstr::FormatMoney(tx->get_vout(i).get_nValue()).c_str());
+        return tfm::format("COutput(%s, %d, %d, %d) [%s]", tx->GetHash().ToString().substr(0,10).c_str(), i, fSpendable, nDepth, strenc::FormatMoney(tx->get_vout(i).get_nValue()).c_str());
     }
 };
 

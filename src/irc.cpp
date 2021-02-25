@@ -7,6 +7,7 @@
 #include <address/base58.h>
 #include <net.h>
 #include <util/thread.h>
+#include <util/strencodings.h>
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using irc_vector = prevector<PREVECTOR_N, uint8_t>;
@@ -117,7 +118,7 @@ bool irc::RecvLineIRC(SOCKET hSocket, std::string &strLine)
             }
 
             std::vector<std::string> vWords;
-            bitstr::ParseString(strLine, ' ', vWords);
+            strenc::ParseString(strLine, ' ', vWords);
             if (vWords.size() >= 1 && vWords[0] == "PING") {
                 strLine[1] = 'O';
                 strLine += '\r';
@@ -183,7 +184,7 @@ bool irc::RecvCodeLine(SOCKET hSocket, const char *psz1, std::string &strRet)
         }
 
         std::vector<std::string> vWords;
-        bitstr::ParseString(strLine, ' ', vWords);
+        strenc::ParseString(strLine, ' ', vWords);
         if (vWords.size() < 2) {
             continue;
         }
@@ -206,7 +207,7 @@ bool irc::GetIPFromIRC(SOCKET hSocket, std::string strMyName, CNetAddr &ipRet)
     }
 
     std::vector<std::string> vWords;
-    bitstr::ParseString(strLine, ' ', vWords);
+    strenc::ParseString(strLine, ' ', vWords);
     if (vWords.size() < 4) {
         return false;
     }
@@ -386,7 +387,7 @@ void irc::ThreadIRCSeed2(void *parg)
             }
 
             std::vector<std::string> vWords;
-            bitstr::ParseString(strLine, ' ', vWords);
+            strenc::ParseString(strLine, ' ', vWords);
             if (vWords.size() < 2) {
                 continue;
             }

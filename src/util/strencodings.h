@@ -247,6 +247,30 @@ constexpr char ToUpper(char c)
  */
 std::string Capitalize(std::string str);
 
+/**
+ * from std::string to std::vector<std::string>
+ * @str[in] str   the string to capitalize.
+ * @v             to std::vector<std::string>
+ */
+inline void ParseString(const std::string &str, char c, std::vector<std::string> &v) {
+    if (str.empty())
+        return;
+    std::string::size_type i1 = 0;
+    std::string::size_type i2;
+    for (;;) {
+        i2 = str.find(c, i1);
+        if (i2 == str.npos) {
+            v.push_back(str.substr(i1));
+            return;
+        }
+        v.push_back(str.substr(i1, i2 - i1));
+        i1 = i2 + 1;
+    }
+}
+
+std::string FormatMoney(int64_t n, bool fPlus = false);
+bool ParseMoney(const char *pszIn, int64_t &nRet);
+
 } // namespace strenc
 
 #endif // BITCOIN_UTIL_STRENCODINGS_H

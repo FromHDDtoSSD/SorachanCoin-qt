@@ -29,8 +29,8 @@ std::string CBlockIndex_impl<T>::ToString() const {
         nFile,
         nBlockPos,
         nHeight,
-        bitstr::FormatMoney(nMint).c_str(),
-        bitstr::FormatMoney(nMoneySupply).c_str(),
+        strenc::FormatMoney(nMint).c_str(),
+        strenc::FormatMoney(nMoneySupply).c_str(),
         GeneratedStakeModifier() ? "MOD": "-",   GetStakeEntropyBit(),   IsProofOfStake() ? "PoS": "PoW",
         nStakeModifier,
         nStakeModifierChecksum,
@@ -92,7 +92,7 @@ void CBlock_print_impl<T>::PrintBlockTree() {
             block.GetHash().ToString().c_str(),
             block.get_nBits(),
             util::DateTimeStrFormat("%x %H:%M:%S", block.GetBlockTime()).c_str(),
-            bitstr::FormatMoney(pindex->get_nMint()).c_str(),
+            strenc::FormatMoney(pindex->get_nMint()).c_str(),
             block.get_vtx().size());
 
         block_notify::PrintWallets(block);
@@ -294,7 +294,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
     // fees are not collected by proof-of-stake miners
     // fees are destroyed to compensate the entire network
     if (args_bool::fDebug && IsProofOfStake() && map_arg::GetBoolArg("-printcreation"))
-        logging::LogPrintf("ConnectBlock() : destroy=%s nFees=%" PRId64 "\n", bitstr::FormatMoney(nFees).c_str(), nFees);
+        logging::LogPrintf("ConnectBlock() : destroy=%s nFees=%" PRId64 "\n", strenc::FormatMoney(nFees).c_str(), nFees);
     if (fJustCheck)
         return true;
 

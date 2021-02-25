@@ -78,14 +78,14 @@ std::string CTxIn_impl<T>::ToString() const {
 
 template <typename T>
 std::string CTxOut_impl<T>::ToStringShort() const {
-    return tfm::format(" out %s %s", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
+    return tfm::format(" out %s %s", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
 }
 
 template <typename T>
 std::string CTxOut_impl<T>::ToString() const {
     if (IsEmpty()) return "CTxOut(empty)";
     if (scriptPubKey.size() < 6) return "CTxOut(error)";
-    return tfm::format("CTxOut(nValue=%s, scriptPubKey=%s)", bitstr::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
+    return tfm::format("CTxOut(nValue=%s, scriptPubKey=%s)", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
 }
 
 // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock
