@@ -146,37 +146,6 @@ std::string dump::DecodeDumpString(const std::string &str)
     return ret.str();
 }
 
-bool match::WildcardMatch(const char *psz, const char *mask)
-{
-    for ( ; ; )
-    {
-        switch (*mask)
-        {
-        case '\0':
-            return (*psz == '\0');
-        case '*':
-            return match::WildcardMatch(psz, mask+1) || (*psz && match::WildcardMatch(psz+1, mask));
-        case '?':
-            if (*psz == '\0') {
-                return false;
-            }
-            break;
-        default:
-            if (*psz != *mask) {
-                return false;
-            }
-            break;
-        }
-        psz++;
-        mask++;
-    }
-}
-
-bool match::WildcardMatch(const std::string &str, const std::string &mask)
-{
-    return match::WildcardMatch(str.c_str(), mask.c_str());
-}
-
 void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
 {
     int64_t nOffsetSample = nTime - bitsystem::GetTime();
@@ -232,6 +201,7 @@ void bitsystem::AddTimeData(const CNetAddr &ip, int64_t nTime)
     }
 }
 
+/*
 void cmd::runCommand(std::string strCommand)
 {
     int nErr = ::system(strCommand.c_str());
@@ -239,3 +209,4 @@ void cmd::runCommand(std::string strCommand)
         logging::LogPrintf("cmd::runCommand error: system(%s) returned %d\n", strCommand.c_str(), nErr);
     }
 }
+*/

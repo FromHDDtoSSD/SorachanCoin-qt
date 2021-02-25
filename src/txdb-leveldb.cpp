@@ -499,37 +499,45 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 }
 
 template <typename HASH>
-static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash) {
+static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash, std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex) {
     if (hash == 0)
         return nullptr;
 
     // Return existing
-    typename std::map<HASH, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
-    if (mi != block_info::mapBlockIndex.end())
+    typename std::map<HASH, CBlockIndex_impl<HASH> *>::iterator mi = mapBlockIndex.find(hash);
+    if (mi != mapBlockIndex.end())
         return (*mi).second;
 
     // Create new
-    CBlockIndex *pindexNew = new(std::nothrow) CBlockIndex;
+    CBlockIndex_impl<HASH> *pindexNew = new(std::nothrow) CBlockIndex_impl<HASH>;
     if (! pindexNew)
         throw std::runtime_error("LoadBlockIndex() : CBlockIndex failed to allocate memory");
 
-    mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
+    mi = mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     pindexNew->set_phashBlock(&((*mi).first));
 
     return pindexNew;
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::LoadBlockIndex()
+bool CTxDB_impl<HASH>::LoadBlockIndex(
+        std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex,
+        std::set<std::pair<COutPoint_impl<HASH>, unsigned int>> &setStakeSeen,
+        CBlockIndex_impl<HASH> *&pindexGenesisBlock,
+        HASH &hashBestChain,
+        int &nBestHeight,
+        CBlockIndex_impl<HASH> *&pindexBest,
+        HASH &nBestInvalidTrust,
+        HASH &nBestChainTrust)
 {
-    if (block_info::mapBlockIndex.size() > 0) {
+    if (mapBlockIndex.size() > 0) {
         // Already loaded once in this session. It can happen during migration from BDB.
         return true;
     }
 
     // The block index is an in-memory structure that maps hashes to on-disk
     // locations where the contents of the block can be found. Here, we scan it
-    // out of the DB and into block_info::mapBlockIndex.
+    // out of the DB and into mapBlockIndex.
     leveldb::Iterator *iterator = pdb->NewIterator(leveldb::ReadOptions());
 
     // Seek to start key.
@@ -559,9 +567,9 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
         HASH blockHash = diskindex.GetBlockHash();
 
         // Construct block index object
-        CBlockIndex_impl<HASH> *pindexNew = InsertBlockIndex(blockHash);
-        pindexNew->set_pprev(InsertBlockIndex(diskindex.get_hashPrev()));
-        pindexNew->set_pnext(InsertBlockIndex(diskindex.get_hashNext()));
+        CBlockIndex_impl<HASH> *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
+        pindexNew->set_pprev(InsertBlockIndex(diskindex.get_hashPrev(), mapBlockIndex));
+        pindexNew->set_pnext(InsertBlockIndex(diskindex.get_hashNext(), mapBlockIndex));
         pindexNew->set_nFile(diskindex.get_nFile());
         pindexNew->set_nBlockPos(diskindex.get_nBlockPos());
         pindexNew->set_nHeight(diskindex.get_nHeight());
@@ -580,8 +588,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
         pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
 
         // Watch for genesis block
-        if (block_info::pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
-            block_info::pindexGenesisBlock = pindexNew;
+        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
+            pindexGenesisBlock = pindexNew;
         }
 
         if (! pindexNew->CheckIndex()) {
@@ -589,9 +597,9 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
             return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
         }
 
-        // ppcoin: build block_info::setStakeSeen
+        // ppcoin: build setStakeSeen
         if (pindexNew->IsProofOfStake()) {
-            block_info::setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
+            setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
 
         iterator->Next();
@@ -604,8 +612,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
 
     // Calculate nChainTrust
     std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
-    vSortedByHeight.reserve(block_info::mapBlockIndex.size());
-    for(const std::pair<HASH, CBlockIndex *>&item: block_info::mapBlockIndex) {
+    vSortedByHeight.reserve(mapBlockIndex.size());
+    for(const std::pair<HASH, CBlockIndex *>&item: mapBlockIndex) {
         CBlockIndex *pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
@@ -625,22 +633,22 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
     //
     // Load hashBestChain pointer to end of best chain
     //
-    if (! ReadHashBestChain(block_info::hashBestChain)) {
-        if (block_info::pindexGenesisBlock == nullptr) {
+    if (! ReadHashBestChain(hashBestChain)) {
+        if (pindexGenesisBlock == nullptr) {
             return true;
         }
 
-        return logging::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not loaded");
+        return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not loaded");
     }
 
-    if (! block_info::mapBlockIndex.count(block_info::hashBestChain)) {
-        return logging::error("CTxDB::LoadBlockIndex() : block_info::hashBestChain not found in the block index");
+    if (! mapBlockIndex.count(hashBestChain)) {
+        return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not found in the block index");
     }
-    block_info::pindexBest = block_info::mapBlockIndex[block_info::hashBestChain];
-    block_info::nBestHeight = block_info::pindexBest->get_nHeight();
-    block_info::nBestChainTrust = block_info::pindexBest->get_nChainTrust();
+    pindexBest = mapBlockIndex[hashBestChain];
+    nBestHeight = pindexBest->get_nHeight();
+    nBestChainTrust = pindexBest->get_nChainTrust();
 
-    logging::LogPrintf("LoadBlockIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n", block_info::hashBestChain.ToString().substr(0, 20).c_str(), block_info::nBestHeight, CBigNum(block_info::nBestChainTrust).ToString().c_str(), util::DateTimeStrFormat("%x %H:%M:%S", block_info::pindexBest->GetBlockTime()).c_str());
+    logging::LogPrintf("LoadBlockIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n", hashBestChain.ToString().substr(0, 20).c_str(), nBestHeight, CBigNum(nBestChainTrust).ToString().c_str(), util::DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
     // load hashSyncCheckpoint
     if (! ReadSyncCheckpoint(Checkpoints::manage::getHashSyncCheckpoint())) {
@@ -651,7 +659,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
     // Load bnBestInvalidTrust, OK if it doesn't exist
     CBigNum bnBestInvalidTrust;
     ReadBestInvalidTrust(bnBestInvalidTrust);
-    block_info::nBestInvalidTrust = bnBestInvalidTrust.getuint256();
+    nBestInvalidTrust = bnBestInvalidTrust.getuint256();
 
     // Verify blocks in the best chain
     int nCheckLevel = map_arg::GetArgInt("-checklevel", 1);
@@ -659,16 +667,16 @@ bool CTxDB_impl<HASH>::LoadBlockIndex()
     if (nCheckDepth == 0) {
         nCheckDepth = 1000000000; // suffices until the year 19000
     }
-    if (nCheckDepth > block_info::nBestHeight) {
-        nCheckDepth = block_info::nBestHeight;
+    if (nCheckDepth > nBestHeight) {
+        nCheckDepth = nBestHeight;
     }
 
     logging::LogPrintf("Verifying last %i blocks at level %i\n", nCheckDepth, nCheckLevel);
     CBlockIndex *pindexFork = nullptr;
     std::map<std::pair<unsigned int, unsigned int>, CBlockIndex *> mapBlockPos;
-    for (CBlockIndex *pindex = block_info::pindexBest; pindex && pindex->get_pprev(); pindex = pindex->set_pprev())
+    for (CBlockIndex *pindex = pindexBest; pindex && pindex->get_pprev(); pindex = pindex->set_pprev())
     {
-        if (args_bool::fRequestShutdown || pindex->get_nHeight() < block_info::nBestHeight - nCheckDepth) {
+        if (args_bool::fRequestShutdown || pindex->get_nHeight() < nBestHeight - nCheckDepth) {
             break;
         }
 

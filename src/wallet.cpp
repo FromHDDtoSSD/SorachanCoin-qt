@@ -22,6 +22,7 @@
 #include <util/time.h>
 #include <random/random.h>
 #include <util/thread.h>
+#include <util/system.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -825,7 +826,7 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
 
         if (! strCmd.empty()) {
             boost::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
-            boost::thread t(cmd::runCommand, strCmd); // thread runs free
+            boost::thread t(lutil::runCommand, strCmd); // thread runs free
         }
     }
 

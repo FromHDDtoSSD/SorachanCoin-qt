@@ -15,6 +15,7 @@
 #include <miner/diff.h>
 #include <block/block_info.h>
 #include <prime/autocheckpoint.h>
+#include <util/system.h>
 
 /*
 ** collect Block Print
@@ -433,7 +434,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     std::string strCmd = map_arg::GetArg("-blocknotify", "");
     if (!fIsInitialDownload && !strCmd.empty()) {
         boost::replace_all(strCmd, "%s", block_info::hashBestChain.GetHex());
-        boost::thread t(cmd::runCommand, strCmd); // thread runs free
+        boost::thread t(lutil::runCommand, strCmd); // thread runs free
     }
 
     return true;

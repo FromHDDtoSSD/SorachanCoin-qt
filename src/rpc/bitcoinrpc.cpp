@@ -497,7 +497,7 @@ bool bitrpc::ClientAllowed(const boost::asio::ip::address &address) {
     const std::string strAddress = address.to_string();
     const std::vector<std::string> &vAllow = map_arg::GetMapMultiArgsString("-rpcallowip");
     for(std::string strAllow: vAllow) {
-        if (match::WildcardMatch(strAddress, strAllow))
+        if (strenc::WildcardMatch(strAddress, strAllow))
             return true;
     }
     return false;

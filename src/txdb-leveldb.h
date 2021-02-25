@@ -62,7 +62,14 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-    bool LoadBlockIndex();
+    bool LoadBlockIndex(std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex,
+                        std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,
+                        CBlockIndex_impl<HASH> *&pindexGenesisBlock,
+                        HASH &hashBestChain,
+                        int &nBestHeight,
+                        CBlockIndex_impl<HASH> *&pindexBest,
+                        HASH &nBestInvalidTrust,
+                        HASH &nBestChainTrust);
 
 private:
     CTxDB_impl(const CTxDB_impl &)=delete;

@@ -1074,7 +1074,14 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     if (map_arg::GetBoolArg("-loadblockindextest")) {
         CTxDB txdb("r");
-        txdb.LoadBlockIndex();
+        txdb.LoadBlockIndex(block_info::mapBlockIndex,
+                            block_info::setStakeSeen,
+                            block_info::pindexGenesisBlock,
+                            block_info::hashBestChain,
+                            block_info::nBestHeight,
+                            block_info::pindexBest,
+                            block_info::nBestInvalidTrust,
+                            block_info::nBestChainTrust);
         CBlock_print::PrintBlockTree();
         return false;
     }

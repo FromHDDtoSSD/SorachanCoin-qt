@@ -324,12 +324,6 @@ public:
     static std::string DecodeDumpString(const std::string &str);
 };
 
-namespace match
-{
-    bool WildcardMatch(const char *psz, const char *mask);
-    bool WildcardMatch(const std::string &str, const std::string &mask);
-}
-
 class seed : private no_instance
 {
 public:
@@ -337,10 +331,12 @@ public:
     static void RandAddSeedPerfmon();
 };
 
+/*
 namespace cmd
 {
     void runCommand(std::string strCommand);
 }
+*/
 
 /*
 #ifndef THROW_WITH_STACKTRACE

@@ -171,7 +171,14 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
     // Load block index
     //
     CTxDB txdb("cr+");
-    if (! txdb.LoadBlockIndex()) {
+    if (! txdb.LoadBlockIndex(block_info::mapBlockIndex,
+                              block_info::setStakeSeen,
+                              block_info::pindexGenesisBlock,
+                              block_info::hashBestChain,
+                              block_info::nBestHeight,
+                              block_info::pindexBest,
+                              block_info::nBestInvalidTrust,
+                              block_info::nBestChainTrust)) {
         return false;
     }
 

@@ -619,4 +619,34 @@ bool ParseMoney(const char *pszIn, int64_t &nRet) {
     return true;
 }
 
+bool WildcardMatch(const char *psz, const char *mask)
+{
+    for (;;) {
+        switch (*mask)
+        {
+        case '\0':
+            return (*psz == '\0');
+        case '*':
+            return WildcardMatch(psz, mask+1) || (*psz && WildcardMatch(psz+1, mask));
+        case '?':
+            if (*psz == '\0') {
+                return false;
+            }
+            break;
+        default:
+            if (*psz != *mask) {
+                return false;
+            }
+            break;
+        }
+        psz++;
+        mask++;
+    }
+}
+
+bool WildcardMatch(const std::string &str, const std::string &mask)
+{
+    return WildcardMatch(str.c_str(), mask.c_str());
+}
+
 } // namespace strenc

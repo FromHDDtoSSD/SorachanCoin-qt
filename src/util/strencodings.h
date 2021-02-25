@@ -271,6 +271,9 @@ inline void ParseString(const std::string &str, char c, std::vector<std::string>
 std::string FormatMoney(int64_t n, bool fPlus = false);
 bool ParseMoney(const char *pszIn, int64_t &nRet);
 
+bool WildcardMatch(const char *psz, const char *mask);
+bool WildcardMatch(const std::string &str, const std::string &mask);
+
 } // namespace strenc
 
 #endif // BITCOIN_UTIL_STRENCODINGS_H
