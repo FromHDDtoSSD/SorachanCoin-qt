@@ -25,7 +25,7 @@ std::string block_alert::GetWarnings(std::string strFor)
 
     // if detected unmet upgrade requirement enter safe mode
     // Note: Modifier upgrade requires blockchain redownload if past protocol switch
-    if (bitkernel::IsFixedModifierInterval(bitkernel::nModifierUpgradeTime + util::nOneDay)) {    // 1 day margin
+    if (bitkernel<uint256>::IsFixedModifierInterval(bitkernel<uint256>::nModifierUpgradeTime + util::nOneDay)) {    // 1 day margin
         nPriority = 5000;
         strStatusBar = strRPC = "WARNING: Blockchain redownload required approaching or past v.1.0.0 upgrade deadline.";
     }

@@ -14,7 +14,7 @@ constexpr double TESTNET_INTERVAL_RATIO = 0.01;
 CheckpointsModel::CheckpointsModel(OptionsModel *in) :
     options(in),
     hardcode(args_bool::fTestNet ? Checkpoints::manage::getMapCheckpointsTestnet(): Checkpoints::manage::getMapCheckpoints()),
-    hardstake(args_bool::fTestNet ? bitkernel::getMapStakeModifierCheckpointsTestnet(): bitkernel::getMapStakeModifierCheckpoints()),
+    hardstake(args_bool::fTestNet ? bitkernel<uint256>::getMapStakeModifierCheckpointsTestnet(): bitkernel<uint256>::getMapStakeModifierCheckpoints()),
     autocheck(CAutocheckPoint::get_instance().getAutocheckpoints()) {
     timer1 = new (std::nothrow) QTimer(this);
     timer2 = new (std::nothrow) QTimer(this);

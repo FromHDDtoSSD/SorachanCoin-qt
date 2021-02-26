@@ -624,8 +624,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         pindex->set_nChainTrust((pindex->get_pprev() ? pindex->get_pprev()->get_nChainTrust() : 0) + pindex->GetBlockTrust());
 
         // calculate stake modifier checksum
-        pindex->set_nStakeModifierChecksum(bitkernel::GetStakeModifierChecksum(pindex));
-        if (!bitkernel::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum())) {
+        pindex->set_nStakeModifierChecksum(bitkernel<HASH>::GetStakeModifierChecksum(pindex));
+        if (!bitkernel<HASH>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum())) {
             return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindex->get_nHeight(), pindex->get_nStakeModifier());
         }
     }

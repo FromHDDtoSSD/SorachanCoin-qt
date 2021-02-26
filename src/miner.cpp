@@ -552,7 +552,7 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     }
 
     // verify hash target and signature of coinstake tx
-    if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
+    if (! bitkernel<uint256>::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
         return logging::error("miner::CheckStake() : proof-of-stake checking failed");
     }
 
@@ -649,7 +649,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
             // Get stake modifier
             uint64_t nStakeModifier = 0;
-            if (! bitkernel::GetKernelStakeModifier(block.GetHash(), nStakeModifier)) {
+            if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetHash(), nStakeModifier)) {
                 continue;
             }
 

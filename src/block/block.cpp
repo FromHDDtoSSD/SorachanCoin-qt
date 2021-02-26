@@ -477,12 +477,12 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
-    if (! bitkernel::ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier))
+    if (! bitkernel<T>::ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier))
         return logging::error("AddToBlockIndex() : bitkernel::ComputeNextStakeModifier() failed");
 
     pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-    pindexNew->set_nStakeModifierChecksum(bitkernel::GetStakeModifierChecksum(pindexNew));
-    if (! bitkernel::CheckStakeModifierCheckpoints(pindexNew->get_nHeight(), pindexNew->get_nStakeModifierChecksum()))
+    pindexNew->set_nStakeModifierChecksum(bitkernel<T>::GetStakeModifierChecksum(pindexNew));
+    if (! bitkernel<T>::CheckStakeModifierCheckpoints(pindexNew->get_nHeight(), pindexNew->get_nStakeModifierChecksum()))
         return logging::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
 
     // Add to block_info::mapBlockIndex

@@ -961,7 +961,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
     // ppcoin: verify hash target and signature of coinstake tx
     if (pblock->IsProofOfStake()) {
         uint256 hashProofOfStake = 0, targetProofOfStake = 0;
-        if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), hashProofOfStake, targetProofOfStake)) {
+        if (! bitkernel<uint256>::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), hashProofOfStake, targetProofOfStake)) {
             logging::LogPrintf("WARNING: block_process::manage::ProcessBlock(): check proof-of-stake failed for block %s\n", hash.ToString().c_str());
             return false; // do not error here as we expect this during initial block download
         }
