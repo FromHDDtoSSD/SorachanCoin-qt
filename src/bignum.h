@@ -1,8 +1,9 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_BIGNUM_H
 #define BITCOIN_BIGNUM_H
 
@@ -10,12 +11,12 @@
 #include <vector>
 #include <prevector/prevector.h>
 #include <openssl/bn.h>
-#include "util.h"
+#include <util.h>
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> bignum_vector;
+using bignum_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> bignum_vector;
+using bignum_vector = typedef std::vector<uint8_t>;
 #endif
 
 /** Errors thrown by the bignum class */
@@ -29,38 +30,37 @@ public:
 class CAutoBN_CTX
 {
 private:
-    CAutoBN_CTX(const CAutoBN_CTX &);
-    CAutoBN_CTX &operator=(const CAutoBN_CTX &);
+    CAutoBN_CTX(const CAutoBN_CTX &)=delete;
+    CAutoBN_CTX &operator=(const CAutoBN_CTX &)=delete;
+    CAutoBN_CTX(CAutoBN_CTX &&)=delete;
+    CAutoBN_CTX &operator=(CAutoBN_CTX &&)=delete;
 
     BN_CTX *pctx;
     BN_CTX *operator=(BN_CTX *pnew) { return pctx = pnew; }
 
 public:
     CAutoBN_CTX() {
-        pctx = BN_CTX_new();
-        if (pctx == NULL) {
+        pctx = ::BN_CTX_new();
+        if (pctx == nullptr) {
             throw bignum_error("CAutoBN_CTX : BN_CTX_new() returned NULL");
         }
     }
 
     virtual ~CAutoBN_CTX() {
-        if (pctx != NULL) {
+        if (pctx != nullptr) {
             ::BN_CTX_free(pctx);
         }
     }
 
     operator BN_CTX *() { return pctx; }
-    BN_CTX& operator*() { return *pctx; }
-    BN_CTX** operator&() { return &pctx; }
-    bool operator!() { return (pctx == NULL); }
+    BN_CTX &operator*() { return *pctx; }
+    BN_CTX **operator&() { return &pctx; }
+    bool operator!() { return (pctx == nullptr); }
 };
 
-/**
-*** C++ wrapper for BIGNUM (OpenSSL bignum)
-**/
-//
-// CBigNum
-//
+/*
+ * C++ wrapper for BIGNUM (OpenSSL bignum)
+ */
 class CBigNum : public BIGNUM
 {
 public:
@@ -196,7 +196,7 @@ public:
         ::BN_mpi2bn(pch, (int)(p - pch), this);
     }
     uint64_t getuint64() const {
-        size_t nSize = ::BN_bn2mpi(this, NULL);
+        size_t nSize = ::BN_bn2mpi(this, nullptr);
         if (nSize < 4) {
             return 0;
         }
@@ -285,7 +285,7 @@ public:
     }
 
     uint160 getuint160() const {
-        unsigned int nSize = ::BN_bn2mpi(this, NULL);
+        unsigned int nSize = ::BN_bn2mpi(this, nullptr);
         if (nSize < 4) {
             return 0;
         }
@@ -334,7 +334,7 @@ public:
     }
 
     uint256 getuint256() const {
-        unsigned int nSize = ::BN_bn2mpi(this, NULL);
+        unsigned int nSize = ::BN_bn2mpi(this, nullptr);
         if (nSize < 4) {
             return 0;
         }
@@ -346,6 +346,27 @@ public:
         }
 
         uint256 n = 0;
+        for (size_t i = 0, j = vch.size() - 1; i < sizeof(n) && j >= 4; i++, j--)
+        {
+            ((uint8_t *)&n)[i] = vch[j];
+        }
+        return n;
+    }
+
+    template <typename HASH>
+    HASH getuint() const {
+        unsigned int nSize = ::BN_bn2mpi(this, nullptr);
+        if (nSize < 4) {
+            return 0;
+        }
+
+        std::vector<uint8_t> vch(nSize);
+        ::BN_bn2mpi(this, &vch[0]);
+        if (vch.size() > 4) {
+            vch[4] &= 0x7f;
+        }
+
+        HASH n = 0;
         for (size_t i = 0, j = vch.size() - 1; i < sizeof(n) && j >= 4; i++, j--)
         {
             ((uint8_t *)&n)[i] = vch[j];
@@ -411,7 +432,7 @@ public:
     }
 
     uint32_t GetCompact() const {
-        uint32_t nSize = ::BN_bn2mpi(this, NULL);
+        uint32_t nSize = ::BN_bn2mpi(this, nullptr);
         std::vector<uint8_t> vch(nSize);
         nSize -= 4;
         ::BN_bn2mpi(this, &vch[0]);
@@ -594,7 +615,7 @@ public:
      */
     static CBigNum generatePrime(const unsigned int numBits, bool safe = false) {
         CBigNum ret;
-        if(! ::BN_generate_prime_ex(&ret, numBits, (safe == true), NULL, NULL, NULL)) {
+        if(! ::BN_generate_prime_ex(&ret, numBits, (safe == true), nullptr, nullptr, nullptr)) {
             throw bignum_error("CBigNum::generatePrime*= :BN_generate_prime_ex");
         }
 
@@ -624,7 +645,7 @@ public:
     */
     bool isPrime(const int checks=BN_prime_checks) const {
         CAutoBN_CTX pctx;
-        int ret = ::BN_is_prime(this, checks, NULL, pctx, NULL);
+        int ret = ::BN_is_prime(this, checks, nullptr, pctx, nullptr);
         if(ret < 0) {
             throw bignum_error("CBigNum::isPrime :BN_is_prime");
         }
@@ -754,7 +775,7 @@ public:
     friend const CBigNum operator/(const CBigNum &a, const CBigNum &b) { // c = a / b
         CAutoBN_CTX pctx;
         CBigNum r;
-        if (! ::BN_div(&r, NULL, &a, &b, pctx)) {
+        if (! ::BN_div(&r, nullptr, &a, &b, pctx)) {
             throw bignum_error("CBigNum::operator/ : BN_div failed");
         }
         return r;
@@ -787,11 +808,9 @@ public:
     friend bool operator>(const CBigNum &a, const CBigNum &b)  { return (::BN_cmp(&a, &b) > 0); }
 };
 
-//static std::ostream &operator<<(std::ostream &strm, const CBigNum &b)
-//{
-//    return strm << b.ToString(10);
-//}
-//typedef CBigNum Bignum;
+static std::ostream &operator<<(std::ostream &strm, const CBigNum &b)
+{
+    return strm << b.ToString(10);
+}
 
 #endif
-//@

@@ -21,23 +21,39 @@ void KernelWorker::Do_generic()
     uint256 nMaxTarget = (bnTargetPerCoinDay * bnValueIn * block_check::nStakeMaxAge / util::COIN / util::nOneDay).getuint256();
 
     // Sha256 result buffer
-    uint32_t hashProofOfStake[8];
+    uint32_t hashProofOfStake[8], hashProofOfStakeC[8];
     uint256 *pnHashProofOfStake = (uint256 *)&hashProofOfStake;
+    uint256 *pnHashProofOfStakeC = (uint256 *)&hashProofOfStakeC;
 
     // Search forward in time from the given timestamp
     // Stopping search in case of shutting down
+
+    latest_crypto::CSHA256 sha256;
+    sha256.Write(kernel, 8 + 16);
+    latest_crypto::CSHA256 workerSha256 = sha256;
+
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
     SHA256_Update(&ctx, kernel, 8 + 16);    // Init new sha256 context and update it with first 24 bytes of kernel
-    SHA256_CTX workerCtx = ctx;                // save context
+    SHA256_CTX workerCtx = ctx;             // save context
     for (uint32_t nTimeTx = nIntervalBegin, nMaxTarget32 = nMaxTarget.Get32(7); nTimeTx < nIntervalEnd && !args_bool::fShutdown; nTimeTx++)
     {
+        uint256 hashC;
+        sha256.Write((unsigned char *)&nTimeTx, 4);
+        sha256.Finalize((unsigned char *)&hashC);
+        latest_crypto::CSHA256().Write((unsigned char *)&hashC, sizeof(hashC)).Finalize((unsigned char *)&hashProofOfStakeC);
+        sha256 = workerSha256;
+
         // Complete first hashing iteration
         uint256 hash1;
         SHA256_Update(&ctx, (unsigned char *)&nTimeTx, 4);
         SHA256_Final((unsigned char *)&hash1, &ctx);
         SHA256((unsigned char *)&hash1, sizeof(hashProofOfStake), (unsigned char *)&hashProofOfStake); // Calculate kernel hash
         ctx = workerCtx;
+
+        assert(!"debug hashC == hash1");
+        assert(hashC==hash1);
+        assert(*pnHashProofOfStake==*pnHashProofOfStakeC);
 
         // Skip if hash doesn't satisfy the maximum target
         if (hashProofOfStake[7] > nMaxTarget32) {
@@ -46,7 +62,7 @@ void KernelWorker::Do_generic()
             CBigNum bnCoinDayWeight = bnValueIn * bitkernel<uint256>::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
             CBigNum bnTargetProofOfStake = bnCoinDayWeight * bnTargetPerCoinDay;
             if (bnTargetProofOfStake >= CBigNum(*pnHashProofOfStake)) {
-                solutions.push_back(std::pair<uint256,uint32_t>(*pnHashProofOfStake, nTimeTx));
+                solutions.push_back(std::pair<uint256, uint32_t>(*pnHashProofOfStake, nTimeTx));
             }
         }
     }
