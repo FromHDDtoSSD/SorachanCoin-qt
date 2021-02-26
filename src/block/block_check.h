@@ -36,13 +36,13 @@ namespace block_check
     extern unsigned int nModifierInterval;// = mainnet::nModifierInterval;
     const int64_t nTargetTimespan = 7 * util::nOneDay;
 
+    template <typename T>
     class manage : private no_instance
     {
     public:
-        static void InvalidChainFound(CBlockIndex *pindexNew);
+        static void InvalidChainFound(CBlockIndex_impl<T> *pindexNew);
         static bool VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
-
-        static bool Reorganize(CTxDB &txdb, CBlockIndex *pindexNew);
+        static bool Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
 
         static int64_t PastDrift(int64_t nTime) {    // up to 2 hours from the past
             return nTime - 2 * util::nOneHour;

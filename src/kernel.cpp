@@ -483,7 +483,7 @@ bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, ui
     }
 
     // Verify signature
-    if (! block_check::manage::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0)) {
+    if (! block_check::manage<uint256>::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0)) {
         return tx.DoS(100, logging::error("bitkernel::CheckProofOfStake() : block_check::manage::VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
     }
 

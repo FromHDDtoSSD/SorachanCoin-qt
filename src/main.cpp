@@ -119,7 +119,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
     // Adding to current best branch
     if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash)) {
         txdb.TxnAbort();
-        block_check::manage::InvalidChainFound(pindexNew);
+        block_check::manage<T>::InvalidChainFound(pindexNew);
         return false;
     }
     if (! txdb.TxnCommit()) {

@@ -15,7 +15,8 @@ unsigned int block_check::nStakeTargetSpacing = block_check::mainnet::nStakeTarg
 unsigned int block_check::nPowTargetSpacing = block_check::mainnet::nPowTargetSpacing;
 unsigned int block_check::nModifierInterval = block_check::mainnet::nModifierInterval;
 
-void block_check::manage::InvalidChainFound(CBlockIndex *pindexNew)
+template <typename T>
+void block_check::manage<T>::InvalidChainFound(CBlockIndex_impl<T> *pindexNew)
 {
     if (pindexNew->get_nChainTrust() > block_info::nBestInvalidTrust) {
         block_info::nBestInvalidTrust = pindexNew->get_nChainTrust();
@@ -37,12 +38,14 @@ void block_check::manage::InvalidChainFound(CBlockIndex *pindexNew)
             util::DateTimeStrFormat("%x %H:%M:%S", block_info::pindexBest->GetBlockTime()).c_str());
 }
 
-bool block_check::manage::VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
+template <typename T>
+bool block_check::manage<T>::VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
     return CScriptCheck(txFrom, txTo, nIn, flags, nHashType)();    // Call by functor
 }
 
-bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
+template <typename T>
+bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
 {
     logging::LogPrintf("REORGANIZE\n");
 
@@ -147,3 +150,5 @@ void block_check::thread::ThreadScriptCheckQuit()
 {
     scriptcheckqueue.Quit();
 }
+
+template class block_check::manage<uint256>;

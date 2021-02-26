@@ -422,7 +422,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
-            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
             pblock->UpdateTime(pindexPrev);
         }
         pblock->set_nNonce(0);

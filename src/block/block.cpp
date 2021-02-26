@@ -367,9 +367,9 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             logging::LogPrintf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
-        if (! block_check::manage::Reorganize(txdb, pindexIntermediate)) {
+        if (! block_check::manage<uint256>::Reorganize(txdb, pindexIntermediate)) {
             txdb.TxnAbort();
-            block_check::manage::InvalidChainFound(pindexNew);
+            block_check::manage<uint256>::InvalidChainFound(pindexNew);
             return logging::error("SetBestChain() : block_check::manage::Reorganize failed");
         }
 
@@ -569,11 +569,11 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
             return DoS(50, logging::error("CheckBlock() : proof of work failed"));
 
         // Check timestamp
-        if (CBlockHeader_impl<T>::GetBlockTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
+        if (CBlockHeader_impl<T>::GetBlockTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
             return logging::error("CheckBlock() : block timestamp too far in the future");
 
         // Check coinbase timestamp
-        if (CBlockHeader_impl<T>::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
+        if (CBlockHeader_impl<T>::GetBlockTime() < block_check::manage<uint256>::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
             return DoS(50, logging::error("CheckBlock() : coinbase timestamp is too late"));
     }
 
@@ -646,7 +646,7 @@ bool CBlock_impl<T>::AcceptBlock()
         block_transaction::DONOT_ACCEPT_BLOCKS_ADMIT_HOURS * util::nOneHour;
 
     // Check timestamp against prev
-    if (CBlockHeader_impl<T>::GetBlockTime() <= nMedianTimePast || block_check::manage::FutureDrift(CBlockHeader_impl<T>::GetBlockTime()) < pindexPrev->GetBlockTime())
+    if (CBlockHeader_impl<T>::GetBlockTime() <= nMedianTimePast || block_check::manage<uint256>::FutureDrift(CBlockHeader_impl<T>::GetBlockTime()) < pindexPrev->GetBlockTime())
         return logging::error("CBlock::AcceptBlock() : block's timestamp is too early");
 
     // Don't accept blocks with future timestamps
@@ -758,7 +758,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
     // Adding to current best branch
     if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash)) {
         txdb.TxnAbort();
-        block_check::manage::InvalidChainFound(pindexNew);
+        block_check::manage<uint256>::InvalidChainFound(pindexNew);
         return false;
     }
     if (! txdb.TxnCommit())

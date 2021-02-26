@@ -13,7 +13,7 @@
 #include <wallet.h>
 
 template <typename T> CTxMemPool_impl<T> CTxMemPool_impl<T>::mempool;
-template <typename T> CBlockIndex *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
+template <typename T> CBlockIndex_impl<T> *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
 int block_transaction::nCoinbaseMaturity = block_transaction::mainnet::nCoinbaseMaturity;
 
 /*
@@ -115,7 +115,7 @@ bool block_transaction::manage_impl<T>::GetTransaction(const T &hash, CTransacti
 }
 
 template <typename T>
-CBlockIndex *block_transaction::manage_impl<T>::FindBlockByHeight(int nHeight)
+CBlockIndex_impl<T> *block_transaction::manage_impl<T>::FindBlockByHeight(int nHeight)
 {
     CBlockIndex *pblockindex;
     if (nHeight < block_info::nBestHeight / 2)
@@ -140,7 +140,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         *pfMissingInputs = false;
 
     // Time (prevent mempool memory exhaustion attack)
-    if (tx.get_nTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
+    if (tx.get_nTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
         return tx.DoS(10, logging::error("CTxMemPool::accept() : transaction timestamp is too far in the future"));
     if (! tx.CheckTransaction())
         return logging::error("CTxMemPool::accept() : CheckTransaction failed");
@@ -709,7 +709,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
 }
 
 template <typename T>
-bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks/*=true*/, unsigned int flags/*=Script_param::STRICT_FLAGS*/, std::vector<CScriptCheck> *pvChecks/*=NULL*/)
+bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex_impl<T> *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks/*=true*/, unsigned int flags/*=Script_param::STRICT_FLAGS*/, std::vector<CScriptCheck> *pvChecks/*=NULL*/)
 {
     // Take over previous transactions' spent pointers
     // fBlock is true when this is called from AcceptBlock when a new best-block is added to the blockchain
@@ -839,7 +839,7 @@ bool CTransaction_impl<T>::ClientConnectInputs()
                 return false;
 
             // Verify signature
-            if (! block_check::manage::VerifySignature(txPrev, *this, i, Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH, 0))
+            if (! block_check::manage<uint256>::VerifySignature(txPrev, *this, i, Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH, 0))
                 return logging::error("ClientConnectInputs() : block_check::manage::VerifySignature failed");
 
             // this is redundant with the CTxMemPool::mempool.mapNextTx stuff,
