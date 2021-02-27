@@ -192,15 +192,11 @@ using CBlock = CBlock_impl<uint256>;
 template <typename T>
 class CBlockIndex_impl : public CBlockHeader<T>
 {
-#ifdef BLOCK_PREVECTOR_ENABLE
-    //using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
-#else
-    //using vMerkle_t = std::vector<T>;
-#endif
 // private:
     // CBlockIndex_impl(const CBlockIndex_impl &)=delete;
+    // CBlockIndex_impl(CBlockIndex_impl &&)=delete;
     // CBlockIndex_impl &operator=(const CBlockIndex_impl &)=delete;
-    // CBlockIndex_impl &operator=(const CBlockIndex_impl &&)=delete;
+    // CBlockIndex_impl &operator=(CBlockIndex_impl &&)=delete;
 protected:
     const T *phashBlock; // CBlock_impl<T>::AddToBlockIndex
     CBlockIndex_impl<T> *pprev;
@@ -276,7 +272,7 @@ public:
         prevoutStake.SetNull();
         nStakeTime = 0;
     }
-    CBlockIndex_impl(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock &block) {
+    CBlockIndex_impl(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock_impl<T> &block) {
         //CBlockHeader<T>::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
@@ -306,8 +302,8 @@ public:
         CBlockHeader<T>::nNonce         = block.get_nNonce();
     }
     virtual ~CBlockIndex_impl() {}
-    CBlock GetBlockHeader() const {
-        CBlock block;
+    CBlock_impl<T> GetBlockHeader() const {
+        CBlock_impl<T> block;
         block.set_nVersion(CBlockHeader<T>::nVersion);
         if (pprev) block.set_hashPrevBlock(pprev->GetBlockHash());
         block.set_hashMerkleRoot(CBlockHeader<T>::hashMerkleRoot);
@@ -419,7 +415,7 @@ public:
     T GetBlockHash() const {
         if (args_bool::fUseFastIndex && (CBlockIndex_impl<T>::nTime < bitsystem::GetAdjustedTime() - util::nOneDay) && this->blockHash != 0)
             return blockHash;
-        CBlock block;
+        CBlock_impl<T> block;
         block.set_nVersion(CBlockIndex_impl<T>::nVersion);
         block.set_hashPrevBlock(hashPrev);
         block.set_hashMerkleRoot(CBlockIndex_impl<T>::hashMerkleRoot);
@@ -470,15 +466,16 @@ public:
 };
 using CDiskBlockIndex = CDiskBlockIndex_impl<uint256>;
 
+template <typename T>
 class block_notify : private no_instance
 {
-    friend class CBlock_impl<uint256>;
+    friend class CBlock_impl<T>;
 private:
     static void SetBestChain(const CBlockLocator &loc);
-    static void UpdatedTransaction(const uint256 &hashTx);
+    static void UpdatedTransaction(const T &hashTx);
 public:
     static bool IsInitialBlockDownload();
-    static void PrintWallets(const CBlock &block);
+    static void PrintWallets(const CBlock_impl<T> &block);
 };
 
 template <typename T>

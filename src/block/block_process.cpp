@@ -101,7 +101,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         pfrom->vSend.SetVersion(std::min(pfrom->nVersion, version::PROTOCOL_VERSION));
         if (! pfrom->fInbound) {
             // Advertise our address
-            if (!args_bool::fNoListen && !block_notify::IsInitialBlockDownload()) {
+            if (!args_bool::fNoListen && !block_notify<uint256>::IsInitialBlockDownload()) {
                 CAddress addr = ext_ip::GetLocalAddress(&pfrom->addr);
                 if (addr.IsRoutable()) pfrom->PushAddress(addr);
             }
@@ -148,7 +148,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         cPeerBlockCounts.input(pfrom->nStartingHeight);
 
         // ppcoin: ask for pending sync-checkpoint if any
-        if (! block_notify::IsInitialBlockDownload())
+        if (! block_notify<uint256>::IsInitialBlockDownload())
             Checkpoints::manage::AskForPendingSyncCheckpoint(pfrom);
     } else if (pfrom->nVersion == 0) {
         // Must have a version message before anything else
@@ -702,7 +702,7 @@ bool block_process::manage::SendMessages(CNode *pto)
         block_process::manage::ResendWalletTransactions();
 
         // Address refresh broadcast
-        if (! block_notify::IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow) {
+        if (! block_notify<uint256>::IsInitialBlockDownload() && pto->nNextLocalAddrSend < nNow) {
             ext_ip::AdvertiseLocal(pto);
             pto->nNextLocalAddrSend = future_time::PoissonNextSend(nNow, util::nOneDay);
         }
@@ -989,7 +989,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
     }
 
     // ppcoin: ask for pending sync-checkpoint if any
-    if (! block_notify::IsInitialBlockDownload())
+    if (! block_notify<uint256>::IsInitialBlockDownload())
         Checkpoints::manage::AskForPendingSyncCheckpoint(pfrom);
 
     // If don't already have its previous block, shunt it off to holding area until we get it
@@ -1019,7 +1019,7 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 
             // ppcoin: getblocks may not obtain the ancestor block rejected
             // earlier by duplicate-stake check so we ask for it again directly
-            if (! block_notify::IsInitialBlockDownload())
+            if (! block_notify<uint256>::IsInitialBlockDownload())
                 pfrom->AskFor(CInv(_CINV_MSG_TYPE::MSG_BLOCK, block_process::manage::WantedByOrphan(pblock2)));
         }
         return true;

@@ -141,7 +141,7 @@ bool ClientModel::isTestNet() const
 
 bool ClientModel::inInitialBlockDownload() const
 {
-    return block_notify::IsInitialBlockDownload();
+    return block_notify<uint256>::IsInitialBlockDownload();
 }
 
 int ClientModel::getNumBlocksOfPeers() const

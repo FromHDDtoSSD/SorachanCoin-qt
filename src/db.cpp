@@ -353,7 +353,7 @@ void CDB::Close()
     if (CDBCommon::IsChainFile(strFile)) {
         nMinutes = 2;
     }
-    if (CDBCommon::IsChainFile(strFile) && block_notify::IsInitialBlockDownload()) {
+    if (CDBCommon::IsChainFile(strFile) && block_notify<uint256>::IsInitialBlockDownload()) {
         nMinutes = 5;
     }
 

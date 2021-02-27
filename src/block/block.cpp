@@ -84,7 +84,7 @@ void CBlock_print_impl<T>::PrintBlockTree() {
         for (int i=0; i < nCol; ++i) logging::LogPrintf("| ");
 
         // print item
-        CBlock block;
+        CBlock_impl<T> block;
         block.ReadFromDisk(pindex);
         logging::LogPrintf("%d (%u,%u) %s  %08x  %s  mint %7s  tx %" PRIszu "\n",
             pindex->get_nHeight(),
@@ -96,7 +96,7 @@ void CBlock_print_impl<T>::PrintBlockTree() {
             strenc::FormatMoney(pindex->get_nMint()).c_str(),
             block.get_vtx().size());
 
-        block_notify::PrintWallets(block);
+        block_notify<T>::PrintWallets(block);
 
         // put the main time-chain first
         vBlockIndex_t &vNext = mapNext[pindex];
@@ -113,33 +113,37 @@ void CBlock_print_impl<T>::PrintBlockTree() {
 }
 
 // notify wallets about a new best chain
-void block_notify::SetBestChain(const CBlockLocator &loc)
+template <typename T>
+void block_notify<T>::SetBestChain(const CBlockLocator &loc)
 {
     for(CWallet *pwallet: block_info::setpwalletRegistered)
         pwallet->SetBestChain(loc);
 }
 
 // notify wallets about an updated transaction
-void block_notify::UpdatedTransaction(const uint256 &hashTx)
+template <typename T>
+void block_notify<T>::UpdatedTransaction(const T &hashTx)
 {
     for(CWallet *pwallet: block_info::setpwalletRegistered)
         pwallet->UpdatedTransaction(hashTx);
 }
 
 // dump all wallets
-void block_notify::PrintWallets(const CBlock &block)
+template <typename T>
+void block_notify<T>::PrintWallets(const CBlock_impl<T> &block)
 {
     for(CWallet *pwallet: block_info::setpwalletRegistered)
         pwallet->PrintWallet(block);
 }
 
-bool block_notify::IsInitialBlockDownload()
+template <typename T>
+bool block_notify<T>::IsInitialBlockDownload()
 {
     if (block_info::pindexBest == nullptr || block_info::nBestHeight < Checkpoints::manage::GetTotalBlocksEstimate())
         return true;
 
     static int64_t nLastUpdate = 0;
-    static CBlockIndex *pindexLastBest = nullptr;
+    static CBlockIndex_impl<T> *pindexLastBest = nullptr;
     int64_t nCurrentTime = bitsystem::GetTime();
     if (block_info::pindexBest != pindexLastBest) {
         pindexLastBest = block_info::pindexBest;
@@ -375,7 +379,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
 
         // Connect further blocks
         for (std::vector<CBlockIndex *>::reverse_iterator rit = vpindexSecondary.rbegin(); rit != vpindexSecondary.rend(); ++rit) {
-            CBlock block;
+            CBlock_impl<T> block;
             if (! block.ReadFromDisk(*rit)) {
                 logging::LogPrintf("SetBestChain() : ReadFromDisk failed\n");
                 break;
@@ -392,10 +396,10 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     }
 
     // Update best block in wallet (so we can detect restored wallets)
-    bool fIsInitialDownload = block_notify::IsInitialBlockDownload();
+    bool fIsInitialDownload = block_notify<T>::IsInitialBlockDownload();
     if (! fIsInitialDownload) {
         const CBlockLocator locator(pindexNew);
-        block_notify::SetBestChain(locator);
+        block_notify<T>::SetBestChain(locator);
     }
 
     // New best block
@@ -506,12 +510,12 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     if (pindexNew == block_info::pindexBest) {
         // Notify UI to display prev block's coinbase if it was ours
         static T hashPrevBestCoinBase;
-        block_notify::UpdatedTransaction(hashPrevBestCoinBase);
+        block_notify<T>::UpdatedTransaction(hashPrevBestCoinBase);
         hashPrevBestCoinBase = Merkle_t::vtx[0].GetHash();
     }
 
     static int8_t counter = 0;
-    if( (++counter & 0x0F) == 0 || !block_notify::IsInitialBlockDownload()) // repaint every 16 blocks if not in initial block download
+    if( (++counter & 0x0F) == 0 || !block_notify<T>::IsInitialBlockDownload()) // repaint every 16 blocks if not in initial block download
         CClientUIInterface::uiInterface.NotifyBlocksChanged();
 
     return true;
@@ -789,7 +793,7 @@ bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPos
     fileout << *this;
     // Flush stdio buffers and commit to disk before returning
     fflush(fileout);
-    if (!block_notify::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
+    if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
         iofs::FileCommit(fileout);
     return true;
 }

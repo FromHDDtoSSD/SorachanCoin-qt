@@ -80,7 +80,7 @@ bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T>
     // Disconnect shorter branch
     std::vector<CTransaction> vResurrect;
     for(CBlockIndex *pindex: vDisconnect) {
-        CBlock block;
+        CBlock_impl<T> block;
         if (! block.ReadFromDisk(pindex))
             return logging::error("block_check::manage::Reorganize() : ReadFromDisk for disconnect failed");
         if (! block.DisconnectBlock(txdb, pindex))
@@ -97,7 +97,7 @@ bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T>
     std::vector<CTransaction> vDelete;
     for (unsigned int i = 0; i < vConnect.size(); ++i) {
         CBlockIndex *pindex = vConnect[i];
-        CBlock block;
+        CBlock_impl<T> block;
         if (! block.ReadFromDisk(pindex))
             return logging::error("block_check::manage::Reorganize() : ReadFromDisk for connect failed");
         if (! block.ConnectBlock(txdb, pindex)) // Invalid block

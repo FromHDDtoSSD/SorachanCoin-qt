@@ -2,8 +2,6 @@
 // Copyright (c) 2013-2015 The Novacoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <vector>
 #include <inttypes.h>
@@ -17,7 +15,6 @@ void KernelWorker::Do_generic()
 
     // Compute maximum possible target to filter out majority of obviously insufficient hashes
     CBigNum bnTargetPerCoinDay; bnTargetPerCoinDay.SetCompact(nBits);
-    // CScriptNum scTargetPerCoinDay;
     uint256 nMaxTarget = (bnTargetPerCoinDay * bnValueIn * block_check::nStakeMaxAge / util::COIN / util::nOneDay).getuint256();
 
     // Sha256 result buffer

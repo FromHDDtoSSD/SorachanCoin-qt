@@ -226,7 +226,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
     LOCK(CRPCTable::cs_getwork);
     if (net_node::vNodes.empty())
         return data.JSONRPCError(-9, strCoinName " is not connected!");
-    if (block_notify::IsInitialBlockDownload())
+    if (block_notify<uint256>::IsInitialBlockDownload())
         return data.JSONRPCError(-10, strCoinName " is downloading blocks...");
     if (params.size() == 0) {
         // Update block
@@ -350,7 +350,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
     LOCK(CRPCTable::cs_getwork);
     if (net_node::vNodes.empty())
         return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
-    if (block_notify::IsInitialBlockDownload())
+    if (block_notify<uint256>::IsInitialBlockDownload())
         return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
     if (params.size() == 0) {
         // Update block
@@ -480,7 +480,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
     if (net_node::vNodes.empty())
         return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
-    if (block_notify::IsInitialBlockDownload())
+    if (block_notify<uint256>::IsInitialBlockDownload())
         return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
 
     //static CReserveKey reservekey(entry::pwalletMain);
