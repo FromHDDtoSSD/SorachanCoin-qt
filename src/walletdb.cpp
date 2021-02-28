@@ -717,22 +717,22 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
         }
 
         if (nLastFlushed != dbparam::nWalletDBUpdated && bitsystem::GetTime() - nLastWalletUpdate >= 2) {
-            TRY_LOCK(CDBEnv::bitdb.cs_db,lockDb);
+            TRY_LOCK(CDBEnv::get_instance().cs_db,lockDb);
             if (lockDb) {
                 //
                 // Don't do this if any databases are in use
                 //
                 int nRefCount = 0;
-                std::map<std::string, int>::iterator mi = CDBEnv::bitdb.mapFileUseCount.begin();
-                while (mi != CDBEnv::bitdb.mapFileUseCount.end())
+                std::map<std::string, int>::iterator mi = CDBEnv::get_instance().mapFileUseCount.begin();
+                while (mi != CDBEnv::get_instance().mapFileUseCount.end())
                 {
                     nRefCount += (*mi).second;
                     mi++;
                 }
 
                 if (nRefCount == 0 && !args_bool::fShutdown) {
-                    std::map<std::string, int>::iterator mi = CDBEnv::bitdb.mapFileUseCount.find(strFile);
-                    if (mi != CDBEnv::bitdb.mapFileUseCount.end()) {
+                    std::map<std::string, int>::iterator mi = CDBEnv::get_instance().mapFileUseCount.find(strFile);
+                    if (mi != CDBEnv::get_instance().mapFileUseCount.end()) {
                         logging::LogPrintf("Flushing wallet.dat\n");
                         nLastFlushed = dbparam::nWalletDBUpdated;
                         int64_t nStart = util::GetTimeMillis();
@@ -740,10 +740,10 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
                         //
                         // Flush wallet.dat so it's self contained
                         //
-                        CDBEnv::bitdb.CloseDb(strFile);
-                        CDBEnv::bitdb.CheckpointLSN(strFile);
+                        CDBEnv::get_instance().CloseDb(strFile);
+                        CDBEnv::get_instance().CheckpointLSN(strFile);
 
-                        CDBEnv::bitdb.mapFileUseCount.erase(mi++);
+                        CDBEnv::get_instance().mapFileUseCount.erase(mi++);
                         logging::LogPrintf("Flushed wallet.dat %" PRId64 "ms\n", util::GetTimeMillis() - nStart);
                     }
                 }
@@ -754,41 +754,36 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
 
 bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &strDest)
 {
-    if (! wallet.fFileBacked) {
+    if (! wallet.fFileBacked)
         return false;
-    }
 
     while (! args_bool::fShutdown)
     {
         {
-            LOCK(CDBEnv::bitdb.cs_db);
-            if (!CDBEnv::bitdb.mapFileUseCount.count(wallet.strWalletFile) || CDBEnv::bitdb.mapFileUseCount[wallet.strWalletFile] == 0) {
+            LOCK(CDBEnv::get_instance().cs_db);
+            if (!CDBEnv::get_instance().mapFileUseCount.count(wallet.strWalletFile) || CDBEnv::get_instance().mapFileUseCount[wallet.strWalletFile] == 0) {
                 //
                 // Flush log data to the dat file
                 //
-                CDBEnv::bitdb.CloseDb(wallet.strWalletFile);
-                CDBEnv::bitdb.CheckpointLSN(wallet.strWalletFile);
-                CDBEnv::bitdb.mapFileUseCount.erase(wallet.strWalletFile);
+                CDBEnv::get_instance().CloseDb(wallet.strWalletFile);
+                CDBEnv::get_instance().CheckpointLSN(wallet.strWalletFile);
+                CDBEnv::get_instance().mapFileUseCount.erase(wallet.strWalletFile);
 
                 //
-                // Copy wallet.dat
+                // Copy wallet.dat or walletq.dat
                 //
-                boost::filesystem::path pathSrc = iofs::GetDataDir() / wallet.strWalletFile;
-                boost::filesystem::path pathDest(strDest);
-                if (boost::filesystem::is_directory(pathDest)) {
+                fs::path pathSrc = iofs::GetDataDir() / wallet.strWalletFile;
+                fs::path pathDest(strDest);
+                if (fs::is_directory(pathDest)) {
                     pathDest /= wallet.strWalletFile;
                 }
 
                 try {
-#if BOOST_VERSION >= 104000
-                    boost::filesystem::copy_file(pathSrc, pathDest, boost::filesystem::copy_option::overwrite_if_exists);
-#else
-                    boost::filesystem::copy_file(pathSrc, pathDest);
-#endif
-                    logging::LogPrintf("copied wallet.dat to %s\n", pathDest.string().c_str());
+                    fs::copy_file(pathSrc, pathDest, fs::copy_option::overwrite_if_exists);
+                    logging::LogPrintf("copied wallet data to %s\n", pathDest.string().c_str());
                     return true;
-                } catch(const boost::filesystem::filesystem_error &e) {
-                    logging::LogPrintf("error copying wallet.dat to %s - %s\n", pathDest.string().c_str(), e.what());
+                } catch(const fs::filesystem_error &e) {
+                    logging::LogPrintf("error copying wallet data to %s - %s\n", pathDest.string().c_str(), e.what());
                     return false;
                 }
             }
@@ -1033,8 +1028,8 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     int64_t now = bitsystem::GetTime();
     std::string newFilename = tfm::format("wallet.%" PRId64 ".bak", now);
 
-    int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL, newFilename.c_str(), DB_AUTO_COMMIT);
-    if (result == 0) {
+    //int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL, newFilename.c_str(), DB_AUTO_COMMIT);
+    if (dbenv.DbRename(filename, newFilename)) {
         logging::LogPrintf("Renamed %s to %s\n", filename.c_str(), newFilename.c_str());
     } else {
         logging::LogPrintf("Failed to rename %s to %s\n", filename.c_str(), newFilename.c_str());
@@ -1050,7 +1045,8 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     logging::LogPrintf("Salvage(aggressive) found %" PRIszu " records\n", salvagedData.size());
 
     bool fSuccess = allOK;
-    Db* pdbCopy = new Db(&dbenv.dbenv, 0);
+    //Db* pdbCopy = new Db(&dbenv.dbenv, 0);
+    Db *pdbCopy = dbenv.create();
     int ret = pdbCopy->open(NULL,                    // Txn pointer
                             filename.c_str(),        // Filename
                             "main",                  // Logical db name

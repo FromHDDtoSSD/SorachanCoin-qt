@@ -197,7 +197,7 @@ QVariant OptionsModel::data(const QModelIndex &index, int role) const
         case ThirdPartyTxUrls:
             return QVariant(strThirdPartyTxUrls);
         case DetachDatabases:
-            return QVariant(CDBEnv::bitdb.GetDetach());
+            return QVariant(CDBEnv::get_instance().GetDetach());
         case Language:
             return settings.value("language", "");
         case CoinControlFeatures:
@@ -315,7 +315,7 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
             break;
         case DetachDatabases: {
             bool fDetachDB = value.toBool();
-            CDBEnv::bitdb.SetDetach(fDetachDB);
+            CDBEnv::get_instance().SetDetach(fDetachDB);
             settings.setValue("detachDB", fDetachDB);
             }
             break;

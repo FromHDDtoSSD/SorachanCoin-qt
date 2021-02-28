@@ -1,23 +1,21 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_DB_H
 #define BITCOIN_DB_H
 
-#include "main.h"
-#include "db_addr.h"
-
+#include <main.h>
+#include <db_addr.h>
 #include <map>
 #include <string>
 #include <vector>
-
 #include <db_cxx.h>
 
 class CAddress;
 class CAddrMan;
-//class CBlockLocator;
 template <typename T> class CBlockLocator_impl;
 using CBlockLocator = CBlockLocator_impl<uint256>;
 template<typename T> class CDiskBlockIndex_impl;
@@ -41,56 +39,45 @@ namespace wallet_dispatch
 namespace dbparam
 {
     extern unsigned int nWalletDBUpdated;// = 0;
+    bool IsChainFile(std::string strFile);
 }
 
-class CDBCommon
+/**
+ * DB Manager
+ */
+class CDBEnv
 {
 private:
-    CDBCommon(const CDBCommon &); // {}
-    CDBCommon(const CDBCommon &&); // {}
-    CDBCommon &operator=(const CDBCommon &); // {}
-    CDBCommon &operator=(const CDBCommon &&); // {}
-protected:
-    bool IsChainFile(std::string strFile) const;
-public:
-    CDBCommon() {}
-};
+    static constexpr int dbcache_size = 25;
 
-//
-// Database map
-// Singleton Class
-//
-class CDBEnv : public CDBCommon
-{
-private:
     CDBEnv();
     ~CDBEnv();
-
-    CDBEnv(const CDBEnv &); // {}
-    CDBEnv(const CDBEnv &&); // {}
-    CDBEnv &operator=(const CDBEnv &); // {}
-    CDBEnv &operator=(const CDBEnv &&); // {}
 
     bool fDetachDB;
     bool fDbEnvInit;
     bool fMockDb;
-    boost::filesystem::path pathEnv;
+    fs::path pathEnv;
     std::string strPath;
+    DbEnv dbenv;
 
     void EnvShutdown();
 
 public:
-    static CDBEnv bitdb;   // Singleton object instance, db.cpp
+    static CDBEnv &get_instance() {
+        static CDBEnv bitdb;
+        return bitdb;
+    }
+
+    Db *create() {
+        return new(std::nothrow) Db(&dbenv, 0);
+    }
 
     mutable CCriticalSection cs_db;
-    DbEnv dbenv;
     std::map<std::string, int> mapFileUseCount;
-    std::map<std::string, Db *> mapDb;
+    std::map<std::string, Db *> mapDb; // database handle
 
-    void MakeMock();
-    bool IsMock() {
-        return fMockDb;
-    }
+    //void MakeMock();
+    bool IsMock() const { return fMockDb; }
 
     /*
     * Verify that database file strFile is OK. If it is not,
@@ -98,13 +85,12 @@ public:
     * This must be called BEFORE strFile is opened.
     * Returns true if strFile is OK.
     */
-    enum VerifyResult
-    {
+    enum VerifyResult {
         VERIFY_OK,
         RECOVER_OK,
         RECOVER_FAIL
     };
-    VerifyResult Verify(std::string strFile, bool(*recoverFunc)(CDBEnv &dbenv, std::string strFile));
+    VerifyResult Verify(std::string strFile, bool(* recoverFunc)(CDBEnv &dbenv, std::string strFile));
 
     /*
     * Salvage data from a file that Verify says is bad.
@@ -113,20 +99,20 @@ public:
     * NOTE: reads the entire database into memory, so cannot be used
     * for huge databases.
     */
-    typedef std::pair<std::vector<unsigned char>, std::vector<unsigned char> > KeyValPair;
+    using KeyValPair = std::pair<std::vector<unsigned char>, std::vector<unsigned char>>;
     bool Salvage(std::string strFile, bool fAggressive, std::vector<KeyValPair> &vResult);
 
-    bool Open(boost::filesystem::path pathEnv_);
+    bool Open(fs::path pathEnv_);
+    bool TxnCheckPoint(uint32_t kbyte, uint32_t min);
     void Close();
+    bool Remove(const std::string &strFile);
+    bool Rename(const std::string &strFileRes, const std::string &strFile);
+    bool DbRename(const std::string &filename, const std::string &newFilename);
     void Flush(bool fShutdown);
     void CheckpointLSN(std::string strFile);
 
-    void SetDetach(bool fDetachDB_) noexcept {
-        fDetachDB = fDetachDB_;
-    }
-    bool GetDetach() const {
-        return fDetachDB;
-    }
+    void SetDetach(bool fDetachDB_) noexcept {fDetachDB = fDetachDB_;}
+    bool GetDetach() const {return fDetachDB;}
 
     void CloseDb(const std::string &strFile);
     bool RemoveDb(const std::string &strFile);
@@ -142,18 +128,17 @@ public:
 };
 
 /**
-** RAII class that provides access to a Berkeley database
-** CTxDB(Berkeley), CWalletDB
-** Type Db Dbt : Berkeley DB
-*/
-class CDB : public CDBCommon
+ * RAII class that provides access to a Berkeley database
+ * using: CTxDB, CWalletDB
+ */
+class CDB
 {
 private:
-    CDB(); // {}
-    CDB(const CDB &); // {}
-    CDB(const CDB &&); // {}
-    CDB &operator=(const CDB &); // {}
-    CDB &operator=(const CDB &&); // {}
+    CDB()=delete;
+    CDB(const CDB &)=delete;
+    CDB(CDB &&)=delete;
+    CDB &operator=(const CDB &)=delete;
+    CDB &operator=(CDB &&)=delete;
 
 protected:
     Db *pdb;
@@ -161,7 +146,7 @@ protected:
     DbTxn *activeTxn;
     bool fReadOnly;
 
-    explicit CDB(const char *pszFile, const char *pszMode = "r+");    // open DB
+    explicit CDB(const char *pszFile, const char *pszMode = "r+"); // open DB
     ~CDB() {
         Close();
     }
@@ -200,7 +185,6 @@ protected:
         }
 
         // Clear and free memory
-        //std::memset(datValue.get_data(), 0, datValue.get_size());
         cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         ::free(datValue.get_data());
         return (ret == 0);
@@ -231,8 +215,6 @@ protected:
         int ret = pdb->put(activeTxn, &datKey, &datValue, (fOverwrite ? 0 : DB_NOOVERWRITE));
 
         // Clear memory in case it was a private key
-        //std::memset(datKey.get_data(), 0, datKey.get_size());
-        //std::memset(datValue.get_data(), 0, datValue.get_size());
         cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         return (ret == 0);
@@ -257,7 +239,6 @@ protected:
         int ret = pdb->del(activeTxn, &datKey, 0);
 
         // Clear memory
-        //std::memset(datKey.get_data(), 0, datKey.get_size());
         cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         return (ret == 0 || ret == DB_NOTFOUND);
     }
@@ -278,7 +259,6 @@ protected:
         int ret = pdb->exists(activeTxn, &datKey, 0);
 
         // Clear memory
-        //std::memset(datKey.get_data(), 0, datKey.get_size());
         cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         return (ret == 0);
     }
@@ -317,7 +297,7 @@ protected:
         if (ret != 0) {
             return ret;
         }
-        else if (datKey.get_data() == NULL || datValue.get_data() == NULL) {
+        else if (datKey.get_data() == nullptr || datValue.get_data() == nullptr) {
             return 99999;
         }
 
@@ -330,8 +310,6 @@ protected:
         ssValue.write((char *)datValue.get_data(), datValue.get_size());
 
         // Clear and free memory
-        //std::memset(datKey.get_data(), 0, datKey.get_size());
-        //std::memset(datValue.get_data(), 0, datValue.get_size());
         cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
         ::free(datKey.get_data());
@@ -345,7 +323,7 @@ public:
             return false;
         }
 
-        DbTxn *ptxn = CDBEnv::bitdb.TxnBegin();
+        DbTxn *ptxn = CDBEnv::get_instance().TxnBegin();
         if (! ptxn) {
             return false;
         }
@@ -382,8 +360,6 @@ public:
     bool WriteVersion(int nVersion) {
         return Write(std::string("version"), nVersion);
     }
-
-    ///////
 
     static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
 };

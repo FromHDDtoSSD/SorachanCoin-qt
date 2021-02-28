@@ -45,6 +45,7 @@ public:
 
 private:
     static std::string strWalletFileName;
+    static std::string strWalletqFileName;
 
     static bool InitError(const std::string &str);
     static bool InitWarning(const std::string &str);

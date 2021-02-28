@@ -41,6 +41,7 @@
 
 CClientUIInterface CClientUIInterface::uiInterface;
 std::string entry::strWalletFileName;
+std::string entry::strWalletqFileName;
 CWallet *entry::pwalletMain = nullptr;
 enum entry::bip66Mode entry::b66mode = entry::Bip66_ADVISORY;
 
@@ -80,9 +81,9 @@ void boot::Shutdown(void *parg)
         args_bool::fRequestShutdown = true;
         block_info::nTransactionsUpdated++;
         // CTxDB().Close();
-        CDBEnv::bitdb.Flush(false);
+        CDBEnv::get_instance().Flush(false);
         net_node::StopNode();
-        CDBEnv::bitdb.Flush(true);
+        CDBEnv::get_instance().Flush(true);
         boost::filesystem::remove(iofs::GetPidFile());
 
         wallet_process::manage::UnregisterWallet(entry::pwalletMain);
@@ -563,7 +564,7 @@ std::string entry::HelpMessage()
 bool entry::AppInit2(bool restart/*=false*/)
 {
     // ********************************************************* Test and Autocheckpoint load (if DEBUG)
-    CMString_test();
+    //CMString_test();
 
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
@@ -732,7 +733,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         args_bool::fDebugNet = map_arg::GetBoolArg("-debugnet");
     }
 
-    CDBEnv::bitdb.SetDetach(map_arg::GetBoolArg("-detachdb", false));
+    CDBEnv::get_instance().SetDetach(map_arg::GetBoolArg("-detachdb", false));
 
 #if !defined(WIN32) && !defined(QT_GUI)
     args_bool::fDaemon = map_arg::GetBoolArg("-daemon");
@@ -790,12 +791,16 @@ bool entry::AppInit2(bool restart/*=false*/)
     //I_DEBUG_CS("Step 4a: wallet filename get ...");
     std::string strDataDir = iofs::GetDataDir().string();
     strWalletFileName = map_arg::GetArg("-wallet", "wallet.dat");
+    //strWalletqFileName = map_arg::GetArg("-walletq", "walletq.dat");
 
     // strWalletFileName must be a plain filename without a directory
     //I_DEBUG_CS("Step 4b: wallet filename only check ...");
-    if (strWalletFileName != boost::filesystem::basename(strWalletFileName) + boost::filesystem::extension(strWalletFileName)) {
+    if (strWalletFileName != fs::basename(strWalletFileName) + fs::extension(strWalletFileName)) {
         return InitError(tfm::format(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
     }
+    //if (strWalletqFileName != fs::basename(strWalletqFileName) + fs::extension(strWalletqFileName)) {
+    //    return InitError(tfm::format(_("Walletq %s resides outside data directory %s."), strWalletqFileName.c_str(), strDataDir.c_str()));
+    //}
 
     //
     // Lock File
@@ -867,20 +872,20 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
 
-    if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
+    if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
 
     if (map_arg::GetBoolArg("-salvagewallet")) {
         // Recover readable keypairs:
-        if (! CWalletDB::Recover(CDBEnv::bitdb, strWalletFileName, true)) {
+        if (! CWalletDB::Recover(CDBEnv::get_instance(), strWalletFileName, true)) {
             return false;
         }
     }
 
     if (boost::filesystem::exists(iofs::GetDataDir() / strWalletFileName)) {
-        CDBEnv::VerifyResult r = CDBEnv::bitdb.Verify(strWalletFileName, CWalletDB::Recover);
+        CDBEnv::VerifyResult r = CDBEnv::get_instance().Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK) {
             std::string msg = tfm::format(_("Warning: wallet.dat corrupt, data salvaged!"
                                           " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
@@ -1067,7 +1072,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 7: load blockchain
     I_DEBUG_CS("Step 7: load blockchain")
 
-    if (! CDBEnv::bitdb.Open(iofs::GetDataDir())) {
+    if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
