@@ -45,10 +45,14 @@ namespace dbparam
 /**
  * DB Manager
  */
-class CDBEnv
+class CDBEnv final
 {
 private:
     static constexpr int dbcache_size = 25;
+    CDBEnv(const CDBEnv &)=delete;
+    CDBEnv(CDBEnv &&)=delete;
+    CDBEnv &operator=(const CDBEnv &)=delete;
+    CDBEnv &operator=(CDBEnv &&)=delete;
 
     CDBEnv();
     ~CDBEnv();
@@ -59,6 +63,7 @@ private:
     fs::path pathEnv;
     std::string strPath;
     DbEnv dbenv;
+    std::map<std::string, int> mapFileUseCount;
 
     void EnvShutdown();
 
@@ -71,9 +76,64 @@ public:
     Db *create() {
         return new(std::nothrow) Db(&dbenv, 0);
     }
+    void IncUseCount(const std::string &strFile, bool fempty = true) {
+        LOCK(cs_db);
+        if(fempty==false && mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("CDBEnv inc: No register strFile");
+        if(mapFileUseCount.count(strFile)==0)
+            mapFileUseCount.insert(std::make_pair(strFile, 0));
+        ++mapFileUseCount[strFile];
+    }
+    void DecUseCount(const std::string &strFile) {
+        LOCK(cs_db);
+        if(mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("CDBEnv dec: No register strFile");
+        if(mapFileUseCount[strFile]==0)
+            throw std::runtime_error("CDBEnv: strFile is already removed");
+        --mapFileUseCount[strFile];
+    }
+    bool ExistsFileCount(const std::string &strFile) const {
+        LOCK(cs_db);
+        return mapFileUseCount.count(strFile)>0;
+    }
+    int GetFileCount(const std::string &strFile) const {
+        LOCK(cs_db);
+        if(mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("CDBEnv getfilecount: No register strFile");
+        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
+        return (*mi).second;
+    }
+    void EraseFileCount(const std::string &strFile) {
+        LOCK(cs_db);
+        if(ExistsFileCount(strFile))
+            mapFileUseCount.erase(strFile);
+    }
+    int GetRefCount() const { // when 0, No using DB.
+        LOCK(cs_db);
+        int RefCount = 0;
+        for(const auto &mi: mapFileUseCount)
+            RefCount += mi.second;
+        return RefCount;
+    }
+    bool FindFile(const std::string &strFile) const {
+        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
+        return (mi != mapFileUseCount.end());
+    }
+    bool Flush(const std::string &strFile) {
+        LOCK(cs_db);
+        if(GetRefCount()>0)
+            return false;
+        std::map<std::string, int>::iterator mi = mapFileUseCount.find(strFile);
+        if(mi != mapFileUseCount.end()) {
+            CloseDb(strFile);
+            CheckpointLSN(strFile);
+            mapFileUseCount.erase(mi);
+            return true;
+        } else
+            return false;
+    }
 
     mutable CCriticalSection cs_db;
-    std::map<std::string, int> mapFileUseCount;
     std::map<std::string, Db *> mapDb; // database handle
 
     //void MakeMock();

@@ -691,14 +691,16 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     // Make this thread recognisable as the wallet flushing thread
     //
     bitthread::RenameThread(strCoinName "-wallet");
-
     const std::string &strFile = ((const std::string *)parg)[0];
 
-    static bool fOneThread = false;
-    if (fOneThread) {
-        return;
+    {
+        LOCK(CDBEnv::get_instance().cs_db);
+        static bool fOneThread = false;
+        if (fOneThread) {
+            return;
+        }
+        fOneThread = true;
     }
-    fOneThread = true;
 
     if (! map_arg::GetBoolArg("-flushwallet", true)) {
         return;
@@ -717,35 +719,17 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
         }
 
         if (nLastFlushed != dbparam::nWalletDBUpdated && bitsystem::GetTime() - nLastWalletUpdate >= 2) {
-            TRY_LOCK(CDBEnv::get_instance().cs_db,lockDb);
+            TRY_LOCK(CDBEnv::get_instance().cs_db, lockDb);
             if (lockDb) {
-                //
                 // Don't do this if any databases are in use
-                //
-                int nRefCount = 0;
-                std::map<std::string, int>::iterator mi = CDBEnv::get_instance().mapFileUseCount.begin();
-                while (mi != CDBEnv::get_instance().mapFileUseCount.end())
-                {
-                    nRefCount += (*mi).second;
-                    mi++;
-                }
-
-                if (nRefCount == 0 && !args_bool::fShutdown) {
-                    std::map<std::string, int>::iterator mi = CDBEnv::get_instance().mapFileUseCount.find(strFile);
-                    if (mi != CDBEnv::get_instance().mapFileUseCount.end()) {
-                        logging::LogPrintf("Flushing wallet.dat\n");
-                        nLastFlushed = dbparam::nWalletDBUpdated;
-                        int64_t nStart = util::GetTimeMillis();
-
-                        //
-                        // Flush wallet.dat so it's self contained
-                        //
-                        CDBEnv::get_instance().CloseDb(strFile);
-                        CDBEnv::get_instance().CheckpointLSN(strFile);
-
-                        CDBEnv::get_instance().mapFileUseCount.erase(mi++);
-                        logging::LogPrintf("Flushed wallet.dat %" PRId64 "ms\n", util::GetTimeMillis() - nStart);
-                    }
+                const int nRefCount = CDBEnv::get_instance().GetRefCount();
+                if (nRefCount == 0 && CDBEnv::get_instance().FindFile(strFile) && !args_bool::fShutdown) {
+                    logging::LogPrintf("Flushing %s\n", strFile.c_str());
+                    nLastFlushed = dbparam::nWalletDBUpdated;
+                    int64_t nStart = util::GetTimeMillis();
+                    // Flush wallet.dat so it's self contained
+                    if(CDBEnv::get_instance().Flush(strFile))
+                        logging::LogPrintf("Flushed %s %" PRId64 "ms\n", strFile.c_str(), util::GetTimeMillis() - nStart);
                 }
             }
         }
@@ -761,13 +745,15 @@ bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &str
     {
         {
             LOCK(CDBEnv::get_instance().cs_db);
-            if (!CDBEnv::get_instance().mapFileUseCount.count(wallet.strWalletFile) || CDBEnv::get_instance().mapFileUseCount[wallet.strWalletFile] == 0) {
+            //if (!CDBEnv::get_instance().mapFileUseCount.count(wallet.strWalletFile) || CDBEnv::get_instance().mapFileUseCount[wallet.strWalletFile] == 0) {
+            if (!CDBEnv::get_instance().ExistsFileCount(wallet.strWalletFile) || CDBEnv::get_instance().GetFileCount(wallet.strWalletFile)==0) {
                 //
                 // Flush log data to the dat file
                 //
-                CDBEnv::get_instance().CloseDb(wallet.strWalletFile);
-                CDBEnv::get_instance().CheckpointLSN(wallet.strWalletFile);
-                CDBEnv::get_instance().mapFileUseCount.erase(wallet.strWalletFile);
+                //CDBEnv::get_instance().CloseDb(wallet.strWalletFile);
+                //CDBEnv::get_instance().CheckpointLSN(wallet.strWalletFile);
+                //CDBEnv::get_instance().mapFileUseCount.erase(wallet.strWalletFile);
+                CDBEnv::get_instance().Flush(wallet.strWalletFile);
 
                 //
                 // Copy wallet.dat or walletq.dat

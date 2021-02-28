@@ -258,7 +258,8 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
         }
 
         strFile = pszFile;
-        ++CDBEnv::get_instance().mapFileUseCount[strFile];
+        //++CDBEnv::get_instance().mapFileUseCount[strFile];
+        CDBEnv::get_instance().IncUseCount(strFile);
         pdb = CDBEnv::get_instance().mapDb[strFile];
         if (pdb == nullptr) {
             //pdb = new(std::nothrow) Db(&CDBEnv::get_instance().dbenv, 0);
@@ -286,10 +287,14 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
 
                 //debugcs::instance() << "CDB::CDB open db: " << ret << debugcs::endl();
                 if (ret != 0) {
-                    if(cc < retry_counter - 1) {util::Sleep(3000); continue;}
+                    if(cc < retry_counter - 1) {
+                        util::Sleep(1000);
+                        continue;
+                    }
                     delete pdb;
                     pdb = nullptr;
-                    --CDBEnv::get_instance().mapFileUseCount[strFile];
+                    //--CDBEnv::get_instance().mapFileUseCount[strFile];
+                    CDBEnv::get_instance().DecUseCount(strFile);
                     strFile.clear();
                     throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", pszFile, ret));
                 } else {
@@ -342,10 +347,11 @@ void CDB::Close()
     //CDBEnv::get_instance().dbenv.txn_checkpoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes, 0);
     CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
 
-    {
-        LOCK(CDBEnv::get_instance().cs_db);
-        --CDBEnv::get_instance().mapFileUseCount[strFile];
-    }
+    //{
+    //    LOCK(CDBEnv::get_instance().cs_db);
+    //    --CDBEnv::get_instance().mapFileUseCount[strFile];
+    //}
+    CDBEnv::get_instance().DecUseCount(strFile);
 }
 
 void CDBEnv::CloseDb(const std::string &strFile)
@@ -379,11 +385,13 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
     {
         {
             LOCK(CDBEnv::get_instance().cs_db);
-            if (!CDBEnv::get_instance().mapFileUseCount.count(strFile) || CDBEnv::get_instance().mapFileUseCount[strFile] == 0) {
+            //if (!CDBEnv::get_instance().mapFileUseCount.count(strFile) || CDBEnv::get_instance().mapFileUseCount[strFile] == 0) {
+            if (!CDBEnv::get_instance().ExistsFileCount(strFile) || CDBEnv::get_instance().GetFileCount(strFile)==0) {
                 // Flush log data to the dat file
                 CDBEnv::get_instance().CloseDb(strFile);
                 CDBEnv::get_instance().CheckpointLSN(strFile);
-                CDBEnv::get_instance().mapFileUseCount.erase(strFile);
+                //CDBEnv::get_instance().mapFileUseCount.erase(strFile);
+                CDBEnv::get_instance().EraseFileCount(strFile);
 
                 bool fSuccess = true;
                 logging::LogPrintf("Rewriting %s...\n", strFile.c_str());
