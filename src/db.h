@@ -64,6 +64,7 @@ private:
     std::string strPath;
     DbEnv dbenv;
     std::map<std::string, int> mapFileUseCount;
+    std::map<std::string, Db *> mapDb; // database handle
 
     void EnvShutdown();
 
@@ -133,8 +134,20 @@ public:
             return false;
     }
 
+    Db *getDb(const std::string &strFile) {
+        LOCK(cs_db);
+        if(mapDb.count(strFile)==0)
+            mapDb.insert(std::make_pair(strFile, nullptr));
+        return mapDb[strFile];
+    }
+    void setDb(const std::string &strFile, Db *pdb) {
+        LOCK(cs_db);
+        if(mapDb.count(strFile)==0)
+            throw std::runtime_error("CDBEnv setDb: setDb doesn't insert key");
+        mapDb[strFile] = pdb;
+    }
+
     mutable CCriticalSection cs_db;
-    std::map<std::string, Db *> mapDb; // database handle
 
     //void MakeMock();
     bool IsMock() const { return fMockDb; }

@@ -236,16 +236,14 @@ void CDBEnv::CheckpointLSN(std::string strFile)
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr)
 {
     const int retry_counter = 10;
-    if (pszFile == nullptr) {
+    if (pszFile == nullptr)
         return;
-    }
 
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
     bool fCreate = ::strchr(pszMode, 'c') != nullptr;
     unsigned int nFlags = DB_THREAD;
-    if (fCreate) {
+    if (fCreate)
         nFlags |= DB_CREATE;
-    }
 
     {
         LOCK(CDBEnv::get_instance().cs_db);
@@ -258,11 +256,9 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
         }
 
         strFile = pszFile;
-        //++CDBEnv::get_instance().mapFileUseCount[strFile];
         CDBEnv::get_instance().IncUseCount(strFile);
-        pdb = CDBEnv::get_instance().mapDb[strFile];
+        pdb = CDBEnv::get_instance().getDb(strFile);
         if (pdb == nullptr) {
-            //pdb = new(std::nothrow) Db(&CDBEnv::get_instance().dbenv, 0);
             pdb = CDBEnv::get_instance().create();
             if (pdb == nullptr) {
                 throw std::runtime_error("CDB() : failed to allocate memory");
@@ -285,7 +281,6 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
                     nFlags,                      // Flags
                     0);
 
-                //debugcs::instance() << "CDB::CDB open db: " << ret << debugcs::endl();
                 if (ret != 0) {
                     if(cc < retry_counter - 1) {
                         util::Sleep(1000);
@@ -293,7 +288,6 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
                     }
                     delete pdb;
                     pdb = nullptr;
-                    //--CDBEnv::get_instance().mapFileUseCount[strFile];
                     CDBEnv::get_instance().DecUseCount(strFile);
                     strFile.clear();
                     throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", pszFile, ret));
@@ -302,6 +296,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
                 }
             }
 
+            CDBEnv::get_instance().setDb(strFile, pdb);
             if (fCreate && !Exists(std::string("version"))) {
                 bool fTmp = fReadOnly;
                 fReadOnly = false;
@@ -309,7 +304,6 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
                 fReadOnly = fTmp;
             }
 
-            CDBEnv::get_instance().mapDb[strFile] = pdb;
         }
     }
 }
@@ -344,13 +338,7 @@ void CDB::Close()
         nMinutes = 5;
     }
 
-    //CDBEnv::get_instance().dbenv.txn_checkpoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes, 0);
     CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
-
-    //{
-    //    LOCK(CDBEnv::get_instance().cs_db);
-    //    --CDBEnv::get_instance().mapFileUseCount[strFile];
-    //}
     CDBEnv::get_instance().DecUseCount(strFile);
 }
 
