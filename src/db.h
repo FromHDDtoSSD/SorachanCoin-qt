@@ -49,6 +49,8 @@ class CDBEnv final
 {
 private:
     static constexpr int dbcache_size = 25;
+    static constexpr int retry_counter = 10; // Create
+
     CDBEnv(const CDBEnv &)=delete;
     CDBEnv(CDBEnv &&)=delete;
     CDBEnv &operator=(const CDBEnv &)=delete;
@@ -68,15 +70,25 @@ private:
 
     void EnvShutdown();
 
+    Db *getDb(const std::string &strFile) {
+        LOCK(cs_db);
+        if(mapDb.count(strFile)==0)
+            mapDb.insert(std::make_pair(strFile, nullptr));
+        return mapDb[strFile];
+    }
+    void setDb(const std::string &strFile, Db *pdb) {
+        LOCK(cs_db);
+        if(mapDb.count(strFile)==0)
+            throw std::runtime_error("CDBEnv setDb: setDb doesn't insert key");
+        mapDb[strFile] = pdb;
+    }
+
 public:
     static CDBEnv &get_instance() {
         static CDBEnv bitdb;
         return bitdb;
     }
 
-    Db *create() {
-        return new(std::nothrow) Db(&dbenv, 0);
-    }
     void IncUseCount(const std::string &strFile, bool fempty = true) {
         LOCK(cs_db);
         if(fempty==false && mapFileUseCount.count(strFile)==0)
@@ -134,17 +146,8 @@ public:
             return false;
     }
 
-    Db *getDb(const std::string &strFile) {
-        LOCK(cs_db);
-        if(mapDb.count(strFile)==0)
-            mapDb.insert(std::make_pair(strFile, nullptr));
-        return mapDb[strFile];
-    }
-    void setDb(const std::string &strFile, Db *pdb) {
-        LOCK(cs_db);
-        if(mapDb.count(strFile)==0)
-            throw std::runtime_error("CDBEnv setDb: setDb doesn't insert key");
-        mapDb[strFile] = pdb;
+    Db *createDb() {
+        return new(std::nothrow) Db(&dbenv, 0);
     }
 
     mutable CCriticalSection cs_db;
@@ -175,6 +178,7 @@ public:
     using KeyValPair = std::pair<std::vector<unsigned char>, std::vector<unsigned char>>;
     bool Salvage(std::string strFile, bool fAggressive, std::vector<KeyValPair> &vResult);
 
+    Db *Create(const std::string &strFile, unsigned int nFlags);
     bool Open(fs::path pathEnv_);
     bool TxnCheckPoint(uint32_t kbyte, uint32_t min);
     void Close();

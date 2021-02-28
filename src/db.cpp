@@ -233,9 +233,61 @@ void CDBEnv::CheckpointLSN(std::string strFile)
     dbenv.lsn_reset(strFile.c_str(), 0);
 }
 
+Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
+{
+    LOCK(cs_db);
+    if (! Open(iofs::GetDataDir())) {
+        if(args_bool::fShutdown)
+            return nullptr;
+        else
+            throw std::runtime_error("CDBEnv::bitdb : failed to open file");
+    }
+
+    IncUseCount(strFile);
+    Db *pdb = getDb(strFile);
+    if (pdb == nullptr) {
+        pdb = createDb();
+        if (pdb == nullptr)
+            throw std::runtime_error("CDB() : failed to allocate memory");
+
+        bool fMockDb = IsMock();
+        if (fMockDb) {
+            DbMpoolFile *mpf = pdb->get_mpf();
+            int ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);
+            if (ret != 0)
+                throw std::runtime_error(tfm::format("CDB() : failed to configure for no temp file backing for database %s", strFile.c_str()));
+        }
+
+        for (int cc = 0; cc < retry_counter; ++cc) {
+            int ret = pdb->open(nullptr,             // Txn pointer
+                fMockDb ? nullptr : strFile.c_str(), // Filename
+                "main",                              // Logical db name
+                DB_BTREE,                            // Database type
+                nFlags,                              // Flags
+                0);
+
+            if (ret != 0) {
+                if(cc < retry_counter - 1) {
+                    util::Sleep(1000);
+                    continue;
+                }
+                delete pdb;
+                pdb = nullptr;
+                DecUseCount(strFile);
+                //strFile.clear();
+                throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", strFile.c_str(), ret));
+            } else {
+                break;
+            }
+        }
+
+        setDb(strFile, pdb);
+    }
+    return pdb;
+}
+
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr)
 {
-    const int retry_counter = 10;
     if (pszFile == nullptr)
         return;
 
@@ -247,63 +299,13 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
 
     {
         LOCK(CDBEnv::get_instance().cs_db);
-        if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
-            if(args_bool::fShutdown) {
-                return;
-            } else {
-                throw std::runtime_error("CDBEnv::bitdb : failed to open file");
-            }
-        }
-
         strFile = pszFile;
-        CDBEnv::get_instance().IncUseCount(strFile);
-        pdb = CDBEnv::get_instance().getDb(strFile);
-        if (pdb == nullptr) {
-            pdb = CDBEnv::get_instance().create();
-            if (pdb == nullptr) {
-                throw std::runtime_error("CDB() : failed to allocate memory");
-            }
-
-            bool fMockDb = CDBEnv::get_instance().IsMock();
-            if (fMockDb) {
-                DbMpoolFile *mpf = pdb->get_mpf();
-                int ret = mpf->set_flags(DB_MPOOL_NOFILE, 1);
-                if (ret != 0) {
-                    throw std::runtime_error(tfm::format("CDB() : failed to configure for no temp file backing for database %s", pszFile));
-                }
-            }
-
-            for (int cc = 0; cc < retry_counter; ++cc) {
-                int ret = pdb->open(nullptr,     // Txn pointer
-                    fMockDb ? nullptr : pszFile, // Filename
-                    "main",                      // Logical db name
-                    DB_BTREE,                    // Database type
-                    nFlags,                      // Flags
-                    0);
-
-                if (ret != 0) {
-                    if(cc < retry_counter - 1) {
-                        util::Sleep(1000);
-                        continue;
-                    }
-                    delete pdb;
-                    pdb = nullptr;
-                    CDBEnv::get_instance().DecUseCount(strFile);
-                    strFile.clear();
-                    throw std::runtime_error(tfm::format("CDB() : can't open database file %s, error %d", pszFile, ret));
-                } else {
-                    break;
-                }
-            }
-
-            CDBEnv::get_instance().setDb(strFile, pdb);
-            if (fCreate && !Exists(std::string("version"))) {
-                bool fTmp = fReadOnly;
-                fReadOnly = false;
-                WriteVersion(version::CLIENT_VERSION);
-                fReadOnly = fTmp;
-            }
-
+        pdb = CDBEnv::get_instance().Create(strFile, nFlags);
+        if (fCreate && !Exists(std::string("version"))) {
+            bool fTmp = fReadOnly;
+            fReadOnly = false;
+            WriteVersion(version::CLIENT_VERSION);
+            fReadOnly = fTmp;
         }
     }
 }
@@ -388,7 +390,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                 { // surround usage of db with extra {}
                     CDB db(strFile.c_str(), "r");
                     //Db *pdbCopy = new(std::nothrow) Db(&CDBEnv::get_instance().dbenv, 0);
-                    Db *pdbCopy = CDBEnv::get_instance().create();
+                    Db *pdbCopy = CDBEnv::get_instance().createDb();
                     if (pdbCopy == nullptr) {
                         logging::LogPrintf("Memory allocate failure for CDB::Rewrite.");
                         return false;
