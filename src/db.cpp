@@ -18,6 +18,7 @@
 #endif
 
 unsigned int dbparam::nWalletDBUpdated = 0;
+CCriticalSection CDBEnv::cs_db;
 
 bool dbparam::IsChainFile(std::string strFile) {
     return (strFile == "blkindex.dat");
@@ -209,22 +210,16 @@ bool CDBEnv::Salvage(std::string strFile, bool fAggressive, std::vector<CDBEnv::
     //
 
     std::string strLine;
-    while (!strDump.eof() && strLine != "HEADER=END")
-    {
+    while (!strDump.eof() && strLine != "HEADER=END") {
         std::getline(strDump, strLine); // Skip past header
     }
 
     std::string keyHex, valueHex;
-    while (!strDump.eof() && keyHex != "DATA=END")
-    {
+    while (!strDump.eof() && keyHex != "DATA=END") {
         std::getline(strDump, keyHex);
         if (keyHex != "DATA=END") {
             std::getline(strDump, valueHex);
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-            vResult.push_back(std::make_pair(strenc::ParseHex(keyHex).get_std_vector(), strenc::ParseHex(valueHex).get_std_vector()));
-#else
             vResult.push_back(std::make_pair(strenc::ParseHex(keyHex), strenc::ParseHex(valueHex)));
-#endif
         }
     }
 
@@ -241,6 +236,23 @@ void CDBEnv::CheckpointLSN(std::string strFile)
     dbenv.lsn_reset(strFile.c_str(), 0);
 }
 
+std::unique_ptr<Db> CDBEnv::TempCreate(DbTxn *txnid, const std::string &strFile, unsigned int nFlags) {
+    std::unique_ptr<Db> pdb(new(std::nothrow) Db(&dbenv, 0));
+    if(pdb) {
+        int ret = pdb->open(txnid,                // Txn pointer
+                            strFile.c_str(),      // Filename
+                            "main",               // Logical db name
+                            DB_BTREE,             // Database type
+                            nFlags,               // Flags
+                            0);
+        if(ret > 0) {
+            pdb.reset(); // release and nullptr
+            assert(pdb.get()==nullptr);
+        }
+    }
+    return std::move(pdb);
+}
+
 Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
 {
     LOCK(cs_db);
@@ -252,9 +264,9 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
     }
 
     IncUseCount(strFile);
-    Db *pdb = getDb(strFile);
+    Db *&pdb = getDb(strFile);
     if (pdb == nullptr) {
-        pdb = createDb();
+        pdb = new(std::nothrow) Db(&dbenv, 0);
         if (pdb == nullptr)
             throw std::runtime_error("CDB() : failed to allocate memory");
 
@@ -291,7 +303,7 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
             }
         }
 
-        setDb(strFile, pdb);
+        //setDb(strFile, pdb);
     }
     return pdb;
 }
@@ -491,19 +503,8 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
 
                 { // surround usage of db with extra {}
                     CDB db(strFile.c_str(), "r");
-                    Db *pdbCopy = CDBEnv::get_instance().createDb();
-                    if (pdbCopy == nullptr) {
-                        logging::LogPrintf("Memory allocate failure for CDB::Rewrite.");
-                        return false;
-                    }
-
-                    int ret = pdbCopy->open(nullptr,  // Txn pointer
-                        strFileRes.c_str(),           // Filename
-                        "main",                       // Logical db name
-                        DB_BTREE,                     // Database type
-                        DB_CREATE,                    // Flags
-                        0);
-                    if (ret > 0) {
+                    std::unique_ptr<Db> pdbCopy = CDBEnv::get_instance().TempCreate(nullptr, strFileRes, DB_CREATE);
+                    if(pdbCopy.get() == nullptr) {
                         logging::LogPrintf("Cannot create database file %s\n", strFileRes.c_str());
                         fSuccess = false;
                     }
@@ -551,7 +552,6 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                         if (pdbCopy->close(0)) {
                             fSuccess = false;
                         }
-                        delete pdbCopy;
                     }
                 }
                 if (fSuccess) {

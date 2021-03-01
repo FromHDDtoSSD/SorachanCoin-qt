@@ -70,21 +70,18 @@ private:
 
     void EnvShutdown();
 
-    Db *getDb(const std::string &strFile) {
+    Db *&getDb(const std::string &strFile) {
         LOCK(cs_db);
         if(mapDb.count(strFile)==0)
             mapDb.insert(std::make_pair(strFile, nullptr));
         return mapDb[strFile];
     }
-    void setDb(const std::string &strFile, Db *pdb) {
-        LOCK(cs_db);
-        if(mapDb.count(strFile)==0)
-            throw std::runtime_error("CDBEnv setDb: setDb doesn't insert key");
-        mapDb[strFile] = pdb;
-    }
 
 public:
+    static CCriticalSection cs_db;
+
     static CDBEnv &get_instance() {
+        LOCK(cs_db);
         static CDBEnv bitdb;
         return bitdb;
     }
@@ -147,12 +144,6 @@ public:
             return false;
     }
 
-    Db *createDb() {
-        return new(std::nothrow) Db(&dbenv, 0);
-    }
-
-    mutable CCriticalSection cs_db;
-
     //void MakeMock();
     //bool IsMock() const { return fMockDb; }
 
@@ -176,8 +167,13 @@ public:
     * NOTE: reads the entire database into memory, so cannot be used
     * for huge databases.
     */
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+    using KeyValPair = std::pair<prevector<PREVECTOR_N, unsigned char>, prevector<PREVECTOR_N, unsigned char>>;
+#else
     using KeyValPair = std::pair<std::vector<unsigned char>, std::vector<unsigned char>>;
+#endif
     bool Salvage(std::string strFile, bool fAggressive, std::vector<KeyValPair> &vResult);
+    std::unique_ptr<Db> TempCreate(DbTxn *txnid, const std::string &strFile, unsigned int nFlags);
 
     Db *Create(const std::string &strFile, unsigned int nFlags);
     bool Open(fs::path pathEnv_);

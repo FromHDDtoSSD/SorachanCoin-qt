@@ -1016,7 +1016,6 @@ bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
     int64_t now = bitsystem::GetTime();
     std::string newFilename = tfm::format("wallet.%" PRId64 ".bak", now);
 
-    //int result = dbenv.dbenv.dbrename(NULL, filename.c_str(), NULL, newFilename.c_str(), DB_AUTO_COMMIT);
     if (dbenv.DbRename(filename, newFilename)) {
         logging::LogPrintf("Renamed %s to %s\n", filename.c_str(), newFilename.c_str());
     } else {
@@ -1033,15 +1032,8 @@ bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
     logging::LogPrintf("Salvage(aggressive) found %" PRIszu " records\n", salvagedData.size());
 
     bool fSuccess = allOK;
-    //Db* pdbCopy = new Db(&dbenv.dbenv, 0);
-    Db *pdbCopy = dbenv.createDb();
-    int ret = pdbCopy->open(NULL,                    // Txn pointer
-                            filename.c_str(),        // Filename
-                            "main",                  // Logical db name
-                            DB_BTREE,                // Database type
-                            DB_CREATE,               // Flags
-                            0);
-    if (ret > 0) {
+    std::unique_ptr<Db> pdbCopy = dbenv.TempCreate(nullptr, filename, DB_CREATE);
+    if(pdbCopy.get()==nullptr) {
         logging::LogPrintf("Cannot create database file %s\n", filename.c_str());
         return false;
     }
@@ -1053,16 +1045,10 @@ bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
     // Data Salvage
     //
     DbTxn *ptxn = dbenv.TxnBegin();
-    for(CDBEnv::KeyValPair &row: salvagedData)
-    {
+    for(CDBEnv::KeyValPair &row: salvagedData) {
         if (fOnlyKeys) {
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-            CDataStream ssKey(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.first), SER_DISK, version::CLIENT_VERSION);
-            CDataStream ssValue(prevector<PREVECTOR_N, uint8_t>::get_prevector(row.second), SER_DISK, version::CLIENT_VERSION);
-#else
             CDataStream ssKey(row.first, SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(row.second, SER_DISK, version::CLIENT_VERSION);
-#endif
 
             std::string strType, strErr;
             bool fReadOK = ReadKeyValue(&dummyWallet, ssKey, ssValue, wss, strType, strErr);
@@ -1085,7 +1071,6 @@ bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
 
     ptxn->commit(0);
     pdbCopy->close(0);
-    delete pdbCopy;
 
     return fSuccess;
 }
