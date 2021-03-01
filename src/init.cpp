@@ -879,12 +879,13 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     if (map_arg::GetBoolArg("-salvagewallet")) {
         // Recover readable keypairs:
-        if (! CWalletDB::Recover(CDBEnv::get_instance(), strWalletFileName, true)) {
+        // keys only salvage
+        if (! CWalletDB::Recover(strWalletFileName, true)) {
             return false;
         }
     }
 
-    if (boost::filesystem::exists(iofs::GetDataDir() / strWalletFileName)) {
+    if (fs::exists(iofs::GetDataDir() / strWalletFileName)) {
         CDBEnv::VerifyResult r = CDBEnv::get_instance().Verify(strWalletFileName, CWalletDB::Recover);
         if (r == CDBEnv::RECOVER_OK) {
             std::string msg = tfm::format(_("Warning: wallet.dat corrupt, data salvaged!"
@@ -892,9 +893,13 @@ bool entry::AppInit2(bool restart/*=false*/)
                                           " your balance or transactions are incorrect you should"
                                           " restore from a backup."), strDataDir.c_str());
             CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
-        }
-        if (r == CDBEnv::RECOVER_FAIL) {
+        } else if (r == CDBEnv::RECOVER_FAIL) {
             return InitError(_("wallet.dat corrupt, salvage failed"));
+        } else if (r == CDBEnv::VERIFY_OK) {
+            // Verify OK (normal)
+            logging::LogPrintf("wallet verify ok");
+        } else {
+            return InitError(_("wallet verufy status corrupt"));
         }
     }
 

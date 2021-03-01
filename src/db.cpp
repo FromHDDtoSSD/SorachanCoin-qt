@@ -19,6 +19,14 @@
 
 unsigned int dbparam::nWalletDBUpdated = 0;
 
+bool dbparam::IsChainFile(std::string strFile) {
+    return (strFile == "blkindex.dat");
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// CDBEnv class
+//////////////////////////////////////////////////////////////////////////////////////////////
+
 void CDBEnv::EnvShutdown() {
     LOCK(cs_db);
     if (! fDbEnvInit)
@@ -36,6 +44,7 @@ CDBEnv::CDBEnv() : fDetachDB(false), fDbEnvInit(false), dbenv(DB_CXX_NO_EXCEPTIO
 CDBEnv::~CDBEnv() {
     EnvShutdown();
 }
+
 void CDBEnv::Close() {
     EnvShutdown();
 }
@@ -155,21 +164,20 @@ void CDBEnv::MakeMock()
 }
 */
 
-CDBEnv::VerifyResult CDBEnv::Verify(std::string strFile, bool(* recoverFunc)(CDBEnv &dbenv, std::string strFile))
+CDBEnv::VerifyResult CDBEnv::Verify(std::string strFile, bool (*recoverFunc)(std::string strFile, bool fOnlyKeys))
 {
     LOCK(cs_db);
     assert(mapFileUseCount.count(strFile) == 0);
 
     Db db(&dbenv, 0);
     int result = db.verify(strFile.c_str(), nullptr, nullptr, 0);
-    if (result == 0) {
+    if (result == 0)
         return VERIFY_OK;
-    } else if (recoverFunc == nullptr) {
+    else if (recoverFunc == nullptr)
         return RECOVER_FAIL;
-    }
 
     // Try to recover:
-    bool fRecovered = (*recoverFunc)(*this, strFile);
+    bool fRecovered = (*recoverFunc)(strFile, false);
     return (fRecovered ? RECOVER_OK : RECOVER_FAIL);
 }
 
@@ -250,6 +258,7 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
         if (pdb == nullptr)
             throw std::runtime_error("CDB() : failed to allocate memory");
 
+        /*
         bool fMockDb = IsMock();
         if (fMockDb) {
             DbMpoolFile *mpf = pdb->get_mpf();
@@ -257,6 +266,7 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
             if (ret != 0)
                 throw std::runtime_error(tfm::format("CDB() : failed to configure for no temp file backing for database %s", strFile.c_str()));
         }
+        */
 
         for (int cc = 0; cc < retry_counter; ++cc) {
             int ret = pdb->open(nullptr,             // Txn pointer
@@ -284,11 +294,6 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
         setDb(strFile, pdb);
     }
     return pdb;
-}
-
-bool dbparam::IsChainFile(std::string strFile)
-{
-    return (strFile == "blkindex.dat");
 }
 
 void CDBEnv::CloseDb(const std::string &strFile)
@@ -325,9 +330,9 @@ DbTxn *CDBEnv::TxnBegin(int flags /*= DB_TXN_WRITE_NOSYNC*/) {
     return ptxn;
 }
 
-//
+//////////////////////////////////////////////////////////////////////////////////////////////
 // CDB class
-//
+//////////////////////////////////////////////////////////////////////////////////////////////
 
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr) {
     if (pszFile == nullptr)

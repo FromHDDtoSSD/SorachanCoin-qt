@@ -998,7 +998,7 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocat
 //
 // Try to (very carefully!) recover wallet.dat if there is a problem.
 //
-bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
+bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
 {
     //
     // Recovery procedure:
@@ -1007,6 +1007,8 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     // Rewrite salvaged data to wallet.dat
     // Set -rescan so any missing transactions will be found.
     //
+
+    CDBEnv &dbenv = CDBEnv::get_instance();
 
     //
     // create backup file (.bak)
@@ -1086,9 +1088,4 @@ bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys)
     delete pdbCopy;
 
     return fSuccess;
-}
-
-bool CWalletDB::Recover(CDBEnv &dbenv, std::string filename)
-{
-    return CWalletDB::Recover(dbenv, filename, false);
 }

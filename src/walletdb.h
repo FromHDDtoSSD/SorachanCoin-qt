@@ -236,8 +236,7 @@ public:
     DBErrors FindWalletTx(CWallet *pwallet, std::vector<uint256> &vTxHash);
     DBErrors ZapWalletTx(CWallet *pwallet);
 
-    static bool Recover(CDBEnv &dbenv, std::string filename, bool fOnlyKeys);
-    static bool Recover(CDBEnv &dbenv, std::string filename);
+    static bool Recover(std::string filename, bool fOnlyKeys=false);
 };
 
 #endif // BITCOIN_WALLETDB_H

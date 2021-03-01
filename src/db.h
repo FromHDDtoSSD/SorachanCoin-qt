@@ -154,7 +154,7 @@ public:
     mutable CCriticalSection cs_db;
 
     //void MakeMock();
-    bool IsMock() const { return fMockDb; }
+    //bool IsMock() const { return fMockDb; }
 
     /*
     * Verify that database file strFile is OK. If it is not,
@@ -167,7 +167,7 @@ public:
         RECOVER_OK,
         RECOVER_FAIL
     };
-    VerifyResult Verify(std::string strFile, bool(* recoverFunc)(CDBEnv &dbenv, std::string strFile));
+    VerifyResult Verify(std::string strFile, bool (*recoverFunc)(std::string strFile, bool fOnlyKeys));
 
     /*
     * Salvage data from a file that Verify says is bad.
