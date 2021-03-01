@@ -49,7 +49,8 @@ class CDBEnv final
 {
 private:
     static constexpr int dbcache_size = 25;
-    static constexpr int retry_counter = 10; // Create
+    static constexpr int retry_counter = 10; // Create retry counter
+    static constexpr bool fMockDb = false; // no using MockDB
 
     CDBEnv(const CDBEnv &)=delete;
     CDBEnv(CDBEnv &&)=delete;
@@ -61,7 +62,6 @@ private:
 
     bool fDetachDB;
     bool fDbEnvInit;
-    bool fMockDb;
     fs::path pathEnv;
     std::string strPath;
     DbEnv dbenv;
@@ -129,6 +129,7 @@ public:
         return RefCount;
     }
     bool FindFile(const std::string &strFile) const {
+        LOCK(cs_db);
         std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
         return (mi != mapFileUseCount.end());
     }
@@ -193,15 +194,7 @@ public:
 
     void CloseDb(const std::string &strFile);
     bool RemoveDb(const std::string &strFile);
-
-    DbTxn *TxnBegin(int flags = DB_TXN_WRITE_NOSYNC) {
-        DbTxn *ptxn = nullptr;
-        int ret = dbenv.txn_begin(nullptr, &ptxn, flags);
-        if (!ptxn || ret != 0) {
-            return nullptr;
-        }
-        return ptxn;
-    }
+    DbTxn *TxnBegin(int flags = DB_TXN_WRITE_NOSYNC);
 };
 
 /**
@@ -224,19 +217,12 @@ protected:
     bool fReadOnly;
 
     explicit CDB(const char *pszFile, const char *pszMode = "r+"); // open DB
-    ~CDB() {
-        Close();
-    }
+    virtual ~CDB();
 
-public:
-    void Close();
-
-protected:
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        if (! pdb) {
+        if (! pdb)
             return false;
-        }
 
         // Key
         CDataStream ssKey(0, 0);
@@ -249,9 +235,8 @@ protected:
         datValue.set_flags(DB_DBT_MALLOC);
         int ret = pdb->get(activeTxn, &datKey, &datValue, 0);
         std::memset(datKey.get_data(), 0, datKey.get_size());
-        if (datValue.get_data() == nullptr) {
+        if (datValue.get_data() == nullptr)
             return false;
-        }
 
         // Unserialize value
         try {
@@ -269,9 +254,8 @@ protected:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        if (! pdb) {
+        if (! pdb)
             return false;
-        }
         if (fReadOnly) {
             assert(!"Write called on database in read-only mode");
         }
@@ -299,9 +283,8 @@ protected:
 
     template<typename K>
     bool Erase(const K &key) {
-        if (! pdb) {
+        if (! pdb)
             return false;
-        }
         if (fReadOnly) {
             assert(!"Erase called on database in read-only mode");
         }
@@ -322,9 +305,8 @@ protected:
 
     template<typename K>
     bool Exists(const K &key) {
-        if (! pdb) {
+        if (! pdb)
             return false;
-        }
 
         // Key
         CDataStream ssKey(0, 0);
@@ -340,103 +322,18 @@ protected:
         return (ret == 0);
     }
 
-    Dbc *GetCursor() {
-        if (! pdb) {
-            return nullptr;
-        }
-
-        Dbc *pcursor = nullptr;
-        int ret = pdb->cursor(nullptr, &pcursor, 0);
-        if (ret != 0) {
-            return nullptr;
-        }
-        return pcursor;
-    }
+    Dbc *GetCursor();
 
     // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-    static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT) {
-        // Read at cursor, return: 0 success, 1 ERROE_CODE
-        Dbt datKey;
-        if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
-            datKey.set_data(&ssKey[0]);
-            datKey.set_size((uint32_t)ssKey.size());
-        }
-
-        Dbt datValue;
-        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
-            datValue.set_data(&ssValue[0]);
-            datValue.set_size((uint32_t)ssValue.size());
-        }
-
-        datKey.set_flags(DB_DBT_MALLOC);
-        datValue.set_flags(DB_DBT_MALLOC);
-        int ret = pcursor->get(&datKey, &datValue, fFlags);
-        if (ret != 0) {
-            return ret;
-        }
-        else if (datKey.get_data() == nullptr || datValue.get_data() == nullptr) {
-            return 99999;
-        }
-
-        // Convert to streams
-        ssKey.SetType(SER_DISK);
-        ssKey.clear();
-        ssKey.write((char *)datKey.get_data(), datKey.get_size());
-        ssValue.SetType(SER_DISK);
-        ssValue.clear();
-        ssValue.write((char *)datValue.get_data(), datValue.get_size());
-
-        // Clear and free memory
-        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
-        cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
-        ::free(datKey.get_data());
-        ::free(datValue.get_data());
-        return 0;
-    }
+    static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
 
 public:
-    bool TxnBegin() {
-        if (!pdb || activeTxn) {
-            return false;
-        }
-
-        DbTxn *ptxn = CDBEnv::get_instance().TxnBegin();
-        if (! ptxn) {
-            return false;
-        }
-
-        activeTxn = ptxn;
-        return true;
-    }
-
-    bool TxnCommit() {
-        if (!pdb || !activeTxn) {
-            return false;
-        }
-
-        int ret = activeTxn->commit(0);
-        activeTxn = nullptr;
-        return (ret == 0);
-    }
-
-    bool TxnAbort() {
-        if (!pdb || !activeTxn) {
-            return false;
-        }
-
-        int ret = activeTxn->abort();
-        activeTxn = nullptr;
-        return (ret == 0);
-    }
-
-    bool ReadVersion(int &nVersion) {
-        nVersion = 0;
-        return Read(std::string("version"), nVersion);
-    }
-
-    bool WriteVersion(int nVersion) {
-        return Write(std::string("version"), nVersion);
-    }
+    void Close();
+    bool TxnBegin();
+    bool TxnCommit();
+    bool TxnAbort();
+    bool ReadVersion(int &nVersion);
+    bool WriteVersion(int nVersion);
 
     static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
 };

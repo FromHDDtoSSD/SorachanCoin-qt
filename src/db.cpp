@@ -32,7 +32,7 @@ void CDBEnv::EnvShutdown() {
         DbEnv(0).remove(strPath.c_str(), 0);
 }
 
-CDBEnv::CDBEnv() : fDetachDB(false), fDbEnvInit(false), fMockDb(false), dbenv(DB_CXX_NO_EXCEPTIONS) {}
+CDBEnv::CDBEnv() : fDetachDB(false), fDbEnvInit(false), dbenv(DB_CXX_NO_EXCEPTIONS) {}
 CDBEnv::~CDBEnv() {
     EnvShutdown();
 }
@@ -114,7 +114,7 @@ bool CDBEnv::Open(fs::path pathEnv_) {
     }
 
     fDbEnvInit = true;
-    fMockDb = false;
+    //fMockDb = false;
 
     return true;
 }
@@ -286,62 +286,9 @@ Db *CDBEnv::Create(const std::string &strFile, unsigned int nFlags)
     return pdb;
 }
 
-CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr)
-{
-    if (pszFile == nullptr)
-        return;
-
-    fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    bool fCreate = ::strchr(pszMode, 'c') != nullptr;
-    unsigned int nFlags = DB_THREAD;
-    if (fCreate)
-        nFlags |= DB_CREATE;
-
-    {
-        LOCK(CDBEnv::get_instance().cs_db);
-        strFile = pszFile;
-        pdb = CDBEnv::get_instance().Create(strFile, nFlags);
-        if (fCreate && !Exists(std::string("version"))) {
-            bool fTmp = fReadOnly;
-            fReadOnly = false;
-            WriteVersion(version::CLIENT_VERSION);
-            fReadOnly = fTmp;
-        }
-    }
-}
-
 bool dbparam::IsChainFile(std::string strFile)
 {
     return (strFile == "blkindex.dat");
-}
-
-void CDB::Close()
-{
-    if (! pdb) {
-        return;
-    }
-    if (activeTxn) {
-        activeTxn->abort();
-    }
-    activeTxn = nullptr;
-    pdb = nullptr;
-
-    //
-    // Flush database activity from memory pool to disk log
-    //
-    unsigned int nMinutes = 0;
-    if (fReadOnly) {
-        nMinutes = 1;
-    }
-    if (dbparam::IsChainFile(strFile)) {
-        nMinutes = 2;
-    }
-    if (dbparam::IsChainFile(strFile) && block_notify<uint256>::IsInitialBlockDownload()) {
-        nMinutes = 5;
-    }
-
-    CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
-    CDBEnv::get_instance().DecUseCount(strFile);
 }
 
 void CDBEnv::CloseDb(const std::string &strFile)
@@ -369,18 +316,168 @@ bool CDBEnv::RemoveDb(const std::string &strFile)
     return (rc == 0);
 }
 
+DbTxn *CDBEnv::TxnBegin(int flags /*= DB_TXN_WRITE_NOSYNC*/) {
+    DbTxn *ptxn = nullptr;
+    int ret = dbenv.txn_begin(nullptr, &ptxn, flags);
+    if (!ptxn || ret != 0)
+        return nullptr;
+
+    return ptxn;
+}
+
+//
+// CDB class
+//
+
+CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr) {
+    if (pszFile == nullptr)
+        return;
+
+    fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
+    bool fCreate = ::strchr(pszMode, 'c') != nullptr;
+    unsigned int nFlags = DB_THREAD;
+    if (fCreate)
+        nFlags |= DB_CREATE;
+
+    {
+        LOCK(CDBEnv::get_instance().cs_db);
+        strFile = pszFile;
+        pdb = CDBEnv::get_instance().Create(strFile, nFlags);
+        if (fCreate && !Exists(std::string("version"))) {
+            bool fTmp = fReadOnly;
+            fReadOnly = false;
+            WriteVersion(version::CLIENT_VERSION);
+            fReadOnly = fTmp;
+        }
+    }
+}
+
+CDB::~CDB() {
+    Close();
+}
+
+void CDB::Close() {
+    if (! pdb)
+        return;
+    if (activeTxn)
+        activeTxn->abort();
+
+    activeTxn = nullptr;
+    pdb = nullptr;
+
+    // Flush database activity from memory pool to disk log
+    unsigned int nMinutes = 0;
+    if (fReadOnly)
+        nMinutes = 1;
+    if (dbparam::IsChainFile(strFile))
+        nMinutes = 2;
+    if (dbparam::IsChainFile(strFile) && block_notify<uint256>::IsInitialBlockDownload())
+        nMinutes = 5;
+
+    CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
+    CDBEnv::get_instance().DecUseCount(strFile);
+}
+
+// fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
+int CDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+    // Read at cursor, return: 0 success, 1 ERROE_CODE
+    Dbt datKey;
+    if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+        datKey.set_data(&ssKey[0]);
+        datKey.set_size((uint32_t)ssKey.size());
+    }
+
+    Dbt datValue;
+    if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+        datValue.set_data(&ssValue[0]);
+        datValue.set_size((uint32_t)ssValue.size());
+    }
+
+    datKey.set_flags(DB_DBT_MALLOC);
+    datValue.set_flags(DB_DBT_MALLOC);
+    int ret = pcursor->get(&datKey, &datValue, fFlags);
+    if (ret != 0)
+        return ret;
+    else if (datKey.get_data() == nullptr || datValue.get_data() == nullptr)
+        return 99999;
+
+    // Convert to streams
+    ssKey.SetType(SER_DISK);
+    ssKey.clear();
+    ssKey.write((char *)datKey.get_data(), datKey.get_size());
+    ssValue.SetType(SER_DISK);
+    ssValue.clear();
+    ssValue.write((char *)datValue.get_data(), datValue.get_size());
+
+    // Clear and free memory
+    cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
+    cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
+    ::free(datKey.get_data());
+    ::free(datValue.get_data());
+    return 0;
+}
+
+bool CDB::TxnBegin() {
+    if (!pdb || activeTxn)
+        return false;
+
+    DbTxn *ptxn = CDBEnv::get_instance().TxnBegin();
+    if (! ptxn)
+        return false;
+
+    activeTxn = ptxn;
+    return true;
+}
+
+bool CDB::TxnCommit() {
+    if (!pdb || !activeTxn)
+        return false;
+
+    int ret = activeTxn->commit(0);
+    activeTxn = nullptr;
+    return (ret == 0);
+}
+
+bool CDB::TxnAbort() {
+    if (!pdb || !activeTxn)
+        return false;
+
+    int ret = activeTxn->abort();
+    activeTxn = nullptr;
+    return (ret == 0);
+}
+
+bool CDB::ReadVersion(int &nVersion) {
+    nVersion = 0;
+    return Read(std::string("version"), nVersion);
+}
+
+bool CDB::WriteVersion(int nVersion) {
+    return Write(std::string("version"), nVersion);
+}
+
+Dbc *CDB::GetCursor() {
+    if (! pdb)
+        return nullptr;
+
+    Dbc *pcursor = nullptr;
+    int ret = pdb->cursor(nullptr, &pcursor, 0);
+    if (ret != 0)
+        return nullptr;
+
+    return pcursor;
+}
+
 bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */)
 {
-    while (!args_bool::fShutdown)
+    while (! args_bool::fShutdown)
     {
         {
             LOCK(CDBEnv::get_instance().cs_db);
-            //if (!CDBEnv::get_instance().mapFileUseCount.count(strFile) || CDBEnv::get_instance().mapFileUseCount[strFile] == 0) {
             if (!CDBEnv::get_instance().ExistsFileCount(strFile) || CDBEnv::get_instance().GetFileCount(strFile)==0) {
                 // Flush log data to the dat file
                 CDBEnv::get_instance().CloseDb(strFile);
                 CDBEnv::get_instance().CheckpointLSN(strFile);
-                //CDBEnv::get_instance().mapFileUseCount.erase(strFile);
                 CDBEnv::get_instance().EraseFileCount(strFile);
 
                 bool fSuccess = true;
@@ -389,7 +486,6 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
 
                 { // surround usage of db with extra {}
                     CDB db(strFile.c_str(), "r");
-                    //Db *pdbCopy = new(std::nothrow) Db(&CDBEnv::get_instance().dbenv, 0);
                     Db *pdbCopy = CDBEnv::get_instance().createDb();
                     if (pdbCopy == nullptr) {
                         logging::LogPrintf("Memory allocate failure for CDB::Rewrite.");
@@ -456,17 +552,6 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                 if (fSuccess) {
                     fSuccess = CDBEnv::get_instance().Remove(strFile);
                     fSuccess = CDBEnv::get_instance().Rename(strFileRes, strFile);
-                    /*
-                    Db dbA(&CDBEnv::get_instance().dbenv, 0);
-                    if (dbA.remove(strFile.c_str(), nullptr, 0)) {
-                        fSuccess = false;
-                    }
-
-                    Db dbB(&CDBEnv::get_instance().dbenv, 0);
-                    if (dbB.rename(strFileRes.c_str(), nullptr, strFile.c_str(), 0)) {
-                        fSuccess = false;
-                    }
-                    */
                 }
                 if (! fSuccess) {
                     logging::LogPrintf("Rewriting of %s FAILED!\n", strFileRes.c_str());
