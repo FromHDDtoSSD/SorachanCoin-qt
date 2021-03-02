@@ -63,7 +63,6 @@ private:
     bool fDetachDB;
     bool fDbEnvInit;
     fs::path pathEnv;
-    std::string strPath;
     DbEnv dbenv;
     std::map<std::string, int> mapFileUseCount;
     std::map<std::string, Db *> mapDb; // database handle

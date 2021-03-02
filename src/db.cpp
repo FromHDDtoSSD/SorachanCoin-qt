@@ -10,6 +10,7 @@
 #include <main.h>
 #include <ui_interface.h>
 #include <init.h>
+#include <file_operate/fs.h>
 #include <boost/filesystem/fstream.hpp>
 #include <util/time.h>
 
@@ -37,8 +38,11 @@ void CDBEnv::EnvShutdown() {
     int ret = dbenv.close(0);
     if (ret != 0)
         logging::LogPrintf("EnvShutdown exception: %s (%d)\n", DbEnv::strerror(ret), ret);
-    if (! fMockDb)
-        DbEnv(0).remove(strPath.c_str(), 0);
+    if (! fMockDb) {
+        int ret = DbEnv(0).remove(pathEnv.string().c_str(), 0);
+        if(ret > 0)
+            throw std::runtime_error("EnvShutdown database remove failure");
+    }
 }
 
 CDBEnv::CDBEnv() : fDetachDB(false), fDbEnvInit(false), dbenv(DB_CXX_NO_EXCEPTIONS) {}
@@ -69,6 +73,7 @@ bool CDBEnv::DbRename(const std::string &filename, const std::string &newFilenam
 }
 
 bool CDBEnv::Open(fs::path pathEnv_) {
+    LOCK(cs_db);
     if (fDbEnvInit)
         return true;
     if (args_bool::fShutdown)
@@ -76,19 +81,20 @@ bool CDBEnv::Open(fs::path pathEnv_) {
 
     // create directory and db.log
     pathEnv = pathEnv_;
-    fs::path pathDataDir = pathEnv;
+    const fs::path pathDataDir = pathEnv;
 
-    strPath = pathDataDir.string();
-    fs::path pathLogDir = pathDataDir / "database";
-    fs::create_directory(pathLogDir);
+    //strPath = pathDataDir.string();
+    const fs::path pathLogDir = pathDataDir / "database";
+    //fs::create_directory(pathLogDir);
+    if(! fsbridge::dir_create(pathLogDir))
+        return false;
 
-    fs::path pathErrorFile = pathDataDir / "db.log";
+    const fs::path pathErrorFile = pathDataDir / "db.log";
     logging::LogPrintf("dbenv.open LogDir=%s ErrorFile=%s\n", pathLogDir.string().c_str(), pathErrorFile.string().c_str());
 
     unsigned int nEnvFlags = 0;
-    if (map_arg::GetBoolArg("-privdb", true)) {
+    if (map_arg::GetBoolArg("-privdb", true))
         nEnvFlags |= DB_PRIVATE;
-    }
 
     int nDbCache = map_arg::GetArgInt("-dbcache", dbcache_size);
     dbenv.set_lg_dir(pathLogDir.string().c_str());
@@ -109,7 +115,7 @@ bool CDBEnv::Open(fs::path pathEnv_) {
     dbenv.log_set_config(DB_LOG_AUTO_REMOVE, 1);
 #endif
 
-    int ret = dbenv.open(strPath.c_str(),
+    int ret = dbenv.open(pathEnv.string().c_str(),
         DB_CREATE |
         DB_INIT_LOCK |
         DB_INIT_LOG |
