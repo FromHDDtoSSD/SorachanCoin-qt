@@ -25,7 +25,7 @@ uint64_t CWalletDB::nAccountingEntryNumber = 0;
 //
 bool CWalletDB::WriteName(const std::string &strAddress, const std::string &strName)
 {
-    dbparam::nWalletDBUpdated++;
+    dbparam::IncWalletUpdate();
     return Write(std::make_pair(std::string("name"), strAddress), strName);
 }
 
@@ -35,7 +35,7 @@ bool CWalletDB::EraseName(const std::string &strAddress)
     // This should only be used for sending addresses, never for receiving addresses,
     // receiving addresses must always have an address book entry if they're not change return.
     //
-    dbparam::nWalletDBUpdated++;
+    dbparam::IncWalletUpdate();
     return Erase(std::make_pair(std::string("name"), strAddress));
 }
 
@@ -706,26 +706,26 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
         return;
     }
 
-    unsigned int nLastSeen = dbparam::nWalletDBUpdated;
-    unsigned int nLastFlushed = dbparam::nWalletDBUpdated;
+    unsigned int nLastSeen = dbparam::GetWalletUpdate();
+    unsigned int nLastFlushed = dbparam::GetWalletUpdate();
     int64_t nLastWalletUpdate = bitsystem::GetTime();
     while (! args_bool::fShutdown)
     {
         util::Sleep(500);
 
-        if (nLastSeen != dbparam::nWalletDBUpdated) {
-            nLastSeen = dbparam::nWalletDBUpdated;
+        if (nLastSeen != dbparam::GetWalletUpdate()) {
+            nLastSeen = dbparam::GetWalletUpdate();
             nLastWalletUpdate = bitsystem::GetTime();
         }
 
-        if (nLastFlushed != dbparam::nWalletDBUpdated && bitsystem::GetTime() - nLastWalletUpdate >= 2) {
+        if (nLastFlushed != dbparam::GetWalletUpdate() && bitsystem::GetTime() - nLastWalletUpdate >= 2) {
             TRY_LOCK(CDBEnv::get_instance().cs_db, lockDb);
             if (lockDb) {
                 // Don't do this if any databases are in use
                 const int nRefCount = CDBEnv::get_instance().GetRefCount();
                 if (nRefCount == 0 && CDBEnv::get_instance().FindFile(strFile) && !args_bool::fShutdown) {
                     logging::LogPrintf("Flushing %s\n", strFile.c_str());
-                    nLastFlushed = dbparam::nWalletDBUpdated;
+                    nLastFlushed = dbparam::GetWalletUpdate();
                     int64_t nStart = util::GetTimeMillis();
                     // Flush wallet.dat so it's self contained
                     if(CDBEnv::get_instance().Flush(strFile))

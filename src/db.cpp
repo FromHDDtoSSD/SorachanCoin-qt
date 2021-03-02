@@ -18,8 +18,19 @@
 # include "sys/stat.h"
 #endif
 
-unsigned int dbparam::nWalletDBUpdated = 0;
 CCriticalSection CDBEnv::cs_db;
+
+static CCriticalSection cs_w_update;
+static unsigned int nWalletDBUpdated = 0;
+void dbparam::IncWalletUpdate() {
+    LOCK(cs_w_update);
+    ++nWalletDBUpdated;
+}
+
+unsigned int dbparam::GetWalletUpdate() {
+    LOCK(cs_w_update);
+    return nWalletDBUpdated;
+}
 
 bool dbparam::IsChainFile(std::string strFile) {
     return (strFile == "blkindex.dat");
@@ -82,10 +93,7 @@ bool CDBEnv::Open(fs::path pathEnv_) {
     // create directory and db.log
     pathEnv = pathEnv_;
     const fs::path pathDataDir = pathEnv;
-
-    //strPath = pathDataDir.string();
     const fs::path pathLogDir = pathDataDir / "database";
-    //fs::create_directory(pathLogDir);
     if(! fsbridge::dir_create(pathLogDir))
         return false;
 

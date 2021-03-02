@@ -85,17 +85,17 @@ public:
     bool EraseName(const std::string &strAddress);
 
     bool WriteTx(uint256 hash, const CWalletTx &wtx) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("tx"), hash), wtx);
     }
 
     bool EraseTx(uint256 hash) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Erase(std::make_pair(std::string("tx"), hash));
     }
 
     bool WriteKey(const CPubKey &key, const CPrivKey &vchPrivKey, const CKeyMetadata &keyMeta) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         if(! Write(std::make_pair(std::string("keymeta"), key), keyMeta)) {
             return false;
         }
@@ -106,7 +106,7 @@ public:
     }
 
     bool WriteMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH, const CKeyMetadata &keyMeta) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta)) {
             return false;
         }
@@ -117,7 +117,7 @@ public:
     }
 
     bool WriteCryptedMalleableKey(const CMalleableKeyView &keyView, const std::vector<unsigned char> &vchCryptedSecretH, const CKeyMetadata &keyMeta) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta)) {
             return false;
         }
@@ -131,7 +131,7 @@ public:
 
 
     bool WriteCryptedKey(const CPubKey &key, const std::vector<unsigned char> &vchCryptedSecret, const CKeyMetadata &keyMeta) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         bool fEraseUnencryptedKey = true;
 
         if (! Write(std::make_pair(std::string("keymeta"), key), keyMeta)) {
@@ -148,12 +148,12 @@ public:
     }
 
     bool WriteMasterKey(unsigned int nID, const CMasterKey &kMasterKey) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("mkey"), nID), kMasterKey, true);
     }
 
     bool EraseMasterKey(unsigned int nID) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Erase(std::make_pair(std::string("mkey"), nID));
     }
 
@@ -166,22 +166,22 @@ public:
     }
 
     bool WriteCScript(const uint160 &hash, const CScript &redeemScript) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("cscript"), hash), redeemScript, false);
     }
 
     bool WriteWatchOnly(const CScript &dest) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("watchs"), dest), '1');
     }
 
     bool EraseWatchOnly(const CScript &dest) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Erase(std::make_pair(std::string("watchs"), dest));
     }
 
     bool WriteBestBlock(const CBlockLocator &locator) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::string("bestblock"), locator);
     }
 
@@ -190,12 +190,12 @@ public:
     }
 
     bool WriteOrderPosNext(int64_t nOrderPosNext) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::string("orderposnext"), nOrderPosNext);
     }
 
     bool WriteDefaultKey(const CPubKey &key) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::string("defaultkey"), key);
     }
 
@@ -204,12 +204,12 @@ public:
     }
 
     bool WritePool(int64_t nPool, const CKeyPool &keypool) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("pool"), nPool), keypool);
     }
 
     bool ErasePool(int64_t nPool) {
-        dbparam::nWalletDBUpdated++;
+        dbparam::IncWalletUpdate();
         return Erase(std::make_pair(std::string("pool"), nPool));
     }
 

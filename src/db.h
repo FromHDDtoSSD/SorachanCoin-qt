@@ -38,7 +38,8 @@ namespace wallet_dispatch
 
 namespace dbparam
 {
-    extern unsigned int nWalletDBUpdated;// = 0;
+    void IncWalletUpdate();
+    unsigned int GetWalletUpdate();
     bool IsChainFile(std::string strFile);
 }
 
@@ -193,6 +194,32 @@ public:
 };
 
 /**
+ * Berkeley database Stream
+ */
+class CDBStream
+{
+    CDBStream()=delete;
+    CDBStream(const CDBStream &)=delete;
+    CDBStream(CDBStream &&)=delete;
+    CDBStream &operator=(const CDBStream &)=delete;
+    CDBStream &operator=(CDBStream &&)=delete;
+public:
+    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : pos(0), pbegin(beginIn), pend(beginIn+sizeIn) {
+        assert(pbegin!=pend);
+    }
+    CDBStream &read(char *dest, uint32_t size) {
+        assert(size>=0);
+        dest ? std::memcpy(dest, pbegin+pos, size): 0;
+        pos += size;
+        return *this;
+    }
+private:
+    uint32_t pos;
+    char *pbegin;
+    char *pend;
+};
+
+/**
  * RAII class that provides access to a Berkeley database
  * using: CTxDB, CWalletDB
  */
@@ -205,12 +232,12 @@ private:
     CDB &operator=(const CDB &)=delete;
     CDB &operator=(CDB &&)=delete;
 
-protected:
     Db *pdb;
     std::string strFile;
     DbTxn *activeTxn;
     bool fReadOnly;
 
+protected:
     explicit CDB(const char *pszFile, const char *pszMode = "r+"); // open DB
     virtual ~CDB();
 
@@ -224,20 +251,34 @@ protected:
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
+        assert(datKey.get_data()==&ssKey[0]); // USERMEM
+
+        // Test
+        /*
+        Dbt datTest;
+        datTest.set_flags(DB_DBT_USERMEM);
+        datTest.set_size(ssKey.size());
+        datTest.set_data(&ssKey[0]);
+        assert(::memcmp(datKey.get_data(), datTest.get_data(), datKey.get_size())==0);
+        */
 
         // Read
         Dbt datValue;
         datValue.set_flags(DB_DBT_MALLOC);
         int ret = pdb->get(activeTxn, &datKey, &datValue, 0);
-        std::memset(datKey.get_data(), 0, datKey.get_size());
+        //std::memset(datKey.get_data(), 0, datKey.get_size()); // datKey buffer is &ssKey[0](CDataStream).
         if (datValue.get_data() == nullptr)
             return false;
 
         // Unserialize value
         try {
-            CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(), 0, 0);
-            ssValue >> value;
+            //CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(), 0, 0);
+            //ssValue >> value;
+            CDBStream stream((char *)datValue.get_data(), datValue.get_size());
+            ::Unserialize(stream, value);
         } catch (const std::exception &) {
+            cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
+            ::free(datValue.get_data());
             return false;
         }
 
