@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 #include <db_cxx.h>
+#include <leveldb/db.h>
 
 class CAddress;
 class CAddrMan;
@@ -44,15 +45,26 @@ namespace dbparam
 }
 
 /**
- * DB Manager
+ * DB Manager Interface
  */
-class CDBEnv final
+class IDBEnv
 {
-private:
+protected:
     static constexpr int dbcache_size = 25;
     static constexpr int retry_counter = 10; // Create retry counter
     static constexpr bool fMockDb = false; // no using MockDB
 
+    virtual void EnvShutdown()=0;
+public:
+    virtual bool Open(fs::path pathEnv_)=0;
+};
+
+/**
+ * Berkeley DB Manager
+ */
+class CDBEnv final : public IDBEnv
+{
+private:
     CDBEnv(const CDBEnv &)=delete;
     CDBEnv(CDBEnv &&)=delete;
     CDBEnv &operator=(const CDBEnv &)=delete;
@@ -194,7 +206,41 @@ public:
 };
 
 /**
- * Berkeley database Stream
+ * Level DB Manager
+ */
+class CLevelDBEnv final : public IDBEnv
+{
+private:
+    CLevelDBEnv(const CLevelDBEnv &)=delete;
+    CLevelDBEnv(CLevelDBEnv &&)=delete;
+    CLevelDBEnv &operator=(const CLevelDBEnv &)=delete;
+    CLevelDBEnv &operator=(CLevelDBEnv &&)=delete;
+
+    CLevelDBEnv();
+    ~CLevelDBEnv();
+
+    bool fLevelDbEnvInit;
+    leveldb::Options options;
+
+    void EnvShutdown();
+    static leveldb::Options GetOptions();
+
+    // global pointer for LevelDB object instance
+    static leveldb::DB *ptxdb;
+
+public:
+    static CCriticalSection cs_leveldb; // only center criticalsection.
+    static CLevelDBEnv &get_instance() {
+        LOCK(cs_leveldb);
+        static CLevelDBEnv obj;
+        return obj;
+    }
+
+    bool Open(fs::path pathEnv_);
+};
+
+/**
+ * Berkeley DB Stream
  */
 class CDBStream
 {
@@ -220,8 +266,9 @@ private:
 };
 
 /**
+ * Berkeley DB
  * RAII class that provides access to a Berkeley database
- * using: CTxDB, CWalletDB
+ * using: CWalletDB, CWallethdDB, CWalletqDB
  */
 class CDB
 {
@@ -243,6 +290,7 @@ protected:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
+        LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
 
@@ -253,7 +301,7 @@ protected:
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
         assert(datKey.get_data()==&ssKey[0]); // USERMEM
 
-        // Test
+        // Test [OK]
         /*
         Dbt datTest;
         datTest.set_flags(DB_DBT_USERMEM);
@@ -266,14 +314,12 @@ protected:
         Dbt datValue;
         datValue.set_flags(DB_DBT_MALLOC);
         int ret = pdb->get(activeTxn, &datKey, &datValue, 0);
-        //std::memset(datKey.get_data(), 0, datKey.get_size()); // datKey buffer is &ssKey[0](CDataStream).
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
         if (datValue.get_data() == nullptr)
             return false;
 
         // Unserialize value
         try {
-            //CDataStream ssValue((char *)datValue.get_data(), (char *)datValue.get_data() + datValue.get_size(), 0, 0);
-            //ssValue >> value;
             CDBStream stream((char *)datValue.get_data(), datValue.get_size());
             ::Unserialize(stream, value);
         } catch (const std::exception &) {
@@ -290,6 +336,7 @@ protected:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
+        LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
         if (fReadOnly) {
@@ -319,6 +366,7 @@ protected:
 
     template<typename K>
     bool Erase(const K &key) {
+        LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
         if (fReadOnly) {
@@ -341,6 +389,7 @@ protected:
 
     template<typename K>
     bool Exists(const K &key) {
+        LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
 

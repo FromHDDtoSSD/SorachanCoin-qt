@@ -22,7 +22,7 @@
 #include <sync/sync.h>
 
 CCriticalSection CMTxDB::csTxdb_write;
-template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::txdb = nullptr;
+template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::ptxdb = nullptr;
 
 template <typename HASH>
 leveldb::Options CTxDB_impl<HASH>::GetOptions()
@@ -61,7 +61,7 @@ void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOl
     fs::create_directory(directory);
     logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
 
-    leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CTxDB::txdb);
+    leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CTxDB::ptxdb);
     if (! status.ok()) {
         throw std::runtime_error(tfm::format("CTxDB::init_blockindex(): error opening database environment %s", status.ToString().c_str()));
     }
@@ -75,8 +75,8 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
 
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    if (CTxDB_impl<HASH>::txdb) {
-        pdb = CTxDB_impl<HASH>::txdb;
+    if (CTxDB_impl<HASH>::ptxdb) {
+        pdb = CTxDB_impl<HASH>::ptxdb;
         return;
     }
 
@@ -88,7 +88,7 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
 
     init_blockindex(options); // Init directory
 
-    pdb = CTxDB_impl<HASH>::txdb;
+    pdb = CTxDB_impl<HASH>::ptxdb;
 
     if (Exists(std::string("version"))) {
         ReadVersion(nVersion);
@@ -98,13 +98,13 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
             // Leveldb instance destruction
-            delete CTxDB_impl<HASH>::txdb;
-            CTxDB_impl<HASH>::txdb = pdb = nullptr;
+            delete CTxDB_impl<HASH>::ptxdb;
+            CTxDB_impl<HASH>::ptxdb = pdb = nullptr;
             delete this->activeBatch;
             this->activeBatch = nullptr;
 
             init_blockindex(options, true); // Remove directory and create new database
-            pdb = CTxDB_impl<HASH>::txdb;
+            pdb = CTxDB_impl<HASH>::ptxdb;
 
             bool fTmp = fReadOnly;
             fReadOnly = false;
@@ -132,8 +132,8 @@ CTxDB_impl<HASH>::~CTxDB_impl() {
 template <typename HASH>
 void CTxDB_impl<HASH>::Close()
 {
-    delete CTxDB_impl<HASH>::txdb;
-    CTxDB_impl<HASH>::txdb = pdb = nullptr;
+    delete CTxDB_impl<HASH>::ptxdb;
+    CTxDB_impl<HASH>::ptxdb = pdb = nullptr;
 
     delete this->options.filter_policy;
     this->options.filter_policy = nullptr;

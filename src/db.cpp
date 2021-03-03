@@ -13,12 +13,16 @@
 #include <file_operate/fs.h>
 #include <boost/filesystem/fstream.hpp>
 #include <util/time.h>
+#include <leveldb/cache.h>
+#include <leveldb/filter_policy.h>
 
 #ifndef WIN32
 # include "sys/stat.h"
 #endif
 
 CCriticalSection CDBEnv::cs_db;
+CCriticalSection CLevelDBEnv::cs_leveldb;
+leveldb::DB *CLevelDBEnv::ptxdb = nullptr;
 
 static CCriticalSection cs_w_update;
 static unsigned int nWalletDBUpdated = 0;
@@ -32,7 +36,11 @@ unsigned int dbparam::GetWalletUpdate() {
     return nWalletDBUpdated;
 }
 
+// SorachanCoin: CDB only use wallet.dat
 bool dbparam::IsChainFile(std::string strFile) {
+    //debugcs::instance() << "dbparam::InChainFile: " << strFile.c_str() << debugcs::endl();
+    //util::Sleep(5000);
+    assert(strFile != "blkindex.dat");
     return (strFile == "blkindex.dat");
 }
 
@@ -356,11 +364,121 @@ DbTxn *CDBEnv::TxnBegin(int flags /*= DB_TXN_WRITE_NOSYNC*/) {
     return ptxn;
 }
 
+void CDBEnv::Flush(bool fShutdown)
+{
+    LOCK(cs_db);
+    const int64_t nStart = util::GetTimeMillis();
+
+    // Flush log data to the actual data file on all files that are not in use
+    logging::LogPrintf("Flush(%s)%s\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started");
+    if (! fDbEnvInit) {
+        return;
+    }
+
+    {
+        LOCK(cs_db);
+        std::map<std::string, int>::iterator mi = mapFileUseCount.begin();
+        while (mi != mapFileUseCount.end())
+        {
+            std::string strFile = (*mi).first;
+            int nRefCount = (*mi).second;
+            logging::LogPrintf("%s refcount=%d\n", strFile.c_str(), nRefCount);
+            if (nRefCount == 0) {
+                // Move log data to the dat file
+                CloseDb(strFile);
+                logging::LogPrintf("%s checkpoint\n", strFile.c_str());
+                dbenv.txn_checkpoint(0, 0, 0);
+                if (!dbparam::IsChainFile(strFile) || fDetachDB) {
+                    logging::LogPrintf("%s detach\n", strFile.c_str());
+                    if (!fMockDb) {
+                        dbenv.lsn_reset(strFile.c_str(), 0);
+                    }
+                }
+                logging::LogPrintf("%s closed\n", strFile.c_str());
+                mapFileUseCount.erase(mi++);
+            } else {
+                ++mi;
+            }
+        }
+
+        logging::LogPrintf("DBFlush(%s)%s ended %15" PRId64 "ms\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started", util::GetTimeMillis() - nStart);
+        if (args_bool::fShutdown) {
+            char **listp;
+            if (mapFileUseCount.empty()) {
+                dbenv.log_archive(&listp, DB_ARCH_REMOVE);
+                Close();
+            }
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// CLevelDBEnv class
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+CLevelDBEnv::CLevelDBEnv() : fLevelDbEnvInit(false) {
+    this->options = CLevelDBEnv::GetOptions();
+}
+
+CLevelDBEnv::~CLevelDBEnv() {
+    EnvShutdown();
+}
+
+void CLevelDBEnv::EnvShutdown() {
+    LOCK(cs_leveldb);
+    if(! fLevelDbEnvInit)
+        return;
+
+    delete CLevelDBEnv::ptxdb;
+    CLevelDBEnv::ptxdb = nullptr;
+
+    delete options.block_cache;
+    options.block_cache = nullptr;
+
+    delete options.filter_policy;
+    options.filter_policy = nullptr;
+}
+
+leveldb::Options CLevelDBEnv::GetOptions() {
+    leveldb::Options options;
+    const int nCacheSizeMB = map_arg::GetArgInt("-dbcache", IDBEnv::dbcache_size);
+
+    options.block_cache = leveldb::NewLRUCache(nCacheSizeMB * 1048576);
+    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
+    if(!options.block_cache || !options.filter_policy)
+        throw std::runtime_error("leveldb GetOptions(): failure");
+
+    return options;
+}
+
+bool CLevelDBEnv::Open(fs::path pathEnv_) {
+    LOCK(cs_leveldb);
+    if (fLevelDbEnvInit)
+        return true;
+    if (args_bool::fShutdown)
+        return false;
+
+    // First time init.
+    fs::path directory = pathEnv_ / "txleveldb";
+
+    if(! fsbridge::dir_create(directory))
+        throw std::runtime_error("CLevelDBEnv::Open(): dir create failure");
+
+    logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
+    leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CLevelDBEnv::ptxdb);
+    if (! status.ok())
+        throw std::runtime_error(tfm::format("CLevelDBEnv::Open(): error opening database environment %s", status.ToString().c_str()));
+
+    fLevelDbEnvInit = true;
+    return true;
+}
+
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CDB class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr) {
+    LOCK(CDBEnv::cs_db);
     if (pszFile == nullptr)
         return;
 
@@ -388,6 +506,7 @@ CDB::~CDB() {
 }
 
 void CDB::Close() {
+    LOCK(CDBEnv::cs_db);
     if (! pdb)
         return;
     if (activeTxn)
@@ -400,10 +519,10 @@ void CDB::Close() {
     unsigned int nMinutes = 0;
     if (fReadOnly)
         nMinutes = 1;
-    if (dbparam::IsChainFile(strFile))
-        nMinutes = 2;
-    if (dbparam::IsChainFile(strFile) && block_notify<uint256>::IsInitialBlockDownload())
-        nMinutes = 5;
+    //if (dbparam::IsChainFile(strFile))
+    //    nMinutes = 2;
+    //if (dbparam::IsChainFile(strFile) && block_notify<HASH>::IsInitialBlockDownload())
+    //    nMinutes = 5;
 
     CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
     CDBEnv::get_instance().DecUseCount(strFile);
@@ -412,6 +531,7 @@ void CDB::Close() {
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int CDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     // Read at cursor, return: 0 success, 1 ERROE_CODE
+    LOCK(CDBEnv::cs_db);
     Dbt datKey;
     if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
         datKey.set_data(&ssKey[0]);
@@ -449,6 +569,7 @@ int CDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, un
 }
 
 bool CDB::TxnBegin() {
+    LOCK(CDBEnv::cs_db);
     if (!pdb || activeTxn)
         return false;
 
@@ -461,6 +582,7 @@ bool CDB::TxnBegin() {
 }
 
 bool CDB::TxnCommit() {
+    LOCK(CDBEnv::cs_db);
     if (!pdb || !activeTxn)
         return false;
 
@@ -470,6 +592,7 @@ bool CDB::TxnCommit() {
 }
 
 bool CDB::TxnAbort() {
+    LOCK(CDBEnv::cs_db);
     if (!pdb || !activeTxn)
         return false;
 
@@ -479,15 +602,18 @@ bool CDB::TxnAbort() {
 }
 
 bool CDB::ReadVersion(int &nVersion) {
+    LOCK(CDBEnv::cs_db);
     nVersion = 0;
     return Read(std::string("version"), nVersion);
 }
 
 bool CDB::WriteVersion(int nVersion) {
+    LOCK(CDBEnv::cs_db);
     return Write(std::string("version"), nVersion);
 }
 
 Dbc *CDB::GetCursor() {
+    LOCK(CDBEnv::cs_db);
     if (! pdb)
         return nullptr;
 
@@ -504,7 +630,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
     while (! args_bool::fShutdown)
     {
         {
-            LOCK(CDBEnv::get_instance().cs_db);
+            LOCK(CDBEnv::cs_db);
             if (!CDBEnv::get_instance().ExistsFileCount(strFile) || CDBEnv::get_instance().GetFileCount(strFile)==0) {
                 // Flush log data to the dat file
                 CDBEnv::get_instance().CloseDb(strFile);
@@ -581,56 +707,4 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
         util::Sleep(100);
     }
     return false;
-}
-
-
-void CDBEnv::Flush(bool fShutdown)
-{
-    int64_t nStart = util::GetTimeMillis();
-
-    //
-    // Flush log data to the actual data file on all files that are not in use
-    //
-    logging::LogPrintf("Flush(%s)%s\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started");
-    if (! fDbEnvInit) {
-        return;
-    }
-
-    {
-        LOCK(cs_db);
-        std::map<std::string, int>::iterator mi = mapFileUseCount.begin();
-        while (mi != mapFileUseCount.end())
-        {
-            std::string strFile = (*mi).first;
-            int nRefCount = (*mi).second;
-            logging::LogPrintf("%s refcount=%d\n", strFile.c_str(), nRefCount);
-            if (nRefCount == 0) {
-                //
-                // Move log data to the dat file
-                //
-                CloseDb(strFile);
-                logging::LogPrintf("%s checkpoint\n", strFile.c_str());
-                dbenv.txn_checkpoint(0, 0, 0);
-                if (!dbparam::IsChainFile(strFile) || fDetachDB) {
-                    logging::LogPrintf("%s detach\n", strFile.c_str());
-                    if (!fMockDb) {
-                        dbenv.lsn_reset(strFile.c_str(), 0);
-                    }
-                }
-                logging::LogPrintf("%s closed\n", strFile.c_str());
-                mapFileUseCount.erase(mi++);
-            } else {
-                ++mi;
-            }
-        }
-
-        logging::LogPrintf("DBFlush(%s)%s ended %15" PRId64 "ms\n", args_bool::fShutdown ? "true" : "false", fDbEnvInit ? "" : " db not started", util::GetTimeMillis() - nStart);
-        if (args_bool::fShutdown) {
-            char **listp;
-            if (mapFileUseCount.empty()) {
-                dbenv.log_archive(&listp, DB_ARCH_REMOVE);
-                Close();
-            }
-        }
-    }
 }

@@ -78,7 +78,7 @@ private:
     CTxDB_impl &operator=(CTxDB_impl &&)=delete;
 
     // global pointer for LevelDB object instance
-    static leveldb::DB *txdb;
+    static leveldb::DB *ptxdb;
 
     // Points to the global instance
     leveldb::DB *pdb;
