@@ -22,30 +22,8 @@
 #include <sync/sync.h>
 #include <debugcs/debugcs.h>
 
-//CCriticalSection CMTxDB::csTxdb_write;
-//template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::ptxdb = nullptr;
-
-/*
-template <typename HASH>
-leveldb::Options CTxDB_impl<HASH>::GetOptions()
-{
-    leveldb::Options options;
-    int nCacheSizeMB = map_arg::GetArgInt("-dbcache", 25);
-
-    options.block_cache = leveldb::NewLRUCache(nCacheSizeMB * 1048576);
-    options.filter_policy = leveldb::NewBloomFilterPolicy(10);
-
-    return options;
-}
-*/
-
-/*
-template <typename HASH>
-void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOld = false)
-{
-    // First time init.
+static void oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
-
     if (fRemoveOld) {
         fs::remove_all(directory); // remove directory
         unsigned int nFile = 1;
@@ -61,47 +39,11 @@ void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOl
             ++nFile;
         }
     }
-
-    fs::create_directory(directory);
-    logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
-
-    leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CTxDB::ptxdb);
-    if (! status.ok()) {
-        throw std::runtime_error(tfm::format("CTxDB::init_blockindex(): error opening database environment %s", status.ToString().c_str()));
-    }
 }
-*/
 
-// CDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
+// Note(pszMode): fReadOnly == false
 template <typename HASH>
-CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(pszMode) {
-    assert(pszMode);
-
-    if (CLevelDBEnv::get_instance().get_ptxdb()) {
-        return;
-    }
-
-    /*
-    this->activeBatch = nullptr;
-    fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    if (CTxDB_impl<HASH>::ptxdb) {
-        pdb = CTxDB_impl<HASH>::ptxdb;
-        debugcs::instance() << "CTxDB_impl::CTxDB_impl already exists ptxdb" << debugcs::endl();
-        return;
-    }
-
-    bool fCreate = ::strchr(pszMode, 'c');
-    debugcs::instance() << "CTxDB_impl::CTxDB_impl ptxdb==nullptr fCreate=" << (fCreate ? "true": "false") << debugcs::endl();
-
-    this->options = GetOptions();
-    this->options.create_if_missing = fCreate;
-    this->options.filter_policy = leveldb::NewBloomFilterPolicy(10);
-
-    //init_blockindex(options); // Init directory
-
-    pdb = CTxDB_impl<HASH>::ptxdb;
-    */
-
+void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= false*/) {
     bool fCreate = ::strchr(pszMode, 'c');
     if (Exists(std::string("version"))) {
         int nVersion;
@@ -109,101 +51,36 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(pszMode)
         logging::LogPrintf("Transaction index version is %d\n", nVersion);
 
         if (nVersion < version::DATABASE_VERSION) {
-            /*
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
             // Leveldb instance destruction
-            delete CTxDB_impl<HASH>::ptxdb;
-            CTxDB_impl<HASH>::ptxdb = pdb = nullptr;
-            delete this->activeBatch;
-            this->activeBatch = nullptr;
+            // Note: activeBatch is nullptr.
+            // Remove directory and create new database.
+            if(! CLevelDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, oldblockindex_remove)) {
+                throw std::runtime_error("CTxDB_impl::init_blockindex(): error opening database environment");
+            }
 
-            //init_blockindex(options, true); // Remove directory and create new database
-            pdb = CTxDB_impl<HASH>::ptxdb;
-
-            bool fTmp = fReadOnly;
-            fReadOnly = false;
             WriteVersion(version::DATABASE_VERSION); // Save transaction index version
-            fReadOnly = fTmp;
-            */
         }
     } else if (fCreate) {
-        bool fTmp = fReadOnly;
-
-        fReadOnly = false;
         WriteVersion(version::DATABASE_VERSION);
-        fReadOnly = fTmp;
     }
 
     logging::LogPrintf("Opened LevelDB successfully\n");
 }
 
+// CLevelDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
 template <typename HASH>
-CTxDB_impl<HASH>::~CTxDB_impl() {
-    /*
-    // Note that this is not the same as Close() because it deletes only
-    // data scoped to this TxDB object.
-    delete this->activeBatch;
+CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(pszMode) {
+    assert(pszMode);
 
-    debugcs::instance() << "CTxDB_impl::~CTxDB_impl" << debugcs::endl();
-    */
-}
-
-/*
-template <typename HASH>
-void CTxDB_impl<HASH>::Close()
-{
-    delete CTxDB_impl<HASH>::ptxdb;
-    CTxDB_impl<HASH>::ptxdb = pdb = nullptr;
-
-    delete this->options.filter_policy;
-    this->options.filter_policy = nullptr;
-
-    delete this->options.block_cache;
-    this->options.block_cache = nullptr;
-
-    delete this->activeBatch;
-    this->activeBatch = nullptr;
-
-    debugcs::instance() << "CTxDB_impl::Close global instance all delete" << debugcs::endl();
-    //util::Sleep(5000);
-}
-*/
-
-template <typename HASH>
-bool CTxDB_impl<HASH>::TxnBegin()
-{
-    assert(!this->activeBatch);
-    this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
-    if (! this->activeBatch) {
-        throw std::runtime_error("LevelDB : WriteBatch failed to allocate memory");
-        return false;
-    }
-    return true;
+    //if (CLevelDBEnv::get_instance().get_ptxdb()) {
+    //    return;
+    //}
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::TxnCommit()
-{
-    assert(this->activeBatch);
-
-    leveldb::Status status = pdb->Write(leveldb::WriteOptions(), activeBatch);
-    delete this->activeBatch;
-    this->activeBatch = nullptr;
-
-    if (! status.ok()) {
-        logging::LogPrintf("LevelDB batch commit failure: %s\n", status.ToString().c_str());
-        return false;
-    }
-    return true;
-}
-
-template <typename HASH>
-bool CTxDB_impl<HASH>::TxnAbort() {
-    delete this->activeBatch;
-    this->activeBatch = nullptr;
-    return true;
-}
+CTxDB_impl<HASH>::~CTxDB_impl() {}
 
 template <typename HASH>
 bool CTxDB_impl<HASH>::ReadVersion(int &nVersion) {
@@ -215,176 +92,6 @@ template <typename HASH>
 bool CTxDB_impl<HASH>::WriteVersion(int nVersion) {
     return Write(std::string("version"), nVersion);
 }
-
-/*
-template<typename HASH>
-template<typename K, typename T>
-bool CTxDB_impl<HASH>::Read(const K &key, T &value) {
-    CDataStream ssKey(0, 0);
-    ssKey.reserve(1000);
-    ssKey << key;
-    std::string strValue;
-
-    bool readFromDb = true;
-    if (this->activeBatch) {
-        // First we must search for it in the currently pending set of
-        // changes to the db. If not found in the batch, go on to read disk.
-        bool deleted = false;
-        readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
-        if (deleted) {
-            return false;
-        }
-    }
-    if (readFromDb) {
-        leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
-        if (!status.ok()) {
-            if (status.IsNotFound()) {
-                return false;
-            }
-
-            // Some unexpected error.
-            logging::LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
-            return false;
-        }
-    }
-
-    // Unserialize value
-    try {
-        CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
-        ssValue >> value;
-    } catch (const std::exception &) {
-        return false;
-    }
-
-    return true;
-}
-
-template<typename HASH>
-template<typename K, typename T>
-bool CTxDB_impl<HASH>::Write(const K &key, const T &value) {
-    if (this->fReadOnly)
-        assert(!"Write called on database in read-only mode");
-
-    CDataStream ssKey(0, 0);
-    ssKey.reserve(1000);
-    ssKey << key;
-
-    CDataStream ssValue(0, 0);
-    ssValue.reserve(10000);
-    ssValue << value;
-
-    if (this->activeBatch) {
-        this->activeBatch->Put(ssKey.str(), ssValue.str());
-        return true;
-    }
-
-    leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
-    if (! status.ok()) {
-        logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
-        return false;
-    }
-
-    return true;
-}
-
-template<typename HASH>
-template<typename K>
-bool CTxDB_impl<HASH>::Erase(const K &key) {
-    if (! this->pdb)
-        return false;
-    if (this->fReadOnly)
-        assert(!"Erase called on database in read-only mode");
-
-    CDataStream ssKey(0, 0);
-    ssKey.reserve(1000);
-    ssKey << key;
-    if (this->activeBatch) {
-        this->activeBatch->Delete(ssKey.str());
-        return true;
-    }
-
-    leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
-    return (status.ok() || status.IsNotFound());
-}
-
-template<typename HASH>
-template<typename K>
-bool CTxDB_impl<HASH>::Exists(const K &key) {
-    CDataStream ssKey(0, 0);
-    ssKey.reserve(1000);
-    ssKey << key;
-    std::string unused;
-
-    if (this->activeBatch) {
-        bool deleted;
-        if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
-            return true;
-        }
-    }
-
-    leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
-    return status.IsNotFound() == false;
-}
-*/
-
-/*
-namespace {
-class CBatchScanner final : public leveldb::WriteBatch::Handler
-{
-private:
-    CBatchScanner(const CBatchScanner &)=delete;
-    CBatchScanner(CBatchScanner &&)=delete;
-    CBatchScanner &operator=(const CBatchScanner &)=delete;
-    CBatchScanner &operator=(CBatchScanner &&)=delete;
-
-public:
-    std::string needle;
-    bool *deleted;
-    std::string *foundValue;
-    bool foundEntry;
-
-    CBatchScanner() : foundEntry(false) {}
-
-    void Put(const leveldb::Slice &key, const leveldb::Slice &value) {
-        if (key.ToString() == needle) {
-            foundEntry = true;
-            *deleted = false;
-            *foundValue = value.ToString();
-        }
-    }
-
-    void Delete(const leveldb::Slice &key) {
-        if (key.ToString() == needle) {
-            foundEntry = true;
-            *deleted = true;
-        }
-    }
-};
-} // namespace
-
-// When performing a read, if we have an active batch we need to check it first
-// before reading from the database, as the rest of the code assumes that once
-// a database transaction begins reads are consistent with it. It would be good
-// to change that assumption in future and avoid the performance hit, though in
-// practice it does not appear to be large.
-template <typename HASH>
-bool CTxDB_impl<HASH>::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const
-{
-    assert(this->activeBatch);
-
-    *deleted = false;
-
-    CBatchScanner scanner;
-    scanner.needle = key.str();
-    scanner.deleted = deleted;
-    scanner.foundValue = value;
-    leveldb::Status status = this->activeBatch->Iterate(&scanner);
-    if (! status.ok()) {
-        throw std::runtime_error(status.ToString());
-    }
-    return scanner.foundEntry;
-}
-*/
 
 template <typename HASH>
 bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
@@ -578,12 +285,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     while (iterator->Valid())
     {
         // Unpack keys and values.
-        CDataStream ssKey(0, 0);
-        ssKey.write(iterator->key().data(), iterator->key().size());
-        CDataStream ssValue(0, 0);
-        ssValue.write(iterator->value().data(), iterator->value().size());
+        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
         std::string strType;
-        ssKey >> strType;
+        ::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
         if (args_bool::fRequestShutdown || strType != "blockindex") {
@@ -591,7 +296,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         }
 
         CDiskBlockIndex_impl<HASH> diskindex;
-        ssValue >> diskindex;
+        ::Unserialize(ssValue, diskindex);
 
         HASH blockHash = diskindex.GetBlockHash();
 

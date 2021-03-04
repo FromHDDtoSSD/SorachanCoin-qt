@@ -23,14 +23,15 @@
 template <typename HASH>
 class CTxDB_impl : public CLevelDB // Note: no necessary virtual.
 {
+    CTxDB_impl(const CTxDB_impl &)=delete;
+    CTxDB_impl(CTxDB_impl &&)=delete;
+    CTxDB_impl &operator=(const CTxDB_impl &)=delete;
+    CTxDB_impl &operator=(CTxDB_impl &&)=delete;
 public:
     CTxDB_impl(const char *pszMode = "r+");
     ~CTxDB_impl();
-    //void Close(); // Destroys the underlying shared global state accessed by this TxDB.
 
-    bool TxnBegin();
-    bool TxnCommit();
-    bool TxnAbort();
+    void init_blockindex(const char *pszMode, bool fRemoveOld = false);
 
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
@@ -71,47 +72,6 @@ public:
                         CBlockIndex_impl<HASH> *&pindexBest,
                         HASH &nBestInvalidTrust,
                         HASH &nBestChainTrust);
-
-private:
-    CTxDB_impl(const CTxDB_impl &)=delete;
-    CTxDB_impl(CTxDB_impl &&)=delete;
-    CTxDB_impl &operator=(const CTxDB_impl &)=delete;
-    CTxDB_impl &operator=(CTxDB_impl &&)=delete;
-
-    // global pointer for LevelDB object instance
-    //static leveldb::DB *ptxdb;
-
-    // Points to the global instance
-    //leveldb::DB *pdb;
-
-    // A batch stores up writes and deletes for atomic application. When this
-    // field is non-NULL, writes/deletes go there instead of directly to disk.
-    //leveldb::WriteBatch *activeBatch;
-    //leveldb::Options options;
-    //bool fReadOnly;
-    //int nVersion;
-
-    //leveldb::Options GetOptions();
-    //void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
-
-    /*
-    // Returns true and sets (value,false) if activeBatch contains the given key
-    // or leaves value alone and sets deleted = true if activeBatch contains a
-    // delete for it.
-    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
-
-    template<typename K, typename T>
-    bool Read(const K &key, T &value);
-
-    template<typename K, typename T>
-    bool Write(const K &key, const T &value);
-
-    template<typename K>
-    bool Erase(const K &key);
-
-    template<typename K>
-    bool Exists(const K &key);
-    */
 };
 using CTxDB = CTxDB_impl<uint256>; // mainchain
 //using CTxDB_finexDriveChain = CTxDB_impl<uint65536>; // sidechain-1

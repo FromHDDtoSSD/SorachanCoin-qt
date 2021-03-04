@@ -434,9 +434,13 @@ void CLevelDBEnv::EnvShutdown() {
 
     delete options.filter_policy;
     options.filter_policy = nullptr;
+
+    //debugcs::instance() << "CLevelDBEnv::EnvShutdown global instance all delete" << debugcs::endl();
+    //util::Sleep(5000);
 }
 
 leveldb::Options CLevelDBEnv::GetOptions() {
+    LOCK(cs_leveldb);
     leveldb::Options options;
     const int nCacheSizeMB = map_arg::GetArgInt("-dbcache", IDBEnv::dbcache_size);
 
@@ -760,6 +764,21 @@ bool CLevelDB::ScanBatch(const CDataStream &key, std::string *value, bool *delet
     }
     return scanner.foundEntry;
 }
+bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const {
+    assert(this->activeBatch);
+
+    *deleted = false;
+
+    CBatchScanner scanner;
+    scanner.needle = key.str();
+    scanner.deleted = deleted;
+    scanner.foundValue = value;
+    leveldb::Status status = this->activeBatch->Iterate(&scanner);
+    if (! status.ok()) {
+        throw std::runtime_error(status.ToString());
+    }
+    return scanner.foundEntry;
+}
 
 CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr) {
     assert(pszMode);
@@ -775,10 +794,37 @@ CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr
 }
 
 CLevelDB::~CLevelDB() {
-    // Note that this is not the same as Close() because it deletes only
-    // data scoped to this TxDB object.
     delete this->activeBatch;
 
-    debugcs::instance() << "CTxDB_impl::~CTxDB_impl" << debugcs::endl();
+    debugcs::instance() << "CLevelDB::~CLevelDB" << debugcs::endl();
 }
 
+bool CLevelDB::TxnBegin() {
+    assert(!this->activeBatch);
+    this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
+    if (! this->activeBatch) {
+        throw std::runtime_error("LevelDB : WriteBatch failed to allocate memory");
+        return false;
+    }
+    return true;
+}
+
+bool CLevelDB::TxnCommit() {
+    assert(this->activeBatch);
+
+    leveldb::Status status = pdb->Write(leveldb::WriteOptions(), activeBatch);
+    delete this->activeBatch;
+    this->activeBatch = nullptr;
+
+    if (! status.ok()) {
+        logging::LogPrintf("LevelDB batch commit failure: %s\n", status.ToString().c_str());
+        return false;
+    }
+    return true;
+}
+
+bool CLevelDB::TxnAbort() {
+    delete this->activeBatch;
+    this->activeBatch = nullptr;
+    return true;
+}

@@ -244,7 +244,15 @@ public:
     }
 
     leveldb::DB *get_ptxdb() const {
+        LOCK(cs_leveldb);
         return ptxdb;
+    }
+
+    bool restart(fs::path pathEnv_, bool fRemoveOld, void (*func)(bool fRemoveOld)) {
+        LOCK(cs_leveldb);
+        EnvShutdown();
+        func(fRemoveOld);
+        return Open(pathEnv_);
     }
 
     bool Open(fs::path pathEnv_);
@@ -261,19 +269,40 @@ class CDBStream
     CDBStream &operator=(const CDBStream &)=delete;
     CDBStream &operator=(CDBStream &&)=delete;
 public:
-    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : pos(0), pbegin(beginIn), pend(beginIn+sizeIn) {
+    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : pos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize
         assert(pbegin!=pend);
     }
+    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) noexcept : pos(0), pend(nullptr), pvch(vch) { // Serialize
+        vch->reserve(vch_reserve);
+        vch->resize(128);
+        pbegin = vch->data();
+    }
+
     CDBStream &read(char *dest, uint32_t size) {
-        assert(size>=0);
+        assert(size>0);
         dest ? std::memcpy(dest, pbegin+pos, size): 0;
         pos += size;
         return *this;
+    }
+
+    CDBStream &write(const char *src, uint32_t size) {
+        assert(size>0);
+        pvch->resize(pos+size);
+        pbegin = pvch->data();
+        src ? std::memcpy(pbegin+pos, src, size): 0;
+        pos += size;
+        pend = pbegin+pos;
+        return *this;
+    }
+
+    std::string str() const {
+        return (std::string(pbegin, pend));
     }
 private:
     uint32_t pos;
     char *pbegin;
     char *pend;
+    std::vector<char> *const pvch;
 };
 
 /**
@@ -448,28 +477,33 @@ private:
     CLevelDB &operator=(CLevelDB &&)=delete;
 
     bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
-
-protected:
-    bool fReadOnly;
-
-    // Points to the global instance
-    leveldb::DB *pdb;
+    bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 
     // A batch stores up writes and deletes for atomic application. When this
     // field is non-NULL, writes/deletes go there instead of directly to disk.
     leveldb::WriteBatch *activeBatch;
 
+    bool fReadOnly;
+
+protected:
+    // Points to the global instance
+    leveldb::DB *pdb;
+
 public:
     CLevelDB(const char *pszMode ="r+");
     ~CLevelDB();
 
+    bool TxnBegin();
+    bool TxnCommit();
+    bool TxnAbort();
+
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
-        std::string strValue;
+        std::vector<char> vch;
+        CDBStream ssKey(&vch);
+        ::Serialize(ssKey, key);
 
+        std::string strValue;
         bool readFromDb = true;
         if (this->activeBatch) {
             // First we must search for it in the currently pending set of
@@ -495,8 +529,8 @@ public:
 
         // Unserialize value
         try {
-            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
-            ssValue >> value;
+            CDBStream stream((char *)&strValue[0], strValue.size());
+            ::Unserialize(stream, value);
         } catch (const std::exception &) {
             return false;
         }
@@ -509,13 +543,13 @@ public:
         if (this->fReadOnly)
             assert(!"Write called on database in read-only mode");
 
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
+        std::vector<char> vch;
+        CDBStream ssKey(&vch);
+        ::Serialize(ssKey, key);
 
-        CDataStream ssValue(0, 0);
-        ssValue.reserve(10000);
-        ssValue << value;
+        std::vector<char> vch2;
+        CDBStream ssValue(&vch2, 10000);
+        ::Serialize(ssValue, value);
 
         if (this->activeBatch) {
             this->activeBatch->Put(ssKey.str(), ssValue.str());
@@ -538,9 +572,10 @@ public:
         if (this->fReadOnly)
             assert(!"Erase called on database in read-only mode");
 
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
+        std::vector<char> vch;
+        CDBStream ssKey(&vch);
+        ::Serialize(ssKey, key);
+
         if (this->activeBatch) {
             this->activeBatch->Delete(ssKey.str());
             return true;
@@ -552,9 +587,11 @@ public:
 
     template<typename K>
     bool Exists(const K &key) {
-        CDataStream ssKey(0, 0);
-        ssKey.reserve(1000);
-        ssKey << key;
+
+        std::vector<char> vch;
+        CDBStream ssKey(&vch);
+        ::Serialize(ssKey, key);
+
         std::string unused;
 
         if (this->activeBatch) {
