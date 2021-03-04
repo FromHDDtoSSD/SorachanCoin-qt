@@ -20,10 +20,12 @@
 #include <util/logging.h>
 #include <file_operate/iofs.h>
 #include <sync/sync.h>
+#include <debugcs/debugcs.h>
 
-CCriticalSection CMTxDB::csTxdb_write;
-template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::ptxdb = nullptr;
+//CCriticalSection CMTxDB::csTxdb_write;
+//template <typename HASH> leveldb::DB *CTxDB_impl<HASH>::ptxdb = nullptr;
 
+/*
 template <typename HASH>
 leveldb::Options CTxDB_impl<HASH>::GetOptions()
 {
@@ -35,9 +37,11 @@ leveldb::Options CTxDB_impl<HASH>::GetOptions()
 
     return options;
 }
+*/
 
+/*
 template <typename HASH>
-void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOld /* = false */)
+void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOld = false)
 {
     // First time init.
     fs::path directory = iofs::GetDataDir() / "txleveldb";
@@ -66,35 +70,46 @@ void CTxDB_impl<HASH>::init_blockindex(leveldb::Options &options, bool fRemoveOl
         throw std::runtime_error(tfm::format("CTxDB::init_blockindex(): error opening database environment %s", status.ToString().c_str()));
     }
 }
+*/
 
 // CDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
 template <typename HASH>
-CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
-{
+CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(pszMode) {
     assert(pszMode);
 
+    if (CLevelDBEnv::get_instance().get_ptxdb()) {
+        return;
+    }
+
+    /*
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
     if (CTxDB_impl<HASH>::ptxdb) {
         pdb = CTxDB_impl<HASH>::ptxdb;
+        debugcs::instance() << "CTxDB_impl::CTxDB_impl already exists ptxdb" << debugcs::endl();
         return;
     }
 
     bool fCreate = ::strchr(pszMode, 'c');
+    debugcs::instance() << "CTxDB_impl::CTxDB_impl ptxdb==nullptr fCreate=" << (fCreate ? "true": "false") << debugcs::endl();
 
     this->options = GetOptions();
     this->options.create_if_missing = fCreate;
     this->options.filter_policy = leveldb::NewBloomFilterPolicy(10);
 
-    init_blockindex(options); // Init directory
+    //init_blockindex(options); // Init directory
 
     pdb = CTxDB_impl<HASH>::ptxdb;
+    */
 
+    bool fCreate = ::strchr(pszMode, 'c');
     if (Exists(std::string("version"))) {
+        int nVersion;
         ReadVersion(nVersion);
         logging::LogPrintf("Transaction index version is %d\n", nVersion);
 
         if (nVersion < version::DATABASE_VERSION) {
+            /*
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
             // Leveldb instance destruction
@@ -103,13 +118,14 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
             delete this->activeBatch;
             this->activeBatch = nullptr;
 
-            init_blockindex(options, true); // Remove directory and create new database
+            //init_blockindex(options, true); // Remove directory and create new database
             pdb = CTxDB_impl<HASH>::ptxdb;
 
             bool fTmp = fReadOnly;
             fReadOnly = false;
             WriteVersion(version::DATABASE_VERSION); // Save transaction index version
             fReadOnly = fTmp;
+            */
         }
     } else if (fCreate) {
         bool fTmp = fReadOnly;
@@ -124,11 +140,16 @@ CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */)
 
 template <typename HASH>
 CTxDB_impl<HASH>::~CTxDB_impl() {
+    /*
     // Note that this is not the same as Close() because it deletes only
     // data scoped to this TxDB object.
     delete this->activeBatch;
+
+    debugcs::instance() << "CTxDB_impl::~CTxDB_impl" << debugcs::endl();
+    */
 }
 
+/*
 template <typename HASH>
 void CTxDB_impl<HASH>::Close()
 {
@@ -143,7 +164,11 @@ void CTxDB_impl<HASH>::Close()
 
     delete this->activeBatch;
     this->activeBatch = nullptr;
+
+    debugcs::instance() << "CTxDB_impl::Close global instance all delete" << debugcs::endl();
+    //util::Sleep(5000);
 }
+*/
 
 template <typename HASH>
 bool CTxDB_impl<HASH>::TxnBegin()
@@ -191,6 +216,7 @@ bool CTxDB_impl<HASH>::WriteVersion(int nVersion) {
     return Write(std::string("version"), nVersion);
 }
 
+/*
 template<typename HASH>
 template<typename K, typename T>
 bool CTxDB_impl<HASH>::Read(const K &key, T &value) {
@@ -299,7 +325,9 @@ bool CTxDB_impl<HASH>::Exists(const K &key) {
     leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
     return status.IsNotFound() == false;
 }
+*/
 
+/*
 namespace {
 class CBatchScanner final : public leveldb::WriteBatch::Handler
 {
@@ -356,6 +384,7 @@ bool CTxDB_impl<HASH>::ScanBatch(const CDataStream &key, std::string *value, boo
     }
     return scanner.foundEntry;
 }
+*/
 
 template <typename HASH>
 bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
@@ -806,11 +835,13 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 }
 
 // multi-threading DB
+/*
 unsigned int CMTxDB::dbcall(cla_thread<CMTxDB>::thread_data *data) {
 
 
     return 0;
 }
+*/
 
 
 

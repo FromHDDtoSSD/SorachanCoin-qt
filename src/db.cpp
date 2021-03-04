@@ -13,8 +13,6 @@
 #include <file_operate/fs.h>
 #include <boost/filesystem/fstream.hpp>
 #include <util/time.h>
-#include <leveldb/cache.h>
-#include <leveldb/filter_policy.h>
 
 #ifndef WIN32
 # include "sys/stat.h"
@@ -22,7 +20,6 @@
 
 CCriticalSection CDBEnv::cs_db;
 CCriticalSection CLevelDBEnv::cs_leveldb;
-leveldb::DB *CLevelDBEnv::ptxdb = nullptr;
 
 static CCriticalSection cs_w_update;
 static unsigned int nWalletDBUpdated = 0;
@@ -448,6 +445,7 @@ leveldb::Options CLevelDBEnv::GetOptions() {
     if(!options.block_cache || !options.filter_policy)
         throw std::runtime_error("leveldb GetOptions(): failure");
 
+    options.create_if_missing = true;
     return options;
 }
 
@@ -465,7 +463,7 @@ bool CLevelDBEnv::Open(fs::path pathEnv_) {
         throw std::runtime_error("CLevelDBEnv::Open(): dir create failure");
 
     logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
-    leveldb::Status status = leveldb::DB::Open(options, directory.string(), &CLevelDBEnv::ptxdb);
+    leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &CLevelDBEnv::get_instance().ptxdb);
     if (! status.ok())
         throw std::runtime_error(tfm::format("CLevelDBEnv::Open(): error opening database environment %s", status.ToString().c_str()));
 
@@ -708,3 +706,79 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
     }
     return false;
 }
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// CLevelDB class
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+namespace {
+class CBatchScanner final : public leveldb::WriteBatch::Handler
+{
+private:
+    CBatchScanner(const CBatchScanner &)=delete;
+    CBatchScanner(CBatchScanner &&)=delete;
+    CBatchScanner &operator=(const CBatchScanner &)=delete;
+    CBatchScanner &operator=(CBatchScanner &&)=delete;
+
+public:
+    std::string needle;
+    bool *deleted;
+    std::string *foundValue;
+    bool foundEntry;
+
+    CBatchScanner() : foundEntry(false) {}
+
+    void Put(const leveldb::Slice &key, const leveldb::Slice &value) {
+        if (key.ToString() == needle) {
+            foundEntry = true;
+            *deleted = false;
+            *foundValue = value.ToString();
+        }
+    }
+
+    void Delete(const leveldb::Slice &key) {
+        if (key.ToString() == needle) {
+            foundEntry = true;
+            *deleted = true;
+        }
+    }
+};
+} // namespace
+
+bool CLevelDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const {
+    assert(this->activeBatch);
+
+    *deleted = false;
+
+    CBatchScanner scanner;
+    scanner.needle = key.str();
+    scanner.deleted = deleted;
+    scanner.foundValue = value;
+    leveldb::Status status = this->activeBatch->Iterate(&scanner);
+    if (! status.ok()) {
+        throw std::runtime_error(status.ToString());
+    }
+    return scanner.foundEntry;
+}
+
+CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr) {
+    assert(pszMode);
+
+    this->activeBatch = nullptr;
+    fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
+    if (CLevelDBEnv::get_instance().get_ptxdb()) {
+        pdb = CLevelDBEnv::get_instance().get_ptxdb();
+        return;
+    }
+
+    pdb = CLevelDBEnv::get_instance().get_ptxdb();
+}
+
+CLevelDB::~CLevelDB() {
+    // Note that this is not the same as Close() because it deletes only
+    // data scoped to this TxDB object.
+    delete this->activeBatch;
+
+    debugcs::instance() << "CTxDB_impl::~CTxDB_impl" << debugcs::endl();
+}
+

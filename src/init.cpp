@@ -868,11 +868,15 @@ bool entry::AppInit2(bool restart/*=false*/)
     int64_t nStart;
 
     // ********************************************************* Step 5: verify database integrity
-    I_DEBUG_CS("Step 5: verify database integrity")
+    I_DEBUG_CS("Step 5: verify database integrity (CDBEnv and CLevelDBEnv)")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
 
     if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
+        std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        return InitError(msg);
+    }
+    if (! CLevelDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
@@ -1077,10 +1081,10 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 7: load blockchain
     I_DEBUG_CS("Step 7: load blockchain")
 
-    if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
-        std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
-        return InitError(msg);
-    }
+    //if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
+    //    std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+    //    return InitError(msg);
+    //}
 
     if (map_arg::GetBoolArg("-loadblockindextest")) {
         CTxDB txdb("r");
@@ -1110,11 +1114,11 @@ bool entry::AppInit2(bool restart/*=false*/)
                 block_load::UnloadBlockIndex();
 
                 if (! block_load::LoadBlockIndex()) {
-                    strLoadError = _("Error loading block database");
+                    strLoadError = _("Error loading block database 1");
                     break;
                 }
             } catch(const std::exception&) {
-                strLoadError = _("Error opening block database");
+                strLoadError = _("Error opening block database 2");
                 break;
             }
 

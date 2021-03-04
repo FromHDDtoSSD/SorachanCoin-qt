@@ -18,14 +18,15 @@
 #include <leveldb/db.h>
 #include <leveldb/write_batch.h>
 #include <util/thread.h>
+#include <db.h>
 
 template <typename HASH>
-class CTxDB_impl // Note: no necessary virtual.
+class CTxDB_impl : public CLevelDB // Note: no necessary virtual.
 {
 public:
     CTxDB_impl(const char *pszMode = "r+");
     ~CTxDB_impl();
-    void Close(); // Destroys the underlying shared global state accessed by this TxDB.
+    //void Close(); // Destroys the underlying shared global state accessed by this TxDB.
 
     bool TxnBegin();
     bool TxnCommit();
@@ -78,21 +79,22 @@ private:
     CTxDB_impl &operator=(CTxDB_impl &&)=delete;
 
     // global pointer for LevelDB object instance
-    static leveldb::DB *ptxdb;
+    //static leveldb::DB *ptxdb;
 
     // Points to the global instance
-    leveldb::DB *pdb;
+    //leveldb::DB *pdb;
 
     // A batch stores up writes and deletes for atomic application. When this
     // field is non-NULL, writes/deletes go there instead of directly to disk.
-    leveldb::WriteBatch *activeBatch;
-    leveldb::Options options;
-    bool fReadOnly;
-    int nVersion;
+    //leveldb::WriteBatch *activeBatch;
+    //leveldb::Options options;
+    //bool fReadOnly;
+    //int nVersion;
 
-    leveldb::Options GetOptions();
-    void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
+    //leveldb::Options GetOptions();
+    //void init_blockindex(leveldb::Options &options, bool fRemoveOld = false);
 
+    /*
     // Returns true and sets (value,false) if activeBatch contains the given key
     // or leaves value alone and sets deleted = true if activeBatch contains a
     // delete for it.
@@ -109,11 +111,13 @@ private:
 
     template<typename K>
     bool Exists(const K &key);
+    */
 };
 using CTxDB = CTxDB_impl<uint256>; // mainchain
 //using CTxDB_finexDriveChain = CTxDB_impl<uint65536>; // sidechain-1
 
 // multi-threading DB
+/*
 class CMTxDB final : public CTxDB
 {
 public:
@@ -141,5 +145,6 @@ private:
     unsigned int dbcall(cla_thread<CMTxDB>::thread_data *data);
     cla_thread<CMTxDB> thread;
 };
+*/
 
 #endif // BITCOIN_DB_H

@@ -14,6 +14,11 @@
 #include <vector>
 #include <db_cxx.h>
 #include <leveldb/db.h>
+#include <leveldb/env.h>
+#include <leveldb/cache.h>
+#include <leveldb/filter_policy.h>
+#include <leveldb/write_batch.h>
+#include <memenv/memenv.h>
 
 class CAddress;
 class CAddrMan;
@@ -226,21 +231,27 @@ private:
     static leveldb::Options GetOptions();
 
     // global pointer for LevelDB object instance
-    static leveldb::DB *ptxdb;
+    leveldb::DB *ptxdb;
+
+    // only using CLevelDBEnv
+    static CCriticalSection cs_leveldb;
 
 public:
-    static CCriticalSection cs_leveldb; // only center criticalsection.
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
         static CLevelDBEnv obj;
         return obj;
     }
 
+    leveldb::DB *get_ptxdb() const {
+        return ptxdb;
+    }
+
     bool Open(fs::path pathEnv_);
 };
 
 /**
- * Berkeley DB Stream
+ * DB Stream
  */
 class CDBStream
 {
@@ -268,7 +279,7 @@ private:
 /**
  * Berkeley DB
  * RAII class that provides access to a Berkeley database
- * using: CWalletDB, CWallethdDB, CWalletqDB
+ * using (Wallet): CWalletDB, CWallethdDB, CWalletqDB
  */
 class CDB
 {
@@ -421,6 +432,141 @@ public:
     bool WriteVersion(int nVersion);
 
     static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
+};
+
+/**
+ * Level DB
+ * RAII class that provides access to a LevelDB database
+ * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
+ */
+class CLevelDB
+{
+private:
+    CLevelDB(const CLevelDB &)=delete;
+    CLevelDB(CLevelDB &&)=delete;
+    CLevelDB &operator=(const CLevelDB &)=delete;
+    CLevelDB &operator=(CLevelDB &&)=delete;
+
+    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
+
+protected:
+    bool fReadOnly;
+
+    // Points to the global instance
+    leveldb::DB *pdb;
+
+    // A batch stores up writes and deletes for atomic application. When this
+    // field is non-NULL, writes/deletes go there instead of directly to disk.
+    leveldb::WriteBatch *activeBatch;
+
+public:
+    CLevelDB(const char *pszMode ="r+");
+    ~CLevelDB();
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        CDataStream ssKey(0, 0);
+        ssKey.reserve(1000);
+        ssKey << key;
+        std::string strValue;
+
+        bool readFromDb = true;
+        if (this->activeBatch) {
+            // First we must search for it in the currently pending set of
+            // changes to the db. If not found in the batch, go on to read disk.
+            bool deleted = false;
+            readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
+            if (deleted) {
+                return false;
+            }
+        }
+        if (readFromDb) {
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
+            if (!status.ok()) {
+                if (status.IsNotFound()) {
+                    return false;
+                }
+
+                // Some unexpected error.
+                logging::LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
+                return false;
+            }
+        }
+
+        // Unserialize value
+        try {
+            CDataStream ssValue(strValue.data(), strValue.data() + strValue.size(), 0, 0);
+            ssValue >> value;
+        } catch (const std::exception &) {
+            return false;
+        }
+
+        return true;
+    }
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value) {
+        if (this->fReadOnly)
+            assert(!"Write called on database in read-only mode");
+
+        CDataStream ssKey(0, 0);
+        ssKey.reserve(1000);
+        ssKey << key;
+
+        CDataStream ssValue(0, 0);
+        ssValue.reserve(10000);
+        ssValue << value;
+
+        if (this->activeBatch) {
+            this->activeBatch->Put(ssKey.str(), ssValue.str());
+            return true;
+        }
+
+        leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
+        if (! status.ok()) {
+            logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
+            return false;
+        }
+
+        return true;
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        if (! this->pdb)
+            return false;
+        if (this->fReadOnly)
+            assert(!"Erase called on database in read-only mode");
+
+        CDataStream ssKey(0, 0);
+        ssKey.reserve(1000);
+        ssKey << key;
+        if (this->activeBatch) {
+            this->activeBatch->Delete(ssKey.str());
+            return true;
+        }
+
+        leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
+        return (status.ok() || status.IsNotFound());
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        CDataStream ssKey(0, 0);
+        ssKey.reserve(1000);
+        ssKey << key;
+        std::string unused;
+
+        if (this->activeBatch) {
+            bool deleted;
+            if (ScanBatch(ssKey, &unused, &deleted) && !deleted) {
+                return true;
+            }
+        }
+
+        leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
+        return status.IsNotFound() == false;
+    }
 };
 
 #endif
