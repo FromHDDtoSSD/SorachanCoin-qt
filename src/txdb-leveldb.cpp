@@ -83,17 +83,6 @@ template <typename HASH>
 CTxDB_impl<HASH>::~CTxDB_impl() {}
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::ReadVersion(int &nVersion) {
-    nVersion = 0;
-    return Read(std::string("version"), nVersion);
-}
-
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteVersion(int nVersion) {
-    return Write(std::string("version"), nVersion);
-}
-
-template <typename HASH>
 bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);

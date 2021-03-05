@@ -749,6 +749,7 @@ public:
 };
 } // namespace
 
+/*
 bool CLevelDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const {
     assert(this->activeBatch);
 
@@ -764,6 +765,7 @@ bool CLevelDB::ScanBatch(const CDataStream &key, std::string *value, bool *delet
     }
     return scanner.foundEntry;
 }
+*/
 bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const {
     assert(this->activeBatch);
 
@@ -782,21 +784,28 @@ bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted
 
 CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr), p(nullptr) {
     assert(pszMode);
+    assert(CLevelDBEnv::get_instance().get_ptxdb());
 
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    if (CLevelDBEnv::get_instance().get_ptxdb()) {
-        pdb = CLevelDBEnv::get_instance().get_ptxdb();
-        return;
-    }
+    //if (CLevelDBEnv::get_instance().get_ptxdb()) {
+    //    pdb = CLevelDBEnv::get_instance().get_ptxdb();
+    //    return;
+    //}
 
     pdb = CLevelDBEnv::get_instance().get_ptxdb();
 }
 
 CLevelDB::~CLevelDB() {
-    delete this->activeBatch;
+    Close();
+}
 
-    debugcs::instance() << "CLevelDB::~CLevelDB" << debugcs::endl();
+void CLevelDB::Close() {
+    delete this->activeBatch;
+    this->activeBatch = nullptr;
+
+    // p is no necessary delete. because delete by const_iterator.
+    //debugcs::instance() << "CLevelDB::Close()" << debugcs::endl();
 }
 
 bool CLevelDB::TxnBegin() {
@@ -827,4 +836,13 @@ bool CLevelDB::TxnAbort() {
     delete this->activeBatch;
     this->activeBatch = nullptr;
     return true;
+}
+
+bool CLevelDB::ReadVersion(int &nVersion) {
+    nVersion = 0;
+    return Read(std::string("version"), nVersion);
+}
+
+bool CLevelDB::WriteVersion(int nVersion) {
+    return Write(std::string("version"), nVersion);
 }

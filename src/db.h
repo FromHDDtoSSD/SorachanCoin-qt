@@ -61,7 +61,37 @@ protected:
 
     virtual void EnvShutdown()=0;
 public:
+
     virtual bool Open(fs::path pathEnv_)=0;
+};
+
+/**
+ * DB Interface
+ */
+class IDB
+{
+public:
+    virtual void Close()=0;
+    virtual bool TxnBegin()=0;
+    virtual bool TxnCommit()=0;
+    virtual bool TxnAbort()=0;
+
+    virtual bool ReadVersion(int &nVersion)=0;
+    virtual bool WriteVersion(int nVersion)=0;
+
+    /*
+    template<typename K, typename T>
+    virtual bool Read(const K &key, T &value)=0;
+
+    template<typename K, typename T>
+    virtual bool Write(const K &key, const T &value)=0;
+
+    template<typename K>
+    virtual bool Erase(const K &key)=0;
+
+    template<typename K>
+    virtual bool Exists(const K &key)=0;
+    */
 };
 
 /**
@@ -310,7 +340,7 @@ private:
  * RAII class that provides access to a Berkeley database
  * using (Wallet): CWalletDB, CWallethdDB, CWalletqDB
  */
-class CDB
+class CDB : public IDB
 {
 private:
     CDB()=delete;
@@ -468,7 +498,7 @@ public:
  * RAII class that provides access to a LevelDB database
  * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
  */
-class CLevelDB
+class CLevelDB : public IDB
 {
 private:
     CLevelDB(const CLevelDB &)=delete;
@@ -476,7 +506,7 @@ private:
     CLevelDB &operator=(const CLevelDB &)=delete;
     CLevelDB &operator=(CLevelDB &&)=delete;
 
-    bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
+    //bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
     bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 
     // A batch stores up writes and deletes for atomic application. When this
@@ -487,6 +517,8 @@ private:
 
     // Points to the global instance
     leveldb::DB *pdb;
+
+    mutable leveldb::Iterator *p;
 
 public:
     //
@@ -513,9 +545,10 @@ public:
         const_iterator() noexcept {
             p = nullptr;
         }
-        explicit const_iterator(leveldb::Iterator *pIn) noexcept {
+        explicit const_iterator(leveldb::Iterator *&pIn) noexcept {
             assert(pIn);
             p = pIn;
+            pIn = nullptr;
         }
         ~const_iterator() {
             delete p;
@@ -550,10 +583,9 @@ public:
         leveldb::Iterator *p;
     };
 
-    mutable leveldb::Iterator *p;
     template <typename KEY, typename VALUE>
     NODISCARD bool seek(const KEY &key, const VALUE &val) const noexcept {
-        if(p) delete p;
+        delete p;
         p = pdb->NewIterator(leveldb::ReadOptions());
         if(! p)
             return false;
@@ -574,9 +606,13 @@ public:
     CLevelDB(const char *pszMode ="r+");
     ~CLevelDB();
 
+    void Close();
     bool TxnBegin();
     bool TxnCommit();
     bool TxnAbort();
+
+    bool ReadVersion(int &nVersion);
+    bool WriteVersion(int nVersion);
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {

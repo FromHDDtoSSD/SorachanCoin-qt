@@ -33,9 +33,6 @@ public:
 
     void init_blockindex(const char *pszMode, bool fRemoveOld = false);
 
-    bool ReadVersion(int &nVersion);
-    bool WriteVersion(int nVersion);
-
     bool ReadTxIndex(HASH hash, CTxIndex &txindex);
     bool UpdateTxIndex(HASH hash, const CTxIndex &txindex);
     bool AddTxIndex(const CTransaction_impl<HASH> &tx, const CDiskTxPos &pos, int nHeight);
