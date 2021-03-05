@@ -339,7 +339,7 @@ protected:
         ssKey.reserve(1000);
         ssKey << key;
         Dbt datKey(&ssKey[0], (uint32_t)ssKey.size());
-        assert(datKey.get_data()==&ssKey[0]); // USERMEM
+        //assert(datKey.get_data()==&ssKey[0]); // USERMEM
 
         // Test [OK]
         /*
@@ -485,9 +485,90 @@ private:
 
     bool fReadOnly;
 
-protected:
     // Points to the global instance
     leveldb::DB *pdb;
+
+public:
+    //
+    // About CLevelDB: const_iterator
+    // Note that, must be using below. memory management is auto.
+    // iterator->: leveldb::Iterator pointer object. key() and value(), data() and size().
+    //
+    // if(! this->seek(KEY, VALUE)) { error }
+    // for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator) { statement }
+    //
+    class const_iterator final {
+        const_iterator(const const_iterator &)=delete;
+        const_iterator &operator=(const const_iterator &)=delete;
+    public:
+        const_iterator &operator=(const_iterator &&obj) noexcept {
+            this->p = obj.p;
+            obj.p = nullptr;
+            return *this;
+        }
+        const_iterator(const_iterator &&obj) noexcept {
+            operator=(std::move(obj));
+        }
+
+        const_iterator() noexcept {
+            p = nullptr;
+        }
+        explicit const_iterator(leveldb::Iterator *pIn) noexcept {
+            assert(pIn);
+            p = pIn;
+        }
+        ~const_iterator() {
+            delete p;
+        }
+
+        void operator++() noexcept {
+            assert(p);
+            p->Next();
+            if(p->Valid()==false) {
+                delete p;
+                p = nullptr;
+            }
+        }
+        void operator++(int) noexcept {
+            operator++();
+        }
+        bool operator==(const const_iterator &obj) const noexcept {
+            return p == obj.p;
+        }
+        bool operator!=(const const_iterator &obj) const noexcept {
+            return p != obj.p;
+        }
+        leveldb::Iterator &operator*() const noexcept {
+            assert(p);
+            return *p;
+        }
+        leveldb::Iterator *operator->() const noexcept {
+            assert(p);
+            return p;
+        }
+    private:
+        leveldb::Iterator *p;
+    };
+
+    mutable leveldb::Iterator *p;
+    template <typename KEY, typename VALUE>
+    NODISCARD bool seek(const KEY &key, const VALUE &val) const noexcept {
+        if(p) delete p;
+        p = pdb->NewIterator(leveldb::ReadOptions());
+        if(! p)
+            return false;
+        CDataStream ssStartKey(0, 0);
+        ssStartKey << std::make_pair(key, val);
+        p->Seek(ssStartKey.str());
+        return true;
+    }
+
+    const_iterator begin() const noexcept {
+        return std::move(const_iterator(p));
+    }
+    constexpr const_iterator end() const noexcept {
+        return std::move(const_iterator());
+    }
 
 public:
     CLevelDB(const char *pszMode ="r+");

@@ -780,7 +780,7 @@ bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted
     return scanner.foundEntry;
 }
 
-CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr) {
+CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr), p(nullptr) {
     assert(pszMode);
 
     this->activeBatch = nullptr;

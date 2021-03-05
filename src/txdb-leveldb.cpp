@@ -274,15 +274,14 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     // The block index is an in-memory structure that maps hashes to on-disk
     // locations where the contents of the block can be found. Here, we scan it
     // out of the DB and into mapBlockIndex.
-    leveldb::Iterator *iterator = pdb->NewIterator(leveldb::ReadOptions());
 
     // Seek to start key.
-    CDataStream ssStartKey(0, 0);
-    ssStartKey << std::make_pair(std::string("blockindex"), HASH(0));
-    iterator->Seek(ssStartKey.str());
+    if(! this->seek(std::string("blockindex"), HASH(0))) {
+        return logging::error("LoadBlockIndex() Error: memory allocate failure.");
+    }
 
     // Now read each entry.
-    while (iterator->Valid())
+    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
     {
         // Unpack keys and values.
         CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
@@ -327,7 +326,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         }
 
         if (! pindexNew->CheckIndex()) {
-            delete iterator;
             return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
         }
 
@@ -335,11 +333,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
-
-        iterator->Next();
     }
-    delete iterator;
-
     if (args_bool::fRequestShutdown) {
         return true;
     }
