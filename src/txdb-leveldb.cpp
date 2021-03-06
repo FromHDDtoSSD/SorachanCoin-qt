@@ -71,12 +71,8 @@ void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= 
 
 // CLevelDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
 template <typename HASH>
-CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(pszMode) {
+CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(CLevelDBEnv::getname_mainchain(), pszMode) {
     assert(pszMode);
-
-    //if (CLevelDBEnv::get_instance().get_ptxdb()) {
-    //    return;
-    //}
 }
 
 template <typename HASH>

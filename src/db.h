@@ -63,6 +63,7 @@ protected:
     static constexpr int retry_counter = 10; // Create retry counter
     static constexpr bool fMockDb = false; // no using MockDB
 
+    fs::path pathEnv;
     mutable CCriticalSection cs_env;
     std::map<std::string, int> mapFileUseCount;
     std::map<std::string, Db *> mapDb; // database handle
@@ -119,6 +120,10 @@ public:
 
     virtual bool Open(fs::path pathEnv_)=0;
     virtual void Close()=0;
+    virtual bool Flush(const std::string &)=0;
+    virtual void Flush(bool fShutdown)=0;
+    virtual void CloseDb(const std::string &)=0;
+    virtual bool RemoveDb(const std::string &)=0;
 };
 
 /**
@@ -166,7 +171,6 @@ private:
 
     bool fDetachDB;
     bool fDbEnvInit;
-    fs::path pathEnv;
     DbEnv dbenv;
 
     void EnvShutdown();
@@ -274,11 +278,10 @@ private:
     // global pointer array for LevelDB object instance
     const std::vector<std::string> instance;
     struct leveldb_object {
-        std::string name;
-        CCriticalSection cs_leveldb;
+        CCriticalSection cs_ldb;
         leveldb::DB *ptxdb;
     };
-    leveldb_object *pobject; // num's instance is same
+    mutable std::map<std::string, leveldb_object *> lobj;
 
     // global only use CLevelDBEnv
     static CCriticalSection cs_leveldb;
@@ -286,13 +289,30 @@ private:
 public:
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
-        static CLevelDBEnv obj({"txleveldb", "txfdcleveldb", "txwalletleveldb"});
+        static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
         return obj;
     }
 
-    leveldb::DB *get_ptxdb() const {
+    static std::string getname_mainchain() {
+        return "txleveldb";
+    }
+    static std::string getname_finexdrivechain() {
+        return "txfinexdrivechain";
+    }
+    static std::string getname_wallet() {
+        return "txwallet";
+    }
+
+    leveldb::DB *&get_ptxdb(const std::string &name) const {
         LOCK(cs_leveldb);
-        return pobject[0].ptxdb;
+        assert(lobj.count(name)>0);
+        return lobj[name]->ptxdb;
+    }
+
+    CCriticalSection &get_rcs(const std::string &name) const {
+        LOCK(cs_leveldb);
+        assert(lobj.count(name)>0);
+        return lobj[name]->cs_ldb;
     }
 
     bool restart(fs::path pathEnv_, bool fRemoveOld, void (*func)(bool fRemoveOld)) {
@@ -305,6 +325,10 @@ public:
     bool Open(fs::path pathEnv_);
 
     void Close();
+    bool Flush(const std::string &strDb);
+    void Flush(bool fShutdown);
+    void CloseDb(const std::string &strDb);
+    bool RemoveDb(const std::string &strDb);
 };
 
 /**
@@ -374,7 +398,7 @@ private:
     bool fReadOnly;
 
 protected:
-    explicit CDB(const char *pszFile, const char *pszMode = "r+"); // open DB
+    explicit CDB(const char *pszFile, const char *pszMode /*= "r+"*/); // open DB
     virtual ~CDB();
 
     template<typename K, typename T>
@@ -525,7 +549,6 @@ private:
     CLevelDB &operator=(const CLevelDB &)=delete;
     CLevelDB &operator=(CLevelDB &&)=delete;
 
-    //bool ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const;
     bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 
     // A batch stores up writes and deletes for atomic application. When this
@@ -535,7 +558,8 @@ private:
     bool fReadOnly;
 
     // Points to the global instance
-    leveldb::DB *pdb;
+    leveldb::DB *&pdb;
+    CCriticalSection &cs_db;
 
     mutable leveldb::Iterator *p;
 
@@ -604,6 +628,7 @@ public:
 
     template <typename KEY, typename VALUE>
     NODISCARD bool seek(const KEY &key, const VALUE &val) const noexcept {
+        LOCK(cs_db);
         delete p;
         p = pdb->NewIterator(leveldb::ReadOptions());
         if(! p)
@@ -622,8 +647,8 @@ public:
     }
 
 public:
-    CLevelDB(const char *pszMode ="r+");
-    ~CLevelDB();
+    explicit CLevelDB(const std::string &strDb, const char *pszMode /*= "r+"*/); // open LevelDB
+    virtual ~CLevelDB();
 
     void Close();
     bool TxnBegin();
@@ -635,6 +660,7 @@ public:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
+        //LOCK(cs_db);
         std::vector<char> vch;
         CDBStream ssKey(&vch);
         ::Serialize(ssKey, key);
@@ -676,6 +702,7 @@ public:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value) {
+        LOCK(cs_db);
         if (this->fReadOnly)
             assert(!"Write called on database in read-only mode");
 
@@ -703,6 +730,7 @@ public:
 
     template<typename K>
     bool Erase(const K &key) {
+        LOCK(cs_db);
         if (! this->pdb)
             return false;
         if (this->fReadOnly)
@@ -723,7 +751,7 @@ public:
 
     template<typename K>
     bool Exists(const K &key) {
-
+        LOCK(cs_db);
         std::vector<char> vch;
         CDBStream ssKey(&vch);
         ::Serialize(ssKey, key);

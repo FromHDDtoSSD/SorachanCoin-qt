@@ -413,7 +413,8 @@ void CDBEnv::Flush(bool fShutdown)
 // CLevelDBEnv class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-CLevelDBEnv::CLevelDBEnv(std::vector<std::string> instIn) : fLevelDbEnvInit(false), pobject(nullptr), instance(instIn) {
+CLevelDBEnv::CLevelDBEnv(std::vector<std::string> instIn) : fLevelDbEnvInit(false), instance(instIn) {
+    LOCK(cs_leveldb);
     this->options = CLevelDBEnv::GetOptions();
 }
 
@@ -426,10 +427,11 @@ void CLevelDBEnv::EnvShutdown() {
     if(! fLevelDbEnvInit)
         return;
 
-    for(size_t i=0; i<instance.size(); ++i) {
-        delete pobject[i].ptxdb;
-        pobject[i].ptxdb = nullptr;
+    for(auto &ite: lobj) {
+        delete ite.second->ptxdb;
+        delete ite.second;
     }
+    lobj.clear();
 
     delete options.block_cache;
     options.block_cache = nullptr;
@@ -437,11 +439,7 @@ void CLevelDBEnv::EnvShutdown() {
     delete options.filter_policy;
     options.filter_policy = nullptr;
 
-    delete [] pobject;
-    pobject = nullptr;
-
-    //debugcs::instance() << "CLevelDBEnv::EnvShutdown global instance all delete" << debugcs::endl();
-    //util::Sleep(5000);
+    debugcs::instance() << "CLevelDBEnv::EnvShutdown() global instance all delete" << debugcs::endl();
 }
 
 leveldb::Options CLevelDBEnv::GetOptions() {
@@ -465,24 +463,24 @@ bool CLevelDBEnv::Open(fs::path pathEnv_) {
     if (args_bool::fShutdown)
         return false;
 
-    pobject = new (std::nothrow) leveldb_object[instance.size()];
-    if(! pobject) {
-        throw std::runtime_error("CLevelDBEnv::Open(): object create failure");
-    }
-
+    pathEnv = pathEnv_;
     for(size_t i=0; i<instance.size(); ++i) {
-        pobject[i].name = instance[i];
-
         // First time init.
-        fs::path directory = pathEnv_ / pobject[i].name;
+        fs::path directory = pathEnv_ / instance[i];
 
         if(! fsbridge::dir_create(directory))
             throw std::runtime_error("CLevelDBEnv::Open(): dir create failure");
 
+        leveldb_object *ptarget = new (std::nothrow) leveldb_object;
+        if(! ptarget)
+            throw std::runtime_error("CLevelDBEnv::Open(): out of memory");
+
         logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
-        leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &pobject[i].ptxdb);
+        leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &ptarget->ptxdb);
         if (! status.ok())
             throw std::runtime_error(tfm::format("CLevelDBEnv::Open(): error opening database environment %s", status.ToString().c_str()));
+
+        lobj.insert(std::make_pair(instance[i], ptarget));
     }
 
     fLevelDbEnvInit = true;
@@ -490,7 +488,40 @@ bool CLevelDBEnv::Open(fs::path pathEnv_) {
 }
 
 void CLevelDBEnv::Close() {
+    Flush(args_bool::fShutdown);
     EnvShutdown();
+}
+
+bool CLevelDBEnv::Flush(const std::string &strDb) {
+    LOCK2(cs_leveldb, lobj[strDb]->cs_ldb);
+    CloseDb(strDb);
+    fs::path directory = pathEnv / strDb;
+    leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &lobj[strDb]->ptxdb);
+    if(! status.ok())
+        throw std::runtime_error(tfm::format("CLevelDBEnv::Flush(): error opening database environment %s", status.ToString().c_str()));
+    return true;
+}
+
+void CLevelDBEnv::Flush(bool fShutdown) {
+    (void)fShutdown;
+    LOCK(cs_leveldb);
+    for(auto &ite: lobj) {
+        if(! Flush(ite.first))
+            return;
+    }
+}
+
+void CLevelDBEnv::CloseDb(const std::string &strDb) {
+    LOCK(cs_leveldb);
+    delete lobj[strDb]->ptxdb;
+    lobj[strDb]->ptxdb = nullptr;
+}
+
+bool CLevelDBEnv::RemoveDb(const std::string &strDb) {
+    LOCK(cs_leveldb);
+    CloseDb(strDb);
+    lobj.erase(strDb);
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
@@ -509,7 +540,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
         nFlags |= DB_CREATE;
 
     {
-        LOCK(CDBEnv::get_instance().cs_db);
+        LOCK(CDBEnv::cs_db);
         strFile = pszFile;
         pdb = CDBEnv::get_instance().Create(strFile, nFlags);
         if (fCreate && !Exists(std::string("version"))) {
@@ -767,24 +798,8 @@ public:
 };
 } // namespace
 
-/*
-bool CLevelDB::ScanBatch(const CDataStream &key, std::string *value, bool *deleted) const {
-    assert(this->activeBatch);
-
-    *deleted = false;
-
-    CBatchScanner scanner;
-    scanner.needle = key.str();
-    scanner.deleted = deleted;
-    scanner.foundValue = value;
-    leveldb::Status status = this->activeBatch->Iterate(&scanner);
-    if (! status.ok()) {
-        throw std::runtime_error(status.ToString());
-    }
-    return scanner.foundEntry;
-}
-*/
 bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const {
+    LOCK(cs_db);
     assert(this->activeBatch);
 
     *deleted = false;
@@ -800,18 +815,13 @@ bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted
     return scanner.foundEntry;
 }
 
-CLevelDB::CLevelDB(const char *pszMode /*="r+"*/) : fReadOnly(true), pdb(nullptr), p(nullptr) {
+CLevelDB::CLevelDB(const std::string &strDb, const char *pszMode /*="r+"*/) :
+    pdb(CLevelDBEnv::get_instance().get_ptxdb(strDb)), cs_db(CLevelDBEnv::get_instance().get_rcs(strDb)), fReadOnly(true), p(nullptr) {
     assert(pszMode);
-    assert(CLevelDBEnv::get_instance().get_ptxdb());
+    //assert(CLevelDBEnv::get_instance().get_ptxdb(strDb));
 
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
-    //if (CLevelDBEnv::get_instance().get_ptxdb()) {
-    //    pdb = CLevelDBEnv::get_instance().get_ptxdb();
-    //    return;
-    //}
-
-    pdb = CLevelDBEnv::get_instance().get_ptxdb();
 }
 
 CLevelDB::~CLevelDB() {
@@ -819,6 +829,7 @@ CLevelDB::~CLevelDB() {
 }
 
 void CLevelDB::Close() {
+    LOCK(cs_db);
     delete this->activeBatch;
     this->activeBatch = nullptr;
 
@@ -827,7 +838,8 @@ void CLevelDB::Close() {
 }
 
 bool CLevelDB::TxnBegin() {
-    assert(!this->activeBatch);
+    LOCK(cs_db);
+    assert(! this->activeBatch);
     this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
     if (! this->activeBatch) {
         throw std::runtime_error("LevelDB : WriteBatch failed to allocate memory");
@@ -837,6 +849,7 @@ bool CLevelDB::TxnBegin() {
 }
 
 bool CLevelDB::TxnCommit() {
+    LOCK(cs_db);
     assert(this->activeBatch);
 
     leveldb::Status status = pdb->Write(leveldb::WriteOptions(), activeBatch);
@@ -851,16 +864,19 @@ bool CLevelDB::TxnCommit() {
 }
 
 bool CLevelDB::TxnAbort() {
+    LOCK(cs_db);
     delete this->activeBatch;
     this->activeBatch = nullptr;
     return true;
 }
 
 bool CLevelDB::ReadVersion(int &nVersion) {
+    //LOCK(cs_db);
     nVersion = 0;
     return Read(std::string("version"), nVersion);
 }
 
 bool CLevelDB::WriteVersion(int nVersion) {
+    LOCK(cs_db);
     return Write(std::string("version"), nVersion);
 }
