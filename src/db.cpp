@@ -413,7 +413,7 @@ void CDBEnv::Flush(bool fShutdown)
 // CLevelDBEnv class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-CLevelDBEnv::CLevelDBEnv() : fLevelDbEnvInit(false) {
+CLevelDBEnv::CLevelDBEnv(std::vector<std::string> instIn) : fLevelDbEnvInit(false), pobject(nullptr), instance(instIn) {
     this->options = CLevelDBEnv::GetOptions();
 }
 
@@ -426,14 +426,19 @@ void CLevelDBEnv::EnvShutdown() {
     if(! fLevelDbEnvInit)
         return;
 
-    delete CLevelDBEnv::ptxdb;
-    CLevelDBEnv::ptxdb = nullptr;
+    for(size_t i=0; i<instance.size(); ++i) {
+        delete pobject[i].ptxdb;
+        pobject[i].ptxdb = nullptr;
+    }
 
     delete options.block_cache;
     options.block_cache = nullptr;
 
     delete options.filter_policy;
     options.filter_policy = nullptr;
+
+    delete [] pobject;
+    pobject = nullptr;
 
     //debugcs::instance() << "CLevelDBEnv::EnvShutdown global instance all delete" << debugcs::endl();
     //util::Sleep(5000);
@@ -460,19 +465,32 @@ bool CLevelDBEnv::Open(fs::path pathEnv_) {
     if (args_bool::fShutdown)
         return false;
 
-    // First time init.
-    fs::path directory = pathEnv_ / "txleveldb";
+    pobject = new (std::nothrow) leveldb_object[instance.size()];
+    if(! pobject) {
+        throw std::runtime_error("CLevelDBEnv::Open(): object create failure");
+    }
 
-    if(! fsbridge::dir_create(directory))
-        throw std::runtime_error("CLevelDBEnv::Open(): dir create failure");
+    for(size_t i=0; i<instance.size(); ++i) {
+        pobject[i].name = instance[i];
 
-    logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
-    leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &CLevelDBEnv::get_instance().ptxdb);
-    if (! status.ok())
-        throw std::runtime_error(tfm::format("CLevelDBEnv::Open(): error opening database environment %s", status.ToString().c_str()));
+        // First time init.
+        fs::path directory = pathEnv_ / pobject[i].name;
+
+        if(! fsbridge::dir_create(directory))
+            throw std::runtime_error("CLevelDBEnv::Open(): dir create failure");
+
+        logging::LogPrintf("Opening LevelDB in %s\n", directory.string().c_str());
+        leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &pobject[i].ptxdb);
+        if (! status.ok())
+            throw std::runtime_error(tfm::format("CLevelDBEnv::Open(): error opening database environment %s", status.ToString().c_str()));
+    }
 
     fLevelDbEnvInit = true;
     return true;
+}
+
+void CLevelDBEnv::Close() {
+    EnvShutdown();
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////

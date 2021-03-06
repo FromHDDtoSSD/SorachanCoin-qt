@@ -54,15 +54,71 @@ namespace dbparam
  */
 class IDBEnv
 {
+    IDBEnv(const IDBEnv &)=delete;
+    IDBEnv(IDBEnv &&)=delete;
+    IDBEnv &operator=(const IDBEnv &)=delete;
+    IDBEnv &operator=(IDBEnv &&)=delete;
 protected:
     static constexpr int dbcache_size = 25;
     static constexpr int retry_counter = 10; // Create retry counter
     static constexpr bool fMockDb = false; // no using MockDB
 
+    mutable CCriticalSection cs_env;
+    std::map<std::string, int> mapFileUseCount;
+    std::map<std::string, Db *> mapDb; // database handle
+
     virtual void EnvShutdown()=0;
 public:
+    IDBEnv() {}
+    virtual ~IDBEnv() {}
+
+    void IncUseCount(const std::string &strFile, bool fempty = true) {
+        LOCK(cs_env);
+        if(fempty==false && mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("IDBEnv inc: No register strFile");
+        if(mapFileUseCount.count(strFile)==0)
+            mapFileUseCount.insert(std::make_pair(strFile, 0));
+        ++mapFileUseCount[strFile];
+    }
+    void DecUseCount(const std::string &strFile) {
+        LOCK(cs_env);
+        if(mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("IDBEnv dec: No register strFile");
+        if(mapFileUseCount[strFile]==0)
+            throw std::runtime_error("IDBEnv: strFile is already removed");
+        --mapFileUseCount[strFile];
+    }
+    bool ExistsFileCount(const std::string &strFile) const {
+        LOCK(cs_env);
+        return mapFileUseCount.count(strFile)>0;
+    }
+    int GetFileCount(const std::string &strFile) const {
+        LOCK(cs_env);
+        if(mapFileUseCount.count(strFile)==0)
+            throw std::runtime_error("IDBEnv getfilecount: No register strFile");
+        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
+        return (*mi).second;
+    }
+    void EraseFileCount(const std::string &strFile) {
+        LOCK(cs_env);
+        if(ExistsFileCount(strFile))
+            mapFileUseCount.erase(strFile);
+    }
+    int GetRefCount() const { // when 0, No using DB.
+        LOCK(cs_env);
+        int RefCount = 0;
+        for(const auto &mi: mapFileUseCount)
+            RefCount += mi.second;
+        return RefCount;
+    }
+    bool FindFile(const std::string &strFile) const {
+        LOCK(cs_env);
+        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
+        return (mi != mapFileUseCount.end());
+    }
 
     virtual bool Open(fs::path pathEnv_)=0;
+    virtual void Close()=0;
 };
 
 /**
@@ -112,8 +168,6 @@ private:
     bool fDbEnvInit;
     fs::path pathEnv;
     DbEnv dbenv;
-    std::map<std::string, int> mapFileUseCount;
-    std::map<std::string, Db *> mapDb; // database handle
 
     void EnvShutdown();
 
@@ -133,50 +187,6 @@ public:
         return bitdb;
     }
 
-    void IncUseCount(const std::string &strFile, bool fempty = true) {
-        LOCK(cs_db);
-        if(fempty==false && mapFileUseCount.count(strFile)==0)
-            throw std::runtime_error("CDBEnv inc: No register strFile");
-        if(mapFileUseCount.count(strFile)==0)
-            mapFileUseCount.insert(std::make_pair(strFile, 0));
-        ++mapFileUseCount[strFile];
-    }
-    void DecUseCount(const std::string &strFile) {
-        LOCK(cs_db);
-        if(mapFileUseCount.count(strFile)==0)
-            throw std::runtime_error("CDBEnv dec: No register strFile");
-        if(mapFileUseCount[strFile]==0)
-            throw std::runtime_error("CDBEnv: strFile is already removed");
-        --mapFileUseCount[strFile];
-    }
-    bool ExistsFileCount(const std::string &strFile) const {
-        LOCK(cs_db);
-        return mapFileUseCount.count(strFile)>0;
-    }
-    int GetFileCount(const std::string &strFile) const {
-        LOCK(cs_db);
-        if(mapFileUseCount.count(strFile)==0)
-            throw std::runtime_error("CDBEnv getfilecount: No register strFile");
-        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
-        return (*mi).second;
-    }
-    void EraseFileCount(const std::string &strFile) {
-        LOCK(cs_db);
-        if(ExistsFileCount(strFile))
-            mapFileUseCount.erase(strFile);
-    }
-    int GetRefCount() const { // when 0, No using DB.
-        LOCK(cs_db);
-        int RefCount = 0;
-        for(const auto &mi: mapFileUseCount)
-            RefCount += mi.second;
-        return RefCount;
-    }
-    bool FindFile(const std::string &strFile) const {
-        LOCK(cs_db);
-        std::map<std::string, int>::const_iterator mi = mapFileUseCount.find(strFile);
-        return (mi != mapFileUseCount.end());
-    }
     bool Flush(const std::string &strFile) {
         LOCK(cs_db);
         if(GetRefCount()>0)
@@ -246,12 +256,13 @@ public:
 class CLevelDBEnv final : public IDBEnv
 {
 private:
+    CLevelDBEnv()=delete;
     CLevelDBEnv(const CLevelDBEnv &)=delete;
     CLevelDBEnv(CLevelDBEnv &&)=delete;
     CLevelDBEnv &operator=(const CLevelDBEnv &)=delete;
     CLevelDBEnv &operator=(CLevelDBEnv &&)=delete;
 
-    CLevelDBEnv();
+    CLevelDBEnv(std::vector<std::string> instIn);
     ~CLevelDBEnv();
 
     bool fLevelDbEnvInit;
@@ -260,22 +271,28 @@ private:
     void EnvShutdown();
     static leveldb::Options GetOptions();
 
-    // global pointer for LevelDB object instance
-    leveldb::DB *ptxdb;
+    // global pointer array for LevelDB object instance
+    const std::vector<std::string> instance;
+    struct leveldb_object {
+        std::string name;
+        CCriticalSection cs_leveldb;
+        leveldb::DB *ptxdb;
+    };
+    leveldb_object *pobject; // num's instance is same
 
-    // only using CLevelDBEnv
+    // global only use CLevelDBEnv
     static CCriticalSection cs_leveldb;
 
 public:
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
-        static CLevelDBEnv obj;
+        static CLevelDBEnv obj({"txleveldb", "txfdcleveldb", "txwalletleveldb"});
         return obj;
     }
 
     leveldb::DB *get_ptxdb() const {
         LOCK(cs_leveldb);
-        return ptxdb;
+        return pobject[0].ptxdb;
     }
 
     bool restart(fs::path pathEnv_, bool fRemoveOld, void (*func)(bool fRemoveOld)) {
@@ -286,6 +303,8 @@ public:
     }
 
     bool Open(fs::path pathEnv_);
+
+    void Close();
 };
 
 /**
