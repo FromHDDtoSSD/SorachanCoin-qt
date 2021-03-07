@@ -579,6 +579,8 @@ public:
         const_iterator &operator=(const_iterator &&obj) noexcept {
             this->p = obj.p;
             obj.p = nullptr;
+            this->cs = obj.cs;
+            obj.cs = nullptr;
             return *this;
         }
         const_iterator(const_iterator &&obj) noexcept {
@@ -587,22 +589,27 @@ public:
 
         const_iterator() noexcept {
             p = nullptr;
+            cs = nullptr;
         }
-        explicit const_iterator(leveldb::Iterator *&pIn) noexcept {
-            assert(pIn);
-            p = pIn;
+        explicit const_iterator(leveldb::Iterator *&pIn, CCriticalSection *csIn) noexcept : p(pIn), cs(csIn) {
+            assert(pIn && csIn);
             pIn = nullptr;
         }
         ~const_iterator() {
             delete p;
+            if(cs) {
+                LEAVE_CRITICAL_SECTION(*cs);
+            }
         }
 
         void operator++() noexcept {
-            assert(p);
+            assert(p && cs);
             p->Next();
             if(p->Valid()==false) {
                 delete p;
                 p = nullptr;
+                LEAVE_CRITICAL_SECTION(*cs);
+                cs = nullptr;
             }
         }
         void operator++(int) noexcept {
@@ -624,6 +631,7 @@ public:
         }
     private:
         leveldb::Iterator *p;
+        CCriticalSection *cs;
     };
 
     template <typename KEY, typename VALUE>
@@ -640,7 +648,15 @@ public:
     }
 
     const_iterator begin() const noexcept {
-        return std::move(const_iterator(p));
+        assert(p);
+        ENTER_CRITICAL_SECTION(cs_db);
+        if(p->Valid()==false) {
+            delete p;
+            p = nullptr;
+            LEAVE_CRITICAL_SECTION(cs_db);
+            return end();
+        }
+        return std::move(const_iterator(p, &cs_db));
     }
     constexpr const_iterator end() const noexcept {
         return std::move(const_iterator());
@@ -660,7 +676,7 @@ public:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        //LOCK(cs_db);
+        LOCK(cs_db);
         std::vector<char> vch;
         CDBStream ssKey(&vch);
         ::Serialize(ssKey, key);

@@ -871,7 +871,7 @@ bool CLevelDB::TxnAbort() {
 }
 
 bool CLevelDB::ReadVersion(int &nVersion) {
-    //LOCK(cs_db);
+    LOCK(cs_db);
     nVersion = 0;
     return Read(std::string("version"), nVersion);
 }
