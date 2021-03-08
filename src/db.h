@@ -145,7 +145,7 @@ public:
     virtual bool Read(const K &key, T &value)=0;
 
     template<typename K, typename T>
-    virtual bool Write(const K &key, const T &value)=0;
+    virtual bool Write(const K &key, const T &value, bool fOverwrite)=0;
 
     template<typename K>
     virtual bool Erase(const K &key)=0;
@@ -305,6 +305,7 @@ public:
 
     leveldb::DB *&get_ptxdb(const std::string &name) const {
         LOCK(cs_leveldb);
+        //debugcs::instance() << "CLevelDBEnv get_ptxdb name:" << name.c_str() << debugcs::endl();
         assert(lobj.count(name)>0);
         return lobj[name]->ptxdb;
     }
@@ -371,6 +372,7 @@ public:
     std::string str() const {
         return (std::string(pbegin, pend));
     }
+
 private:
     uint32_t pos;
     char *pbegin;
@@ -540,6 +542,7 @@ public:
  * Level DB
  * RAII class that provides access to a LevelDB database
  * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
+ * using (Wallet): CDBHybrid
  */
 class CLevelDB : public IDB
 {
@@ -549,6 +552,8 @@ private:
     CLevelDB &operator=(const CLevelDB &)=delete;
     CLevelDB &operator=(CLevelDB &&)=delete;
 
+    using leveldb_secure_string = std::basic_string<char, std::char_traits<char>, secure_allocator<char>>;
+
     bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 
     // A batch stores up writes and deletes for atomic application. When this
@@ -556,6 +561,7 @@ private:
     leveldb::WriteBatch *activeBatch;
 
     bool fReadOnly;
+    bool fSecure;
 
     // Points to the global instance
     leveldb::DB *&pdb;
@@ -591,7 +597,7 @@ public:
             p = nullptr;
             cs = nullptr;
         }
-        explicit const_iterator(leveldb::Iterator *&pIn, CCriticalSection *csIn) noexcept : p(pIn), cs(csIn) {
+        explicit const_iterator(leveldb::Iterator *&&pIn, CCriticalSection *csIn) noexcept : p(pIn), cs(csIn) {
             assert(pIn && csIn);
             pIn = nullptr;
         }
@@ -649,6 +655,7 @@ public:
 
     const_iterator begin() const noexcept {
         assert(p);
+        assert(fSecure==false);
         ENTER_CRITICAL_SECTION(cs_db);
         if(p->Valid()==false) {
             delete p;
@@ -656,14 +663,14 @@ public:
             LEAVE_CRITICAL_SECTION(cs_db);
             return end();
         }
-        return std::move(const_iterator(p, &cs_db));
+        return std::move(const_iterator(std::move(p), &cs_db));
     }
     constexpr const_iterator end() const noexcept {
         return std::move(const_iterator());
     }
 
 public:
-    explicit CLevelDB(const std::string &strDb, const char *pszMode /*= "r+"*/); // open LevelDB
+    explicit CLevelDB(const std::string &strDb, const char *pszMode /*= "r+"*/, bool fSecureIn = false); // open LevelDB
     virtual ~CLevelDB();
 
     void Close();
@@ -676,6 +683,71 @@ public:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
+        return fSecure ? ReadSecure(key, value): ReadNormal(key, value);
+    }
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
+        return fSecure ? WriteSecure(key, value, fOverwrite): WriteNormal(key, value, fOverwrite);
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        return fSecure ? EraseSecure(key): EraseNormal(key);
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        return fSecure ? ExistsSecure(key): ExistsNormal(key);
+    }
+
+private:
+    static leveldb_secure_string SecureStringAllocate() {
+        leveldb_secure_string str;
+        str.reserve(10000);
+        str = "MIKE";
+        const char *p1 = str.data();
+        str = "";
+        const char *p2 = str.data();
+        assert(p1==p2);
+        return std::move(str);
+    }
+
+    template<typename K, typename T>
+    bool ReadSecure(const K &key, T &value) {
+        LOCK(cs_db);
+        assert(this->activeBatch==nullptr);
+        leveldb_secure_string secureValue = SecureStringAllocate();
+        try {
+            CDataStream ssKey(0, 0);
+            ssKey.reserve(1000);
+            ssKey << key;
+            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&secureValue);
+            if (! status.ok()) {
+                if (status.IsNotFound())
+                    return false;
+                // Some unexpected error.
+                logging::LogPrintf("LevelDB read secure failure: %s\n", status.ToString().c_str());
+                return false;
+            }
+            if(secureValue.size()==0) {
+                debugcs::instance() << "CLevelDB ReadSecure stream size==0" << debugcs::endl();
+                return false;
+            }
+
+            // Unserialize value
+            CDataStream ssValue(&secureValue[0], &secureValue[0]+secureValue.size());
+            ssValue >> value;
+        } catch (const std::exception &) {
+            return false;
+        }
+
+        return true;
+    }
+
+    template<typename K, typename T>
+    bool ReadNormal(const K &key, T &value) {
         LOCK(cs_db);
         std::vector<char> vch;
         CDBStream ssKey(&vch);
@@ -688,17 +760,14 @@ public:
             // changes to the db. If not found in the batch, go on to read disk.
             bool deleted = false;
             readFromDb = ScanBatch(ssKey, &strValue, &deleted) == false;
-            if (deleted) {
+            if (deleted)
                 return false;
-            }
         }
         if (readFromDb) {
             leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &strValue);
-            if (!status.ok()) {
-                if (status.IsNotFound()) {
+            if (! status.ok()) {
+                if (status.IsNotFound())
                     return false;
-                }
-
                 // Some unexpected error.
                 logging::LogPrintf("LevelDB read failure: %s\n", status.ToString().c_str());
                 return false;
@@ -717,10 +786,50 @@ public:
     }
 
     template<typename K, typename T>
-    bool Write(const K &key, const T &value) {
+    bool WriteSecure(const K &key, const T &value, bool fOverwrite) {
         LOCK(cs_db);
-        if (this->fReadOnly)
+        assert(this->activeBatch==nullptr);
+        if (this->fReadOnly) {
             assert(!"Write called on database in read-only mode");
+        }
+        if(! fOverwrite) {
+            if(ExistsSecure(key))
+                return false;
+        }
+
+        try {
+            CDataStream ssKey(0, 0);
+            ssKey.reserve(1000);
+            ssKey << key;
+
+            CDataStream ssValue(0, 0);
+            ssValue.reserve(10000);
+            ssValue << value;
+
+            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            const leveldb_secure_string secureValue(ssValue.begin(), ssValue.end());
+            leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), *((const std::string *)&secureKey), *((const std::string *)&secureValue));
+            if (! status.ok()) {
+                logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
+                return false;
+            }
+        } catch (const std::exception &) {
+            return false;
+        }
+
+        return true;
+    }
+
+    template<typename K, typename T>
+    bool WriteNormal(const K &key, const T &value, bool fOverwrite) {
+        LOCK(cs_db);
+        if (this->fReadOnly) {
+            assert(!"Write called on database in read-only mode");
+        }
+        if(! fOverwrite) {
+            if(ExistsNormal(key))
+                return false;
+        }
 
         std::vector<char> vch;
         CDBStream ssKey(&vch);
@@ -745,12 +854,35 @@ public:
     }
 
     template<typename K>
-    bool Erase(const K &key) {
+    bool EraseSecure(const K &key) {
+        LOCK(cs_db);
+        assert(this->activeBatch==nullptr);
+        if (! this->pdb)
+            return false;
+        if (this->fReadOnly) {
+            assert(!"Erase called on database in read-only mode");
+        }
+
+        try {
+            CDataStream ssKey(0, 0);
+            ssKey.reserve(1000);
+            ssKey << key;
+            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), *((const std::string *)&secureKey));
+            return (status.ok() || status.IsNotFound());
+        } catch (const std::exception &) {
+            return false;
+        }
+    }
+
+    template<typename K>
+    bool EraseNormal(const K &key) {
         LOCK(cs_db);
         if (! this->pdb)
             return false;
-        if (this->fReadOnly)
+        if (this->fReadOnly) {
             assert(!"Erase called on database in read-only mode");
+        }
 
         std::vector<char> vch;
         CDBStream ssKey(&vch);
@@ -766,7 +898,24 @@ public:
     }
 
     template<typename K>
-    bool Exists(const K &key) {
+    bool ExistsSecure(const K &key) {
+        LOCK(cs_db);
+        assert(this->activeBatch==nullptr);
+        leveldb_secure_string unused = SecureStringAllocate();
+        try {
+            CDataStream ssKey(0, 0);
+            ssKey.reserve(1000);
+            ssKey << key;
+            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&unused);
+            return status.IsNotFound() == false;
+        } catch (const std::exception &) {
+            return false;
+        }
+    }
+
+    template<typename K>
+    bool ExistsNormal(const K &key) {
         LOCK(cs_db);
         std::vector<char> vch;
         CDBStream ssKey(&vch);

@@ -767,12 +767,10 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
 namespace {
 class CBatchScanner final : public leveldb::WriteBatch::Handler
 {
-private:
     CBatchScanner(const CBatchScanner &)=delete;
     CBatchScanner(CBatchScanner &&)=delete;
     CBatchScanner &operator=(const CBatchScanner &)=delete;
     CBatchScanner &operator=(CBatchScanner &&)=delete;
-
 public:
     std::string needle;
     bool *deleted;
@@ -815,10 +813,10 @@ bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted
     return scanner.foundEntry;
 }
 
-CLevelDB::CLevelDB(const std::string &strDb, const char *pszMode /*="r+"*/) :
+CLevelDB::CLevelDB(const std::string &strDb, const char *pszMode /*="r+"*/, bool fSecureIn /*= false*/) :
     pdb(CLevelDBEnv::get_instance().get_ptxdb(strDb)), cs_db(CLevelDBEnv::get_instance().get_rcs(strDb)), fReadOnly(true), p(nullptr) {
     assert(pszMode);
-    //assert(CLevelDBEnv::get_instance().get_ptxdb(strDb));
+    fSecure = fSecureIn;
 
     this->activeBatch = nullptr;
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));

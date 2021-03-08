@@ -1081,11 +1081,6 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 7: load blockchain
     I_DEBUG_CS("Step 7: load blockchain")
 
-    //if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
-    //    std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
-    //    return InitError(msg);
-    //}
-
     if (map_arg::GetBoolArg("-loadblockindextest")) {
         CTxDB txdb("r");
         txdb.LoadBlockIndex(block_info::mapBlockIndex,
@@ -1175,36 +1170,28 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
 
-        /*
-        entry::pwalletMain = new CWallet(strWalletFileName);
-        DBErrors nZapWalletRet = entry::pwalletMain->ZapWalletTx();
-        if (nZapWalletRet != DB_LOAD_OK) {
-            CClientUIInterface::uiInterface.InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
-            return false;
-        }
-        delete entry::pwalletMain;
-        entry::pwalletMain = NULL;
-        */
-
-        CWallet walletMain(strWalletFileName);
+        CWallet walletMain(strWalletFileName, CLevelDBEnv::getname_wallet());
         DBErrors nZapWalletRet = walletMain.ZapWalletTx();
         if (nZapWalletRet != DB_LOAD_OK) {
             CClientUIInterface::uiInterface.InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
             return false;
         }
+        entry::pwalletMain = nullptr;
     }
 
     CClientUIInterface::uiInterface.InitMessage(_("Loading wallet..."));
     logging::LogPrintf("Loading wallet...\n");
     nStart = util::GetTimeMillis();
 
+    I_DEBUG_CS("Step 8a: load wallet new instance");
     bool fFirstRun = true;
-    entry::pwalletMain = new(std::nothrow) CWallet(strWalletFileName);
+    entry::pwalletMain = new (std::nothrow) CWallet(strWalletFileName, CLevelDBEnv::getname_wallet());
     if(! entry::pwalletMain) {
         InitError("WalletMain memory allocate failure.");
         return false;
     }
 
+    I_DEBUG_CS("Step 8b: load wallet start");
     DBErrors nLoadWalletRet = entry::pwalletMain->LoadWallet(fFirstRun);
     if (nLoadWalletRet != DB_LOAD_OK) {
         if (nLoadWalletRet == DB_CORRUPT) {
@@ -1273,7 +1260,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-rescan")) {
         pindexRescan = block_info::pindexGenesisBlock;
     } else {
-        CWalletDB walletdb(strWalletFileName);
+        CWalletDB walletdb(strWalletFileName, CLevelDBEnv::getname_wallet());
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator)) {
             pindexRescan = locator.GetBlockIndex();

@@ -25,12 +25,13 @@ class CReserveKey;
 class COutput;
 class CCoinControl;
 
+// instance
+// entry::pwalletMain
+
 // Set of selected transactions
 typedef std::set<std::pair<const CWalletTx*,unsigned int> > CoinsSet;
 
-//
 // (client) version numbers for particular wallet features
-//
 enum WalletFeature
 {
     FEATURE_BASE = 10500,                // the earliest version new wallets supports (only useful for getinfo's clientversion output)
@@ -41,9 +42,6 @@ enum WalletFeature
     FEATURE_LATEST = 60017
 };
 
-//
-// A key pool entry
-//
 class CKeyPool
 {
 private:
@@ -76,29 +74,26 @@ public:
     }
 };
 
-//
 // A CWallet is an extension of a keystore, which also maintains a set of transactions and balances,
 // and provides the ability to create new transactions.
-//
 class CWallet : public CCryptoKeyStore
 {
+    CWallet(const CWallet &)=delete;
+    CWallet &operator=(const CWallet &)=delete;
+    CWallet(CWallet &&)=delete;
+    CWallet &operator=(CWallet &&)=delete;
 private:
-    CWallet(const CWallet &); // {}
-    CWallet &operator=(const CWallet &); // {}
-
     bool SelectCoins(int64_t nTargetValue, unsigned int nSpendTime, std::set<std::pair<const CWalletTx *, unsigned int> > &setCoinsRet, int64_t &nValueRet, const CCoinControl *coinControl = NULL) const;
 
     CWalletDB *pwalletdbEncryption, *pwalletdbDecryption;
 
-    //
     // Wallet State
-    //
     // the current wallet version.
     // clients below this version are not able to load the wallet
-    //
     int nWalletVersion;
 
-    // the maximum wallet format version: memory-only variable that specifies to what version this wallet may be upgraded
+    // the maximum wallet format version:
+    // memory-only variable that specifies to what version this wallet may be upgraded
     int nWalletMaxVersion;
 
     int64_t nNextResend;
@@ -110,16 +105,15 @@ private:
 
 public:
 
-    //
     // ppcoin: optional setting to unlock wallet for block minting only;
     //         serves to disable the trivial sendmoney when OS account compromised
-    //
     static bool fWalletUnlockMintOnly;
 
     mutable CCriticalSection cs_wallet;
 
     bool fFileBacked;
     std::string strWalletFile;
+    std::string strWalletLevelDB;
 
     std::set<int64_t> setKeyPool;
     
@@ -138,9 +132,10 @@ public:
         SetNull();
     }
 
-    CWallet(std::string strWalletFileIn) {
+    CWallet(const std::string &strWalletFileIn, const std::string &strWalletLevelDBIn) {
         SetNull();
         strWalletFile = strWalletFileIn;
+        strWalletLevelDB = strWalletLevelDBIn;
         fFileBacked = true;
     }
 
@@ -149,8 +144,8 @@ public:
         nWalletMaxVersion = FEATURE_BASE;
         fFileBacked = false;
         nMasterKeyMaxID = 0;
-        pwalletdbEncryption = NULL;
-        pwalletdbDecryption = NULL;
+        pwalletdbEncryption = nullptr;
+        pwalletdbDecryption = nullptr;
         nNextResend = 0;
         nLastResend = 0;
         nOrderPosNext = 0;

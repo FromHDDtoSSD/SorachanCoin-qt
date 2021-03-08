@@ -20,33 +20,42 @@
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
-//
-// CWalletDB (wallet.dat)
-//
-bool CWalletDB::WriteName(const std::string &strAddress, const std::string &strName)
-{
+////////////////////////////////////////////////
+// CDBHybrid
+////////////////////////////////////////////////
+
+CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode/*="r+"*/) :
+    CDB(strFilename.c_str(), pszMode), ldb(strLevelDB, pszMode, true) {
+    debugcs::instance() << "CDBHybrid::CDBHybrid strLevelDB:" << strLevelDB.c_str() << debugcs::endl();
+}
+
+CDBHybrid::~CDBHybrid() {}
+
+////////////////////////////////////////////////////////////
+// CWalletDB
+////////////////////////////////////////////////////////////
+
+CWalletDB::CWalletDB(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode/*="r+"*/) :
+    CDBHybrid(strFilename.c_str(), strLevelDB, pszMode) {}
+
+bool CWalletDB::WriteName(const std::string &strAddress, const std::string &strName) {
     dbparam::IncWalletUpdate();
     return Write(std::make_pair(std::string("name"), strAddress), strName);
 }
 
-bool CWalletDB::EraseName(const std::string &strAddress)
-{
-    //
+bool CWalletDB::EraseName(const std::string &strAddress) {
     // This should only be used for sending addresses, never for receiving addresses,
     // receiving addresses must always have an address book entry if they're not change return.
-    //
     dbparam::IncWalletUpdate();
     return Erase(std::make_pair(std::string("name"), strAddress));
 }
 
-bool CWalletDB::ReadAccount(const std::string &strAccount, CAccount &account)
-{
+bool CWalletDB::ReadAccount(const std::string &strAccount, CAccount &account) {
     account.SetNull();
     return Read(std::make_pair(std::string("acc"), strAccount), account);
 }
 
-bool CWalletDB::WriteAccount(const std::string &strAccount, const CAccount &account)
-{
+bool CWalletDB::WriteAccount(const std::string &strAccount, const CAccount &account) {
     return Write(std::make_pair(std::string("acc"), strAccount), account);
 }
 
@@ -66,8 +75,7 @@ int64_t CWalletDB::GetAccountCreditDebit(const std::string &strAccount)
     ListAccountCreditDebit(strAccount, entries);
 
     int64_t nCreditDebit = 0;
-    for(const CAccountingEntry &entry: entries)
-    {
+    for(const CAccountingEntry &entry: entries) {
         nCreditDebit += entry.nCreditDebit;
     }
 
@@ -78,21 +86,16 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
 {
     bool fAllAccounts = (strAccount == "*");
 
-    Dbc* pcursor = GetCursor();
-    if (! pcursor) {
+    Dbc *pcursor = GetCursor();
+    if (! pcursor)
         throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
-    }
 
     unsigned int fFlags = DB_SET_RANGE;
-    for ( ; ; )
-    {
-        //
+    for (;;) {
         // Read next record
-        //
         CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
-        if (fFlags == DB_SET_RANGE) {
+        if (fFlags == DB_SET_RANGE)
             ssKey << std::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
-        }
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
         int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
@@ -104,20 +107,15 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
             throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : error scanning DB");
         }
 
-        //
-        // Unserialize
-        //
         std::string strType;
         ssKey >> strType;
-        if (strType != "acentry") {
+        if (strType != "acentry")
             break;
-        }
 
         CAccountingEntry acentry;
         ssKey >> acentry.strAccount;
-        if (!fAllAccounts && acentry.strAccount != strAccount) {
+        if (!fAllAccounts && acentry.strAccount != strAccount)
             break;
-        }
 
         ssValue >> acentry;
         ssKey >> acentry.nEntryNo;

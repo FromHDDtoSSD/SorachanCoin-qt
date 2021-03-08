@@ -265,7 +265,7 @@ json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, CB
 }
 
 CBitcoinAddress CRPCTable::GetAccountAddress(CBitrpcData &data, std::string strAccount, bool bForceNew/* =false */, bool *ret/*=nullptr*/) {
-    CWalletDB walletdb(entry::pwalletMain->strWalletFile);
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB);
     CAccount account;
     walletdb.ReadAccount(strAccount, account);
 
@@ -708,7 +708,7 @@ int64_t CRPCTable::GetAccountBalance(CWalletDB &walletdb, const std::string &str
 }
 
 int64_t CRPCTable::GetAccountBalance(const std::string &strAccount, int nMinDepth, const isminefilter &filter) {
-    CWalletDB walletdb(entry::pwalletMain->strWalletFile);
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB);
     return GetAccountBalance(walletdb, strAccount, nMinDepth, filter);
 }
 
@@ -807,7 +807,7 @@ json_spirit::Value CRPCTable::movecmd(const json_spirit::Array &params, CBitrpcD
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     }
 
-    CWalletDB walletdb(entry::pwalletMain->strWalletFile);
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB);
     if (! walletdb.TxnBegin())
         return data.JSONRPCError(RPC_DATABASE_ERROR, "database error");
 
@@ -1400,7 +1400,7 @@ json_spirit::Value CRPCTable::listaccounts(const json_spirit::Array &params, CBi
     }
 
     std::list<CAccountingEntry> acentries;
-    CWalletDB(entry::pwalletMain->strWalletFile).ListAccountCreditDebit("*", acentries);
+    CWalletDB(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB).ListAccountCreditDebit("*", acentries);
     for(const CAccountingEntry &entry: acentries)
         mapAccountBalances[entry.strAccount] += entry.nCreditDebit;
 

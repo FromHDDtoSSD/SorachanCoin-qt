@@ -1,22 +1,20 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_WALLETDB_H
 #define BITCOIN_WALLETDB_H
 
-#include "db.h"
-//#include "base58.h"
-#include "keystore.h"
+#include <db.h>
+#include <keystore.h>
 
 class CKeyPool;
 class CAccount;
 class CAccountingEntry;
 
-//
 // Error statuses for the wallet database
-//
 enum DBErrors
 {
     DB_LOAD_OK,
@@ -64,23 +62,63 @@ public:
 };
 
 //
-// Access to the wallet database (wallet.dat, walletq.dat)
+// SorachanCoin: wallet DB Hybrid system
 //
-class CWalletScanState;
-class CWalletDB : public CDB
+// Note that LevelDB "bool fSecureIn" always is used turning on "true". handle "privateKey".
+//
+class CDBHybrid : public CDB
 {
+    CDBHybrid(const CDBHybrid &)=delete;
+    CDBHybrid &operator=(const CDBHybrid &)=delete;
+    CDBHybrid(CDBHybrid &&)=delete;
+    CDBHybrid &operator=(CDBHybrid &&)=delete;
+
 public:
-    CWalletDB(std::string strFilename, const char *pszMode="r+") : CDB(strFilename.c_str(), pszMode) {}
+    CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
+    virtual ~CDBHybrid();
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
+        if(! ldb.Write(key, value, fOverwrite))
+            debugcs::instance() << "CDBHybrid LevlDB Write failure" << debugcs::endl();
+        return CDB::Write(key, value, fOverwrite);
+    }
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        if(! ldb.Read(key, value))
+            debugcs::instance() << "CDBHybrid LevelDB Read NoExists or failure" << debugcs::endl();
+        return CDB::Read(key, value);
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        if(! ldb.Erase(key))
+            debugcs::instance() << "CDBHybrid LevelDB Erase failure" << debugcs::endl();
+        return CDB::Erase(key);
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        //ldb.Exists(key);
+        return CDB::Exists(key);
+    }
 
 private:
+    CLevelDB ldb;
+};
+
+// Access to the wallet database (CWalletDB: wallet.dat / txwallet)
+class CWalletScanState;
+class CWalletDB : public CDBHybrid
+{
     CWalletDB(const CWalletDB &)=delete;
     CWalletDB &operator=(const CWalletDB &)=delete;
     CWalletDB(CWalletDB &&)=delete;
     CWalletDB &operator=(CWalletDB &&)=delete;
-
-    static uint64_t nAccountingEntryNumber;
-
 public:
+    explicit CWalletDB(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
+
     bool WriteName(const std::string &strAddress, const std::string &strName);
     bool EraseName(const std::string &strAddress);
 
@@ -96,50 +134,41 @@ public:
 
     bool WriteKey(const CPubKey &key, const CPrivKey &vchPrivKey, const CKeyMetadata &keyMeta) {
         dbparam::IncWalletUpdate();
-        if(! Write(std::make_pair(std::string("keymeta"), key), keyMeta)) {
+        if(! Write(std::make_pair(std::string("keymeta"), key), keyMeta))
             return false;
-        }
-        if(! Write(std::make_pair(std::string("key"), key), vchPrivKey, false)) {
+        if(! Write(std::make_pair(std::string("key"), key), vchPrivKey, false))
             return false;
-        }
         return true;
     }
 
     bool WriteMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH, const CKeyMetadata &keyMeta) {
         dbparam::IncWalletUpdate();
-        if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta)) {
+        if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta))
             return false;
-        }
-        if(! Write(std::make_pair(std::string("malpair"), keyView.ToString()), vchSecretH, false)) {
+        if(! Write(std::make_pair(std::string("malpair"), keyView.ToString()), vchSecretH, false))
             return false;
-        }
         return true;
     }
 
     bool WriteCryptedMalleableKey(const CMalleableKeyView &keyView, const std::vector<unsigned char> &vchCryptedSecretH, const CKeyMetadata &keyMeta) {
         dbparam::IncWalletUpdate();
-        if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta)) {
+        if(! Write(std::make_pair(std::string("malmeta"), keyView.ToString()), keyMeta))
             return false;
-        }
-        if(! Write(std::make_pair(std::string("malcpair"), keyView.ToString()), vchCryptedSecretH, false)) {
+        if(! Write(std::make_pair(std::string("malcpair"), keyView.ToString()), vchCryptedSecretH, false))
             return false;
-        }
 
         Erase(std::make_pair(std::string("malpair"), keyView.ToString()));
         return true;
     }
 
-
     bool WriteCryptedKey(const CPubKey &key, const std::vector<unsigned char> &vchCryptedSecret, const CKeyMetadata &keyMeta) {
         dbparam::IncWalletUpdate();
         bool fEraseUnencryptedKey = true;
 
-        if (! Write(std::make_pair(std::string("keymeta"), key), keyMeta)) {
+        if (! Write(std::make_pair(std::string("keymeta"), key), keyMeta))
             return false;
-        }
-        if (! Write(std::make_pair(std::string("ckey"), key), vchCryptedSecret, false)) {
+        if (! Write(std::make_pair(std::string("ckey"), key), vchCryptedSecret, false))
             return false;
-        }
         if (fEraseUnencryptedKey) {
             Erase(std::make_pair(std::string("key"), key));
             Erase(std::make_pair(std::string("wkey"), key));
@@ -220,13 +249,6 @@ public:
     bool ReadAccount(const std::string &strAccount, CAccount &account);
     bool WriteAccount(const std::string &strAccount, const CAccount &account);
 
-private:
-    static bool ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &ssValue, CWalletScanState &wss, std::string &strType, std::string &strErr);
-    static bool IsKeyType(std::string strType);
-
-    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry &acentry);
-
-public:
     bool WriteAccountingEntry(const CAccountingEntry &acentry);
     int64_t GetAccountCreditDebit(const std::string &strAccount);
     void ListAccountCreditDebit(const std::string &strAccount, std::list<CAccountingEntry> &acentries);
@@ -237,6 +259,13 @@ public:
     DBErrors ZapWalletTx(CWallet *pwallet);
 
     static bool Recover(std::string filename, bool fOnlyKeys=false);
+
+private:
+    static uint64_t nAccountingEntryNumber;
+
+    static bool ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &ssValue, CWalletScanState &wss, std::string &strType, std::string &strErr);
+    static bool IsKeyType(std::string strType);
+    bool WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry &acentry);
 };
 
 #endif // BITCOIN_WALLETDB_H
