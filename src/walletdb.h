@@ -72,39 +72,9 @@ class CDBHybrid : public CDB
     CDBHybrid &operator=(const CDBHybrid &)=delete;
     CDBHybrid(CDBHybrid &&)=delete;
     CDBHybrid &operator=(CDBHybrid &&)=delete;
-
 public:
     CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
     virtual ~CDBHybrid();
-
-    /*
-    template<typename K, typename T>
-    bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        if(! ldb.Write(key, value, fOverwrite))
-            debugcs::instance() << "CDBHybrid LevlDB Write failure" << debugcs::endl();
-        return CDB::Write(key, value, fOverwrite);
-    }
-
-    template<typename K, typename T>
-    bool Read(const K &key, T &value) {
-        if(! ldb.Read(key, value))
-            debugcs::instance() << "CDBHybrid LevelDB Read NoExists or failure" << debugcs::endl();
-        return CDB::Read(key, value);
-    }
-
-    template<typename K>
-    bool Erase(const K &key) {
-        if(! ldb.Erase(key))
-            debugcs::instance() << "CDBHybrid LevelDB Erase failure" << debugcs::endl();
-        return CDB::Erase(key);
-    }
-
-    template<typename K>
-    bool Exists(const K &key) {
-        //ldb.Exists(key);
-        return CDB::Exists(key);
-    }
-    */
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
@@ -116,7 +86,7 @@ public:
         bool ret = CDB::Read(key, value);
         T lval;
         if(! ldb.Read(key, lval)) {
-            assert(ldb.Write(key, value));
+            assert(ldb.Write(key, value)); // sync from CDB to CLevelDB.
         }
         return ret;
     }
@@ -143,7 +113,7 @@ private:
 
 // Access to the wallet database (CWalletDB: wallet.dat / txwallet)
 class CWalletScanState;
-class CWalletDB : public CDBHybrid
+class CWalletDB final : public CDBHybrid
 {
     CWalletDB(const CWalletDB &)=delete;
     CWalletDB &operator=(const CWalletDB &)=delete;

@@ -132,11 +132,31 @@ public:
 class IDB
 {
 public:
-    class DbIterator {
-        DbIterator()=delete;
+    class DbIterator final {
+        DbIterator(const DbIterator &)=delete;
+        DbIterator &operator=(const DbIterator &)=delete;
     public:
-        explicit DbIterator(Dbc *p) noexcept : bp(p), lp(nullptr) {}
-        explicit DbIterator(leveldb::Iterator *p) noexcept : bp(nullptr), lp(p) {}
+        DbIterator &operator=(DbIterator &&obj) noexcept {
+            this->cs = obj.cs;
+            obj.cs = nullptr;
+            this->bp = obj.bp;
+            obj.bp = nullptr;
+            this->lp = obj.lp;
+            obj.lp = nullptr;
+            return *this;
+        }
+
+        DbIterator(DbIterator &&obj) noexcept {
+            operator=(std::move(obj));
+        }
+        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr) {}
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), cs(csIn) {
+            assert(cs);
+            p = nullptr;
+        }
+        explicit DbIterator(leveldb::Iterator *p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
+            assert(cs);
+        }
         ~DbIterator() {
             if(bp)
                 bp->close();
@@ -144,27 +164,37 @@ public:
                 delete lp;
         }
 
-        // C++11
+        bool is_leveldb() const noexcept {
+            return lp != nullptr;
+        }
+        bool is_error() const noexcept {
+            return (lp == nullptr && bp == nullptr);
+        }
+        CCriticalSection &get_cs() const noexcept {
+            return *cs;
+        }
+
         operator Dbc *() const noexcept {
             return bp;
         }
         operator leveldb::Iterator *() const noexcept {
             return lp;
         }
-        DbIterator *operator->() noexcept {
-            return this;
-        }
 
-        // after C++14
-        //auto *operator->() const noexcept {
-        //    return bp ? bp: lp;
-        //}
     private:
         Dbc *bp;
         leveldb::Iterator *lp;
+        CCriticalSection *cs;
     };
 
-    //virtual DbIterator *GetCursor()=0;
+    virtual DbIterator GetIteCursor()=0;
+
+#ifndef DB_NEXT
+# define DB_NEXT 16
+#endif
+    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
+    static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
+    static int ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
 
     virtual void Close()=0;
     virtual bool TxnBegin()=0;
@@ -557,9 +587,7 @@ public:
     }
 
     Dbc *GetCursor();
-
-    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-    static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
+    DbIterator GetIteCursor();
 
     void Close();
     bool TxnBegin();
@@ -616,7 +644,7 @@ private:
 
 public:
     //
-    // About CLevelDB: const_iterator
+    // About CLevelDB: const_iterator (if fSecure == false)
     // Note that, must be using below. memory management is auto.
     // iterator->: leveldb::Iterator pointer object. key() and value(), data() and size().
     //
@@ -717,6 +745,26 @@ public:
 public:
     explicit CLevelDB(const std::string &strDb, const char *pszMode /*= "r+"*/, bool fSecureIn = false); // open LevelDB
     virtual ~CLevelDB();
+
+    //
+    // About CLevelDB: Get Cursor (if fSecure == true)
+    //
+#ifndef DB_SET
+# define DB_SET 27
+#endif
+#ifndef DB_SET_RANGE
+# define DB_SET_RANGE 28
+#endif
+#ifndef DB_GET_BOTH
+# define DB_GET_BOTH 8
+#endif
+#ifndef DB_GET_BOTH_RANGE
+# define DB_GET_BOTH_RANGE 10
+#endif
+#ifndef DB_NOTFOUND
+# define DB_NOTFOUND (-30988)
+#endif
+    DbIterator GetIteCursor();
 
     void Close();
     bool TxnBegin();

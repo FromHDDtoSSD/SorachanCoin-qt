@@ -87,9 +87,15 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
 {
     bool fAllAccounts = (strAccount == "*");
 
+    IDB::DbIterator ite = GetIteCursor();
+    if (ite.is_error())
+        throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
+
+    /*
     Dbc *pcursor = GetCursor();
     if (! pcursor)
         throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
+    */
 
     unsigned int fFlags = DB_SET_RANGE;
     for (;;) {
@@ -99,12 +105,13 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
             ssKey << std::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-        int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        //int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
+        int ret = ReadAtCursor(ite, ssKey, ssValue, fFlags);
         fFlags = DB_NEXT;
         if (ret == DB_NOTFOUND) {
             break;
         } else if (ret != 0) {
-            pcursor->close();
+            //pcursor->close();
             throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : error scanning DB");
         }
 
@@ -123,7 +130,7 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
         entries.push_back(acentry);
     }
 
-    pcursor->close();
+    //pcursor->close();
 }
 
 DBErrors CWalletDB::ReorderTransactions(CWallet *pwallet)
@@ -502,20 +509,20 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
         //
         // Get cursor
         //
-        Dbc *pcursor = GetCursor();
-        if (! pcursor) {
+        IDB::DbIterator ite = GetIteCursor();
+        if (ite.is_error()) {
             logging::LogPrintf("Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
 
-        for ( ; ; )
+        for (;;)
         {
             //
             // Read next record (for DB)
             //
             CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-            int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            int ret = ReadAtCursor(ite, ssKey, ssValue);
             if (ret == DB_NOTFOUND) {
                 break;
             } else if (ret != 0) {
@@ -548,7 +555,6 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
                 logging::LogPrintf("%s\n", strErr.c_str());
             }
         }
-        pcursor->close();
     } catch (...) {
         result = DB_CORRUPT;
     }
@@ -618,20 +624,26 @@ DBErrors CWalletDB::FindWalletTx(CWallet *pwallet, std::vector<uint256> &vTxHash
         //
         // Get cursor
         //
-        Dbc *pcursor = GetCursor();
-        if (! pcursor) {
+        IDB::DbIterator ite = GetIteCursor();
+        if (ite.is_error()) {
             logging::LogPrintf("Error getting wallet database cursor\n");
             return DB_CORRUPT;
         }
+        //Dbc *pcursor = GetCursor();
+        //if (! pcursor) {
+        //    logging::LogPrintf("Error getting wallet database cursor\n");
+        //    return DB_CORRUPT;
+        //}
 
-        for ( ; ; )
+        for (;;)
         {
             //
             // Read next record
             //
             CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-            int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            //int ret = ReadAtCursor(pcursor, ssKey, ssValue);
+            int ret = ReadAtCursor(ite, ssKey, ssValue);
             if (ret == DB_NOTFOUND) {
                 break;
             } else if (ret != 0) {
@@ -648,7 +660,7 @@ DBErrors CWalletDB::FindWalletTx(CWallet *pwallet, std::vector<uint256> &vTxHash
                 vTxHash.push_back(hash);
             }
         }
-        pcursor->close();
+        //pcursor->close();
     } catch (const boost::thread_interrupted&) {
         throw;
     } catch (...) {

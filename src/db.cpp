@@ -580,7 +580,7 @@ void CDB::Close() {
 }
 
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-int CDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     // Read at cursor, return: 0 success, 1 ERROE_CODE
     LOCK(CDBEnv::cs_db);
     Dbt datKey;
@@ -617,6 +617,50 @@ int CDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, un
     ::free(datKey.get_data());
     ::free(datValue.get_data());
     return 0;
+}
+
+int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+    auto ldb = [&]() {
+        return 0;
+    };
+    auto cdb = [&]() {
+        Dbt datKey;
+        if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            datKey.set_data(&ssKey[0]);
+            datKey.set_size((uint32_t)ssKey.size());
+        }
+
+        Dbt datValue;
+        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            datValue.set_data(&ssValue[0]);
+            datValue.set_size((uint32_t)ssValue.size());
+        }
+
+        datKey.set_flags(DB_DBT_MALLOC);
+        datValue.set_flags(DB_DBT_MALLOC);
+        int ret = ((Dbc *)pcursor)->get(&datKey, &datValue, fFlags);
+        if (ret != 0)
+            return ret;
+        else if (datKey.get_data() == nullptr || datValue.get_data() == nullptr)
+            return 99999;
+
+        // Convert to streams
+        ssKey.SetType(SER_DISK);
+        ssKey.clear();
+        ssKey.write((char *)datKey.get_data(), datKey.get_size());
+        ssValue.SetType(SER_DISK);
+        ssValue.clear();
+        ssValue.write((char *)datValue.get_data(), datValue.get_size());
+
+        // Clear and free memory
+        cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
+        cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
+        ::free(datKey.get_data());
+        ::free(datValue.get_data());
+        return 0;
+    };
+    LOCK(pcursor.get_cs());
+    return pcursor.is_leveldb() ? ldb(): cdb();
 }
 
 bool CDB::TxnBegin() {
@@ -674,6 +718,19 @@ Dbc *CDB::GetCursor() {
         return nullptr;
 
     return pcursor;
+}
+
+IDB::DbIterator CDB::GetIteCursor() {
+    LOCK(CDBEnv::cs_db);
+    if (! pdb)
+        return std::move(DbIterator());
+
+    Dbc *pcursor = nullptr;
+    int ret = pdb->cursor(nullptr, &pcursor, 0);
+    if (ret != 0)
+        pcursor = nullptr;
+
+    return std::move(DbIterator(std::move(pcursor), &CDBEnv::cs_db));
 }
 
 bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */)
@@ -824,6 +881,11 @@ CLevelDB::CLevelDB(const std::string &strDb, const char *pszMode /*="r+"*/, bool
 
 CLevelDB::~CLevelDB() {
     Close();
+}
+
+IDB::DbIterator CLevelDB::GetIteCursor() {
+    LOCK(cs_db);
+    return std::move(DbIterator(pdb->NewIterator(leveldb::ReadOptions()), &cs_db));
 }
 
 void CLevelDB::Close() {
