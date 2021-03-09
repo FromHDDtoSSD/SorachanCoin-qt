@@ -77,6 +77,7 @@ public:
     CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
     virtual ~CDBHybrid();
 
+    /*
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
         if(! ldb.Write(key, value, fOverwrite))
@@ -102,6 +103,38 @@ public:
     bool Exists(const K &key) {
         //ldb.Exists(key);
         return CDB::Exists(key);
+    }
+    */
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
+        return CDB::Write(key, value, fOverwrite) && ldb.Write(key, value, fOverwrite);
+    }
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        bool ret = CDB::Read(key, value);
+        T lval;
+        if(! ldb.Read(key, lval)) {
+            assert(ldb.Write(key, value));
+        }
+        return ret;
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        bool ret1 = CDB::Erase(key);
+        bool ret2 = ldb.Erase(key);
+        assert(ret1==ret2);
+        return ret1;
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        bool ret1 = CDB::Exists(key);
+        bool ret2 = ldb.Exists(key);
+        assert(ret1==ret2);
+        return ret1;
     }
 
 private:

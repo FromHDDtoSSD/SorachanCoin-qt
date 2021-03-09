@@ -132,6 +132,40 @@ public:
 class IDB
 {
 public:
+    class DbIterator {
+        DbIterator()=delete;
+    public:
+        explicit DbIterator(Dbc *p) noexcept : bp(p), lp(nullptr) {}
+        explicit DbIterator(leveldb::Iterator *p) noexcept : bp(nullptr), lp(p) {}
+        ~DbIterator() {
+            if(bp)
+                bp->close();
+            if(lp)
+                delete lp;
+        }
+
+        // C++11
+        operator Dbc *() const noexcept {
+            return bp;
+        }
+        operator leveldb::Iterator *() const noexcept {
+            return lp;
+        }
+        DbIterator *operator->() noexcept {
+            return this;
+        }
+
+        // after C++14
+        //auto *operator->() const noexcept {
+        //    return bp ? bp: lp;
+        //}
+    private:
+        Dbc *bp;
+        leveldb::Iterator *lp;
+    };
+
+    //virtual DbIterator *GetCursor()=0;
+
     virtual void Close()=0;
     virtual bool TxnBegin()=0;
     virtual bool TxnCommit()=0;
@@ -399,7 +433,7 @@ private:
     DbTxn *activeTxn;
     bool fReadOnly;
 
-protected:
+public:
     explicit CDB(const char *pszFile, const char *pszMode /*= "r+"*/); // open DB
     virtual ~CDB();
 
@@ -527,7 +561,6 @@ protected:
     // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
     static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
 
-public:
     void Close();
     bool TxnBegin();
     bool TxnCommit();
@@ -552,7 +585,19 @@ private:
     CLevelDB &operator=(const CLevelDB &)=delete;
     CLevelDB &operator=(CLevelDB &&)=delete;
 
-    using leveldb_secure_string = std::basic_string<char, std::char_traits<char>, secure_allocator<char>>;
+    class leveldb_secure_string : public std::string {
+    public:
+        leveldb_secure_string() {
+            ((std::string *const)this)->reserve(10000);
+            *((std::string *const)this) = "MIKE";
+            *((std::string *const)this) = "";
+        }
+        template <typename Iterator>
+        explicit leveldb_secure_string(Iterator begin, Iterator end) : std::string(begin, end) {}
+        ~leveldb_secure_string() {
+            cleanse::OPENSSL_cleanse(&(((std::string *const)this)->operator[](0)), ((std::string *const)this)->size());
+        }
+    };
 
     bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 
@@ -702,22 +747,11 @@ public:
     }
 
 private:
-    static leveldb_secure_string SecureStringAllocate() {
-        leveldb_secure_string str;
-        str.reserve(10000);
-        str = "MIKE";
-        const char *p1 = str.data();
-        str = "";
-        const char *p2 = str.data();
-        assert(p1==p2);
-        return std::move(str);
-    }
-
     template<typename K, typename T>
     bool ReadSecure(const K &key, T &value) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        leveldb_secure_string secureValue = SecureStringAllocate();
+        leveldb_secure_string secureValue;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
@@ -901,7 +935,7 @@ private:
     bool ExistsSecure(const K &key) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        leveldb_secure_string unused = SecureStringAllocate();
+        leveldb_secure_string unused;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
