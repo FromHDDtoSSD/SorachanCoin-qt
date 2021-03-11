@@ -66,7 +66,7 @@ public:
 //
 // Note that LevelDB "bool fSecureIn" always is used turning on "true". handle "privateKey".
 //
-class CDBHybrid : public CDB
+class CDBHybrid
 {
     CDBHybrid(const CDBHybrid &)=delete;
     CDBHybrid &operator=(const CDBHybrid &)=delete;
@@ -76,11 +76,17 @@ public:
     CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
     virtual ~CDBHybrid();
 
+    IDB::DbIterator GetIteCursor();
+
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        return CDB::Write(key, value, fOverwrite) && ldb.Write(key, value, fOverwrite);
+        bool ret1 = bdb.Write(key, value, fOverwrite);
+        bool ret2 = ldb.Write(key, value, fOverwrite);
+        assert(ret1 && ret2);
+        return ret2;
     }
 
+    /*
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
         bool ret = CDB::Read(key, value);
@@ -90,10 +96,30 @@ public:
         }
         return ret;
     }
+    */
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        if(! ldb.Read(key, value))
+            return false;
+        CDataStream ssValue1;
+        ssValue1 << value;
+
+        T value2;
+        if(! bdb.Read(key, value2))
+            return false;
+
+        CDataStream ssValue2;
+        ssValue2 << value2;
+
+        debugcs::instance() << "CDBHybrid::Read debug mode size:" << ssValue1.size() << debugcs::endl(); // only can display size.
+        assert(std::memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
+        return true;
+    }
 
     template<typename K>
     bool Erase(const K &key) {
-        bool ret1 = CDB::Erase(key);
+        bool ret1 = bdb.Erase(key);
         bool ret2 = ldb.Erase(key);
         assert(ret1==ret2);
         return ret1;
@@ -101,13 +127,50 @@ public:
 
     template<typename K>
     bool Exists(const K &key) {
-        bool ret1 = CDB::Exists(key);
+        bool ret1 = bdb.Exists(key);
         bool ret2 = ldb.Exists(key);
         assert(ret1==ret2);
         return ret1;
     }
 
+    bool TxnBegin();
+    bool TxnCommit();
+    bool TxnAbort();
+
+    bool ReadVersion(int &nVersion);
+    bool WriteVersion(int nVersion);
+
+    /*
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
+        bool ret = ldb.Write(key, value, fOverwrite);
+        if(ret)
+            CLevelDBEnv::get_instance().Flush(ldb_name);
+        return ret;
+    }
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        return ldb.Read(key, value);
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        bool ret = ldb.Erase(key);
+        if(ret)
+            CLevelDBEnv::get_instance().Flush(ldb_name);
+        return ret;
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        return ldb.Exists(key);
+    }
+    */
+
 private:
+    std::string ldb_name;
+    CDB bdb;
     CLevelDB ldb;
 };
 

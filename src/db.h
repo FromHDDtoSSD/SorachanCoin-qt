@@ -132,36 +132,50 @@ public:
 class IDB
 {
 public:
+    class leveldb_secure_string final : public std::string {
+    public:
+        leveldb_secure_string() {
+            ((std::string *const)this)->reserve(10000);
+            *((std::string *const)this) = "MIKE";
+            *((std::string *const)this) = "";
+        }
+        template <typename Iterator>
+        explicit leveldb_secure_string(Iterator begin, Iterator end) : std::string(begin, end) {}
+        ~leveldb_secure_string() {
+            cleanse::OPENSSL_cleanse(&(((std::string *const)this)->operator[](0)), ((std::string *const)this)->size());
+        }
+    };
+
     class DbIterator final {
         DbIterator(const DbIterator &)=delete;
         DbIterator &operator=(const DbIterator &)=delete;
+        static leveldb::DB *empty_lobj;
     public:
         DbIterator &operator=(DbIterator &&obj) noexcept {
+            // cs: must be swap
+            // bp: must be swap
+            // lp: no swap (Note: There is no release here.)
             this->cs = obj.cs;
             obj.cs = nullptr;
             this->bp = obj.bp;
             obj.bp = nullptr;
-            this->lp = obj.lp;
-            obj.lp = nullptr;
             return *this;
         }
 
-        DbIterator(DbIterator &&obj) noexcept {
+        DbIterator(DbIterator &&obj) noexcept : lp(obj.lp) {
             operator=(std::move(obj));
         }
-        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr) {}
-        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), cs(csIn) {
+        DbIterator() noexcept : bp(nullptr), lp(empty_lobj), cs(nullptr) {}
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(empty_lobj), cs(csIn) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(leveldb::Iterator *p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
+        explicit DbIterator(leveldb::DB *&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
             assert(cs);
         }
         ~DbIterator() {
             if(bp)
                 bp->close();
-            if(lp)
-                delete lp;
         }
 
         bool is_leveldb() const noexcept {
@@ -170,6 +184,9 @@ public:
         bool is_error() const noexcept {
             return (lp == nullptr && bp == nullptr);
         }
+        bool is_ok() const noexcept {
+            return !is_error();
+        }
         CCriticalSection &get_cs() const noexcept {
             return *cs;
         }
@@ -177,13 +194,13 @@ public:
         operator Dbc *() const noexcept {
             return bp;
         }
-        operator leveldb::Iterator *() const noexcept {
+        operator leveldb::DB *&() const noexcept {
             return lp;
         }
 
     private:
         Dbc *bp;
-        leveldb::Iterator *lp;
+        leveldb::DB *&lp;
         CCriticalSection *cs;
     };
 
@@ -193,7 +210,7 @@ public:
 # define DB_NEXT 16
 #endif
     // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-    static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
+    //static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
     static int ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
 
     virtual void Close()=0;
@@ -586,7 +603,7 @@ public:
         return (ret == 0);
     }
 
-    Dbc *GetCursor();
+    //Dbc *GetCursor();
     DbIterator GetIteCursor();
 
     void Close();
@@ -612,20 +629,6 @@ private:
     CLevelDB(CLevelDB &&)=delete;
     CLevelDB &operator=(const CLevelDB &)=delete;
     CLevelDB &operator=(CLevelDB &&)=delete;
-
-    class leveldb_secure_string : public std::string {
-    public:
-        leveldb_secure_string() {
-            ((std::string *const)this)->reserve(10000);
-            *((std::string *const)this) = "MIKE";
-            *((std::string *const)this) = "";
-        }
-        template <typename Iterator>
-        explicit leveldb_secure_string(Iterator begin, Iterator end) : std::string(begin, end) {}
-        ~leveldb_secure_string() {
-            cleanse::OPENSSL_cleanse(&(((std::string *const)this)->operator[](0)), ((std::string *const)this)->size());
-        }
-    };
 
     bool ScanBatch(const CDBStream &key, std::string *value, bool *deleted) const;
 

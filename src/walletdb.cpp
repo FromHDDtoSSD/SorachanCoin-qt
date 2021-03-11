@@ -21,16 +21,70 @@
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
+//#define CDB_MODE
 ////////////////////////////////////////////////
 // CDBHybrid
 ////////////////////////////////////////////////
 
 CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode/*="r+"*/) :
-    CDB(strFilename.c_str(), pszMode), ldb(strLevelDB, pszMode, true) {
+    bdb(strFilename.c_str(), pszMode), ldb(strLevelDB, pszMode, true) {
+    ldb_name = strLevelDB;
     debugcs::instance() << "CDBHybrid::CDBHybrid strLevelDB:" << strLevelDB.c_str() << debugcs::endl();
 }
 
 CDBHybrid::~CDBHybrid() {}
+
+#ifdef CDB_MODE
+IDB::DbIterator CDBHybrid::GetIteCursor() {
+    return bdb.GetIteCursor();
+}
+
+bool CDBHybrid::TxnBegin() {
+    return bdb.TxnBegin();
+}
+
+bool CDBHybrid::TxnCommit() {
+    return bdb.TxnCommit();
+}
+
+bool CDBHybrid::TxnAbort() {
+    return bdb.TxnAbort();
+}
+
+bool CDBHybrid::ReadVersion(int &nVersion) {
+    return bdb.ReadVersion(nVersion);
+}
+
+bool CDBHybrid::WriteVersion(int nVersion) {
+    return bdb.WriteVersion(nVersion);
+}
+
+#else
+
+IDB::DbIterator CDBHybrid::GetIteCursor() {
+    return ldb.GetIteCursor();
+}
+
+bool CDBHybrid::TxnBegin() {
+    return ldb.TxnBegin();
+}
+
+bool CDBHybrid::TxnCommit() {
+    return ldb.TxnCommit();
+}
+
+bool CDBHybrid::TxnAbort() {
+    return ldb.TxnAbort();
+}
+
+bool CDBHybrid::ReadVersion(int &nVersion) {
+    return ldb.ReadVersion(nVersion);
+}
+
+bool CDBHybrid::WriteVersion(int nVersion) {
+    return ldb.WriteVersion(nVersion);
+}
+#endif
 
 ////////////////////////////////////////////////////////////
 // CWalletDB
@@ -106,7 +160,7 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
         //int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);
-        int ret = ReadAtCursor(ite, ssKey, ssValue, fFlags);
+        int ret = IDB::ReadAtCursor(ite, ssKey, ssValue, fFlags);
         fFlags = DB_NEXT;
         if (ret == DB_NOTFOUND) {
             break;
@@ -522,7 +576,7 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
             //
             CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-            int ret = ReadAtCursor(ite, ssKey, ssValue);
+            int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
             if (ret == DB_NOTFOUND) {
                 break;
             } else if (ret != 0) {
@@ -643,7 +697,7 @@ DBErrors CWalletDB::FindWalletTx(CWallet *pwallet, std::vector<uint256> &vTxHash
             CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
             CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
             //int ret = ReadAtCursor(pcursor, ssKey, ssValue);
-            int ret = ReadAtCursor(ite, ssKey, ssValue);
+            int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
             if (ret == DB_NOTFOUND) {
                 break;
             } else if (ret != 0) {

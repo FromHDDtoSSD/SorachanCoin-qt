@@ -18,6 +18,8 @@
 # include "sys/stat.h"
 #endif
 
+leveldb::DB *IDB::DbIterator::empty_lobj = nullptr;
+
 CCriticalSection CDBEnv::cs_db;
 CCriticalSection CLevelDBEnv::cs_leveldb;
 
@@ -579,8 +581,8 @@ void CDB::Close() {
     CDBEnv::get_instance().DecUseCount(strFile);
 }
 
-// fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+/*
+int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags) {
     // Read at cursor, return: 0 success, 1 ERROE_CODE
     LOCK(CDBEnv::cs_db);
     Dbt datKey;
@@ -618,10 +620,35 @@ int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, un
     ::free(datValue.get_data());
     return 0;
 }
+*/
 
+// fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto ldb = [&]() {
-        return 0;
+        const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+        //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
+        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            assert(!"from value to key.");
+            return 99999;
+        }
+
+        leveldb_secure_string secureValue;
+        leveldb::Status status = ((leveldb::DB *)pcursor)->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&secureValue);
+        if(! status.ok()) {
+            if(status.IsNotFound()) {
+                return DB_NOTFOUND;
+            } else {
+                return 99999; // failure
+            }
+        }
+        debugcs::instance() << "IDB::ReadAtCursor value size:" << secureValue.size() << debugcs::endl();
+
+        ssValue.SetType(SER_DISK);
+        ssValue.clear();
+        ssValue.write((char *)secureValue.data(), secureValue.size());
+        return 0; // success
     };
     auto cdb = [&]() {
         Dbt datKey;
@@ -707,6 +734,7 @@ bool CDB::WriteVersion(int nVersion) {
     return Write(std::string("version"), nVersion);
 }
 
+/*
 Dbc *CDB::GetCursor() {
     LOCK(CDBEnv::cs_db);
     if (! pdb)
@@ -719,6 +747,7 @@ Dbc *CDB::GetCursor() {
 
     return pcursor;
 }
+*/
 
 IDB::DbIterator CDB::GetIteCursor() {
     LOCK(CDBEnv::cs_db);
@@ -757,18 +786,21 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                         fSuccess = false;
                     }
 
-                    Dbc *pcursor = db.GetCursor();
-                    if (pcursor) {
+                    //Dbc *pcursor = db.GetCursor();
+                    IDB::DbIterator ite = db.GetIteCursor();
+                    //if (pcursor) {
+                    if (ite.is_ok()) {
                         while (fSuccess)
                         {
                             CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
                             CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
-                            int ret = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
+                            //int ret = db.ReadAtCursor(pcursor, ssKey, ssValue, DB_NEXT);
+                            int ret = db.ReadAtCursor(ite, ssKey, ssValue, DB_NEXT);
                             if (ret == DB_NOTFOUND) {
-                                pcursor->close();
+                                //pcursor->close();
                                 break;
                             } else if (ret != 0) {
-                                pcursor->close();
+                                //pcursor->close();
                                 fSuccess = false;
                                 break;
                             }
@@ -885,7 +917,7 @@ CLevelDB::~CLevelDB() {
 
 IDB::DbIterator CLevelDB::GetIteCursor() {
     LOCK(cs_db);
-    return std::move(DbIterator(pdb->NewIterator(leveldb::ReadOptions()), &cs_db));
+    return std::move(DbIterator(pdb, &cs_db));
 }
 
 void CLevelDB::Close() {
