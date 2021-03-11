@@ -227,12 +227,14 @@ int main(int argc, char *argv[])
         return 1;
     }
 
+    /*
     std::string args_error;
     if(! ARGS.ParseParameters(argc, argv, args_error)) {
         QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: ARGS::ParseParameters %1").arg(args_error.c_str()));
         return 1;
     }
+    */
 
     // User language is set up: pick a data directory
     Intro::pickDataDirectory();

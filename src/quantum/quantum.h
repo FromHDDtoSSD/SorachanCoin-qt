@@ -58,11 +58,12 @@ private:
         struct {
             secure_type type;
             size_t size;
+            bool fMemoryLocked;
         } data;
     } alloc_info;
 #pragma pack(pop)
 
-    static const size_t alloc_info_size = sizeof(alloc_info);
+    static constexpr size_t alloc_info_size = sizeof(alloc_info);
 private:
     class manage
     {

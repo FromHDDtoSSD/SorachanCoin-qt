@@ -139,11 +139,13 @@ bool entry::AppInit(int argc, char *argv[])
             boot::Shutdown(nullptr);
         }
 
+        /*
         std::string args_error;
         if(! ARGS.ParseParameters(argc, argv, args_error)) {
             fprintf(stderr, "Error: ARGS::ParseParameters %s", args_error.c_str());
             boot::Shutdown(nullptr);
         }
+        */
 
         if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
             fprintf(stderr, "Error: Specified directory does not exist\n");
@@ -634,6 +636,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     args_uint::nNodeLifespan = map_arg::GetArgUInt("-addrlifespan", 7);
     args_bool::fUseFastIndex = map_arg::GetBoolArg("-fastindex", true);
     args_bool::fUseMemoryLog = map_arg::GetBoolArg("-memorylog", true);
+    args_bool::fMemoryLockPermissive = map_arg::GetBoolArg("-memorylockpermissive", false);
 
     // Ping and address broadcast intervals
     block_process::manage::nPingInterval = std::max<int64_t>(10 * 60, map_arg::GetArg("-keepalive", 30 * 60));

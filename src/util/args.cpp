@@ -44,6 +44,7 @@ bool_arg args_bool::fCommandLine(false);
 bool_arg args_bool::fTestNet(false);
 bool_arg args_bool::fLogTimestamps(false);
 bool_arg args_bool::fReopenDebugLog(false);
+bool_arg args_bool::fMemoryLockPermissive(false);
 unsigned int args_uint::nNodeLifespan = 0;
 
 LCCriticalSection config::cs_args;
@@ -597,7 +598,7 @@ bool ArgsManager::ParseParameters(int argc, const char *const argv[], std::strin
 
         // Check that the arg is known
         if (!(lutil::IsSwitchChar(key[0]) && key.size() == 1)) {
-            if (!IsArgKnown(key)) {
+            if (! IsArgKnown(key)) {
                 error = tfm::format("Invalid parameter %s", key.c_str());
                 return false;
             }

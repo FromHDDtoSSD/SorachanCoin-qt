@@ -14,6 +14,7 @@
 #include <const/macro.h>
 #include <random/random.h>
 #include <cleanse/cleanse.h>
+#include <util/args.h>
 #ifndef WIN32
 # define MAP_NOCORE 0
 #endif
@@ -60,7 +61,7 @@ void *quantum_lib::secure_malloc(size_t sizeIn) {
         ptr = nullptr;
     }
 #endif
-    if (! ptr) throw std::runtime_error("secure_alloc memory allocate failure.");
+    if (! ptr) throw std::runtime_error("quantumlib::secure_alloc memory allocate failure.");
 
     bool lock_ret = false;
 #if defined(WIN32)
@@ -68,32 +69,40 @@ void *quantum_lib::secure_malloc(size_t sizeIn) {
 #else
     lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true : false;
 #endif
-    if (! lock_ret) throw std::runtime_error("secure_alloc virtual lock failure.");
+    if (! lock_ret) {
+        if(! args_bool::fMemoryLockPermissive)
+            throw std::runtime_error("quantumlib::secure_alloc virtual lock failure.");
+    }
 
     alloc_info *pinfo = reinterpret_cast<alloc_info *>(ptr);
     pinfo->data.type = LOCK_UNLOCK;
     pinfo->data.size = sizeIn;
+    pinfo->data.fMemoryLocked = lock_ret;
     return reinterpret_cast<void *>((byte *)ptr + alloc_info_size);
 }
 
 void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) noexcept {
     void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
     size_t size;
+    bool fMemoryLocked;
     {
         manage mem(fptr, alloc_info_size);
         mem.readonly();
         const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
         size = pinfo->data.size;
+        fMemoryLocked = pinfo->data.fMemoryLocked;
     }
     {
         manage mem(fptr, size + alloc_info_size);
         mem.readwrite();
         fRandom ? secure_memrandom(fptr, size + alloc_info_size) : secure_memzero(fptr, size + alloc_info_size);
+        if(fMemoryLocked) {
 #if defined(WIN32)
-        (void)::VirtualUnlock(fptr, size + alloc_info_size);
+            (void)::VirtualUnlock(fptr, size + alloc_info_size);
 #else
-        (void)::munlock(fptr, size + alloc_info_size);
+            (void)::munlock(fptr, size + alloc_info_size);
 #endif
+        }
     }
 
 #if defined(WIN32)
@@ -131,6 +140,7 @@ void quantum_lib::secure_stackrandom(const size_t sizeIn) noexcept {
 bool quantum_lib::secure_mprotect_noaccess(const void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
     size_t size;
+    //bool fMemoryLocked;
     void *__ptr = const_cast<void *>(ptr);
     {
         void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
@@ -138,6 +148,7 @@ bool quantum_lib::secure_mprotect_noaccess(const void *ptr) noexcept {
         mem.readonly();
         const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
         size = pinfo->data.size;
+        //fMemoryLocked = pinfo->data.fMemoryLocked;
     }
 #if defined(WIN32)
     DWORD old;
@@ -152,6 +163,7 @@ bool quantum_lib::secure_mprotect_noaccess(const void *ptr) noexcept {
 bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
     size_t size;
+    //bool fMemoryLocked;
     void *__ptr = const_cast<void *>(ptr);
     {
         void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
@@ -159,6 +171,7 @@ bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
         mem.readonly();
         const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
         size = pinfo->data.size;
+        //fMemoryLocked = pinfo->data.fMemoryLocked;
     }
 #if defined(WIN32)
     DWORD old;
@@ -173,6 +186,7 @@ bool quantum_lib::secure_mprotect_readonly(const void *ptr) noexcept {
 bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
     // success, return 0. error, return -1.(mprotect)
     size_t size;
+    //bool fMemoryLocked;
     {
         void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
         manage mem(fptr, alloc_info_size);
@@ -180,6 +194,7 @@ bool quantum_lib::secure_mprotect_readwrite(void *ptr) noexcept {
         const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
         size = pinfo->data.size;
         //debugcs::instance() << "SIZE: " << size << debugcs::endl();
+        //fMemoryLocked = pinfo->data.fMemoryLocked;
     }
 #if defined(WIN32)
     DWORD old;

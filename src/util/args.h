@@ -43,15 +43,15 @@ public:
 
 namespace args_bool
 {
-    extern bool_arg fUseMemoryLog; //(false);
-    extern bool_arg fConfChange; //(false);
-    extern bool_arg fUseFastIndex; //(false);
-    extern bool_arg fNoListen; //(false);
-    extern bool_arg fDebug; //(false);
-    extern bool_arg fDebugNet; //(false);
-    extern bool_arg fPrintToConsole; //(false);
-    extern bool_arg fPrintToDebugger; //(false);
-    extern bool_arg fRequestShutdown; //(false);
+    extern bool_arg fUseMemoryLog; //(false)
+    extern bool_arg fConfChange; //(false)
+    extern bool_arg fUseFastIndex; //(false)
+    extern bool_arg fNoListen; //(false)
+    extern bool_arg fDebug; //(false)
+    extern bool_arg fDebugNet; //(false)
+    extern bool_arg fPrintToConsole; //(false)
+    extern bool_arg fPrintToDebugger; //(false)
+    extern bool_arg fRequestShutdown; //(false)
     extern bool_arg fShutdown; //(false)
     extern bool_arg fDaemon; //(false)
     extern bool_arg fServer; //(false)
@@ -59,6 +59,7 @@ namespace args_bool
     extern bool_arg fTestNet; //(false)
     extern bool_arg fLogTimestamps; //(false)
     extern bool_arg fReopenDebugLog; //(false)
+    extern bool_arg fMemoryLockPermissive; //(false)
 }
 
 namespace args_uint
