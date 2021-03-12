@@ -803,16 +803,13 @@ private:
     bool ReadSecure(const K &key, T &value) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        std::string secureValue;
+        leveldb_secure_string secureValue;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
-            //leveldb::ReadOptions readOptions;
-            //readOptions.fill_cache = true;
-            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &secureValue);
+            leveldb::Slice slKey(&ssKey[0], ssKey.size());
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), slKey, (std::string *)&secureValue);
             if (! status.ok()) {
                 if (status.IsNotFound())
                     return false;
@@ -820,10 +817,10 @@ private:
                 logging::LogPrintf("LevelDB read secure failure: %s\n", status.ToString().c_str());
                 return false;
             }
-            if(secureValue.size()==0) {
-                debugcs::instance() << "CLevelDB ReadSecure stream size==0" << debugcs::endl();
-                return false;
-            }
+            //if(secureValue.size()==0) {
+            //    debugcs::instance() << "CLevelDB ReadSecure stream size==0" << debugcs::endl();
+            //    return false;
+            //}
 
             // Unserialize value
             CDataStream ssValue(&secureValue[0], &secureValue[0]+secureValue.size());
@@ -895,14 +892,9 @@ private:
             ssValue.reserve(10000);
             ssValue << value;
 
-            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            //const leveldb_secure_string secureValue(ssValue.begin(), ssValue.end());
-            //leveldb::Slice slKey(&ssKey[0], ssKey.size());
-            //leveldb::Slice slValue(&ssValue[0], ssValue.size());
-            //leveldb::WriteOptions writeOptions;
-            //writeOptions.sync = true;
-            //leveldb::Status status = this->pdb->Put(writeOptions, *((const leveldb::Slice *)&secureKey), *((const leveldb::Slice *)&secureValue));
-            leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
+            leveldb::Slice slKey(&ssKey[0], ssKey.size());
+            leveldb::Slice slValue(&ssValue[0], ssValue.size());
+            leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), slKey, slValue);
             if (! status.ok()) {
                 logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
                 return false;
@@ -961,9 +953,8 @@ private:
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
-            leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
+            leveldb::Slice slKey(&ssKey[0], ssKey.size());
+            leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), slKey);
             return (status.ok() || status.IsNotFound());
         } catch (const std::exception &) {
             return false;
@@ -996,14 +987,13 @@ private:
     bool ExistsSecure(const K &key) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        std::string unused;
+        leveldb_secure_string unused;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
-            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
+            leveldb::Slice slKey(&ssKey[0], ssKey.size());
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), slKey, (std::string *)&unused);
             return status.IsNotFound() == false;
         } catch (const std::exception &) {
             return false;

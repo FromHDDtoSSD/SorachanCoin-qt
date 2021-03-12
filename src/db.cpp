@@ -931,6 +931,7 @@ void CLevelDB::Close() {
 
 bool CLevelDB::TxnBegin() {
     LOCK(cs_db);
+    assert(fSecure==false);
     assert(! this->activeBatch);
     this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
     if (! this->activeBatch) {
@@ -942,6 +943,7 @@ bool CLevelDB::TxnBegin() {
 
 bool CLevelDB::TxnCommit() {
     LOCK(cs_db);
+    assert(fSecure==false);
     assert(this->activeBatch);
 
     leveldb::Status status = pdb->Write(leveldb::WriteOptions(), activeBatch);
@@ -957,6 +959,7 @@ bool CLevelDB::TxnCommit() {
 
 bool CLevelDB::TxnAbort() {
     LOCK(cs_db);
+    assert(fSecure==false);
     delete this->activeBatch;
     this->activeBatch = nullptr;
     return true;
