@@ -149,33 +149,34 @@ public:
     class DbIterator final {
         DbIterator(const DbIterator &)=delete;
         DbIterator &operator=(const DbIterator &)=delete;
-        static leveldb::DB *empty_lobj;
     public:
         DbIterator &operator=(DbIterator &&obj) noexcept {
-            // cs: must be swap
-            // bp: must be swap
-            // lp: no swap (Note: There is no release here.)
             this->cs = obj.cs;
             obj.cs = nullptr;
             this->bp = obj.bp;
             obj.bp = nullptr;
+            this->lp = obj.lp;
+            obj.lp = nullptr;
             return *this;
         }
 
-        DbIterator(DbIterator &&obj) noexcept : lp(obj.lp) {
+        DbIterator(DbIterator &&obj) noexcept {
             operator=(std::move(obj));
         }
-        DbIterator() noexcept : bp(nullptr), lp(empty_lobj), cs(nullptr) {}
-        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(empty_lobj), cs(csIn) {
+        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr) {}
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), cs(csIn) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(leveldb::DB *&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
+        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
             assert(cs);
+            p = nullptr;
         }
         ~DbIterator() {
             if(bp)
                 bp->close();
+            if(lp)
+                delete lp;
         }
 
         bool is_leveldb() const noexcept {
@@ -194,13 +195,13 @@ public:
         operator Dbc *() const noexcept {
             return bp;
         }
-        operator leveldb::DB *&() const noexcept {
+        operator leveldb::Iterator *() const noexcept {
             return lp;
         }
 
     private:
         Dbc *bp;
-        leveldb::DB *&lp;
+        leveldb::Iterator *lp;
         CCriticalSection *cs;
     };
 
@@ -802,13 +803,16 @@ private:
     bool ReadSecure(const K &key, T &value) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        leveldb_secure_string secureValue;
+        std::string secureValue;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&secureValue);
+            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
+            //leveldb::ReadOptions readOptions;
+            //readOptions.fill_cache = true;
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &secureValue);
             if (! status.ok()) {
                 if (status.IsNotFound())
                     return false;
@@ -891,9 +895,14 @@ private:
             ssValue.reserve(10000);
             ssValue << value;
 
-            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            const leveldb_secure_string secureValue(ssValue.begin(), ssValue.end());
-            leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), *((const std::string *)&secureKey), *((const std::string *)&secureValue));
+            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            //const leveldb_secure_string secureValue(ssValue.begin(), ssValue.end());
+            //leveldb::Slice slKey(&ssKey[0], ssKey.size());
+            //leveldb::Slice slValue(&ssValue[0], ssValue.size());
+            //leveldb::WriteOptions writeOptions;
+            //writeOptions.sync = true;
+            //leveldb::Status status = this->pdb->Put(writeOptions, *((const leveldb::Slice *)&secureKey), *((const leveldb::Slice *)&secureValue));
+            leveldb::Status status = this->pdb->Put(leveldb::WriteOptions(), ssKey.str(), ssValue.str());
             if (! status.ok()) {
                 logging::LogPrintf("LevelDB write failure: %s\n", status.ToString().c_str());
                 return false;
@@ -952,8 +961,9 @@ private:
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), *((const std::string *)&secureKey));
+            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
+            leveldb::Status status = this->pdb->Delete(leveldb::WriteOptions(), ssKey.str());
             return (status.ok() || status.IsNotFound());
         } catch (const std::exception &) {
             return false;
@@ -986,13 +996,14 @@ private:
     bool ExistsSecure(const K &key) {
         LOCK(cs_db);
         assert(this->activeBatch==nullptr);
-        leveldb_secure_string unused;
+        std::string unused;
         try {
             CDataStream ssKey(0, 0);
             ssKey.reserve(1000);
             ssKey << key;
-            const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
-            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&unused);
+            //const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
+            //leveldb::Slice secureKey(&ssKey[0], ssKey.size());
+            leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
             return status.IsNotFound() == false;
         } catch (const std::exception &) {
             return false;

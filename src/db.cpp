@@ -18,8 +18,6 @@
 # include "sys/stat.h"
 #endif
 
-leveldb::DB *IDB::DbIterator::empty_lobj = nullptr;
-
 CCriticalSection CDBEnv::cs_db;
 CCriticalSection CLevelDBEnv::cs_leveldb;
 
@@ -625,30 +623,28 @@ int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, un
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto ldb = [&]() {
-        const leveldb_secure_string secureKey(ssKey.begin(), ssKey.end());
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
             // no statement
         //}
-        if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
-            assert(!"from value to key.");
-            return 99999;
-        }
+        //if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
 
-        leveldb_secure_string secureValue;
-        leveldb::Status status = ((leveldb::DB *)pcursor)->Get(leveldb::ReadOptions(), *((const std::string *)&secureKey), (std::string *)&secureValue);
-        if(! status.ok()) {
-            if(status.IsNotFound()) {
-                return DB_NOTFOUND;
-            } else {
-                return 99999; // failure
-            }
-        }
-        debugcs::instance() << "IDB::ReadAtCursor value size:" << secureValue.size() << debugcs::endl();
+        leveldb::Iterator *ite = (leveldb::Iterator *)pcursor;
+        if(ite->Valid()==false)
+            return DB_NOTFOUND;
 
+        ssKey.SetType(SER_DISK);
+        ssKey.clear();
+        ssKey.write((char *)ite->key().data(), ite->key().size());
         ssValue.SetType(SER_DISK);
         ssValue.clear();
-        ssValue.write((char *)secureValue.data(), secureValue.size());
-        return 0; // success
+        ssValue.write((char *)ite->value().data(), ite->value().size());
+
+        cleanse::OPENSSL_cleanse(const_cast<char *>(ite->key().data()), ite->key().size());
+        cleanse::OPENSSL_cleanse(const_cast<char *>(ite->value().data()), ite->value().size());
+        ite->Next();
+        return ite->Valid() ? 0: DB_NOTFOUND;
     };
     auto cdb = [&]() {
         Dbt datKey;
@@ -917,7 +913,11 @@ CLevelDB::~CLevelDB() {
 
 IDB::DbIterator CLevelDB::GetIteCursor() {
     LOCK(cs_db);
-    return std::move(DbIterator(pdb, &cs_db));
+    leveldb::Iterator *p = pdb->NewIterator(leveldb::ReadOptions());
+    if(! p)
+        throw std::runtime_error("CLevelDB::GetIteCursor memory allocate failure");
+    p->SeekToFirst();
+    return std::move(DbIterator(std::move(p), &cs_db));
 }
 
 void CLevelDB::Close() {

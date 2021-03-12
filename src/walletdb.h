@@ -83,6 +83,16 @@ public:
         bool ret1 = bdb.Write(key, value, fOverwrite);
         bool ret2 = ldb.Write(key, value, fOverwrite);
         assert(ret1 && ret2);
+        {
+            T valid;
+            assert(ldb.Read(key, valid));
+            CDataStream ssValue1;
+            ssValue1 << value;
+            CDataStream ssValue2;
+            ssValue2 << valid;
+            assert(ssValue1.size()==ssValue2.size());
+            assert(memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
+        }
         return ret2;
     }
 
@@ -113,6 +123,7 @@ public:
         ssValue2 << value2;
 
         debugcs::instance() << "CDBHybrid::Read debug mode size:" << ssValue1.size() << debugcs::endl(); // only can display size.
+        assert(ssValue1.size()==ssValue2.size());
         assert(std::memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
         return true;
     }
