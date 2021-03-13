@@ -20,6 +20,7 @@
 
 CCriticalSection CDBEnv::cs_db;
 CCriticalSection CLevelDBEnv::cs_leveldb;
+CCriticalSection CSqliteDBEnv::cs_sqlite;
 
 static CCriticalSection cs_w_update;
 static unsigned int nWalletDBUpdated = 0;
@@ -525,6 +526,103 @@ bool CLevelDBEnv::RemoveDb(const std::string &strDb) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////
+// CSqliteDBEnv class
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+CSqliteDBEnv::CSqliteDBEnv(std::vector<std::string> instIn) : instance(instIn) {}
+
+CSqliteDBEnv::~CSqliteDBEnv() {
+    EnvShutdown();
+}
+
+void CSqliteDBEnv::EnvShutdown() {
+    LOCK(cs_sqlite);
+    for(const auto &ite: sqlobj) {
+        if(ite.second->psql) {
+            ::sqlite3_close(ite.second->psql);
+        }
+        delete ite.second;
+    }
+    sqlobj.clear();
+}
+
+bool CSqliteDBEnv::Open(fs::path pathEnv_) {
+    LOCK(cs_sqlite);
+    pathEnv = pathEnv_;
+    for(const auto &ite: instance) {
+        fs::path path_ = pathEnv_ / ite;
+        sqlite_object *sobj = new(std::nothrow) sqlite_object;
+        if(! sobj) {
+            EnvShutdown();
+            throw std::runtime_error("CSqliteDBEnv::Open memory allocate failure");
+        }
+        if(::sqlite3_open(path_.string().c_str(), &sobj->psql)!=SQLITE_OK) {
+            EnvShutdown();
+            throw std::runtime_error("CSqliteDBEnv::Open Sqlite Object open failure");
+        }
+
+        sqlobj.insert(std::make_pair(ite, sobj));
+        if(is_table_exists(ite, std::string("key_value"))==false) {
+            const std::string sql_cmd("create table key_value (key blob primary key, value blob not null)");
+            if(! sql(ite, sql_cmd)) {
+                EnvShutdown();
+                throw std::runtime_error("CSqliteDBEnv::Open Sqlite key_value table create failure");
+            }
+        }
+    }
+    return true;
+}
+
+bool CSqliteDBEnv::is_table_exists(const std::string &strFile, const std::string &table_name) {
+    table_check tc(table_name);
+    const std::string sql_cmd("select name from sqlite_master where type='table'");
+    char *error;
+    bool ret = (::sqlite3_exec(sqlobj[strFile]->psql, sql_cmd.c_str(), m_tablenamecheck_callback, &tc, &error)==SQLITE_OK);
+    return ret && tc.exists;
+}
+
+void CSqliteDBEnv::Close() {
+    LOCK(cs_sqlite);
+    Flush(args_bool::fShutdown);
+    EnvShutdown();
+}
+
+bool CSqliteDBEnv::Flush(const std::string &strFile) {
+    LOCK2(cs_sqlite, sqlobj[strFile]->cs_sql);
+    ::sqlite3_close(sqlobj[strFile]->psql);
+
+    fs::path strPath = pathEnv / strFile;
+    if(::sqlite3_open(strPath.string().c_str(), &sqlobj[strFile]->psql)!=SQLITE_OK) {
+        EnvShutdown();
+        throw std::runtime_error("CSqliteDBEnv::Flush Sqlite Object open failure");
+    }
+    return true;
+}
+
+void CSqliteDBEnv::Flush(bool fShutdown) {
+    (void)fShutdown;
+    LOCK(cs_sqlite);
+    for(const auto &ite: sqlobj) {
+        if(! Flush(ite.first))
+            return;
+    }
+}
+
+void CSqliteDBEnv::CloseDb(const std::string &strFile) {
+    LOCK(cs_sqlite);
+    Flush(strFile);
+    ::sqlite3_close(sqlobj[strFile]->psql);
+    sqlobj[strFile]->psql = nullptr;
+}
+
+bool CSqliteDBEnv::RemoveDb(const std::string &strFile) {
+    LOCK(cs_sqlite);
+    CloseDb(strFile);
+    sqlobj.erase(strFile);
+    return true;
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
 // CDB class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -974,4 +1072,50 @@ bool CLevelDB::ReadVersion(int &nVersion) {
 bool CLevelDB::WriteVersion(int nVersion) {
     LOCK(cs_db);
     return Write(std::string("version"), nVersion);
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+// CSqliteDB class
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+CSqliteDB::CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn /*= false*/) :
+    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)) {
+    fSecure = fSecureIn;
+
+    fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
+}
+CSqliteDB::~CSqliteDB() {}
+
+IDB::DbIterator CSqliteDB::GetIteCursor() {
+
+    return std::move(IDB::DbIterator());
+}
+
+void CSqliteDB::Close() {
+
+}
+
+bool CSqliteDB::TxnBegin() {
+
+    return false;
+}
+
+bool CSqliteDB::TxnCommit() {
+
+    return false;
+}
+
+bool CSqliteDB::TxnAbort() {
+
+    return false;
+}
+
+bool CSqliteDB::ReadVersion(int &nVersion) {
+
+    return false;
+}
+
+bool CSqliteDB::WriteVersion(int nVersion) {
+
+    return false;
 }

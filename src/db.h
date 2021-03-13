@@ -19,6 +19,7 @@
 #include <leveldb/filter_policy.h>
 #include <leveldb/write_batch.h>
 #include <memenv/memenv.h>
+#include <sqlite/sqlite3.h>
 
 class CAddress;
 class CAddrMan;
@@ -179,11 +180,17 @@ public:
                 delete lp;
         }
 
+        bool is_bdb() const noexcept {
+            return bp != nullptr;
+        }
         bool is_leveldb() const noexcept {
             return lp != nullptr;
         }
+        bool is_sqlite() const noexcept {
+            return qp != nullptr;
+        }
         bool is_error() const noexcept {
-            return (lp == nullptr && bp == nullptr);
+            return (lp == nullptr && bp == nullptr && qp == nullptr);
         }
         bool is_ok() const noexcept {
             return !is_error();
@@ -198,10 +205,14 @@ public:
         operator leveldb::Iterator *() const noexcept {
             return lp;
         }
+        operator sqlite3 *() const noexcept {
+            return qp;
+        }
 
     private:
         Dbc *bp;
         leveldb::Iterator *lp;
+        sqlite3 *qp;
         CCriticalSection *cs;
     };
 
@@ -412,6 +423,117 @@ public:
     void Flush(bool fShutdown);
     void CloseDb(const std::string &strDb);
     bool RemoveDb(const std::string &strDb);
+};
+
+/**
+ * Sqlite DB Manager
+ */
+class CSqliteDBEnv final : public IDBEnv
+{
+    CSqliteDBEnv()=delete;
+    CSqliteDBEnv(const CSqliteDBEnv &)=delete;
+    CSqliteDBEnv &operator=(const CSqliteDBEnv &)=delete;
+    CSqliteDBEnv(CSqliteDBEnv &&)=delete;
+    CSqliteDBEnv &operator=(CSqliteDBEnv &&)=delete;
+private:
+    CSqliteDBEnv(std::vector<std::string> instIn);
+    ~CSqliteDBEnv();
+    static CCriticalSection cs_sqlite;
+
+    fs::path pathEnv;
+
+    // global pointer array for Sqlite object instance
+    const std::vector<std::string> instance;
+    struct sqlite_object {
+        CCriticalSection cs_sql;
+        sqlite3 *psql;
+        sqlite_object() {
+            psql = nullptr;
+        }
+    };
+    mutable std::map<std::string, sqlite_object *> sqlobj;
+
+    void EnvShutdown();
+
+protected:
+    struct table_check {
+        std::string name;
+        bool exists;
+        table_check(const std::string &nameIn) {
+            name = nameIn;
+            exists = false;
+        }
+    };
+
+    static int m_default_callback(void *unused, int argc, char **argv, char **azColName) {
+        (void)unused;
+        (void)argc;
+        (void)argv;
+        (void)azColName;
+        return SQLITE_OK;
+    }
+
+    static int m_tablenamecheck_callback(void *table_context, int argc, char **argv, char **azColName) {
+        table_check *tc = reinterpret_cast<table_check *>(table_context);
+        if(tc->exists)
+            return SQLITE_OK;
+        for(int i=0; i<argc; ++i) {
+            if(std::strcmp(azColName[i], "name")==0) {
+                if(tc->name == argv[i]) {
+                    tc->exists=true;
+                    return SQLITE_OK;
+                }
+            }
+        }
+        return SQLITE_OK;
+    }
+
+    bool sql(const std::string &strFile, const std::string &cmd) {
+        LOCK(sqlobj[strFile]->cs_sql);
+        char *error;
+        if(::sqlite3_exec(sqlobj[strFile]->psql, cmd.c_str(), m_default_callback, nullptr, &error)!=SQLITE_OK)
+            return false;
+        return true;
+    }
+
+    bool is_table_exists(const std::string &strFile, const std::string &table_name);
+
+public:
+    static CSqliteDBEnv &get_instance() {
+        LOCK(cs_sqlite);
+        static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
+        return obj;
+    }
+
+    static std::string getname_mainchain() {
+        return "blkmainchain.dat";
+    }
+    static std::string getname_finexdrivechain() {
+        return "blkfinexdrivechain.dat";
+    }
+    static std::string getname_wallet() {
+        return "walletsql.dat";
+    }
+
+    sqlite3 *&get_psqldb(const std::string &name) const {
+        LOCK(cs_sqlite);
+        assert(sqlobj.count(name)>0);
+        return sqlobj[name]->psql;
+    }
+
+    CCriticalSection &get_rcs(const std::string &name) const {
+        LOCK(cs_sqlite);
+        assert(sqlobj.count(name)>0);
+        return sqlobj[name]->cs_sql;
+    }
+
+    bool Open(fs::path pathEnv_);
+
+    void Close();
+    bool Flush(const std::string &strFile);
+    void Flush(bool fShutdown);
+    void CloseDb(const std::string &strFile);
+    bool RemoveDb(const std::string &strFile);
 };
 
 /**
@@ -1018,6 +1140,113 @@ private:
 
         leveldb::Status status = this->pdb->Get(leveldb::ReadOptions(), ssKey.str(), &unused);
         return status.IsNotFound() == false;
+    }
+};
+
+/**
+ * Sqlite DB
+ * RAII class that provides access to a SqliteDB database
+ * using: testing ...
+ */
+class CSqliteDB : public IDB
+{
+    CSqliteDB()=delete;
+    CSqliteDB(const CSqliteDB &)=delete;
+    CSqliteDB(CSqliteDB &&)=delete;
+    CSqliteDB &operator=(const CSqliteDB &)=delete;
+    CSqliteDB &operator=(CSqliteDB &&)=delete;
+private:
+    bool fReadOnly;
+    bool fSecure;
+
+    sqlite3 *&pdb;
+    CCriticalSection &cs_db;
+
+public:
+    explicit CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn = false); // open SqliteDB
+    virtual ~CSqliteDB();
+
+    DbIterator GetIteCursor();
+
+    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
+    //static int ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
+
+    void Close();
+    bool TxnBegin();
+    bool TxnCommit();
+    bool TxnAbort();
+
+    bool ReadVersion(int &nVersion);
+    bool WriteVersion(int nVersion);
+
+    template<typename K, typename T>
+    bool Read(const K &key, T &value) {
+        return fSecure ? ReadSecure(key, value): ReadNormal(key, value);
+    }
+
+    template<typename K, typename T>
+    bool Write(const K &key, const T &value, bool fOverwrite) {
+        return fSecure ? WriteSecure(key, value, fOverwrite): WriteNormal(key, value, fOverwrite);
+    }
+
+    template<typename K>
+    bool Erase(const K &key) {
+        return fSecure ? EraseSecure(key): EraseNormal(key);
+    }
+
+    template<typename K>
+    bool Exists(const K &key) {
+        return fSecure ? ExistsSecure(key): ExistsNormal(key);
+    }
+
+private:
+    template<typename K, typename T>
+    bool ReadSecure(const K &key, T &value) {
+
+        return false;
+    }
+
+    template<typename K, typename T>
+    bool ReadNormal(const K &key, T &value) {
+
+        return false;
+    }
+
+    template<typename K, typename T>
+    bool WriteSecure(const K &key, const T &value, bool fOverwrite) {
+
+        return false;
+    }
+
+    template<typename K, typename T>
+    bool WriteNormal(const K &key, const T &value, bool fOverwrite) {
+
+        return false;
+    }
+
+    template<typename K>
+    bool EraseSecure(const K &key) {
+
+        return false;
+    }
+
+    template<typename K>
+    bool EraseNormal(const K &key) {
+
+        return false;
+    }
+
+    template<typename K>
+    bool ExistsSecure(const K &key) {
+
+        return false;
+    }
+
+    template<typename K>
+    bool ExistsNormal(const K &key) {
+
+
+        return false;
     }
 };
 

@@ -76,7 +76,6 @@ DEBUG_ALGO_CS_OUTPUT=0
 #
 USE_DBUS=0
 BITCOIN_NEED_QT_PLUGINS=0
-WINXP_BUILD=0
 64BIT_BUILD=0
 
 #
@@ -133,20 +132,10 @@ contains (64BIT_BUILD, 1) {
     64BIT_SUFFIX=64
     DEFINES += BUILD64BIT
 }
-contains (WINXP_BUILD, 1) {
-    message(WINXP BUILD MODE LEVELDB 0)
-    BOOST_PATH_SUFFIX=55_0
-    64BIT_BUILD=0
-} else {
-    message(NO WINXP BUILD)
-}
 windows: {
     BOOST_LIB_SUFFIX=-mgw73-mt-x64-1_68
     contains(64BIT_BUILD, 0) {
         BOOST_LIB_SUFFIX=-mgw73-mt-x32-1_68
-        contains (WINXP_BUILD, 1) {
-            BOOST_LIB_SUFFIX=-mgw63-mt-1_55
-        }
     }
 }
 BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
@@ -162,10 +151,8 @@ UPNP_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc
 UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
 BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
 BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs
-contains (WINXP_BUILD, 1) {
-    OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/openssl-1.0.2o/include
-    OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/openssl-1.0.2o
-}
+SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
+SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs
 
 #
 # Build setting
@@ -315,6 +302,9 @@ contains(USE_PREVECTOR_S, 1) {
 
 INCLUDEPATH += $$BLAKE2_INC_PATH
 LIBS += -lb2
+
+INCLUDEPATH += $$SQLITE_INC_PATH
+LIBS += -lsqlite3
 
 #
 # use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)
