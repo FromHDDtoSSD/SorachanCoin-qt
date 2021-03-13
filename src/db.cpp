@@ -563,7 +563,7 @@ bool CSqliteDBEnv::Open(fs::path pathEnv_) {
 
         sqlobj.insert(std::make_pair(ite, sobj));
         if(is_table_exists(ite, std::string("key_value"))==false) {
-            const std::string sql_cmd("create table key_value (key blob primary key, value blob not null)"); // sql const object: no necessary placeholder
+            const std::string sql_cmd("create table key_value (key blob primary key, value blob not null);"); // sql const object: no necessary placeholder
             if(! sql(ite, sql_cmd)) {
                 EnvShutdown();
                 throw std::runtime_error("CSqliteDBEnv::Open Sqlite key_value table create failure");
@@ -575,7 +575,7 @@ bool CSqliteDBEnv::Open(fs::path pathEnv_) {
 
 bool CSqliteDBEnv::is_table_exists(const std::string &strFile, const std::string &table_name) {
     table_check tc(table_name);
-    const std::string sql_cmd("select name from sqlite_master where type='table'"); // sql const object: no necessary placeholder
+    const std::string sql_cmd("select name from sqlite_master where type='table';"); // sql const object: no necessary placeholder
     char *error;
     bool ret = (::sqlite3_exec(sqlobj[strFile]->psql, sql_cmd.c_str(), m_tablenamecheck_callback, &tc, &error)==SQLITE_OK);
     return ret && tc.exists;

@@ -82,49 +82,32 @@ public:
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
         bool ret1 = bdb.Write(key, value, fOverwrite);
         bool ret2 = ldb.Write(key, value, fOverwrite);
-        assert(ret1 && ret2);
-        {
-            T valid;
-            assert(ldb.Read(key, valid));
-            CDataStream ssValue1;
-            ssValue1 << value;
-            CDataStream ssValue2;
-            ssValue2 << valid;
-            assert(ssValue1.size()==ssValue2.size());
-            assert(memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
-        }
-        return ret2;
+        bool ret3 = sqldb.Write(key, value, fOverwrite);
+        assert(ret1 && ret2 && ret3);
+        return ret1;
     }
-
-    /*
-    template<typename K, typename T>
-    bool Read(const K &key, T &value) {
-        bool ret = CDB::Read(key, value);
-        T lval;
-        if(! ldb.Read(key, lval)) {
-            assert(ldb.Write(key, value)); // sync from CDB to CLevelDB.
-        }
-        return ret;
-    }
-    */
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        if(! ldb.Read(key, value))
+        if(! bdb.Read(key, value))
             return false;
         CDataStream ssValue1;
         ssValue1 << value;
 
         T value2;
-        if(! bdb.Read(key, value2))
+        if(! ldb.Read(key, value2))
             return false;
-
         CDataStream ssValue2;
         ssValue2 << value2;
 
-        debugcs::instance() << "CDBHybrid::Read debug mode size:" << ssValue1.size() << debugcs::endl(); // only can display size.
-        assert(ssValue1.size()==ssValue2.size());
+        T value3;
+        if(! sqldb.Read(key, value3))
+            return false;
+        CDataStream ssValue3;
+        ssValue3 << value3;
+
         assert(std::memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
+        assert(std::memcmp(&ssValue1[0], &ssValue3[0], ssValue1.size())==0);
         return true;
     }
 
@@ -132,7 +115,8 @@ public:
     bool Erase(const K &key) {
         bool ret1 = bdb.Erase(key);
         bool ret2 = ldb.Erase(key);
-        assert(ret1==ret2);
+        bool ret3 = sqldb.Erase(key);
+        assert(ret1==ret2&&ret1==ret3);
         return ret1;
     }
 
@@ -140,7 +124,8 @@ public:
     bool Exists(const K &key) {
         bool ret1 = bdb.Exists(key);
         bool ret2 = ldb.Exists(key);
-        assert(ret1==ret2);
+        bool ret3 = sqldb.Exists(key);
+        assert(ret1==ret2&&ret1==ret3);
         return ret1;
     }
 
@@ -150,34 +135,6 @@ public:
 
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
-
-    /*
-    template<typename K, typename T>
-    bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        bool ret = ldb.Write(key, value, fOverwrite);
-        if(ret)
-            CLevelDBEnv::get_instance().Flush(ldb_name);
-        return ret;
-    }
-
-    template<typename K, typename T>
-    bool Read(const K &key, T &value) {
-        return ldb.Read(key, value);
-    }
-
-    template<typename K>
-    bool Erase(const K &key) {
-        bool ret = ldb.Erase(key);
-        if(ret)
-            CLevelDBEnv::get_instance().Flush(ldb_name);
-        return ret;
-    }
-
-    template<typename K>
-    bool Exists(const K &key) {
-        return ldb.Exists(key);
-    }
-    */
 
 private:
     std::string ldb_name;

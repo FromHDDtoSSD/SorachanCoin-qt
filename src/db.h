@@ -1242,7 +1242,7 @@ private:
             ::Serialize(ssKey, key);
 
             std::vector<char> vchValue;
-            CDBStream ssValue(&vchValue);
+            CDBStream ssValue(&vchValue, 10000);
 
             sqlite3_stmt *stmt;
             do {
@@ -1272,6 +1272,7 @@ private:
         if (this->fReadOnly) {
             assert(!"Write called on database in read-only mode");
         }
+        bool update = ExistsSecure(key);
         bool ret = false;
         try {
             CDataStream ssKey;
@@ -1284,17 +1285,16 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 1, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 2, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if (::sqlite3_step(stmt)!=SQLITE_DONE) {
-                    if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
-                    if(! fOverwrite) break;
+                if(update) {
+                    if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                } else {
                     if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
                     if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                     if(::sqlite3_bind_blob(stmt, 2, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                    if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 }
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 ret = true;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
@@ -1312,6 +1312,7 @@ private:
         if (this->fReadOnly) {
             assert(!"Write called on database in read-only mode");
         }
+        bool update = ExistsNormal(key);
         bool ret = false;
         try {
             std::vector<char> vchKey;
@@ -1324,17 +1325,16 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 1, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 2, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt)!=SQLITE_DONE) {
-                    if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
-                    if(! fOverwrite) break;
+                if(update) {
+                    if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                } else {
                     if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
                     if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                     if(::sqlite3_bind_blob(stmt, 2, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                    if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 }
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 ret = true;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
