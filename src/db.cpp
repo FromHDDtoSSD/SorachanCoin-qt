@@ -563,7 +563,7 @@ bool CSqliteDBEnv::Open(fs::path pathEnv_) {
 
         sqlobj.insert(std::make_pair(ite, sobj));
         if(is_table_exists(ite, std::string("key_value"))==false) {
-            const std::string sql_cmd("create table key_value (key blob primary key, value blob not null)");
+            const std::string sql_cmd("create table key_value (key blob primary key, value blob not null)"); // sql const object: no necessary placeholder
             if(! sql(ite, sql_cmd)) {
                 EnvShutdown();
                 throw std::runtime_error("CSqliteDBEnv::Open Sqlite key_value table create failure");
@@ -575,7 +575,7 @@ bool CSqliteDBEnv::Open(fs::path pathEnv_) {
 
 bool CSqliteDBEnv::is_table_exists(const std::string &strFile, const std::string &table_name) {
     table_check tc(table_name);
-    const std::string sql_cmd("select name from sqlite_master where type='table'");
+    const std::string sql_cmd("select name from sqlite_master where type='table'"); // sql const object: no necessary placeholder
     char *error;
     bool ret = (::sqlite3_exec(sqlobj[strFile]->psql, sql_cmd.c_str(), m_tablenamecheck_callback, &tc, &error)==SQLITE_OK);
     return ret && tc.exists;
@@ -677,47 +677,6 @@ void CDB::Close() {
     CDBEnv::get_instance().DecUseCount(strFile);
 }
 
-/*
-int IDB::ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags) {
-    // Read at cursor, return: 0 success, 1 ERROE_CODE
-    LOCK(CDBEnv::cs_db);
-    Dbt datKey;
-    if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
-        datKey.set_data(&ssKey[0]);
-        datKey.set_size((uint32_t)ssKey.size());
-    }
-
-    Dbt datValue;
-    if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
-        datValue.set_data(&ssValue[0]);
-        datValue.set_size((uint32_t)ssValue.size());
-    }
-
-    datKey.set_flags(DB_DBT_MALLOC);
-    datValue.set_flags(DB_DBT_MALLOC);
-    int ret = pcursor->get(&datKey, &datValue, fFlags);
-    if (ret != 0)
-        return ret;
-    else if (datKey.get_data() == nullptr || datValue.get_data() == nullptr)
-        return 99999;
-
-    // Convert to streams
-    ssKey.SetType(SER_DISK);
-    ssKey.clear();
-    ssKey.write((char *)datKey.get_data(), datKey.get_size());
-    ssValue.SetType(SER_DISK);
-    ssValue.clear();
-    ssValue.write((char *)datValue.get_data(), datValue.get_size());
-
-    // Clear and free memory
-    cleanse::OPENSSL_cleanse(datKey.get_data(), datKey.get_size());
-    cleanse::OPENSSL_cleanse(datValue.get_data(), datValue.get_size());
-    ::free(datKey.get_data());
-    ::free(datValue.get_data());
-    return 0;
-}
-*/
-
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto ldb = [&]() {
@@ -779,6 +738,9 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         ::free(datKey.get_data());
         ::free(datValue.get_data());
         return 0;
+    };
+    auto sqldb = [&]() {
+        return 99999;
     };
     LOCK(pcursor.get_cs());
     return pcursor.is_leveldb() ? ldb(): cdb();
@@ -1084,16 +1046,16 @@ CSqliteDB::CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/,
 
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
 }
-CSqliteDB::~CSqliteDB() {}
+CSqliteDB::~CSqliteDB() {
+    Close();
+}
 
 IDB::DbIterator CSqliteDB::GetIteCursor() {
 
     return std::move(IDB::DbIterator());
 }
 
-void CSqliteDB::Close() {
-
-}
+void CSqliteDB::Close() {}
 
 bool CSqliteDB::TxnBegin() {
 
@@ -1111,11 +1073,12 @@ bool CSqliteDB::TxnAbort() {
 }
 
 bool CSqliteDB::ReadVersion(int &nVersion) {
-
-    return false;
+    LOCK(cs_db);
+    nVersion = 0;
+    return Read(std::string("version"), nVersion);
 }
 
 bool CSqliteDB::WriteVersion(int nVersion) {
-
-    return false;
+    LOCK(cs_db);
+    return Write(std::string("version"), nVersion);
 }

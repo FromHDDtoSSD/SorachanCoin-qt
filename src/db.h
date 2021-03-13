@@ -222,7 +222,6 @@ public:
 # define DB_NEXT 16
 #endif
     // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-    //static int ReadAtCursor(Dbc *pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
     static int ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
 
     virtual void Close()=0;
@@ -455,7 +454,6 @@ private:
 
     void EnvShutdown();
 
-protected:
     struct table_check {
         std::string name;
         bool exists;
@@ -1168,9 +1166,6 @@ public:
 
     DbIterator GetIteCursor();
 
-    // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
-    //static int ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags = DB_NEXT);
-
     void Close();
     bool TxnBegin();
     bool TxnCommit();
@@ -1179,13 +1174,14 @@ public:
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
 
+    // below Read/Write are from "key_value" table.
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
         return fSecure ? ReadSecure(key, value): ReadNormal(key, value);
     }
 
     template<typename K, typename T>
-    bool Write(const K &key, const T &value, bool fOverwrite) {
+    bool Write(const K &key, const T &value, bool fOverwrite = true) {
         return fSecure ? WriteSecure(key, value, fOverwrite): WriteNormal(key, value, fOverwrite);
     }
 
@@ -1200,53 +1196,263 @@ public:
     }
 
 private:
+    // below Read/Write are from "key_value" table.
     template<typename K, typename T>
     bool ReadSecure(const K &key, T &value) {
+        LOCK(cs_db);
+        assert(pdb);
+        bool ret = false;
+        try {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
 
-        return false;
+            CDataStream ssValue;
+            ssValue.reserve(10000);
+
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
+                    const int size = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+                    ssValue.write(pdata, size);
+                }
+                ret = true;
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+
+            ssValue >> value;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K, typename T>
     bool ReadNormal(const K &key, T &value) {
+        LOCK(cs_db);
+        assert(pdb);
+        bool ret = false;
+        try {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
+            ::Serialize(ssKey, key);
 
-        return false;
+            std::vector<char> vchValue;
+            CDBStream ssValue(&vchValue);
+
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
+                    const int size = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+                    ssValue.write(pdata, size);
+                }
+                ret = true;
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+
+            ::Unserialize(ssValue, value);
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K, typename T>
     bool WriteSecure(const K &key, const T &value, bool fOverwrite) {
+        LOCK(cs_db);
+        assert(pdb);
+        if (this->fReadOnly) {
+            assert(!"Write called on database in read-only mode");
+        }
+        bool ret = false;
+        try {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
 
-        return false;
+            CDataStream ssValue;
+            ssValue.reserve(10000);
+            ssValue << value;
+
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 2, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if (::sqlite3_step(stmt)!=SQLITE_DONE) {
+                    if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+                    if(! fOverwrite) break;
+                    if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+                }
+                ret = true;
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K, typename T>
     bool WriteNormal(const K &key, const T &value, bool fOverwrite) {
+        LOCK(cs_db);
+        assert(pdb);
+        if (this->fReadOnly) {
+            assert(!"Write called on database in read-only mode");
+        }
+        bool ret = false;
+        try {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
+            ::Serialize(ssKey, key);
 
-        return false;
+            std::vector<char> vchValue;
+            CDBStream ssValue(&vchValue);
+            ::Serialize(ssValue, value);
+
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 2, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) {
+                    if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+                    if(! fOverwrite) break;
+                    if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+                }
+                ret = true;
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K>
     bool EraseSecure(const K &key) {
+        LOCK(cs_db);
+        assert(pdb);
+        if (this->fReadOnly) {
+            assert(!"Erase called on database in read-only mode");
+        }
+        bool ret = false;
+        try {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
 
-        return false;
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)==SQLITE_DONE) {
+                    ret = true;
+                }
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K>
     bool EraseNormal(const K &key) {
+        LOCK(cs_db);
+        assert(pdb);
+        if (this->fReadOnly) {
+            assert(!"Erase called on database in read-only mode");
+        }
+        bool ret = false;
+        try {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
+            ::Serialize(ssKey, key);
 
-        return false;
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)==SQLITE_DONE) {
+                    ret = true;
+                }
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K>
     bool ExistsSecure(const K &key) {
+        LOCK(cs_db);
+        assert(pdb);
+        bool ret = false;
+        try {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
 
-        return false;
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                    ret = true;
+                }
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 
     template<typename K>
     bool ExistsNormal(const K &key) {
+        LOCK(cs_db);
+        assert(pdb);
+        bool ret = false;
+        try {
+            std::vector<char> vch;
+            CDBStream ssKey(&vch);
+            ::Serialize(ssKey, key);
 
-
-        return false;
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &vch[0], vch.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                    ret = true;
+                }
+            } while(0);
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+        return ret;
     }
 };
 

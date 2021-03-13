@@ -883,6 +883,10 @@ bool entry::AppInit2(bool restart/*=false*/)
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
+    if (! CSqliteDBEnv::get_instance().Open(iofs::GetDataDir())) {
+        std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
+        return InitError(msg);
+    }
 
     if (map_arg::GetBoolArg("-salvagewallet")) {
         // Recover readable keypairs:
@@ -1173,7 +1177,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
 
-        CWallet walletMain(strWalletFileName, CLevelDBEnv::getname_wallet());
+        CWallet walletMain(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
         DBErrors nZapWalletRet = walletMain.ZapWalletTx();
         if (nZapWalletRet != DB_LOAD_OK) {
             CClientUIInterface::uiInterface.InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
@@ -1188,7 +1192,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     I_DEBUG_CS("Step 8a: load wallet new instance");
     bool fFirstRun = true;
-    entry::pwalletMain = new (std::nothrow) CWallet(strWalletFileName, CLevelDBEnv::getname_wallet());
+    entry::pwalletMain = new (std::nothrow) CWallet(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
     if(! entry::pwalletMain) {
         InitError("WalletMain memory allocate failure.");
         return false;
@@ -1263,7 +1267,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-rescan")) {
         pindexRescan = block_info::pindexGenesisBlock;
     } else {
-        CWalletDB walletdb(strWalletFileName, CLevelDBEnv::getname_wallet());
+        CWalletDB walletdb(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator)) {
             pindexRescan = locator.GetBlockIndex();

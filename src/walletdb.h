@@ -73,7 +73,7 @@ class CDBHybrid
     CDBHybrid(CDBHybrid &&)=delete;
     CDBHybrid &operator=(CDBHybrid &&)=delete;
 public:
-    CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
+    CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const std::string &strSqlFile, const char *pszMode="r+");
     virtual ~CDBHybrid();
 
     IDB::DbIterator GetIteCursor();
@@ -181,8 +181,10 @@ public:
 
 private:
     std::string ldb_name;
+    std::string sqldb_name;
     CDB bdb;
     CLevelDB ldb;
+    CSqliteDB sqldb;
 };
 
 // Access to the wallet database (CWalletDB: wallet.dat / txwallet)
@@ -194,7 +196,7 @@ class CWalletDB final : public CDBHybrid
     CWalletDB(CWalletDB &&)=delete;
     CWalletDB &operator=(CWalletDB &&)=delete;
 public:
-    explicit CWalletDB(const std::string &strFilename, const std::string &strLevelDB, const char *pszMode="r+");
+    explicit CWalletDB(const std::string &strFilename, const std::string &strLevelDB, const std::string &strSqlFile, const char *pszMode="r+");
 
     bool WriteName(const std::string &strAddress, const std::string &strName);
     bool EraseName(const std::string &strAddress);

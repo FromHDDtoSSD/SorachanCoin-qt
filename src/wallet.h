@@ -114,6 +114,7 @@ public:
     bool fFileBacked;
     std::string strWalletFile;
     std::string strWalletLevelDB;
+    std::string strWalletSqlFile;
 
     std::set<int64_t> setKeyPool;
     
@@ -132,10 +133,11 @@ public:
         SetNull();
     }
 
-    CWallet(const std::string &strWalletFileIn, const std::string &strWalletLevelDBIn) {
+    CWallet(const std::string &strWalletFileIn, const std::string &strWalletLevelDBIn, const std::string &strWalletSqlFileIn) {
         SetNull();
         strWalletFile = strWalletFileIn;
         strWalletLevelDB = strWalletLevelDBIn;
+        strWalletSqlFile = strWalletSqlFileIn;
         fFileBacked = true;
     }
 
