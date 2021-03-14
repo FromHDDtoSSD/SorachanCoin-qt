@@ -158,6 +158,8 @@ public:
             obj.bp = nullptr;
             this->lp = obj.lp;
             obj.lp = nullptr;
+            this->qp = obj.qp;
+            obj.qp = nullptr;
             return *this;
         }
 
@@ -165,11 +167,15 @@ public:
             operator=(std::move(obj));
         }
         DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr) {}
-        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), cs(csIn) {
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), qp(nullptr), cs(csIn) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), cs(csIn) {
+        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), qp(nullptr), cs(csIn) {
+            assert(cs);
+            p = nullptr;
+        }
+        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(nullptr), qp(p), cs(csIn) {
             assert(cs);
             p = nullptr;
         }
@@ -178,6 +184,8 @@ public:
                 bp->close();
             if(lp)
                 delete lp;
+            if(qp)
+                ::sqlite3_finalize(qp);
         }
 
         bool is_bdb() const noexcept {
@@ -205,15 +213,56 @@ public:
         operator leveldb::Iterator *() const noexcept {
             return lp;
         }
-        operator sqlite3 *() const noexcept {
+        operator sqlite3_stmt *() const noexcept {
             return qp;
         }
 
     private:
         Dbc *bp;
         leveldb::Iterator *lp;
-        sqlite3 *qp;
+        sqlite3_stmt *qp;
         CCriticalSection *cs;
+    };
+
+    //
+    // Delayed writing: for LevelDB, Sqlite
+    //
+    class CTxnSecureBuffer {
+        CTxnSecureBuffer(const CTxnSecureBuffer &)=delete;
+        CTxnSecureBuffer(CTxnSecureBuffer &&)=delete;
+        CTxnSecureBuffer &operator=(const CTxnSecureBuffer &)=delete;
+        CTxnSecureBuffer &operator=(CTxnSecureBuffer &&)=delete;
+    public:
+        enum txn_method {
+            TXN_READ,
+            TXN_WRITE_INSERT,
+            TXN_WRITE_UPDATE
+        };
+
+        using secure_binary = std::vector<char, secure_allocator<char>>;
+        using secure_keyvalue = std::pair<secure_binary, secure_binary>;
+
+        CTxnSecureBuffer() {}
+        ~CTxnSecureBuffer() {}
+        void clear() {
+            buf.clear();
+        }
+        size_t size() const noexcept {
+            return buf.size();
+        }
+
+        void insert(txn_method method, const CDataStream &ssKey, const CDataStream &ssValue) {
+            buf.emplace_back(std::move(
+                                  std::make_pair(method,
+                                                 std::move(std::make_pair(std::vector<char, secure_allocator<char>>(&ssKey[0], &ssKey[0]+ssKey.size()),
+                                                                          std::vector<char, secure_allocator<char>>(&ssValue[0], &ssValue[0]+ssValue.size()))))));
+        }
+        const std::pair<txn_method, secure_keyvalue> &get(int index) const noexcept {
+            return buf[index];
+        }
+
+    private:
+        std::vector<std::pair<txn_method, secure_keyvalue>> buf;
     };
 
     virtual DbIterator GetIteCursor()=0;
@@ -1160,6 +1209,8 @@ private:
     sqlite3 *&pdb;
     CCriticalSection &cs_db;
 
+    CTxnSecureBuffer *txn;
+
 public:
     explicit CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn = false); // open SqliteDB
     virtual ~CSqliteDB();
@@ -1212,19 +1263,21 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
-                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
-                    const int size = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+                    const int size = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
                     ssValue.write(pdata, size);
-                }
+                    cleanse::OPENSSL_cleanse(const_cast<char *>(pdata), size);
+                } else break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;  // key value pair must be unique.
                 ret = true;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;
-
-            ssValue >> value;
+            if(ret)
+                ssValue >> value;
         } catch (const std::exception &) {
             return false;
         }
@@ -1246,19 +1299,20 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
-                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
-                    const int size = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+                    const int size = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
                     ssValue.write(pdata, size);
-                }
+                } else break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;  // key value pair must be unique.
                 ret = true;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;
-
-            ::Unserialize(ssValue, value);
+            if(ret)
+                ::Unserialize(ssValue, value);
         } catch (const std::exception &) {
             return false;
         }
@@ -1273,7 +1327,20 @@ private:
             assert(!"Write called on database in read-only mode");
         }
         bool update = ExistsSecure(key);
+        if(fOverwrite==false && update)
+            return false;
+        if(txn) {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
+            CDataStream ssValue;
+            ssValue.reserve(10000);
+            ssValue << value;
+            txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            return true;
+        }
         bool ret = false;
+        sqlite3_stmt *stmt=nullptr;
         try {
             CDataStream ssKey;
             ssKey.reserve(1000);
@@ -1283,7 +1350,6 @@ private:
             ssValue.reserve(10000);
             ssValue << value;
 
-            sqlite3_stmt *stmt;
             do {
                 if(update) {
                     if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
@@ -1297,9 +1363,13 @@ private:
                 if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 ret = true;
             } while(0);
-            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
-                return false;
+            if(stmt) {
+                if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                    return false;
+            }
         } catch (const std::exception &) {
+            if(stmt)
+                ::sqlite3_finalize(stmt);
             return false;
         }
         return ret;
@@ -1313,7 +1383,20 @@ private:
             assert(!"Write called on database in read-only mode");
         }
         bool update = ExistsNormal(key);
+        if(fOverwrite==false && update)
+            return false;
+        if(txn) {
+            CDataStream ssKey;
+            ssKey.reserve(1000);
+            ssKey << key;
+            CDataStream ssValue;
+            ssValue.reserve(10000);
+            ssValue << value;
+            txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            return true;
+        }
         bool ret = false;
+        sqlite3_stmt *stmt=nullptr;
         try {
             std::vector<char> vchKey;
             CDBStream ssKey(&vchKey);
@@ -1323,7 +1406,6 @@ private:
             CDBStream ssValue(&vchValue);
             ::Serialize(ssValue, value);
 
-            sqlite3_stmt *stmt;
             do {
                 if(update) {
                     if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
@@ -1337,9 +1419,13 @@ private:
                 if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 ret = true;
             } while(0);
-            if(::sqlite3_finalize(stmt)!=SQLITE_OK)
-                return false;
+            if(stmt) {
+                if(::sqlite3_finalize(stmt)!=SQLITE_OK)
+                    return false;
+            }
         } catch (const std::exception &) {
+            if(stmt)
+                ::sqlite3_finalize(stmt);
             return false;
         }
         return ret;
@@ -1362,9 +1448,8 @@ private:
             do {
                 if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt)==SQLITE_DONE) {
+                if(::sqlite3_step(stmt)==SQLITE_DONE)
                     ret = true;
-                }
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;
@@ -1391,9 +1476,8 @@ private:
             do {
                 if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt)==SQLITE_DONE) {
+                if(::sqlite3_step(stmt)==SQLITE_DONE)
                     ret = true;
-                }
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;
@@ -1415,11 +1499,12 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                if(::sqlite3_step(stmt) == SQLITE_ROW)
                     ret = true;
-                }
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) // key value pair must be unique.
+                    ret = false;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;
@@ -1441,11 +1526,12 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select * from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vch[0], vch.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                if(::sqlite3_step(stmt) == SQLITE_ROW)
                     ret = true;
-                }
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) // key value pair must be unique.
+                    ret = false;
             } while(0);
             if(::sqlite3_finalize(stmt)!=SQLITE_OK)
                 return false;

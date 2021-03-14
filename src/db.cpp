@@ -703,7 +703,7 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         ite->Next();
         return ite->Valid() ? 0: DB_NOTFOUND;
     };
-    auto cdb = [&]() {
+    auto bdb = [&]() {
         Dbt datKey;
         if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
             datKey.set_data(&ssKey[0]);
@@ -740,10 +740,46 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         return 0;
     };
     auto sqldb = [&]() {
-        return 99999;
+        //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
+        //if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
+
+        sqlite3_stmt *stmt = (sqlite3_stmt *)pcursor;
+        int ret;
+        if((ret=::sqlite3_step(stmt)) == SQLITE_ROW) {
+            const char *pkey = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+            const int keysize = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
+            const char *pvalue = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
+            const int valuesize = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+
+            ssKey.SetType(SER_DISK);
+            ssKey.clear();
+            ssKey.write(pkey, keysize);
+            ssValue.SetType(SER_DISK);
+            ssValue.clear();
+            ssValue.write(pvalue, valuesize);
+
+            cleanse::OPENSSL_cleanse(const_cast<char *>(pkey), keysize);
+            cleanse::OPENSSL_cleanse(const_cast<char *>(pvalue), valuesize);
+        }
+        if(ret==SQLITE_DONE)
+            return DB_NOTFOUND;
+
+        return 0;
     };
     LOCK(pcursor.get_cs());
-    return pcursor.is_leveldb() ? ldb(): cdb();
+    if(pcursor.is_bdb())
+        return bdb();
+    else if(pcursor.is_leveldb())
+        return ldb();
+    else if(pcursor.is_sqlite())
+        return sqldb();
+    else
+        return 99999;
+
 }
 
 bool CDB::TxnBegin() {
@@ -1038,10 +1074,11 @@ bool CLevelDB::WriteVersion(int nVersion) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CSqliteDB class
+// like key value store database.
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 CSqliteDB::CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn /*= false*/) :
-    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)) {
+    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)), txn(nullptr) {
     fSecure = fSecureIn;
 
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
@@ -1051,25 +1088,84 @@ CSqliteDB::~CSqliteDB() {
 }
 
 IDB::DbIterator CSqliteDB::GetIteCursor() {
-
-    return std::move(IDB::DbIterator());
+    LOCK(cs_db);
+    sqlite3_stmt *stmt;
+    if(::sqlite3_prepare_v2(pdb, "select * from key_value", -1, &stmt, nullptr)!=SQLITE_OK)
+        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db));
 }
 
-void CSqliteDB::Close() {}
+void CSqliteDB::Close() {
+    if(txn) {
+        delete txn;
+        txn = nullptr;
+    }
+}
 
+//
+// Sqlite: About Txn, Only Secure and Write
+//
 bool CSqliteDB::TxnBegin() {
-
-    return false;
+    LOCK(cs_db);
+    assert(txn==nullptr);
+    //assert(fSecure);
+    txn = new(std::nothrow) CTxnSecureBuffer;
+    return txn != nullptr;
 }
 
 bool CSqliteDB::TxnCommit() {
-
-    return false;
+    LOCK(cs_db);
+    assert(txn);
+    //assert(fSecure);
+    for(int i=0; i<txn->size(); ++i) {
+        const auto &target = txn->get(i);
+        if(target.first==CTxnSecureBuffer::TXN_READ) {
+            assert(!"TXN_READ unsupported");
+            throw std::runtime_error("TXN_READ unsupported");
+        }
+        else if(target.first==CTxnSecureBuffer::TXN_WRITE_UPDATE) {
+            auto &data = target.second; // data.first: key, data.second: value
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &data.second[0], data.second.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 2, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+            } while(0);
+            if(::sqlite3_step(stmt)!=SQLITE_DONE) {
+                delete txn;
+                txn = nullptr;
+                return false;
+            }
+        }
+        else if(target.first==CTxnSecureBuffer::TXN_WRITE_INSERT) {
+            auto &data = target.second; // data.first: key, data.second: value
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 2, &data.second[0], data.second.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+            } while(0);
+            if(::sqlite3_step(stmt)!=SQLITE_DONE) {
+                delete txn;
+                txn = nullptr;
+                return false;
+            }
+        }
+        else
+            throw std::runtime_error("TXN unsupported");
+    }
+    delete txn;
+    txn = nullptr;
+    return true;
 }
 
 bool CSqliteDB::TxnAbort() {
-
-    return false;
+    LOCK(cs_db);
+    assert(txn);
+    //assert(fSecure);
+    delete txn;
+    txn = nullptr;
+    return true;
 }
 
 bool CSqliteDB::ReadVersion(int &nVersion) {

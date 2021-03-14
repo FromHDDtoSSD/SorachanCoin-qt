@@ -21,7 +21,7 @@
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
-#define CDB_MODE
+#define SQL_MODE
 ////////////////////////////////////////////////
 // CDBHybrid
 ////////////////////////////////////////////////
@@ -34,7 +34,7 @@ CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strLevel
 
 CDBHybrid::~CDBHybrid() {}
 
-#ifdef CDB_MODE
+#if defined(CDB_MODE)
 IDB::DbIterator CDBHybrid::GetIteCursor() {
     return bdb.GetIteCursor();
 }
@@ -57,6 +57,32 @@ bool CDBHybrid::ReadVersion(int &nVersion) {
 
 bool CDBHybrid::WriteVersion(int nVersion) {
     return bdb.WriteVersion(nVersion);
+}
+
+#elif defined(SQL_MODE)
+
+IDB::DbIterator CDBHybrid::GetIteCursor() {
+    return sqldb.GetIteCursor();
+}
+
+bool CDBHybrid::TxnBegin() {
+    return sqldb.TxnBegin();
+}
+
+bool CDBHybrid::TxnCommit() {
+    return sqldb.TxnCommit();
+}
+
+bool CDBHybrid::TxnAbort() {
+    return sqldb.TxnAbort();
+}
+
+bool CDBHybrid::ReadVersion(int &nVersion) {
+    return sqldb.ReadVersion(nVersion);
+}
+
+bool CDBHybrid::WriteVersion(int nVersion) {
+    return sqldb.WriteVersion(nVersion);
 }
 
 #else

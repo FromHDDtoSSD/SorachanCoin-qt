@@ -80,15 +80,16 @@ public:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        bool ret1 = bdb.Write(key, value, fOverwrite);
-        bool ret2 = ldb.Write(key, value, fOverwrite);
+        //bool ret1 = bdb.Write(key, value, fOverwrite);
+        //bool ret2 = ldb.Write(key, value, fOverwrite);
         bool ret3 = sqldb.Write(key, value, fOverwrite);
-        assert(ret1 && ret2 && ret3);
-        return ret1;
+        //assert(ret1 && ret2 && ret3);
+        return ret3;
     }
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
+        /*
         if(! bdb.Read(key, value))
             return false;
         CDataStream ssValue1;
@@ -108,25 +109,27 @@ public:
 
         assert(std::memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
         assert(std::memcmp(&ssValue1[0], &ssValue3[0], ssValue1.size())==0);
-        return true;
+        */
+        return sqldb.Read(key, value);
+        //return true;
     }
 
     template<typename K>
     bool Erase(const K &key) {
-        bool ret1 = bdb.Erase(key);
-        bool ret2 = ldb.Erase(key);
+        //bool ret1 = bdb.Erase(key);
+        //bool ret2 = ldb.Erase(key);
         bool ret3 = sqldb.Erase(key);
-        assert(ret1==ret2&&ret1==ret3);
-        return ret1;
+        //assert(ret1==ret2&&ret1==ret3);
+        return ret3;
     }
 
     template<typename K>
     bool Exists(const K &key) {
-        bool ret1 = bdb.Exists(key);
-        bool ret2 = ldb.Exists(key);
+        //bool ret1 = bdb.Exists(key);
+        //bool ret2 = ldb.Exists(key);
         bool ret3 = sqldb.Exists(key);
-        assert(ret1==ret2&&ret1==ret3);
-        return ret1;
+        //assert(ret1==ret2&&ret1==ret3);
+        return ret3;
     }
 
     bool TxnBegin();
