@@ -921,6 +921,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
                     if (fSuccess) {
                         db.Close();
                         CDBEnv::get_instance().CloseDb(strFile);
+                        ite.setnull();
                         if (pdbCopy->close(0)) {
                             fSuccess = false;
                         }

@@ -217,6 +217,14 @@ public:
             return qp;
         }
 
+        // call CloseDB before setnull().
+        void setnull() noexcept {
+            bp=nullptr;
+            lp=nullptr;
+            qp=nullptr;
+            cs=nullptr;
+        }
+
     private:
         Dbc *bp;
         leveldb::Iterator *lp;
