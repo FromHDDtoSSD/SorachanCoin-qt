@@ -23,11 +23,8 @@ uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
 ////////////////////////////////////////////////
 // SorachanCoin
-// CWalletDB use CSQLite. (DBD is up to v3)
-////////////////////////////////////////////////
-#define SQL_MODE
-
-////////////////////////////////////////////////
+// CWalletDB use CSqliteDB. (CDB is up to v3)
+//
 // CDBHybrid
 ////////////////////////////////////////////////
 
@@ -39,7 +36,7 @@ CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strSqlFi
 
 CDBHybrid::~CDBHybrid() {}
 
-#if defined(CDB_MODE)
+#ifndef WALLET_SQL_MODE
 IDB::DbIterator CDBHybrid::GetIteCursor() {
     return bdb.GetIteCursor();
 }
@@ -761,7 +758,6 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     // Make this thread recognisable as the wallet flushing thread
     //
     bitthread::RenameThread(strCoinName "-wallet");
-    const std::string &strFile = ((const std::string *)parg)[0];
 
     {
         LOCK(CDBEnv::get_instance().cs_db);
@@ -776,6 +772,13 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
         return;
     }
 
+#ifdef WALLET_SQL_MODE
+    while (! args_bool::fShutdown) {
+        util::Sleep(3000);
+        CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_wallet());
+    }
+#else
+    const std::string &strFile = ((const std::string *)parg)[0];
     unsigned int nLastSeen = dbparam::GetWalletUpdate();
     unsigned int nLastFlushed = dbparam::GetWalletUpdate();
     int64_t nLastWalletUpdate = bitsystem::GetTime();
@@ -804,6 +807,7 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
             }
         }
     }
+#endif
 }
 
 bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &strDest)
@@ -811,6 +815,10 @@ bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &str
     if (! wallet.fFileBacked)
         return false;
 
+#ifdef WALLET_SQL_MODE
+    // under development
+    return false;
+#else
     while (! args_bool::fShutdown)
     {
         {
@@ -847,6 +855,7 @@ bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &str
         util::Sleep(100);
     }
     return false;
+#endif
 }
 
 bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)

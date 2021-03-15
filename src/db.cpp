@@ -788,6 +788,39 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
 
 }
 
+bool CSqliteDB::PortToSqlite(DbIterator ite) {
+    // if exists "minversion", already port completed. therefore, skip PortToSqlite.
+    LOCK(cs_db);
+    const std::string tykey("minversion");
+    int tyValue;
+    bool version_ret = Read(tykey, tyValue);
+    debugcs::instance() << "portToSqlite minversion version_ret(bool): " << version_ret << debugcs::endl();
+    if(version_ret)
+        return true;
+
+    bool result = false;
+    for(;;) {
+        CDataStream ssKey;
+        ssKey.reserve(1000);
+        CDataStream ssValue;
+        ssValue.reserve(10000);
+        int ret = ReadAtCursor(ite, ssKey, ssValue);
+        //debugcs::instance() << "PortToSqlite ret: " << ret << debugcs::endl();
+        if(ret==DB_NOTFOUND) {
+            result = true;
+            break;
+        }
+        if(ret!=0)
+            break;
+        sqlite3_stmt *stmt;
+        if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
+        if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+        if(::sqlite3_bind_blob(stmt, 2, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+        if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+    }
+    return result;
+}
+
 bool CDB::TxnBegin() {
     LOCK(CDBEnv::cs_db);
     if (!pdb || activeTxn)
@@ -1096,6 +1129,7 @@ void CSqliteDB::Close() {
 
 //
 // Sqlite: About Txn, Only Secure and Write
+// using: mainly wallet crypto
 //
 bool CSqliteDB::TxnBegin() {
     LOCK(cs_db);

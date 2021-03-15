@@ -35,6 +35,10 @@ class CTxIndex;
 class CWallet;
 class CWalletTx;
 
+// SorachanCoin: wallet SQLite
+#define WALLET_SQL_MODE
+
+// under development: WALLET_SQL_MODE
 namespace wallet_dispatch
 {
     void ThreadFlushWalletDB(void *parg);
@@ -1236,6 +1240,8 @@ public:
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
 
+    bool PortToSqlite(DbIterator ite);
+
     // below Read/Write are from "key_value" table.
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
@@ -1520,8 +1526,13 @@ private:
             do {
                 if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                if(::sqlite3_step(stmt) == SQLITE_ROW)
+                if(::sqlite3_step(stmt) == SQLITE_ROW) {
+                    // buffer cleanse
+                    const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+                    const int size = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
+                    cleanse::OPENSSL_cleanse(const_cast<char *>(pdata), size);
                     ret = true;
+                }
                 if(::sqlite3_step(stmt)!=SQLITE_DONE) // key value pair must be unique.
                     ret = false;
             } while(0);

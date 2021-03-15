@@ -888,6 +888,20 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
+    // port from CDB to CSqliteDB
+    {
+        LOCK(CDBEnv::cs_db);
+        CClientUIInterface::uiInterface.InitMessage(_("Porting from BerkeleyDB to SQLite ..."));
+        CDB bdb(strWalletFileName.c_str(), "r");
+        IDB::DbIterator ite = bdb.GetIteCursor();
+        CSqliteDB sqldb(CSqliteDBEnv::getname_wallet(), "r+");
+        if(! sqldb.PortToSqlite(std::move(ite)))
+            return InitError(std::string("Port from CDB to CSqliteDB failure."));
+    }
+
+    /*
+     * SorachaCoin: removed Salvage command (using CSqliteDB)
+     *
     if (map_arg::GetBoolArg("-salvagewallet")) {
         // Recover readable keypairs:
         // keys only salvage
@@ -913,6 +927,7 @@ bool entry::AppInit2(bool restart/*=false*/)
             return InitError(_("wallet verufy status corrupt"));
         }
     }
+    */
 
     // ********************************************************* Step 6: network initialization
     I_DEBUG_CS("Step 6: network initialization")

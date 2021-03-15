@@ -80,27 +80,43 @@ public:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
+#ifdef WALLET_SQL_MODE
         return sqldb.Write(key, value, fOverwrite);
+#else
+        return bdb.Write(key, value, fOverwrite);
+#endif
     }
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
+#ifdef WALLET_SQL_MODE
         if(! sqldb.Read(key, value)) {
             bool ret1 = bdb.Read(key, value);
             bool ret2 = sqldb.Write(key, value);
             return ret1 && ret2;
         }
         return true;
+#else
+        return bdb.Read(key, value);
+#endif
     }
 
     template<typename K>
     bool Erase(const K &key) {
+#ifdef WALLET_SQL_MODE
         return sqldb.Erase(key);
+#else
+        return bdb.Erase(key);
+#endif
     }
 
     template<typename K>
     bool Exists(const K &key) {
+#ifdef WALLET_SQL_MODE
         return sqldb.Exists(key);
+#else
+        return bdb.Exists(key);
+#endif
     }
 
     bool TxnBegin();
