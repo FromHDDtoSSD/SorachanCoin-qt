@@ -755,12 +755,18 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
             const char *pvalue = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
             const int valuesize = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
 
-            ssKey.SetType(SER_DISK);
-            ssKey.clear();
-            ssKey.write(pkey, keysize);
-            ssValue.SetType(SER_DISK);
-            ssValue.clear();
-            ssValue.write(pvalue, valuesize);
+            try {
+                ssKey.SetType(SER_DISK);
+                ssKey.clear();
+                ssKey.write(pkey, keysize);
+                ssValue.SetType(SER_DISK);
+                ssValue.clear();
+                ssValue.write(pvalue, valuesize);
+            } catch (const std::exception &) {
+                cleanse::OPENSSL_cleanse(const_cast<char *>(pkey), keysize);
+                cleanse::OPENSSL_cleanse(const_cast<char *>(pvalue), valuesize);
+                throw std::runtime_error("IDB::ReadAtCursor memory allocate failure");
+            }
 
             cleanse::OPENSSL_cleanse(const_cast<char *>(pkey), keysize);
             cleanse::OPENSSL_cleanse(const_cast<char *>(pvalue), valuesize);
@@ -825,21 +831,6 @@ bool CDB::WriteVersion(int nVersion) {
     LOCK(CDBEnv::cs_db);
     return Write(std::string("version"), nVersion);
 }
-
-/*
-Dbc *CDB::GetCursor() {
-    LOCK(CDBEnv::cs_db);
-    if (! pdb)
-        return nullptr;
-
-    Dbc *pcursor = nullptr;
-    int ret = pdb->cursor(nullptr, &pcursor, 0);
-    if (ret != 0)
-        return nullptr;
-
-    return pcursor;
-}
-*/
 
 IDB::DbIterator CDB::GetIteCursor() {
     LOCK(CDBEnv::cs_db);

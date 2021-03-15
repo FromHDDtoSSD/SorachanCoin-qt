@@ -438,7 +438,8 @@ private:
 public:
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
-        static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
+        //static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
+        static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain()});
         return obj;
     }
 
@@ -556,16 +557,19 @@ private:
 public:
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
+        //static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_wallet()});
         return obj;
     }
 
+    /*
     static std::string getname_mainchain() {
         return "blkmainchain.dat";
     }
     static std::string getname_finexdrivechain() {
         return "blkfinexdrivechain.dat";
     }
+    */
     static std::string getname_wallet() {
         return "walletsql.dat";
     }
@@ -642,7 +646,7 @@ private:
 /**
  * Berkeley DB
  * RAII class that provides access to a Berkeley database
- * using (Wallet): CWalletDB, CWallethdDB, CWalletqDB
+ * using (Wallet): old CWalletDB (up to v3)
  */
 class CDB : public IDB
 {
@@ -798,7 +802,6 @@ public:
  * Level DB
  * RAII class that provides access to a LevelDB database
  * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
- * using (Wallet): CDBHybrid
  */
 class CLevelDB : public IDB
 {
@@ -1338,13 +1341,17 @@ private:
         if(fOverwrite==false && update)
             return false;
         if(txn) {
-            CDataStream ssKey;
-            ssKey.reserve(1000);
-            ssKey << key;
-            CDataStream ssValue;
-            ssValue.reserve(10000);
-            ssValue << value;
-            txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            try {
+                CDataStream ssKey;
+                ssKey.reserve(1000);
+                ssKey << key;
+                CDataStream ssValue;
+                ssValue.reserve(10000);
+                ssValue << value;
+                txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            } catch (const std::exception &) {
+                return false;
+            }
             return true;
         }
         bool ret = false;
@@ -1394,13 +1401,17 @@ private:
         if(fOverwrite==false && update)
             return false;
         if(txn) {
-            CDataStream ssKey;
-            ssKey.reserve(1000);
-            ssKey << key;
-            CDataStream ssValue;
-            ssValue.reserve(10000);
-            ssValue << value;
-            txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            try {
+                CDataStream ssKey;
+                ssKey.reserve(1000);
+                ssKey << key;
+                CDataStream ssValue;
+                ssValue.reserve(10000);
+                ssValue << value;
+                txn->insert(update ? CTxnSecureBuffer::TXN_WRITE_UPDATE: CTxnSecureBuffer::TXN_WRITE_INSERT, ssKey, ssValue);
+            } catch (const std::exception &) {
+                return false;
+            }
             return true;
         }
         bool ret = false;

@@ -21,15 +21,20 @@
 
 uint64_t CWalletDB::nAccountingEntryNumber = 0;
 
+////////////////////////////////////////////////
+// SorachanCoin
+// CWalletDB use CSQLite. (DBD is up to v3)
+////////////////////////////////////////////////
 #define SQL_MODE
+
 ////////////////////////////////////////////////
 // CDBHybrid
 ////////////////////////////////////////////////
 
-CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const std::string &strSqlFile, const char *pszMode/*="r+"*/) :
-    bdb(strFilename.c_str(), pszMode), ldb(strLevelDB, pszMode, true), sqldb(strSqlFile, pszMode, true) {
-    ldb_name = strLevelDB;
-    debugcs::instance() << "CDBHybrid::CDBHybrid strLevelDB:" << strLevelDB.c_str() << debugcs::endl();
+CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strSqlFile, const char *pszMode/*="r+"*/) :
+    bdb(strFilename.c_str(), pszMode), sqldb(strSqlFile, pszMode, true) {
+    sqldb_name = strSqlFile;
+    //debugcs::instance() << "CDBHybrid::CDBHybrid strSqliteDB:" << strLevelDB.c_str() << debugcs::endl();
 }
 
 CDBHybrid::~CDBHybrid() {}
@@ -58,9 +63,7 @@ bool CDBHybrid::ReadVersion(int &nVersion) {
 bool CDBHybrid::WriteVersion(int nVersion) {
     return bdb.WriteVersion(nVersion);
 }
-
-#elif defined(SQL_MODE)
-
+#else
 IDB::DbIterator CDBHybrid::GetIteCursor() {
     return sqldb.GetIteCursor();
 }
@@ -84,32 +87,6 @@ bool CDBHybrid::ReadVersion(int &nVersion) {
 bool CDBHybrid::WriteVersion(int nVersion) {
     return sqldb.WriteVersion(nVersion);
 }
-
-#else
-
-IDB::DbIterator CDBHybrid::GetIteCursor() {
-    return ldb.GetIteCursor();
-}
-
-bool CDBHybrid::TxnBegin() {
-    return ldb.TxnBegin();
-}
-
-bool CDBHybrid::TxnCommit() {
-    return ldb.TxnCommit();
-}
-
-bool CDBHybrid::TxnAbort() {
-    return ldb.TxnAbort();
-}
-
-bool CDBHybrid::ReadVersion(int &nVersion) {
-    return ldb.ReadVersion(nVersion);
-}
-
-bool CDBHybrid::WriteVersion(int nVersion) {
-    return ldb.WriteVersion(nVersion);
-}
 #endif
 
 ////////////////////////////////////////////////////////////
@@ -117,7 +94,9 @@ bool CDBHybrid::WriteVersion(int nVersion) {
 ////////////////////////////////////////////////////////////
 
 CWalletDB::CWalletDB(const std::string &strFilename, const std::string &strLevelDB, const std::string &strSqlFile, const char *pszMode/*="r+"*/) :
-    CDBHybrid(strFilename.c_str(), strLevelDB, strSqlFile, pszMode) {}
+    CDBHybrid(strFilename.c_str(), strSqlFile, pszMode) {
+    (void)strLevelDB;
+}
 
 bool CWalletDB::WriteName(const std::string &strAddress, const std::string &strName) {
     dbparam::IncWalletUpdate();

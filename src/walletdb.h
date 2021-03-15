@@ -64,7 +64,7 @@ public:
 //
 // SorachanCoin: wallet DB Hybrid system
 //
-// Note that LevelDB "bool fSecureIn" always is used turning on "true". handle "privateKey".
+// Note that SqliteDB "bool fSecureIn" always is used turning on "true". handle "privateKey".
 //
 class CDBHybrid
 {
@@ -73,63 +73,34 @@ class CDBHybrid
     CDBHybrid(CDBHybrid &&)=delete;
     CDBHybrid &operator=(CDBHybrid &&)=delete;
 public:
-    CDBHybrid(const std::string &strFilename, const std::string &strLevelDB, const std::string &strSqlFile, const char *pszMode="r+");
+    CDBHybrid(const std::string &strFilename, const std::string &strSqlFile, const char *pszMode="r+");
     virtual ~CDBHybrid();
 
     IDB::DbIterator GetIteCursor();
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        //bool ret1 = bdb.Write(key, value, fOverwrite);
-        //bool ret2 = ldb.Write(key, value, fOverwrite);
-        bool ret3 = sqldb.Write(key, value, fOverwrite);
-        //assert(ret1 && ret2 && ret3);
-        return ret3;
+        return sqldb.Write(key, value, fOverwrite);
     }
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        /*
-        if(! bdb.Read(key, value))
-            return false;
-        CDataStream ssValue1;
-        ssValue1 << value;
-
-        T value2;
-        if(! ldb.Read(key, value2))
-            return false;
-        CDataStream ssValue2;
-        ssValue2 << value2;
-
-        T value3;
-        if(! sqldb.Read(key, value3))
-            return false;
-        CDataStream ssValue3;
-        ssValue3 << value3;
-
-        assert(std::memcmp(&ssValue1[0], &ssValue2[0], ssValue1.size())==0);
-        assert(std::memcmp(&ssValue1[0], &ssValue3[0], ssValue1.size())==0);
-        */
-        return sqldb.Read(key, value);
-        //return true;
+        if(! sqldb.Read(key, value)) {
+            bool ret1 = bdb.Read(key, value);
+            bool ret2 = sqldb.Write(key, value);
+            return ret1 && ret2;
+        }
+        return true;
     }
 
     template<typename K>
     bool Erase(const K &key) {
-        //bool ret1 = bdb.Erase(key);
-        //bool ret2 = ldb.Erase(key);
-        bool ret3 = sqldb.Erase(key);
-        //assert(ret1==ret2&&ret1==ret3);
-        return ret3;
+        return sqldb.Erase(key);
     }
 
     template<typename K>
     bool Exists(const K &key) {
-        //bool ret1 = bdb.Exists(key);
-        //bool ret2 = ldb.Exists(key);
-        bool ret3 = sqldb.Exists(key);
-        //assert(ret1==ret2&&ret1==ret3);
-        return ret3;
+        return sqldb.Exists(key);
     }
 
     bool TxnBegin();
@@ -140,10 +111,8 @@ public:
     bool WriteVersion(int nVersion);
 
 private:
-    std::string ldb_name;
     std::string sqldb_name;
     CDB bdb;
-    CLevelDB ldb;
     CSqliteDB sqldb;
 };
 
