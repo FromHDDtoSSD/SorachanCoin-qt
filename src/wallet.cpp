@@ -516,6 +516,7 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
     return true;
 }
 
+// SorachanCoin: unsupported
 bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
 {
     if (! IsCrypted()) {
@@ -601,9 +602,9 @@ bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
 #ifndef WALLET_SQL_MODE
         CDB::Rewrite(strWalletFile);
 #else
-        if(! CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet())) {
-            return false;
-        }
+        //if(! CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet())) {
+        //    return false;
+        //}
 #endif
     }
     NotifyStatusChanged(this);

@@ -601,10 +601,11 @@ public:
             pathDest /= strFileSrc;
         if(! (fsbridge::dir_exists(pathEnv_) && fsbridge::file_exists(pathSrc)))
             return false;
-        EnvShutdown();
+        if(::sqlite3_close(sqlobj[strFileSrc]->psql)!=SQLITE_OK)
+            return false;
         if(fsbridge::file_copy(pathSrc, pathDest))
             logging::LogPrintf("copied wallet data to %s\n", pathDest.string().c_str());
-        return Open(pathEnv_);
+        return ::sqlite3_open(pathSrc.string().c_str(), &sqlobj[strFileSrc]->psql)==SQLITE_OK;
     }
 
     bool Open(fs::path pathEnv_);
@@ -616,6 +617,10 @@ public:
     bool RemoveDb(const std::string &strFile);
 
     bool Rewrite(const std::string &target, const char *pszSkip=nullptr);
+
+    static std::string get_version() {
+        return std::string("SQLite v") + std::string(::sqlite3_version);
+    }
 };
 
 /**

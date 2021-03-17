@@ -54,7 +54,7 @@ AutocheckpointsWidget::~AutocheckpointsWidget() {
 void AutocheckpointsWidget::setCheckpointsModel(CheckpointsModel *checkpointsModel) {
     assert(checkpointsModel!=nullptr);
     this->checkpointsModel = checkpointsModel;
-    connect(this->checkpointsModel, SIGNAL(CheckpointsHardcode(const MapCheckpoints, const std::map<int, unsigned int>)), this, SLOT(update1(const MapCheckpoints, const std::map<int, unsigned int>)));
+    //connect(this->checkpointsModel, SIGNAL(CheckpointsHardcode(const MapCheckpoints, const std::map<int, unsigned int>)), this, SLOT(update1(const MapCheckpoints &, const MapModifierCheckpoints &)));
     connect(this->checkpointsModel, SIGNAL(CheckpointsAuto(const AutoCheckpoints)), this, SLOT(update2(const AutoCheckpoints)));
     update1(this->checkpointsModel->getHardcode(), this->checkpointsModel->getHardstake());
     update2(this->checkpointsModel->getAutocheckpoints());

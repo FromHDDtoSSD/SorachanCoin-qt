@@ -1145,6 +1145,7 @@ bool CSqliteDB::TxnBegin() {
 }
 
 bool CSqliteDB::TxnCommit() {
+    /*
     auto dummy_writer = [&](const CTxnSecureBuffer::secure_keyvalue &data) {
         //
         // Note: After writing dummy random data (same size), update value.
@@ -1184,6 +1185,7 @@ bool CSqliteDB::TxnCommit() {
         //debugcs::instance() << "dummy_writer result: " << result << debugcs::endl();
         return result;
     };
+    */
 
     LOCK(cs_db);
     assert(txn);
@@ -1200,7 +1202,7 @@ bool CSqliteDB::TxnCommit() {
             const auto &data = target.second; // data.first: key, data.second: value
             sqlite3_stmt *stmt;
             do {
-                if(! dummy_writer(data)) break;
+                //if(! dummy_writer(data)) break;
                 if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &data.second[0], data.second.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 2, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;

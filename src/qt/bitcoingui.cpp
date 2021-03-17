@@ -233,7 +233,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         connect(receiveCoinsPage, SIGNAL(signMessage(QString)), this, SLOT(gotoSignMessageTab(QString)));
 
         //gotoOverviewPage();
-        connect(syncWidget, SIGNAL(gotoSyncToOverview()), this, SLOT(gotoOverviewPage()));
+        connect(syncWidget, SIGNAL(gotoSyncToOverview()), this, SLOT(gotoOverviewFromSync()));
         gotoSyncWidget();
 
     } catch (const std::bad_alloc &) {
@@ -890,6 +890,17 @@ void BitcoinGUI::incomingTransaction(const QModelIndex & parent, int start, int 
     }
 }
 
+void BitcoinGUI::gotoOverviewFromSync() {
+    if(centralWidget->currentWidget()!=syncWidget)
+        return;
+
+    overviewAction->setChecked(true);
+    centralWidget->setCurrentWidget(overviewPage);
+
+    exportAction->setEnabled(false);
+    disconnect(exportAction, SIGNAL(triggered()), 0, 0);
+}
+
 void BitcoinGUI::gotoOverviewPage() {
     overviewAction->setChecked(true);
     centralWidget->setCurrentWidget(overviewPage);
@@ -1102,6 +1113,13 @@ void BitcoinGUI::encryptWallet(bool status) {
     if(! walletModel) {
         return;
     }
+
+    if(! status) {
+        QMessageBox::information(this, tr("Already Encryption"), tr("Wallet has been encrypted."));
+        setEncryptionStatus(walletModel->getEncryptionStatus());
+        return;
+    }
+
     AskPassphraseDialog dlg(status ? AskPassphraseDialog::Encrypt:
                                      AskPassphraseDialog::Decrypt, this);
     dlg.setModel(walletModel);

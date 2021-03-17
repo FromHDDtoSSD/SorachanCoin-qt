@@ -94,7 +94,7 @@ AddressBookPage::AddressBookPage(Mode mode, Tabs tab, QWidget *parent/*=nullptr*
         connect(editAction, SIGNAL(triggered()), this, SLOT(onEditAction()));
         connect(deleteAction, SIGNAL(triggered()), this, SLOT(on_deleteButton_clicked()));
 #ifdef USE_QRCODE
-        connect(showQRCodeAction, SIGNAL(triggered()), this, SLOT(on_showQRCode_clicked()));
+        connect(showQRCodeAction, SIGNAL(triggered()), this, SLOT(onShowQRCode_clicked()));
 #endif
         connect(signMessageAction, SIGNAL(triggered()), this, SLOT(on_signMessage_clicked()));
         connect(verifyMessageAction, SIGNAL(triggered()), this, SLOT(on_verifyMessage_clicked()));
@@ -321,7 +321,7 @@ void AddressBookPage::exportClicked() {
     }
 }
 
-void AddressBookPage::on_showQRCode_clicked() {
+void AddressBookPage::onShowQRCode_clicked() {
 #ifdef USE_QRCODE
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);

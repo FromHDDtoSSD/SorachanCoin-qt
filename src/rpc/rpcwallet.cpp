@@ -1774,11 +1774,15 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, CB
     if (! entry::pwalletMain->EncryptWallet(strWalletPass))
         return data.JSONRPCError(RPC_WALLET_ENCRYPTION_FAILED, "Error: Failed to encrypt the wallet.");
 
+#ifdef WALLET_SQL_MODE
+    return data.JSONRPCSuccess(json_spirit::Value::null);
+#else
     // TODO: BDB seems to have a bad habit of writing old data into
     // slack space in .dat files; that is bad if the old data is
     // unencrypted private keys. So:
     boot::StartShutdown();
     return data.JSONRPCSuccess(strCoinName " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.");
+#endif
 }
 
 namespace {

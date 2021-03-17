@@ -183,6 +183,7 @@ public slots:
 
 private slots:
     /** Switch to overview (home) page */
+    void gotoOverviewFromSync();
     void gotoOverviewPage();
     /** Switch to history (transactions) page */
     void gotoHistoryPage();

@@ -35,13 +35,13 @@ SyncWidget::SyncWidget(QWidget *parent) :
     ui->setupUi(this);
 
     QFont font1 = QApplication::font();
-    font1.setPointSize(font1.pointSize() * 3.5);
+    font1.setPointSize(font1.pointSize() * 3.3);
     font1.setBold(true);
     QFont font2 = QApplication::font();
-    font2.setPointSize(font2.pointSize() * 2.5);
+    font2.setPointSize(font2.pointSize() * 2.3);
     font2.setBold(true);
     QFont font3 = QApplication::font();
-    font3.setPointSize(font3.pointSize() * 1.5);
+    font3.setPointSize(font3.pointSize() * 1.3);
     font3.setBold(false);
     ui->labelExplain->setFont(font3);
     ui->labelStatus->setFont(font1);
@@ -78,7 +78,7 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
     if(gblock_info.enbaled()) {
         int prog = count - gblock_info.cblockHeight;
         int nRemainingBlocks = nTotalBlocks-count;
-        if(0 < nRemainingBlocks) {
+        if(5 < nRemainingBlocks) {
             int64_t time = util::GetTimeMillis() - gblock_info.ctime;
             int64_t remain = (double)nRemainingBlocks/prog * time / 1000;
             int hours = remain/3600;
@@ -90,7 +90,7 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
                 ui->labelStatus->setText(tr("Synchronizing ..."));
                 if(remain>0) {
                     ui->progressbarSync->setVisible(true);
-                    ui->labelRemain->setText(QString(tr("until sync: %1 hours %2 min %3 sec ...")).arg(hours,2,10,QChar('0')).arg(minutes,2,10,QChar('0')).arg(sec,2,10,QChar('0')));
+                    ui->labelRemain->setText(QString(tr("until sync: %1 hours %2 min %3 sec ...")).arg(hours,3,10,QChar('0')).arg(minutes,2,10,QChar('0')).arg(sec,2,10,QChar('0')));
                 } else {
                     ui->progressbarSync->setVisible(false);
                     ui->labelRemain->setText(QString(tr("---")));

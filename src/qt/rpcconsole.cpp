@@ -19,6 +19,7 @@
 #include <QScrollBar>
 #include <db_cxx.h>
 #include <allocator/qtsecure.h>
+#include <db.h>
 
 namespace {
 constexpr int CONSOLE_HISTORY = 50;
@@ -238,7 +239,11 @@ RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(new (std::nothrow)
 
     // set library version labels
     ui->openSSLVersion->setText(SSLeay_version(SSLEAY_VERSION));
+#ifndef WALLET_SQL_MODE
     ui->berkeleyDBVersion->setText(DbEnv::version(0, 0, 0));
+#else
+    ui->berkeleyDBVersion->setText(CSqliteDBEnv::get_version().c_str());
+#endif
 
     startExecutor();
     setTrafficGraphRange(INITIAL_TRAFFIC_GRAPH_MINS);
