@@ -502,7 +502,13 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
 
         // Need to completely rewrite the wallet file; if we don't, bdb might keep
         // bits of the unencrypted private key in slack space in the database file.
+#ifndef WALLET_SQL_MODE
         CDB::Rewrite(strWalletFile);
+#else
+        if(! CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet())) {
+            return false;
+        }
+#endif
 
     }
     NotifyStatusChanged(this);
@@ -592,7 +598,13 @@ bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
 
         // Need to completely rewrite the wallet file; if we don't, bdb might keep
         // encrypted private keys in the database file which can be a reason of consistency issues.
+#ifndef WALLET_SQL_MODE
         CDB::Rewrite(strWalletFile);
+#else
+        if(! CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet())) {
+            return false;
+        }
+#endif
     }
     NotifyStatusChanged(this);
 
@@ -2803,12 +2815,21 @@ DBErrors CWallet::LoadWallet(bool &fFirstRunRet)
     fFirstRunRet = false;
     DBErrors nLoadWalletRet = CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile, "cr+").LoadWallet(this);
     if (nLoadWalletRet == DB_NEED_REWRITE) {
+#ifdef WALLET_SQL_MODE
+        if(CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet(), "\x04pool")) {
+            setKeyPool.clear();
+            // Note: can't top-up keypool here, because wallet is locked.
+            // User will be prompted to unlock wallet the next operation
+            // the requires a new key.
+        }
+#else
         if (CDB::Rewrite(strWalletFile, "\x04pool")) {
             setKeyPool.clear();
             // Note: can't top-up keypool here, because wallet is locked.
             // User will be prompted to unlock wallet the next operation
             // the requires a new key.
         }
+#endif
     }
 
     if (nLoadWalletRet != DB_LOAD_OK) {
@@ -2830,6 +2851,15 @@ DBErrors CWallet::ZapWalletTx()
 
     DBErrors nZapWalletTxRet = CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile, "cr+").ZapWalletTx(this);
     if (nZapWalletTxRet == DB_NEED_REWRITE) {
+#ifdef WALLET_SQL_MODE
+        if(CSqliteDBEnv::get_instance().Rewrite(CSqliteDBEnv::getname_wallet(), "\x04pool")) {
+            LOCK(cs_wallet);
+            setKeyPool.clear();
+            // Note: can't top-up keypool here, because wallet is locked.
+            // User will be prompted to unlock wallet the next operation
+            // the requires a new key.
+        }
+#else
         if (CDB::Rewrite(strWalletFile, "\x04pool")) {
             LOCK(cs_wallet);
             setKeyPool.clear();
@@ -2837,6 +2867,7 @@ DBErrors CWallet::ZapWalletTx()
             // User will be prompted to unlock wallet the next operation
             // the requires a new key.
         }
+#endif
     }
 
     if (nZapWalletTxRet != DB_LOAD_OK) {

@@ -121,6 +121,9 @@ void AskPassphraseDialog::accept() {
         if(retval == QMessageBox::Yes) {
             if(newpass1 == newpass2) {
                 if(model->setWalletEncrypted(true, newpass1)) {
+#ifdef WALLET_SQL_MODE
+                    QMessageBox::information(this, tr("Wallet encrypted"), tr("Wallet encryption succeeded."));
+#else
                     QMessageBox::warning(this, tr("Wallet encrypted"),
                                          "<qt>" + 
                                          tr("SorachanCoin will close now to finish the encryption process. "
@@ -133,6 +136,7 @@ void AskPassphraseDialog::accept() {
                                          "will become useless as soon as you start using the new, encrypted wallet.") + 
                                          "</b></qt>");
                     QApplication::quit();
+#endif
                 } else {
                     QMessageBox::critical(this, tr("Wallet encryption failed"),
                                          tr("Wallet encryption failed due to an internal error. Your wallet was not encrypted."));
@@ -170,11 +174,16 @@ void AskPassphraseDialog::accept() {
             QMessageBox::critical(this, tr("Wallet decryption failed"),
                                   tr("The passphrase entered for the wallet decryption was incorrect."));
         } else {
+#ifdef WALLET_SQL_MODE
+            QMessageBox::information(this, tr("Wallet decrypted"), tr("Wallet decrypted succeeded."));
+            QDialog::accept();
+#else
             QMessageBox::warning(this, tr("Wallet decrypted"),
                                      "<qt>" + 
                                      tr("SorachanCoin will close now to finish the decryption process. ") +
                                      "</b></qt>");
             QApplication::quit();
+#endif
         }
         break;
     case ChangePass:

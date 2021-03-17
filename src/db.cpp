@@ -798,6 +798,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
     if(version_ret)
         return true;
 
+    sqlite3_stmt *stmt;
     bool result = false;
     for(;;) {
         CDataStream ssKey;
@@ -812,12 +813,14 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
         }
         if(ret!=0)
             break;
-        sqlite3_stmt *stmt;
         if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
         if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
         if(::sqlite3_bind_blob(stmt, 2, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
         if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+        if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
     }
+    if(! result)
+        ::sqlite3_finalize(stmt);
     return result;
 }
 
@@ -878,6 +881,7 @@ IDB::DbIterator CDB::GetIteCursor() {
     return std::move(DbIterator(std::move(pcursor), &CDBEnv::cs_db));
 }
 
+#ifndef WALLET_SQL_MODE
 bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */)
 {
     while (! args_bool::fShutdown)
@@ -965,6 +969,7 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
     }
     return false;
 }
+#endif
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CLevelDB class
@@ -1140,49 +1145,113 @@ bool CSqliteDB::TxnBegin() {
 }
 
 bool CSqliteDB::TxnCommit() {
+    auto dummy_writer = [&](const CTxnSecureBuffer::secure_keyvalue &data) {
+        //
+        // Note: After writing dummy random data (same size), update value.
+        //
+        bool result = false;
+        sqlite3_stmt *stmt;
+        do {
+            if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+            if(::sqlite3_bind_blob(stmt, 1, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+            if(::sqlite3_step(stmt)!=SQLITE_ROW) break;
+            const char *rdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+            const int rsize = ::sqlite3_column_bytes(stmt, 0);
+            cleanse::OPENSSL_cleanse(const_cast<char *>(rdata), rsize);
+            if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+            std::vector<unsigned char> rbuf;
+            try {
+                rbuf.resize(rsize);
+            } catch (const std::exception &) {
+                break;
+            }
+            //debugcs::instance() << "dummy_writer size: " << rsize << debugcs::endl();
+            if(rsize>32)
+                cleanse::OPENSSL_cleanse(&rbuf[0], rsize);
+            else
+                latest_crypto::random::GetStrongRandBytes(&rbuf[0], rsize); // assert(num <= 32);
+            if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+            if(::sqlite3_bind_blob(stmt, 1, &rbuf[0], rsize, SQLITE_STATIC)!=SQLITE_OK) break;
+            if(::sqlite3_bind_blob(stmt, 2, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+            if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+            if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+
+            result = true;
+        } while(0);
+        if(! result)
+            ::sqlite3_finalize(stmt);
+        //debugcs::instance() << "dummy_writer result: " << result << debugcs::endl();
+        return result;
+    };
+
     LOCK(cs_db);
     assert(txn);
     //assert(fSecure);
+    bool fGood = true;
     for(int i=0; i<txn->size(); ++i) {
+        bool result = false;
         const auto &target = txn->get(i);
         if(target.first==CTxnSecureBuffer::TXN_READ) {
             assert(!"TXN_READ unsupported");
             throw std::runtime_error("TXN_READ unsupported");
         }
         else if(target.first==CTxnSecureBuffer::TXN_WRITE_UPDATE) {
-            auto &data = target.second; // data.first: key, data.second: value
+            const auto &data = target.second; // data.first: key, data.second: value
             sqlite3_stmt *stmt;
             do {
+                if(! dummy_writer(data)) break;
                 if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &data.second[0], data.second.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 2, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+                if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+
+                result = true;
             } while(0);
-            if(::sqlite3_step(stmt)!=SQLITE_DONE) {
-                delete txn;
-                txn = nullptr;
-                return false;
-            }
+            if(! result)
+                ::sqlite3_finalize(stmt);
+        }
+        else if(target.first==CTxnSecureBuffer::TXN_ERASE) {
+            const auto &data = target.second; // data.first: key, data.second: value
+            sqlite3_stmt *stmt;
+            do {
+                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+                if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+
+                result = true;
+            } while(0);
+            if(! result)
+                ::sqlite3_finalize(stmt);
         }
         else if(target.first==CTxnSecureBuffer::TXN_WRITE_INSERT) {
-            auto &data = target.second; // data.first: key, data.second: value
+            const auto &data = target.second; // data.first: key, data.second: value
             sqlite3_stmt *stmt;
             do {
                 if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 2, &data.second[0], data.second.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
+                if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+
+                result = true;
             } while(0);
-            if(::sqlite3_step(stmt)!=SQLITE_DONE) {
-                delete txn;
-                txn = nullptr;
-                return false;
-            }
+            if(! result)
+                ::sqlite3_finalize(stmt);
         }
         else
             throw std::runtime_error("TXN unsupported");
+
+        if(result==false) {
+            fGood = false;
+            break;
+        }
     }
     delete txn;
     txn = nullptr;
-    return true;
+    return fGood;
 }
 
 bool CSqliteDB::TxnAbort() {
@@ -1203,4 +1272,94 @@ bool CSqliteDB::ReadVersion(int &nVersion) {
 bool CSqliteDB::WriteVersion(int nVersion) {
     LOCK(cs_db);
     return Write(std::string("version"), nVersion);
+}
+
+/*
+ * Rewrite
+ * migrate from old sql to new sql.
+ * therefore, remaining deleted data(value) are complete eleminated.
+ */
+bool CSqliteDBEnv::Rewrite(const std::string &target, const char *pszSkip/*=nullptr*/) { // pszSkip: Serialize data. (e.g. "\x07version")
+    assert(sqlobj.count(target)>0);
+    LOCK2(CSqliteDBEnv::cs_sqlite, sqlobj[target]->cs_sql);
+    fs::path pathsql = iofs::GetDataDir() / fs::path(target);
+    pathsql += ".rewrite";
+    fs::path pathsrc = iofs::GetDataDir() / target;
+
+    sqlite3 *prw3;
+    if(::sqlite3_open(pathsql.string().c_str(), &prw3)!=SQLITE_OK) {
+        fs::remove(pathsql);
+        return false;
+    }
+
+    const std::string sql_cmd("create table key_value (key blob primary key, value blob not null);"); // sql const object: no necessary placeholder
+    char *error;
+    if(::sqlite3_exec(prw3, sql_cmd.c_str(), nullptr, nullptr, &error)!=SQLITE_OK) {
+        ::sqlite3_close(prw3);
+        fs::remove(pathsql);
+        return false;
+    }
+
+    sqlite3_stmt *stmt_src;
+    if(::sqlite3_prepare_v2(sqlobj[target]->psql, "select * from key_value;", -1, &stmt_src, nullptr)!=SQLITE_OK) {
+        ::sqlite3_close(prw3);
+        fs::remove(pathsql);
+        return false;
+    }
+    int ret;
+    bool result = true;
+    while((ret=::sqlite3_step(stmt_src))==SQLITE_ROW) {
+        const char *key_data = nullptr;
+        int key_size = 0;
+        const char *value_data = nullptr;
+        int value_size = 0;
+        do {
+            key_data = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt_src, 0));
+            key_size = ::sqlite3_column_bytes(stmt_src, 0);
+            if(pszSkip) {
+                if(std::strncmp(pszSkip, key_data, std::min((int)std::strlen(pszSkip), key_size))==0)
+                    break;
+            }
+            value_data = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt_src, 1));
+            value_size = ::sqlite3_column_bytes(stmt_src, 1);
+            sqlite3_stmt *stmt_dest;
+            if(::sqlite3_prepare_v2(prw3, "insert into key_value (key, value) values ($1, $2);", -1, &stmt_dest, nullptr)!=SQLITE_OK) {result=false; break;}
+            if(::sqlite3_bind_blob(stmt_dest, 1, key_data, key_size, SQLITE_STATIC)!=SQLITE_OK) {result=false; ::sqlite3_finalize(stmt_dest); break;}
+            if(::sqlite3_bind_blob(stmt_dest, 2, value_data, value_size, SQLITE_STATIC)!=SQLITE_OK) {result=false; ::sqlite3_finalize(stmt_dest); break;}
+            if(::sqlite3_step(stmt_dest)!=SQLITE_DONE) {result=false; ::sqlite3_finalize(stmt_dest); break;}
+            if(::sqlite3_finalize(stmt_dest)!=SQLITE_OK) {result=false; break;}
+        } while(0);
+        cleanse::OPENSSL_cleanse(const_cast<char *>(key_data), key_size);
+        cleanse::OPENSSL_cleanse(const_cast<char *>(value_data), value_size);
+        if(! result) break;
+    }
+    if(!result || ret!=SQLITE_DONE) {
+        ::sqlite3_finalize(stmt_src);
+        ::sqlite3_close(prw3);
+        fs::remove(pathsql);
+        return false;
+    }
+
+    if(::sqlite3_finalize(stmt_src)!=SQLITE_OK) {
+        ::sqlite3_close(prw3);
+        fs::remove(pathsql);
+        return false;
+    }
+    if(::sqlite3_close(prw3)!=SQLITE_OK) {
+        fs::remove(pathsql);
+        return false;
+    }
+
+    // rewrite and restart
+    // note that even if error, restart splobj[target]->psql.
+    if(::sqlite3_close(sqlobj[target]->psql)!=SQLITE_OK) {
+        fs::remove(pathsql);
+        return false;
+    }
+    fs::remove(pathsrc);
+
+    if(! fsbridge::file_rename(pathsql, pathsrc))
+        return false;
+
+    return ::sqlite3_open(pathsrc.string().c_str(), &sqlobj[target]->psql)==SQLITE_OK;
 }

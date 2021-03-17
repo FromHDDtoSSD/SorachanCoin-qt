@@ -38,7 +38,6 @@ class CWalletTx;
 // SorachanCoin: wallet SQLite
 #define WALLET_SQL_MODE
 
-// under development: WALLET_SQL_MODE
 namespace wallet_dispatch
 {
     void ThreadFlushWalletDB(void *parg);
@@ -63,13 +62,14 @@ class IDBEnv
     IDBEnv(IDBEnv &&)=delete;
     IDBEnv &operator=(const IDBEnv &)=delete;
     IDBEnv &operator=(IDBEnv &&)=delete;
+private:
+    mutable CCriticalSection cs_env;
 protected:
     static constexpr int dbcache_size = 25;
     static constexpr int retry_counter = 10; // Create retry counter
     static constexpr bool fMockDb = false; // no using MockDB
 
     fs::path pathEnv;
-    mutable CCriticalSection cs_env;
     std::map<std::string, int> mapFileUseCount;
     std::map<std::string, Db *> mapDb; // database handle
 
@@ -247,6 +247,7 @@ public:
     public:
         enum txn_method {
             TXN_READ,
+            TXN_ERASE,
             TXN_WRITE_INSERT,
             TXN_WRITE_UPDATE
         };
@@ -336,7 +337,7 @@ private:
     }
 
 public:
-    static CCriticalSection cs_db;
+    static CCriticalSection cs_db; // Using Rewite
 
     static CDBEnv &get_instance() {
         LOCK(cs_db);
@@ -499,7 +500,6 @@ class CSqliteDBEnv final : public IDBEnv
 private:
     CSqliteDBEnv(std::vector<std::string> instIn);
     ~CSqliteDBEnv();
-    static CCriticalSection cs_sqlite;
 
     fs::path pathEnv;
 
@@ -559,6 +559,8 @@ private:
     bool is_table_exists(const std::string &strFile, const std::string &table_name);
 
 public:
+    static CCriticalSection cs_sqlite; // using Rewite
+
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
         //static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
@@ -590,6 +592,21 @@ public:
         return sqlobj[name]->cs_sql;
     }
 
+    bool backup(fs::path pathEnv_, const std::string &strFileSrc, const std::string &strFileOrDirDest) {
+        assert(sqlobj.count(strFileSrc)>0);
+        LOCK2(cs_sqlite, sqlobj[strFileSrc]->cs_sql);
+        const fs::path pathSrc = pathEnv_ / strFileSrc;
+        fs::path pathDest(strFileOrDirDest);
+        if(fsbridge::dir_is(pathDest))
+            pathDest /= strFileSrc;
+        if(! (fsbridge::dir_exists(pathEnv_) && fsbridge::file_exists(pathSrc)))
+            return false;
+        EnvShutdown();
+        if(fsbridge::file_copy(pathSrc, pathDest))
+            logging::LogPrintf("copied wallet data to %s\n", pathDest.string().c_str());
+        return Open(pathEnv_);
+    }
+
     bool Open(fs::path pathEnv_);
 
     void Close();
@@ -597,6 +614,8 @@ public:
     void Flush(bool fShutdown);
     void CloseDb(const std::string &strFile);
     bool RemoveDb(const std::string &strFile);
+
+    bool Rewrite(const std::string &target, const char *pszSkip=nullptr);
 };
 
 /**
@@ -799,7 +818,9 @@ public:
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
 
+#ifndef WALLET_SQL_MODE
     static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
+#endif
 };
 
 /**
@@ -1280,7 +1301,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
                     const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
@@ -1316,7 +1337,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
                     const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
@@ -1463,6 +1484,18 @@ private:
         if (this->fReadOnly) {
             assert(!"Erase called on database in read-only mode");
         }
+        if(txn) {
+            try {
+                CDataStream ssKey;
+                ssKey.reserve(1000);
+                ssKey << key;
+                CDataStream ssValue;
+                txn->insert(CTxnSecureBuffer::TXN_ERASE, ssKey, ssValue); // ssValue unused.
+            } catch (const std::exception &) {
+                return false;
+            }
+            return true;
+        }
         bool ret = false;
         try {
             CDataStream ssKey;
@@ -1471,7 +1504,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt)==SQLITE_DONE)
                     ret = true;
@@ -1491,6 +1524,18 @@ private:
         if (this->fReadOnly) {
             assert(!"Erase called on database in read-only mode");
         }
+        if(txn) {
+            try {
+                CDataStream ssKey;
+                ssKey.reserve(1000);
+                ssKey << key;
+                CDataStream ssValue;
+                txn->insert(CTxnSecureBuffer::TXN_ERASE, ssKey, ssValue); // ssValue unused.
+            } catch (const std::exception &) {
+                return false;
+            }
+            return true;
+        }
         bool ret = false;
         try {
             std::vector<char> vchKey;
@@ -1499,7 +1544,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt)==SQLITE_DONE)
                     ret = true;
@@ -1524,7 +1569,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &ssKey[0], ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
                     // buffer cleanse
@@ -1556,7 +1601,7 @@ private:
 
             sqlite3_stmt *stmt;
             do {
-                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1", -1, &stmt, nullptr)!=SQLITE_OK) break;
+                if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
                 if(::sqlite3_bind_blob(stmt, 1, &vch[0], vch.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW)
                     ret = true;

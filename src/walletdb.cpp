@@ -773,6 +773,7 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     }
 
 #ifdef WALLET_SQL_MODE
+    (void)parg;
     while (! args_bool::fShutdown) {
         util::Sleep(3000);
         CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_wallet());
@@ -816,8 +817,7 @@ bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &str
         return false;
 
 #ifdef WALLET_SQL_MODE
-    // under development
-    return false;
+    return CSqliteDBEnv::get_instance().backup(iofs::GetDataDir(), wallet.strWalletSqlFile, strDest); // strDest accepts file or directory.
 #else
     while (! args_bool::fShutdown)
     {
@@ -834,7 +834,7 @@ bool wallet_dispatch::BackupWallet(const CWallet &wallet, const std::string &str
                 CDBEnv::get_instance().Flush(wallet.strWalletFile);
 
                 //
-                // Copy wallet.dat or walletq.dat
+                // Copy wallet.dat
                 //
                 fs::path pathSrc = iofs::GetDataDir() / wallet.strWalletFile;
                 fs::path pathDest(strDest);
@@ -950,7 +950,7 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
     return true;
 }
 
-bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string& strLocation)
+bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string &strLocation)
 {
     if (! pwallet->fFileBacked) {
         return false;
