@@ -24,8 +24,6 @@ struct sync_info {
 };
 } // namespace
 
-static bool fcompsync = false;
-
 SyncWidget::SyncWidget(QWidget *parent) :
     QWidget(parent),
     ui(new(std::nothrow) Ui::SyncWidget) {
@@ -97,9 +95,7 @@ void SyncWidget::progress(int count, int nTotalBlocks) {
                 }
             }
         } else {
-            if(fcompsync==false)
-                emit gotoSyncToOverview(); // sync is complete.
-            fcompsync = true;
+            emit gotoSyncToOverview(); // sync is complete.
         }
     }
 

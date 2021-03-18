@@ -28,11 +28,20 @@ uint64_t CWalletDB::nAccountingEntryNumber = 0;
 // CDBHybrid
 ////////////////////////////////////////////////
 
+#ifdef WALLET_SQL_MODE
 CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strSqlFile, const char *pszMode/*="r+"*/) :
-    bdb(strFilename.c_str(), pszMode), sqldb(strSqlFile, pszMode, true) {
+    sqldb(strSqlFile, pszMode, true) {
+    (void)strFilename;
     sqldb_name = strSqlFile;
     //debugcs::instance() << "CDBHybrid::CDBHybrid strSqliteDB:" << strLevelDB.c_str() << debugcs::endl();
 }
+#else
+CDBHybrid::CDBHybrid(const std::string &strFilename, const std::string &strSqlFile, const char *pszMode/*="r+"*/) :
+    bdb(strFilename.c_str(), pszMode) {
+    sqldb_name = strSqlFile;
+    //debugcs::instance() << "CDBHybrid::CDBHybrid strSqliteDB:" << strLevelDB.c_str() << debugcs::endl();
+}
+#endif
 
 CDBHybrid::~CDBHybrid() {}
 

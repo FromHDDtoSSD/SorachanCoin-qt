@@ -11,10 +11,18 @@
 #include <scrypt.h>
 #include <debugcs/debugcs.h>
 
+// SorachanCoin
+// v3.5 under development
+// porting to SQLite
+
 static const char *dirname = "autocheckpoints";
 static const char *datname = "autocheckpoints.dat";
 static constexpr int lowerBlockHeight = 440000; // mainnet and testnet
-#define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
+#ifdef DEBUG
+# define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
+#else
+# define CP_DEBUG_CS(str)
+#endif
 
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vAuto = prevector<PREVECTOR_BLOCK_N, uint8_t>;
@@ -115,6 +123,10 @@ CAutocheckPoint_impl<T>::~CAutocheckPoint_impl() {}
 template <typename T>
 bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckpoints qhash(uint65536) check
     LLOCK(cs_autocp);
+
+    // under development
+    return true;
+
     try {
         if(block_info::mapBlockIndex.empty())
             return false;
@@ -161,6 +173,10 @@ bool CAutocheckPoint_impl<T>::Verify() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     LLOCK(cs_autocp);
+
+    // under development
+    return true;
+
     const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
 
     /* checked mapBlockIndex
@@ -231,13 +247,17 @@ bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
 
     // checksum hash_65536
     CDataStream dhash;
-    dhash << get_hash_65536(whash);
-    try {
-        fileout << dhash;
-    } catch(const std::exception &) {
-        iofs::FileCommit(fileout);
-        fileout.fclose();
-        return false;
+    if(whash.size()>0) {
+        dhash << get_hash_65536(whash);
+    }
+    if(dhash.size()>0) {
+        try {
+            fileout << dhash;
+        } catch(const std::exception &) {
+            iofs::FileCommit(fileout);
+            fileout.fclose();
+            return false;
+        }
     }
 
     iofs::FileCommit(fileout);

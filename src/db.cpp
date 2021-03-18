@@ -589,7 +589,11 @@ void CSqliteDBEnv::Close() {
 
 bool CSqliteDBEnv::Flush(const std::string &strFile) {
     LOCK2(cs_sqlite, sqlobj[strFile]->cs_sql);
-    ::sqlite3_close(sqlobj[strFile]->psql);
+    //if(args_bool::fShutdown)
+    //    return true;
+
+    if(::sqlite3_close(sqlobj[strFile]->psql)!=SQLITE_OK)
+        return false;
 
     fs::path strPath = pathEnv / strFile;
     if(::sqlite3_open(strPath.string().c_str(), &sqlobj[strFile]->psql)!=SQLITE_OK) {
@@ -798,7 +802,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
     if(version_ret)
         return true;
 
-    sqlite3_stmt *stmt;
+    sqlite3_stmt *stmt=nullptr;
     bool result = false;
     for(;;) {
         CDataStream ssKey;
@@ -818,8 +822,9 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
         if(::sqlite3_bind_blob(stmt, 2, &ssValue[0], ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
         if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
         if(::sqlite3_finalize(stmt)!=SQLITE_OK) break;
+        stmt=nullptr;
     }
-    if(! result)
+    if(!result && stmt)
         ::sqlite3_finalize(stmt);
     return result;
 }

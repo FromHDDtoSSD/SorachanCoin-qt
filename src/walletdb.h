@@ -90,12 +90,7 @@ public:
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
 #ifdef WALLET_SQL_MODE
-        if(! sqldb.Read(key, value)) {
-            bool ret1 = bdb.Read(key, value);
-            bool ret2 = sqldb.Write(key, value);
-            return ret1 && ret2;
-        }
-        return true;
+        return sqldb.Read(key, value);
 #else
         return bdb.Read(key, value);
 #endif
@@ -128,8 +123,11 @@ public:
 
 private:
     std::string sqldb_name;
+#ifndef WALLET_SQL_MODE
     CDB bdb;
+#else
     CSqliteDB sqldb;
+#endif
 };
 
 // Access to the wallet database (CWalletDB: wallet.dat / txwallet)

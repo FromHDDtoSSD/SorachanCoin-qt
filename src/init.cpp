@@ -791,25 +791,17 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 4: application initialization: dir lock, daemonize, pidfile, debug log
     I_DEBUG_CS("Step 4: application initialization: dir lock, daemonize, pidfile, debug log")
 
-    //I_DEBUG_CS("Step 4a: wallet filename get ...");
     std::string strDataDir = iofs::GetDataDir().string();
     strWalletFileName = map_arg::GetArg("-wallet", "wallet.dat");
-    //strWalletqFileName = map_arg::GetArg("-walletq", "walletq.dat");
 
     // strWalletFileName must be a plain filename without a directory
-    //I_DEBUG_CS("Step 4b: wallet filename only check ...");
-    if (strWalletFileName != fs::basename(strWalletFileName) + fs::extension(strWalletFileName)) {
+    if (strWalletFileName != fs::basename(strWalletFileName) + fs::extension(strWalletFileName))
         return InitError(tfm::format(_("Wallet %s resides outside data directory %s."), strWalletFileName.c_str(), strDataDir.c_str()));
-    }
-    //if (strWalletqFileName != fs::basename(strWalletqFileName) + fs::extension(strWalletqFileName)) {
-    //    return InitError(tfm::format(_("Walletq %s resides outside data directory %s."), strWalletqFileName.c_str(), strDataDir.c_str()));
-    //}
 
     //
     // Lock File
     // Make sure only a single Bitcoin process is using the data directory
     //
-    //I_DEBUG_CS("Step 4c: Lock File ...");
     fs::path pathLockFile = iofs::GetDataDir() / ".lock";
     FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) {
@@ -874,6 +866,10 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 5: verify database integrity (CDBEnv and CLevelDBEnv)")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
+    const fs::path bdb_path = iofs::GetDataDir() / strWalletFileName.c_str();
+#ifndef WALLET_SQL_MODE
+    assert(fsbridge::file_exists(bdb_path));
+#endif
 
     if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
@@ -890,7 +886,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
 #ifdef WALLET_SQL_MODE
     // port from CDB to CSqliteDB
-    {
+    if(fsbridge::file_exists(bdb_path)) {
         LOCK(CDBEnv::cs_db);
         CClientUIInterface::uiInterface.InitMessage(_("Data migrate from BerkeleyDB to SQLite ..."));
         CDB bdb(strWalletFileName.c_str(), "r");
@@ -1326,8 +1322,9 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 10: load Autocheckpoints.dat")
 
     // SorachanCoin: Autocheckpoints load
-    if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
-        return false;
+    // v3.5 under development (porting to SQLite ...)
+    //if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
+    //    return false;
 
     // ********************************************************* Step 11: load peers
     I_DEBUG_CS("Step 11: load peers")
