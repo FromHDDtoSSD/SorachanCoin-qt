@@ -139,7 +139,7 @@ bool entry::AppInit(int argc, char *argv[])
             boot::Shutdown(nullptr);
         }
 
-        /*
+        /* under development
         std::string args_error;
         if(! ARGS.ParseParameters(argc, argv, args_error)) {
             fprintf(stderr, "Error: ARGS::ParseParameters %s", args_error.c_str());
@@ -147,7 +147,7 @@ bool entry::AppInit(int argc, char *argv[])
         }
         */
 
-        if (! boost::filesystem::is_directory(iofs::GetDataDir(false))) {
+        if (! fs::is_directory(iofs::GetDataDir(false))) {
             fprintf(stderr, "Error: Specified directory does not exist\n");
             boot::Shutdown(nullptr);
         }
@@ -156,11 +156,13 @@ bool entry::AppInit(int argc, char *argv[])
             boot::Shutdown(nullptr);
         }
 
+        /* under development
         std::string config_error;
         if(! ARGS.ReadConfigFiles(config_error)) {
             fprintf(stderr, "Error: ARGS::ReadConfigFile() %s", config_error.c_str());
             boot::Shutdown(nullptr);
         }
+        */
 
         if (map_arg::GetMapArgsCount("-?") || map_arg::GetMapArgsCount("--help")) {
             //

@@ -221,13 +221,13 @@ int main(int argc, char *argv[])
     initTranslations(qtTranslatorBase, qtTranslator, translatorBase, translator);
 
     // Command-line options take precedence:
+    // map_arg: old core, ARGS: new core
     if(! map_arg::ParseParameters(argc, argv)) {
         QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: map_arg::ParseParameters").arg(QString::fromStdString(map_arg::GetMapArgsString("-datadir"))));
         return 1;
     }
-
-    /*
+    /* under development
     std::string args_error;
     if(! ARGS.ParseParameters(argc, argv, args_error)) {
         QMessageBox::critical(0, strCoinName,
@@ -255,12 +255,14 @@ int main(int argc, char *argv[])
     }
 
     entry::SetupServerArgs();
+    /* under developmrnt
     std::string config_error;
     if(! ARGS.ReadConfigFiles(config_error)) {
         QMessageBox::critical(0, strCoinName,
             QObject::tr("Error: ARGS::ReadConfigFile() %1").arg(config_error.c_str()));
         return 1;
     }
+    */
 
     // ... then GUI settings:
     OptionsModel optionsModel;

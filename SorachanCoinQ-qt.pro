@@ -152,7 +152,7 @@ UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
 BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
 BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs
 SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
-SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs
+SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs/libsqlite3.a
 
 #
 # Build setting
@@ -304,7 +304,7 @@ INCLUDEPATH += $$BLAKE2_INC_PATH
 LIBS += -lb2
 
 INCLUDEPATH += $$SQLITE_INC_PATH
-LIBS += -lsqlite3
+LIBS += $$SQLITE_LIB_PATH
 
 #
 # use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)
