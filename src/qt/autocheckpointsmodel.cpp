@@ -40,7 +40,7 @@ void CheckpointsModel::update() {
 // slot (callback: this timer2)
 void CheckpointsModel::buildmap() {
     // under development: if CUI, should use std::thread. because no use QTimer. adopt v4 later.
-    LLOCK(CAutocheckPoint::get_instance().getcs());
+    LOCK(CAutocheckPoint::get_instance().getcs());
     CAutocheckPoint::get_instance().BuildAutocheckPoints();
     CAutocheckPoint::get_instance().Buildmap();
 }

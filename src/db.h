@@ -564,7 +564,8 @@ public:
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
         //static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
-        static CSqliteDBEnv obj({getname_wallet()});
+        //static CSqliteDBEnv obj({getname_wallet()});
+        static CSqliteDBEnv obj({getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
         return obj;
     }
 
@@ -576,6 +577,12 @@ public:
         return "blkfinexdrivechain.dat";
     }
     */
+    static std::string getname_autocheckpoints() {
+        return "blkautocheckpoints.dat";
+    }
+    static std::string getname_headeronlychain() {
+        return "blkheaderonlychain.dat";
+    }
     static std::string getname_wallet() {
         return "walletsql.dat";
     }

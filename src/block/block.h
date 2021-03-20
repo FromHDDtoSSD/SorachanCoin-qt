@@ -85,6 +85,47 @@ public:
     }
 };
 template <typename T>
+class CDiskBlockHeader_impl : public CBlockHeader_impl<T> {
+    CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;
+    CDiskBlockHeader_impl(CDiskBlockHeader_impl &&)=delete;
+    CDiskBlockHeader_impl &operator=(const CDiskBlockHeader_impl &)=delete;
+    CDiskBlockHeader_impl &operator=(CDiskBlockHeader_impl &&)=delete;
+private:
+    mutable T blockHash;
+    T hashPrev;
+    T hashNext;
+public:
+    CDiskBlockHeader_impl() {
+        blockHash = 0;
+        hashPrev = 0;
+        hashNext = 0;
+    }
+
+    const T &get_hashPrev() const {return hashPrev;}
+    const T &get_hashNext() const {return hashNext;}
+    void set_hashPrev(const T &_in) {hashPrev=_in;}
+    void set_hashNext(const T &_in) {hashNext=_in;}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(this->hashNext);
+
+        // block header
+        READWRITE(this->nVersion);  // CBlockHeader this nVersion
+        READWRITE(this->hashPrev);
+        READWRITE(this->hashMerkleRoot);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->nNonce);
+        READWRITE(this->blockHash);
+    }
+};
+using CDiskBlockHeader = CDiskBlockHeader_impl<uint256>;
+
+template <typename T>
 class CBlock_impl : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction>
 {
 #ifdef BLOCK_PREVECTOR_ENABLE

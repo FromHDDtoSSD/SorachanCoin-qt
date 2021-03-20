@@ -1323,10 +1323,8 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 10: load Autocheckpoints.dat
     I_DEBUG_CS("Step 10: load Autocheckpoints.dat")
 
-    // SorachanCoin: Autocheckpoints load
-    // v3.5 under development (porting to SQLite ...)
-    //if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
-    //    return false;
+    if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
+        return false;
 
     // ********************************************************* Step 11: load peers
     I_DEBUG_CS("Step 11: load peers")
