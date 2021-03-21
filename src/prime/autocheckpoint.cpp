@@ -103,11 +103,11 @@ template <typename T>
 bool CAutocheckPoint_impl<T>::Write(const CBlockIndex_impl<T> &header, int32_t nHeight) {
     LOCK(cs_autocp);
     assert(header.get_hashPrevBlock()!=0);
-    CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()));
     AutoCheckData data;
     data.nHeight = nHeight;
     data.nTime = header.get_nTime();
     data.hash = header.GetBlockHash();
+    CP_DEBUG_CS(tfm::format("Autocheckpoint Write: %d %d %s", data.nHeight, data.nTime, data.hash.ToString()));
     return CAcpDB().Write(data);
 }
 

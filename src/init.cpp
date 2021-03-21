@@ -886,16 +886,32 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
+#ifdef BLK_SQL_MODE
+    const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_blkindexsql();
+    if(! fsbridge::file_exists(blksql_path)){
+        LOCK(CLevelDBEnv::cs_leveldb);
+        CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
+        CLevelDB ldb(CLevelDBEnv::getname_mainchain(), "r");
+        IDB::DbIterator ite = ldb.GetIteCursor(std::string("blockindex"), uint256(0));
+        CSqliteDB sqldb(CSqliteDBEnv::getname_blkindexsql(), "r+");
+        if(! sqldb.PortToSqlite(std::move(ite))) {
+            fs::remove(blksql_path);
+            return InitError(std::string("[Blockchain] Data migrate from LevelDB to SQLite failure."));
+        }
+        CLevelDBEnv::get_instance().CloseDb(CLevelDBEnv::getname_mainchain());
+    }
+#endif
+
 #ifdef WALLET_SQL_MODE
     // port from CDB to CSqliteDB
     if(fsbridge::file_exists(bdb_path)) {
         LOCK(CDBEnv::cs_db);
-        CClientUIInterface::uiInterface.InitMessage(_("Data migrate from BerkeleyDB to SQLite ..."));
+        CClientUIInterface::uiInterface.InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
         CDB bdb(strWalletFileName.c_str(), "r");
         IDB::DbIterator ite = bdb.GetIteCursor();
         CSqliteDB sqldb(CSqliteDBEnv::getname_wallet(), "r+");
         if(! sqldb.PortToSqlite(std::move(ite)))
-            return InitError(std::string("Data migrate from BerkeleyDB to SQLite failure."));
+            return InitError(std::string("[Wallet] Data migrate from BerkeleyDB to SQLite failure."));
         CDBEnv::get_instance().CloseDb(strWalletFileName.c_str());
     }
 #else
@@ -1323,8 +1339,8 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 10: load Autocheckpoints.dat
     I_DEBUG_CS("Step 10: load Autocheckpoints.dat")
 
-    if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
-        return false;
+    //if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
+    //    return false;
 
     // ********************************************************* Step 11: load peers
     I_DEBUG_CS("Step 11: load peers")

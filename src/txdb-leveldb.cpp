@@ -22,6 +22,14 @@
 #include <sync/sync.h>
 #include <debugcs/debugcs.h>
 
+#ifdef BLK_SQL_MODE
+CTxDBHybrid::CTxDBHybrid(const char *pszMode) : sqldb(CSqliteDBEnv::getname_blkindexsql(), pszMode) {}
+#else
+CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_mainchain(), pszMode) {}
+#endif
+CTxDBHybrid::~CTxDBHybrid() {}
+
+
 static void oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
     if (fRemoveOld) {
@@ -71,7 +79,7 @@ void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= 
 
 // CLevelDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
 template <typename HASH>
-CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CLevelDB(CLevelDBEnv::getname_mainchain(), pszMode) {
+CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CTxDBHybrid(pszMode) {
     assert(pszMode);
 }
 
@@ -260,6 +268,98 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     // locations where the contents of the block can be found. Here, we scan it
     // out of the DB and into mapBlockIndex.
 
+#ifdef BLK_SQL_MODE
+
+    // Seek to start key.
+    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
+
+    // debug
+    /*
+    {
+        CDataStream ssKey;
+        ssKey.reserve(1000);
+        CDataStream ssValue;
+        ssValue.reserve(10000);
+        int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
+        debugcs::instance() << "debug CTxDB_impl LoadBlockIndex ret: " << ret << debugcs::endl();
+        assert(ret==DB_NOTFOUND);
+        return false;
+    }
+    */
+
+    // Now read each entry.
+    int ret;
+    CDataStream ssKey;
+    ssKey.reserve(1000);
+    CDataStream ssValue;
+    ssValue.reserve(10000);
+    while((ret=IDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND)
+    {
+        if(ret>0)
+            return logging::error("LoadBlockIndex() : sql read failure");
+
+        // Unpack keys and values.
+        std::string strType;
+        ::Unserialize(ssKey, strType);
+        //HASH hash;
+        //::Unserialize(ssKey, hash);
+        //debugcs::instance() << "CTxDB_impl ReadAtCursor strType: " << strType.c_str() << " Hash: " << hash.ToString().c_str() << debugcs::endl();
+
+        // Did we reach the end of the data to read?
+        if (args_bool::fRequestShutdown || strType != "blockindex") {
+            break;
+        }
+
+        CDiskBlockIndex_impl<HASH> diskindex;
+        ::Unserialize(ssValue, diskindex);
+
+        HASH blockHash = diskindex.GetBlockHash();
+        //debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
+
+        // Construct block index object
+        CBlockIndex_impl<HASH> *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
+        pindexNew->set_pprev(InsertBlockIndex(diskindex.get_hashPrev(), mapBlockIndex));
+        pindexNew->set_pnext(InsertBlockIndex(diskindex.get_hashNext(), mapBlockIndex));
+        pindexNew->set_nFile(diskindex.get_nFile());
+        pindexNew->set_nBlockPos(diskindex.get_nBlockPos());
+        pindexNew->set_nHeight(diskindex.get_nHeight());
+        pindexNew->set_nMint(diskindex.get_nMint());
+        pindexNew->set_nMoneySupply(diskindex.get_nMoneySupply());
+        pindexNew->set_nFlags(diskindex.get_nFlags());
+        pindexNew->set_nStakeModifier(diskindex.get_nStakeModifier());
+        pindexNew->set_prevoutStake(diskindex.get_prevoutStake());
+        pindexNew->set_nStakeTime(diskindex.get_nStakeTime());
+        pindexNew->set_hashProofOfStake(diskindex.get_hashProofOfStake());
+        pindexNew->set_nVersion(diskindex.get_nVersion());
+        pindexNew->set_hashMerkleRoot(diskindex.get_hashMerkleRoot());
+        pindexNew->set_nTime(diskindex.get_nTime());
+        pindexNew->set_nBits(diskindex.get_nBits());
+        pindexNew->set_nNonce(diskindex.get_nNonce());
+        pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
+
+        // Watch for genesis block
+        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
+            pindexGenesisBlock = pindexNew;
+        }
+
+        if (! pindexNew->CheckIndex()) {
+            return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
+        }
+
+        // ppcoin: build setStakeSeen
+        if (pindexNew->IsProofOfStake()) {
+            setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
+        }
+
+        // clear
+        ssKey.clear();
+        ssValue.clear();
+    }
+
+    debugcs::instance() << "ReadAtCursor OK" << debugcs::endl();
+
+#else
+
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), HASH(0))) {
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
@@ -319,6 +419,9 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
     }
+
+#endif
+
     if (args_bool::fRequestShutdown) {
         return true;
     }

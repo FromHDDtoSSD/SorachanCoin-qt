@@ -9,7 +9,11 @@
 #define BITCOIN_LEVELDB_H
 
 // SorachanCoin
+// Hybrid DB Blockchain
 // Multi-Threading supported
+
+// defined: SQLite Blockchain
+//#define BLK_SQL_MODE
 
 #include <main.h>
 #include <map>
@@ -20,8 +24,79 @@
 #include <util/thread.h>
 #include <db.h>
 
+#ifdef BLK_SQL_MODE
+class CTxDBHybrid {
+#else
+class CTxDBHybrid : public CLevelDB {
+#endif
+    CTxDBHybrid(const CTxDBHybrid &)=delete;
+    CTxDBHybrid(CTxDBHybrid &&)=delete;
+    CTxDBHybrid &operator=(const CTxDBHybrid &)=delete;
+    CTxDBHybrid &operator=(CTxDBHybrid &&)=delete;
+public:
+    explicit CTxDBHybrid(const char *pszMode="r+");
+    virtual ~CTxDBHybrid();
+
+#ifdef BLK_SQL_MODE
+    IDB::DbIterator GetIteCursor(std::string mkey) {
+        return std::move(sqldb.GetIteCursor(mkey));
+    }
+
+    template <typename K, typename T>
+    bool Read(const K &key, T &value) {
+        debugcs::instance() << "CTxDBHybrid Read()" << debugcs::endl();
+        return sqldb.Read(key, value);
+    }
+
+    template <typename K, typename T>
+    bool Write(const K &key, const T &value) {
+        debugcs::instance() << "CTxDBHybrid Write()" << debugcs::endl();
+        return sqldb.Write(key, value);
+    }
+
+    template <typename K>
+    bool Erase(const K &key) {
+        debugcs::instance() << "CTxDBHybrid Erase()" << debugcs::endl();
+        return sqldb.Erase(key);
+    }
+
+    template <typename K>
+    bool Exists(const K &key) {
+        debugcs::instance() << "CTxDBHybrid Exists()" << debugcs::endl();
+        return sqldb.Exists(key);
+    }
+
+    bool ReadVersion(int &nVersion) {
+        debugcs::instance() << "CTxDBHybrid ReadVersion()" << debugcs::endl();
+        return sqldb.ReadVersion(nVersion);
+    }
+    bool WriteVersion(int nVersion) {
+        debugcs::instance() << "CTxDBHybrid WriteVersion()" << debugcs::endl();
+        return sqldb.WriteVersion(nVersion);
+    }
+
+    bool TxnBegin() {
+        debugcs::instance() << "CTxDBHybrid TxnBegin()" << debugcs::endl();
+        return sqldb.TxnBegin();
+    }
+    bool TxnCommit() {
+        debugcs::instance() << "CTxDBHybrid TxnCommit()" << debugcs::endl();
+        return sqldb.TxnCommit();
+    }
+    bool TxnAbort() {
+        debugcs::instance() << "CTxDBHybrid TxnAbort()" << debugcs::endl();
+        return sqldb.TxnAbort();
+    }
+#endif
+
+#ifdef BLK_SQL_MODE
+private:
+    CSqliteDB sqldb;
+#endif
+};
+
 template <typename HASH>
-class CTxDB_impl : public CLevelDB // Note: no necessary virtual.
+class CTxDB_impl final : public CTxDBHybrid
 {
     CTxDB_impl(const CTxDB_impl &)=delete;
     CTxDB_impl(CTxDB_impl &&)=delete;

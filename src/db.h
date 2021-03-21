@@ -437,10 +437,10 @@ private:
     };
     mutable std::map<std::string, leveldb_object *> lobj;
 
+public:
     // global only use CLevelDBEnv
     static CCriticalSection cs_leveldb;
 
-public:
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
         //static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
@@ -565,7 +565,7 @@ public:
         LOCK(cs_sqlite);
         //static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
         //static CSqliteDBEnv obj({getname_wallet()});
-        static CSqliteDBEnv obj({getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_blkindexsql(), getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
         return obj;
     }
 
@@ -577,6 +577,9 @@ public:
         return "blkfinexdrivechain.dat";
     }
     */
+    static std::string getname_blkindexsql() {
+        return "blkindexsql.dat";
+    }
     static std::string getname_autocheckpoints() {
         return "blkautocheckpoints.dat";
     }
@@ -986,6 +989,17 @@ public:
 # define DB_NOTFOUND (-30988)
 #endif
     DbIterator GetIteCursor();
+    template <typename KEY, typename VALUE>
+    DbIterator GetIteCursor(const KEY &key, const VALUE &value) {
+        LOCK(cs_db);
+        leveldb::Iterator *p = pdb->NewIterator(leveldb::ReadOptions());
+        if(! p)
+            throw std::runtime_error("CLevelDB::GetIteCursor memory allocate failure");
+        CDataStream ssStartKey;
+        ssStartKey << std::make_pair(key, value);
+        p->Seek(ssStartKey.str());
+        return std::move(DbIterator(std::move(p), &cs_db));
+    }
 
     void Close();
     bool TxnBegin();
@@ -1241,7 +1255,11 @@ private:
 /**
  * Sqlite DB
  * RAII class that provides access to a SqliteDB database
- * using: testing ...
+ * using: CWalletDB
+ *
+ * checked buffer scope: about using SQLITE_STATIC.
+ * USE SecureAllocator:
+ * Be careful when using SQLITE_TRANSIENT to prevent accidental memcpy in internal.
  */
 class CSqliteDB : public IDB
 {
@@ -1263,7 +1281,8 @@ public:
     explicit CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn = false); // open SqliteDB
     virtual ~CSqliteDB();
 
-    DbIterator GetIteCursor();
+    DbIterator GetIteCursor(); // all
+    DbIterator GetIteCursor(std::string mkey); // key partial(%mkey%) match
 
     void Close();
     bool TxnBegin();

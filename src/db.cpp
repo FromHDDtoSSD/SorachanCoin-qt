@@ -1125,8 +1125,20 @@ CSqliteDB::~CSqliteDB() {
 IDB::DbIterator CSqliteDB::GetIteCursor() {
     LOCK(cs_db);
     sqlite3_stmt *stmt;
-    if(::sqlite3_prepare_v2(pdb, "select * from key_value", -1, &stmt, nullptr)!=SQLITE_OK)
+    if(::sqlite3_prepare_v2(pdb, "select * from key_value;", -1, &stmt, nullptr)!=SQLITE_OK)
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db));
+}
+
+IDB::DbIterator CSqliteDB::GetIteCursor(std::string mkey) {
+    LOCK(cs_db);
+    sqlite3_stmt *stmt;
+    if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK)
+        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    if(::sqlite3_bind_blob(stmt, 1, (const char *)mkey.c_str(), mkey.size(), SQLITE_TRANSIENT)!=SQLITE_OK) {
+        ::sqlite3_finalize(stmt);
+        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    }
     return std::move(IDB::DbIterator(std::move(stmt), &cs_db));
 }
 
