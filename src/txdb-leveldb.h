@@ -44,13 +44,14 @@ public:
 
     template <typename K, typename T>
     bool Read(const K &key, T &value) {
-        debugcs::instance() << "CTxDBHybrid Read()" << debugcs::endl();
-        return sqldb.Read(key, value);
+        bool ret = sqldb.Read(key, value);
+        debugcs::instance() << "CTxDBHybrid Read() type_key: " << typeid(K).name() << " type_value: " << typeid(T).name() << " ret: " << ret << debugcs::endl();
+        return ret;
     }
 
     template <typename K, typename T>
     bool Write(const K &key, const T &value) {
-        debugcs::instance() << "CTxDBHybrid Write()" << debugcs::endl();
+        debugcs::instance() << "CTxDBHybrid Write() type_key: " << typeid(K).name() << " type_value: " << typeid(T).name() << debugcs::endl();
         return sqldb.Write(key, value);
     }
 
@@ -86,6 +87,32 @@ public:
     bool TxnAbort() {
         debugcs::instance() << "CTxDBHybrid TxnAbort()" << debugcs::endl();
         return sqldb.TxnAbort();
+    }
+#else
+    bool TxnBegin() {
+        debugcs::instance() << "CTxDBHybrid TxnBegin()" << debugcs::endl();
+        return CLevelDB::TxnBegin();
+    }
+    bool TxnCommit() {
+        debugcs::instance() << "CTxDBHybrid TxnCommit()" << debugcs::endl();
+        return CLevelDB::TxnCommit();
+    }
+    bool TxnAbort() {
+        debugcs::instance() << "CTxDBHybrid TxnAbort()" << debugcs::endl();
+        return CLevelDB::TxnAbort();
+    }
+
+    template <typename K, typename T>
+    bool Read(const K &key, T &value) {
+        bool ret = CLevelDB::Read(key, value);
+        debugcs::instance() << "CTxDBHybrid Read() type_key: " << typeid(K).name() << " type_value: " << typeid(T).name() << " ret: " << ret << debugcs::endl();
+        return ret;
+    }
+
+    template <typename K, typename T>
+    bool Write(const K &key, const T &value) {
+        debugcs::instance() << "CTxDBHybrid Write() type_key: " << typeid(K).name() << " type_value: " << typeid(T).name() << debugcs::endl();
+        return CLevelDB::Write(key, value);
     }
 #endif
 
