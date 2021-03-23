@@ -443,19 +443,12 @@ public:
 
     static CLevelDBEnv &get_instance() {
         LOCK(cs_leveldb);
-        //static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
-        static CLevelDBEnv obj({getname_mainchain(), getname_finexdrivechain()});
+        static CLevelDBEnv obj({getname_mainchain()});
         return obj;
     }
 
     static std::string getname_mainchain() {
         return "txleveldb";
-    }
-    static std::string getname_finexdrivechain() {
-        return "txfinexdrivechain";
-    }
-    static std::string getname_wallet() {
-        return "txwallet";
     }
 
     leveldb::DB *&get_ptxdb(const std::string &name) const {
@@ -563,21 +556,14 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        //static CSqliteDBEnv obj({getname_mainchain(), getname_finexdrivechain(), getname_wallet()});
-        //static CSqliteDBEnv obj({getname_wallet()});
-        static CSqliteDBEnv obj({getname_blkindexsql(), getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
         return obj;
     }
 
-    /*
-    static std::string getname_mainchain() {
-        return "blkmainchain.dat";
-    }
     static std::string getname_finexdrivechain() {
         return "blkfinexdrivechain.dat";
     }
-    */
-    static std::string getname_blkindexsql() {
+    static std::string getname_mainchain() {
         return "blkindexsql.dat";
     }
     static std::string getname_autocheckpoints() {

@@ -23,7 +23,7 @@
 #include <debugcs/debugcs.h>
 
 #ifdef BLK_SQL_MODE
-CTxDBHybrid::CTxDBHybrid(const char *pszMode) : sqldb(CSqliteDBEnv::getname_blkindexsql(), pszMode) {}
+CTxDBHybrid::CTxDBHybrid(const char *pszMode) : sqldb(CSqliteDBEnv::getname_mainchain(), pszMode) {}
 #else
 CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_mainchain(), pszMode) {}
 #endif

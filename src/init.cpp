@@ -888,13 +888,13 @@ bool entry::AppInit2(bool restart/*=false*/)
 
 #ifdef BLK_SQL_MODE
     // port from LevelDB to CSqliteDB
-    const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_blkindexsql();
+    const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
     if(! fsbridge::file_exists(blksql_path)){
         LOCK(CLevelDBEnv::cs_leveldb);
         CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
         CLevelDB ldb(CLevelDBEnv::getname_mainchain(), "r");
         IDB::DbIterator ite = ldb.GetIteCursor(std::string("blockindex"), uint256(0));
-        CSqliteDB sqldb(CSqliteDBEnv::getname_blkindexsql(), "r+");
+        CSqliteDB sqldb(CSqliteDBEnv::getname_mainchain(), "r+");
         if(! sqldb.PortToSqlite(std::move(ite))) {
             fs::remove(blksql_path);
             return InitError(std::string("[Blockchain] Data migrate from LevelDB to SQLite failure."));
@@ -1209,7 +1209,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
         CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
 
-        CWallet walletMain(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
+        CWallet walletMain(strWalletFileName, std::string("unused"), CSqliteDBEnv::getname_wallet());
         DBErrors nZapWalletRet = walletMain.ZapWalletTx();
         if (nZapWalletRet != DB_LOAD_OK) {
             CClientUIInterface::uiInterface.InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
@@ -1224,7 +1224,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     I_DEBUG_CS("Step 8a: load wallet new instance");
     bool fFirstRun = true;
-    entry::pwalletMain = new (std::nothrow) CWallet(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
+    entry::pwalletMain = new (std::nothrow) CWallet(strWalletFileName, std::string("unused"), CSqliteDBEnv::getname_wallet());
     if(! entry::pwalletMain) {
         InitError("WalletMain memory allocate failure.");
         return false;
@@ -1299,7 +1299,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetBoolArg("-rescan")) {
         pindexRescan = block_info::pindexGenesisBlock;
     } else {
-        CWalletDB walletdb(strWalletFileName, CLevelDBEnv::getname_wallet(), CSqliteDBEnv::getname_wallet());
+        CWalletDB walletdb(strWalletFileName, std::string("unused"), CSqliteDBEnv::getname_wallet());
         CBlockLocator locator;
         if (walletdb.ReadBestBlock(locator)) {
             pindexRescan = locator.GetBlockIndex();
