@@ -115,6 +115,7 @@ template <typename T>
 bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     uint256 hash = CBlockHeader_impl<T>::GetHash();
+    //debugcs::instance() << "SetBestChainInner hash: " << hash.ToString() << debugcs::endl();
 
     // Adding to current best branch
     if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash)) {

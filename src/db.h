@@ -644,10 +644,10 @@ class CDBStream
     CDBStream &operator=(const CDBStream &)=delete;
     CDBStream &operator=(CDBStream &&)=delete;
 public:
-    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : pos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize
+    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : wpos(0), rpos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize iterator init
         assert(pbegin!=pend);
     }
-    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) noexcept : pos(0), pend(nullptr), pvch(vch) { // Serialize
+    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) noexcept : wpos(0), rpos(0), pend(nullptr), pvch(vch) { // Serialize object to bytearray, Unserialize bytearray to object
         vch->reserve(vch_reserve);
         vch->resize(128);
         pbegin = vch->data();
@@ -655,18 +655,18 @@ public:
 
     CDBStream &read(char *dest, uint32_t size) {
         assert(size>0);
-        dest ? std::memcpy(dest, pbegin+pos, size): 0;
-        pos += size;
+        dest ? std::memcpy(dest, pbegin+rpos, size): 0;
+        rpos += size;
         return *this;
     }
 
     CDBStream &write(const char *src, uint32_t size) {
         assert(size>0);
-        pvch->resize(pos+size);
+        pvch->resize(wpos+size);
         pbegin = pvch->data();
-        src ? std::memcpy(pbegin+pos, src, size): 0;
-        pos += size;
-        pend = pbegin+pos;
+        src ? std::memcpy(pbegin+wpos, src, size): 0;
+        wpos += size;
+        pend = pbegin+wpos;
         return *this;
     }
 
@@ -674,8 +674,26 @@ public:
         return (std::string(pbegin, pend));
     }
 
+    const char *data() const noexcept {
+        return pbegin;
+    }
+
+    size_t size() const noexcept {
+        return (size_t)wpos;
+    }
+
+    void clear() { // if exists pvch, using clear()
+        if(pvch) {
+            pvch->clear();
+            pvch->resize(128);
+            pbegin = pvch->data();
+            wpos = 0;
+            rpos = 0;
+        }
+    }
+
 private:
-    uint32_t pos;
+    uint32_t wpos, rpos;
     char *pbegin;
     char *pend;
     std::vector<char> *const pvch;
@@ -1284,6 +1302,9 @@ public:
     DbIterator GetIteCursor(); // all
     DbIterator GetIteCursor(std::string mkey); // key partial(%mkey%) match
 
+    // ReadAtCursor for CSqliteDB
+    static int ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags = DB_NEXT);
+
     void Close();
     bool TxnBegin();
     bool TxnCommit();
@@ -1369,7 +1390,7 @@ private:
             sqlite3_stmt *stmt;
             do {
                 if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, ssKey.data(), ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW) {
                     const char *pdata = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
                     const int size = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
@@ -1480,18 +1501,18 @@ private:
             ::Serialize(ssKey, key);
 
             std::vector<char> vchValue;
-            CDBStream ssValue(&vchValue);
+            CDBStream ssValue(&vchValue, 10000);
             ::Serialize(ssValue, value);
 
             do {
                 if(update) {
                     if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                    if(::sqlite3_bind_blob(stmt, 1, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                    if(::sqlite3_bind_blob(stmt, 2, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, ssValue.data(), ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, ssKey.data(), ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 } else {
                     if(::sqlite3_prepare_v2(pdb, "insert into key_value (key, value) values ($1, $2);", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                    if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
-                    if(::sqlite3_bind_blob(stmt, 2, &vchValue[0], vchValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 1, ssKey.data(), ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                    if(::sqlite3_bind_blob(stmt, 2, ssValue.data(), ssValue.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 }
                 if(::sqlite3_step(stmt)!=SQLITE_DONE) break;
                 ret = true;
@@ -1576,7 +1597,7 @@ private:
             sqlite3_stmt *stmt;
             do {
                 if(::sqlite3_prepare_v2(pdb, "delete from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 1, &vchKey[0], vchKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, ssKey.data(), ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt)==SQLITE_DONE)
                     ret = true;
             } while(0);
@@ -1626,14 +1647,14 @@ private:
         assert(pdb);
         bool ret = false;
         try {
-            std::vector<char> vch;
-            CDBStream ssKey(&vch);
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
             ::Serialize(ssKey, key);
 
             sqlite3_stmt *stmt;
             do {
                 if(::sqlite3_prepare_v2(pdb, "select value from key_value where key=$1;", -1, &stmt, nullptr)!=SQLITE_OK) break;
-                if(::sqlite3_bind_blob(stmt, 1, &vch[0], vch.size(), SQLITE_STATIC)!=SQLITE_OK) break;
+                if(::sqlite3_bind_blob(stmt, 1, ssKey.data(), ssKey.size(), SQLITE_STATIC)!=SQLITE_OK) break;
                 if(::sqlite3_step(stmt) == SQLITE_ROW)
                     ret = true;
                 if(::sqlite3_step(stmt)!=SQLITE_DONE) // key value pair must be unique.

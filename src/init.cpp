@@ -887,6 +887,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
 #ifdef BLK_SQL_MODE
+    // port from LevelDB to CSqliteDB
     const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_blkindexsql();
     if(! fsbridge::file_exists(blksql_path)){
         LOCK(CLevelDBEnv::cs_leveldb);

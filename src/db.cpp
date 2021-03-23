@@ -682,6 +682,42 @@ void CDB::Close() {
 }
 
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
+int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+    auto sqldb = [&]() {
+        //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
+        //if (fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
+            // no statement
+        //}
+
+        sqlite3_stmt *stmt = (sqlite3_stmt *)pcursor;
+        int ret;
+        if((ret=::sqlite3_step(stmt)) == SQLITE_ROW) {
+            const char *pkey = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 0));
+            const int keysize = ::sqlite3_column_bytes(stmt, 0) / sizeof(char);
+            const char *pvalue = reinterpret_cast<const char *>(::sqlite3_column_blob(stmt, 1));
+            const int valuesize = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
+
+            try {
+                ssKey.clear();
+                ssKey.write(pkey, keysize);
+                ssValue.clear();
+                ssValue.write(pvalue, valuesize);
+            } catch (const std::exception &) {
+                throw std::runtime_error("CSqliteDB::ReadAtCursor memory allocate failure");
+            }
+        }
+        if(ret==SQLITE_DONE)
+            return DB_NOTFOUND;
+
+        return 0;
+    };
+    LOCK(pcursor.get_cs());
+    (void)fFlags;
+    return sqldb();
+}
+
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto ldb = [&]() {
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
@@ -809,7 +845,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
         ssKey.reserve(1000);
         CDataStream ssValue;
         ssValue.reserve(10000);
-        int ret = ReadAtCursor(ite, ssKey, ssValue);
+        int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
         //debugcs::instance() << "PortToSqlite ret: " << ret << debugcs::endl();
         if(ret==DB_NOTFOUND) {
             result = true;

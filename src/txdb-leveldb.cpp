@@ -176,6 +176,7 @@ bool CTxDB_impl<HASH>::ReadHashBestChain(HASH &hashBestChain)
 template <typename HASH>
 bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
+    //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
     return Write(std::string("hashBestChain"), hashBestChain);
 }
 
@@ -273,27 +274,13 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     // Seek to start key.
     IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
 
-    // debug
-    /*
-    {
-        CDataStream ssKey;
-        ssKey.reserve(1000);
-        CDataStream ssValue;
-        ssValue.reserve(10000);
-        int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
-        debugcs::instance() << "debug CTxDB_impl LoadBlockIndex ret: " << ret << debugcs::endl();
-        assert(ret==DB_NOTFOUND);
-        return false;
-    }
-    */
-
     // Now read each entry.
     int ret;
-    CDataStream ssKey;
-    ssKey.reserve(1000);
-    CDataStream ssValue;
-    ssValue.reserve(10000);
-    while((ret=IDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND)
+    std::vector<char> vchKey;
+    CDBStream ssKey(&vchKey);
+    std::vector<char> vchValue;
+    CDBStream ssValue(&vchValue, 10000);
+    while((ret=CSqliteDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND)
     {
         if(ret>0)
             return logging::error("LoadBlockIndex() : sql read failure");
@@ -301,9 +288,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         // Unpack keys and values.
         std::string strType;
         ::Unserialize(ssKey, strType);
-        //HASH hash;
-        //::Unserialize(ssKey, hash);
-        //debugcs::instance() << "CTxDB_impl ReadAtCursor strType: " << strType.c_str() << " Hash: " << hash.ToString().c_str() << debugcs::endl();
 
         // Did we reach the end of the data to read?
         if (args_bool::fRequestShutdown || strType != "blockindex") {
@@ -350,13 +334,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
-
-        // clear
-        ssKey.clear();
-        ssValue.clear();
     }
-
-    debugcs::instance() << "ReadAtCursor OK" << debugcs::endl();
 
 #else
 
