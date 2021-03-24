@@ -718,6 +718,23 @@ int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStre
     return sqldb();
 }
 
+int CSqliteDB::IgnoreAtCursor(const DbIterator &pcursor) {
+    auto sqldb = [&]() {
+        sqlite3_stmt *stmt = (sqlite3_stmt *)pcursor;
+        int ret;
+        if((ret=::sqlite3_step(stmt)) == SQLITE_ROW) {
+            // no statement
+        } else
+            return 99999;
+        if(ret==SQLITE_DONE)
+            return DB_NOTFOUND;
+
+        return 0;
+    };
+    LOCK(pcursor.get_cs());
+    return sqldb();
+}
+
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto ldb = [&]() {
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {

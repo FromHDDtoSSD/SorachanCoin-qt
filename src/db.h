@@ -1288,8 +1288,9 @@ public:
     DbIterator GetIteCursor(); // all
     DbIterator GetIteCursor(std::string mkey); // key partial(%mkey%) match
 
-    // ReadAtCursor for CSqliteDB
+    // AtCursor for CSqliteDB
     static int ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags = DB_NEXT);
+    static int IgnoreAtCursor(const DbIterator &pcursor);
 
     void Close();
     bool TxnBegin();

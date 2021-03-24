@@ -177,7 +177,10 @@ template <typename HASH>
 bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
     //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
-    return Write(std::string("hashBestChain"), hashBestChain);
+    bool ret1 = Write(std::string("hashBestChain"), hashBestChain);
+    bool ret2 = Write(std::string("hashGenesisChain"),
+                     (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
+    return ret1 && ret2;
 }
 
 template <typename HASH>
@@ -227,6 +230,98 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 {
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
+
+// like block_info::mapBlockIndex
+template <typename HASH>
+class CmapBlockIndex {
+    CmapBlockIndex(const CmapBlockIndex &)=delete;
+    CmapBlockIndex(CmapBlockIndex &&)=delete;
+    CmapBlockIndex &operator=(const CmapBlockIndex &)=delete;
+    CmapBlockIndex &operator=(CmapBlockIndex &&)=delete;
+ public:
+    class iterator {
+        iterator(const iterator &)=delete;
+        iterator &operator=(const iterator &)=delete;
+        iterator &operator=(iterator &&)=delete;
+     public:
+        iterator() { // end iterator
+            fNotfound=true;
+        }
+        iterator(iterator &&obj) : fNotfound(false) {
+            std::move(obj.ite);
+        }
+        void inc() const {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey, 1000);
+            std::vector<char> vchValue;
+            CDBStream ssValue(&vchValue, 10000);
+            int ret = CSqliteDB::ReadAtCursor(ite, ssKey, ssValue);
+            if(ret==DB_NOTFOUND) {
+                fNotfound=true;
+                return;
+            }
+            ::Unserialize(ssKey, data.first);
+            ::Unserialize(ssValue, data.second);
+        }
+        void operator++() {
+            inc();
+        }
+        void operator++(int) {
+            inc();
+        }
+        bool operator==(const iterator &obj) const {
+            if(fNotfound==obj.fNotfound)
+                return true;
+            return data.first==obj.data.first;
+        }
+        bool operator!=(const iterator &obj) const {
+            return !operator==(obj);
+        }
+        const std::pair<HASH, CBlockIndex_impl<HASH> *> &operator*() const {
+            return data;
+        }
+     private:
+        mutable bool fNotfound;
+        IDB::DbIterator ite;
+        mutable std::pair<HASH, CBlockIndex_impl<HASH> *> data;
+    };
+
+ private:
+    static bool existsqlBlockIndex(const HASH &hash) {
+        try {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
+            ::Serialize(ssKey, std::make_pair(std::string("blockindex"), hash));
+            IDB::DbIterator ite = CSqliteDB(CSqliteDBEnv::getname_wallet(), "r").GetIteCursor(std::string(ssKey.data(), ssKey.data()+ssKey.size()));
+            std::vector<char> vchValue;
+            CDBStream ssValue(&vchValue, 10000); // dummy
+            if(CSqliteDB::ReadAtCursor(ite, ssKey, ssValue)!=0)
+                return false;
+            return true;
+        } catch (const std::exception &) {
+            return false;
+        }
+    }
+    static bool getsqlBlockIndex(const HASH &hash, CBlockIndex_impl<HASH> &blockIndex) {
+        try {
+            std::vector<char> vchKey;
+            CDBStream ssKey(&vchKey);
+            ::Serialize(ssKey, std::make_pair(std::string("blockindex"), hash));
+            IDB::DbIterator ite = CSqliteDB(CSqliteDBEnv::getname_wallet(), "r").GetIteCursor(std::string(ssKey.data(), ssKey.data()+ssKey.size()));
+            std::vector<char> vchValue;
+            CDBStream ssValue(&vchValue, 10000);
+            if(CSqliteDB::ReadAtCursor(ite, ssKey, ssValue)!=0)
+                return false;
+            ::Unserialize(ssValue, blockIndex);
+            return true;
+        } catch (const std::exception &) {
+            return false;
+        }
+    }
+
+ private:
+    std::map<HASH, CBlockIndex_impl<HASH> *> _mapBlockIndex;
+};
 
 template <typename HASH>
 static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash, std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex) {
