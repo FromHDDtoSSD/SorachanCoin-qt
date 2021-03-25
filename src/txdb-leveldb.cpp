@@ -252,7 +252,7 @@ class CmapBlockIndex {
         }
         void inc() const {
             std::vector<char> vchKey;
-            CDBStream ssKey(&vchKey, 1000);
+            CDBStream ssKey(&vchKey);
             std::vector<char> vchValue;
             CDBStream ssValue(&vchValue, 10000);
             int ret = CSqliteDB::ReadAtCursor(ite, ssKey, ssValue);
@@ -285,6 +285,27 @@ class CmapBlockIndex {
         IDB::DbIterator ite;
         mutable std::pair<HASH, CBlockIndex_impl<HASH> *> data;
     };
+
+    CmapBlockIndex(std::map<HASH, CBlockIndex_impl<HASH> *> *p) : _mapBlockIndex(p) {}
+    ~CmapBlockIndex() {}
+
+    int count(const HASH &hash) const {
+        if(_mapBlockIndex->count(hash))
+            return 1;
+        return existsqlBlockIndex(hash) ? 1: 0;
+    }
+
+    CBlockIndex_impl<HASH> *operator[](const HASH &hash) {
+        if(_mapBlockIndex->count(hash))
+            return (*_mapBlockIndex)[hash];
+        CBlockIndex_impl<HASH> *pobj = new (std::nothrow) CBlockIndex_impl<HASH>;
+        if(! pobj)
+            throw std::runtime_error("CmapBlockIndex [] out of memory.");
+        if(! getsqlBlockIndex(hash, pobj))
+            throw std::runtime_error("CmapBlockIndex [] getsqlBlockIndex failure.");
+        _mapBlockIndex->insert(std::make_pair(hash, pobj));
+        return (*_mapBlockIndex)[hash];
+    }
 
  private:
     static bool existsqlBlockIndex(const HASH &hash) {
@@ -320,7 +341,7 @@ class CmapBlockIndex {
     }
 
  private:
-    std::map<HASH, CBlockIndex_impl<HASH> *> _mapBlockIndex;
+    std::map<HASH, CBlockIndex_impl<HASH> *> *_mapBlockIndex;
 };
 
 template <typename HASH>
@@ -429,6 +450,12 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
+    }
+
+    // debug
+    // checking mapBlockIndex
+    {
+        CmapBlockIndex<HASH> mbi(&mapBlockIndex);
     }
 
 #else
