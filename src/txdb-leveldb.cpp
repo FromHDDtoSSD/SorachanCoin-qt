@@ -249,10 +249,10 @@ class CmapBlockIndex final {
             fNotfound=true;
         }
         explicit iterator(IDB::DbIterator *pidbIn, std::map<HASH, CBlockIndex_impl<HASH> *> *pmapIn, typename std::map<HASH, CBlockIndex_impl<HASH> *>::const_iterator imapIn) noexcept {
-            this->pidb = pidb;
+            this->pidb = pidbIn;
             this->pmap = pmapIn;
             this->imap = imapIn;
-            fNotfound = false;
+            this->fNotfound = false;
         }
         iterator(iterator &&obj) noexcept {
             this->pidb = obj.pidb;
@@ -263,7 +263,8 @@ class CmapBlockIndex final {
             obj.fNotfound = true;
         }
         void inc() const {
-            if(++imap==pmap->end()) {
+            ++imap;
+            if(imap==pmap->end()) {
                 std::vector<char> vchKey;
                 CDBStream ssKey(&vchKey);
                 std::vector<char> vchValue;
@@ -274,8 +275,10 @@ class CmapBlockIndex final {
                     return;
                 }
                 try {
+                    std::string str;
                     HASH hash;
                     CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
+                    ::Unserialize(ssKey, str);
                     ::Unserialize(ssKey, hash);
                     ::Unserialize(ssValue, *pobj);
                     pmap->insert(std::make_pair(hash, pobj));
@@ -299,7 +302,7 @@ class CmapBlockIndex final {
         bool operator!=(const iterator &obj) const {
             return !operator==(obj);
         }
-        const std::pair<HASH, CBlockIndex_impl<HASH> *> &operator*() const {
+        const std::pair<HASH, CBlockIndex_impl<HASH> *> operator*() const {
             if(imap==pmap->end()) {
                 std::vector<char> vchKey;
                 CDBStream ssKey(&vchKey);
@@ -310,8 +313,10 @@ class CmapBlockIndex final {
                     throw std::runtime_error("CmapBlockIndex operator() DB_NOTFOUND: *end()");
                 }
                 try {
+                    std::string str;
                     HASH hash;
                     CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
+                    ::Unserialize(ssKey, str);
                     ::Unserialize(ssKey, hash);
                     ::Unserialize(ssValue, *pobj);
                     pmap->insert(std::make_pair(hash, pobj));
@@ -358,6 +363,15 @@ class CmapBlockIndex final {
     }
 
     iterator begin() {
+        if(_mapBlockIndex.size()==0) {
+            CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
+            HASH hash;
+            if(getnextBlockIndex(_ite, hash, *pobj)==false) {
+                delete pobj;
+                return end();
+            }
+            _mapBlockIndex.insert(std::make_pair(hash, pobj));
+        }
         return std::move(iterator(&_ite, &_mapBlockIndex, _mapBlockIndex.begin()));
     }
 
@@ -381,16 +395,29 @@ class CmapBlockIndex final {
 
  private:
     CmapBlockIndex() {
-        _ite = CSqliteDB(CSqliteDBEnv::getname_wallet(), "r").GetIteCursor(std::string("%blockindex%"));
+        _ite = CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r").GetIteCursor(std::string("%blockindex%"));
     }
     ~CmapBlockIndex() {}
 
+    static bool getnextBlockIndex(const IDB::DbIterator &ite, HASH &hash, CBlockIndex_impl<HASH> &blockIndex) {
+        std::vector<char> vchKey;
+        CDBStream ssKey(&vchKey);
+        std::vector<char> vchValue;
+        CDBStream ssValue(&vchValue, 10000);
+        if(CSqliteDB::ReadAtCursor(ite, ssKey, ssValue)!=0)
+            return false;
+        std::string str;
+        ::Unserialize(ssKey, str);
+        ::Unserialize(ssKey, hash);
+        ::Unserialize(ssValue, blockIndex);
+        return true;
+    }
     static bool getsqlBlockIndex(const HASH &hash, CBlockIndex_impl<HASH> &blockIndex) {
         try {
             std::vector<char> vchKey;
             CDBStream ssKey(&vchKey);
             ::Serialize(ssKey, std::make_pair(std::string("blockindex"), hash));
-            IDB::DbIterator ite = CSqliteDB(CSqliteDBEnv::getname_wallet(), "r").GetIteCursor(std::string(ssKey.data(), ssKey.data()+ssKey.size()));
+            IDB::DbIterator ite = CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r").GetIteCursor(std::string(ssKey.data(), ssKey.data()+ssKey.size()));
             std::vector<char> vchValue;
             CDBStream ssValue(&vchValue, 10000);
             if(CSqliteDB::ReadAtCursor(ite, ssKey, ssValue)!=0)
@@ -521,7 +548,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     {
         CmapBlockIndex<HASH> &mbi = CmapBlockIndex<HASH>::get_instance();
         for(typename CmapBlockIndex<HASH>::iterator ite = mbi.begin(); ite != mbi.end(); ++ite) {
-
+            debugcs::instance() << "block HASH : " << (*ite).first.ToString().c_str() << debugcs::endl();
         }
     }
     */

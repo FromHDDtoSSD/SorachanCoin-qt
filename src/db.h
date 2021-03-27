@@ -158,6 +158,8 @@ public:
         DbIterator &operator=(DbIterator &&obj) noexcept {
             this->cs = obj.cs;
             obj.cs = nullptr;
+            this->cs_ite = obj.cs_ite;
+            obj.cs_ite = nullptr;
             this->bp = obj.bp;
             obj.bp = nullptr;
             this->lp = obj.lp;
@@ -179,7 +181,7 @@ public:
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(nullptr), qp(p), cs(csIn) {
+        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn, CCriticalSection *cs_iteIn) noexcept : bp(nullptr), lp(nullptr), qp(p), cs(csIn), cs_ite(cs_iteIn) {
             assert(cs);
             p = nullptr;
         }
@@ -188,8 +190,10 @@ public:
                 bp->close();
             if(lp)
                 delete lp;
-            if(qp)
+            if(qp) {
                 ::sqlite3_finalize(qp);
+                LEAVE_CRITICAL_SECTION(*cs_ite);
+            }
         }
 
         bool is_bdb() const noexcept {
@@ -234,6 +238,7 @@ public:
         leveldb::Iterator *lp;
         sqlite3_stmt *qp;
         CCriticalSection *cs;
+        CCriticalSection *cs_ite;
     };
 
     //
@@ -433,6 +438,7 @@ private:
     const std::vector<std::string> instance;
     struct leveldb_object {
         CCriticalSection cs_ldb;
+        CCriticalSection cs_iterator;
         leveldb::DB *ptxdb;
     };
     mutable std::map<std::string, leveldb_object *> lobj;
@@ -462,6 +468,12 @@ public:
         LOCK(cs_leveldb);
         assert(lobj.count(name)>0);
         return lobj[name]->cs_ldb;
+    }
+
+    CCriticalSection &get_rcs_ite(const std::string &name) const {
+        LOCK(cs_leveldb);
+        assert(lobj.count(name)>0);
+        return lobj[name]->cs_iterator;
     }
 
     bool restart(fs::path pathEnv_, bool fRemoveOld, void (*func)(bool fRemoveOld)) {
@@ -500,6 +512,7 @@ private:
     const std::vector<std::string> instance;
     struct sqlite_object {
         CCriticalSection cs_sql;
+        CCriticalSection cs_iterator;
         sqlite3 *psql;
         sqlite_object() {
             psql = nullptr;
@@ -586,6 +599,12 @@ public:
         LOCK(cs_sqlite);
         assert(sqlobj.count(name)>0);
         return sqlobj[name]->cs_sql;
+    }
+
+    CCriticalSection &get_rcs_ite(const std::string &name) const {
+        LOCK(cs_sqlite);
+        assert(sqlobj.count(name)>0);
+        return sqlobj[name]->cs_iterator;
     }
 
     bool backup(fs::path pathEnv_, const std::string &strFileSrc, const std::string &strFileOrDirDest) {
@@ -867,6 +886,7 @@ private:
     // Points to the global instance
     leveldb::DB *&pdb;
     CCriticalSection &cs_db;
+    CCriticalSection &cs_iterator;
 
     mutable leveldb::Iterator *p;
 
@@ -1278,6 +1298,7 @@ private:
 
     sqlite3 *&pdb;
     CCriticalSection &cs_db;
+    CCriticalSection &cs_iterator;
 
     CTxnSecureBuffer *txn;
 

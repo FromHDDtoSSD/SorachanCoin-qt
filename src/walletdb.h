@@ -77,6 +77,9 @@ public:
     virtual ~CDBHybrid();
 
     IDB::DbIterator GetIteCursor();
+#ifdef WALLET_SQL_MODE
+    IDB::DbIterator GetIteCursor(std::string mkey);
+#endif
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {

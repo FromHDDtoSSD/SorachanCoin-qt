@@ -73,6 +73,9 @@ bool CDBHybrid::WriteVersion(int nVersion) {
 IDB::DbIterator CDBHybrid::GetIteCursor() {
     return sqldb.GetIteCursor();
 }
+IDB::DbIterator CDBHybrid::GetIteCursor(std::string mkey) {
+    return sqldb.GetIteCursor(mkey);
+}
 
 bool CDBHybrid::TxnBegin() {
     return sqldb.TxnBegin();
@@ -152,9 +155,15 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
 {
     bool fAllAccounts = (strAccount == "*");
 
+#ifdef WALLET_SQL_MODE
+    IDB::DbIterator ite = GetIteCursor(std::string("%acentry%"));
+    if (ite.is_error())
+        throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
+#else
     IDB::DbIterator ite = GetIteCursor();
     if (ite.is_error())
         throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
+#endif
 
     /*
     Dbc *pcursor = GetCursor();
@@ -166,8 +175,10 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
     for (;;) {
         // Read next record
         CDataStream ssKey(SER_DISK, version::CLIENT_VERSION);
+#ifndef WALLET_SQL_MODE
         if (fFlags == DB_SET_RANGE)
             ssKey << std::make_tuple(std::string("acentry"), (fAllAccounts? std::string("") : strAccount), uint64_t(0));
+#endif
 
         CDataStream ssValue(SER_DISK, version::CLIENT_VERSION);
         //int ret = ReadAtCursor(pcursor, ssKey, ssValue, fFlags);

@@ -494,7 +494,7 @@ void CLevelDBEnv::Close() {
 }
 
 bool CLevelDBEnv::Flush(const std::string &strDb) {
-    LOCK2(cs_leveldb, lobj[strDb]->cs_ldb);
+    LOCK3(cs_leveldb, lobj[strDb]->cs_ldb, lobj[strDb]->cs_iterator);
     CloseDb(strDb);
     fs::path directory = pathEnv / strDb;
     leveldb::Status status = leveldb::DB::Open(this->options, directory.string(), &lobj[strDb]->ptxdb);
@@ -588,7 +588,8 @@ void CSqliteDBEnv::Close() {
 }
 
 bool CSqliteDBEnv::Flush(const std::string &strFile) {
-    LOCK2(cs_sqlite, sqlobj[strFile]->cs_sql);
+    assert(strFile!=CSqliteDBEnv::getname_mainchain()); // mainchain is always have iterator.
+    LOCK3(cs_sqlite, sqlobj[strFile]->cs_sql, sqlobj[strFile]->cs_iterator);
     //if(args_bool::fShutdown)
     //    return true;
 
@@ -1083,7 +1084,7 @@ bool CLevelDB::ScanBatch(const CDBStream &key, std::string *value, bool *deleted
 }
 
 CLevelDB::CLevelDB(const std::string &strDb, const char *pszMode /*="r+"*/, bool fSecureIn /*= false*/) :
-    pdb(CLevelDBEnv::get_instance().get_ptxdb(strDb)), cs_db(CLevelDBEnv::get_instance().get_rcs(strDb)), fReadOnly(true), p(nullptr) {
+    pdb(CLevelDBEnv::get_instance().get_ptxdb(strDb)), cs_db(CLevelDBEnv::get_instance().get_rcs(strDb)), cs_iterator(CLevelDBEnv::get_instance().get_rcs_ite(strDb)), fReadOnly(true), p(nullptr) {
     assert(pszMode);
     fSecure = fSecureIn;
 
@@ -1117,6 +1118,7 @@ bool CLevelDB::TxnBegin() {
     LOCK(cs_db);
     assert(fSecure==false);
     assert(! this->activeBatch);
+    ENTER_CRITICAL_SECTION(cs_iterator);
     this->activeBatch = new(std::nothrow) leveldb::WriteBatch();
     if (! this->activeBatch) {
         throw std::runtime_error("LevelDB : WriteBatch failed to allocate memory");
@@ -1136,8 +1138,10 @@ bool CLevelDB::TxnCommit() {
 
     if (! status.ok()) {
         logging::LogPrintf("LevelDB batch commit failure: %s\n", status.ToString().c_str());
+        LEAVE_CRITICAL_SECTION(cs_iterator);
         return false;
     }
+    LEAVE_CRITICAL_SECTION(cs_iterator);
     return true;
 }
 
@@ -1146,6 +1150,7 @@ bool CLevelDB::TxnAbort() {
     assert(fSecure==false);
     delete this->activeBatch;
     this->activeBatch = nullptr;
+    LEAVE_CRITICAL_SECTION(cs_iterator);
     return true;
 }
 
@@ -1166,7 +1171,7 @@ bool CLevelDB::WriteVersion(int nVersion) {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 CSqliteDB::CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn /*= false*/) :
-    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)), txn(nullptr) {
+    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)), cs_iterator(CSqliteDBEnv::get_instance().get_rcs_ite(strFile)), txn(nullptr) {
     fSecure = fSecureIn;
 
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
@@ -1177,22 +1182,29 @@ CSqliteDB::~CSqliteDB() {
 
 IDB::DbIterator CSqliteDB::GetIteCursor() {
     LOCK(cs_db);
+    ENTER_CRITICAL_SECTION(cs_iterator);
     sqlite3_stmt *stmt;
-    if(::sqlite3_prepare_v2(pdb, "select * from key_value;", -1, &stmt, nullptr)!=SQLITE_OK)
+    if(::sqlite3_prepare_v2(pdb, "select * from key_value;", -1, &stmt, nullptr)!=SQLITE_OK) {
+        LEAVE_CRITICAL_SECTION(cs_iterator);
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
-    return std::move(IDB::DbIterator(std::move(stmt), &cs_db));
+    }
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator));
 }
 
 IDB::DbIterator CSqliteDB::GetIteCursor(std::string mkey) {
     LOCK(cs_db);
+    ENTER_CRITICAL_SECTION(cs_iterator);
     sqlite3_stmt *stmt;
-    if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK)
-        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
-    if(::sqlite3_bind_blob(stmt, 1, (const char *)mkey.c_str(), mkey.size(), SQLITE_TRANSIENT)!=SQLITE_OK) {
-        ::sqlite3_finalize(stmt);
+    if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK) {
+        LEAVE_CRITICAL_SECTION(cs_iterator);
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
     }
-    return std::move(IDB::DbIterator(std::move(stmt), &cs_db));
+    if(::sqlite3_bind_blob(stmt, 1, (const char *)mkey.c_str(), mkey.size(), SQLITE_TRANSIENT)!=SQLITE_OK) {
+        ::sqlite3_finalize(stmt);
+        LEAVE_CRITICAL_SECTION(cs_iterator);
+        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    }
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator));
 }
 
 void CSqliteDB::Close() {

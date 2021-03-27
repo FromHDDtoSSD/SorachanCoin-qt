@@ -49,7 +49,7 @@ public:
         CDataStream ssValue;
         ssValue.reserve(10000);
         int ret;
-        while((ret=CSqliteDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND) {
+        while((ret=IDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND) {
             if(ret!=0)
                 break;
             std::pair<std::string, uint65536> key;
