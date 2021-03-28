@@ -248,7 +248,7 @@ class CmapBlockIndex final {
         iterator() noexcept : pidb(nullptr), pmap(nullptr) { // end iterator
             fNotfound=true;
         }
-        explicit iterator(IDB::DbIterator *pidbIn, std::map<HASH, CBlockIndex_impl<HASH> *> *pmapIn, typename std::map<HASH, CBlockIndex_impl<HASH> *>::const_iterator imapIn) noexcept {
+        explicit iterator(IDB::DbIterator *pidbIn, typename std::map<HASH, CBlockIndex_impl<HASH> *> *pmapIn, typename std::map<HASH, CBlockIndex_impl<HASH> *>::iterator imapIn) noexcept {
             this->pidb = pidbIn;
             this->pmap = pmapIn;
             this->imap = imapIn;
@@ -257,13 +257,16 @@ class CmapBlockIndex final {
         iterator(iterator &&obj) noexcept {
             this->pidb = obj.pidb;
             this->pmap = obj.pmap;
-            this->imap = obj.imap;
+            this->imap = std::move(obj.imap);
+            this->vbuffer = std::move(obj.vbuffer);
             this->fNotfound = obj.fNotfound;
+            obj.pidb = nullptr;
             obj.pmap = nullptr;
             obj.fNotfound = true;
         }
-        void inc() const {
-            ++imap;
+        void inc() {
+            if(imap!=pmap->end())
+                ++imap;
             if(imap==pmap->end()) {
                 std::vector<char> vchKey;
                 CDBStream ssKey(&vchKey);
@@ -275,14 +278,15 @@ class CmapBlockIndex final {
                     return;
                 }
                 try {
-                    std::string str;
                     HASH hash;
                     CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
-                    ::Unserialize(ssKey, str);
+                    ssKey.ignore();
                     ::Unserialize(ssKey, hash);
                     ::Unserialize(ssValue, *pobj);
-                    pmap->insert(std::make_pair(hash, pobj));
-                    imap = pmap->find(hash);
+                    pmap->emplace(hash, pobj);
+                    vbuffer.emplace_back(std::make_pair(hash, pobj));
+                    //::fprintf_s(stdout, "hash: %s\n", hash.ToString().c_str());
+                    ibuffer = vbuffer.end() - 1;
                 } catch (const std::exception &) {
                     throw std::runtime_error("CmapBlockIndex inc() out of memory");
                 }
@@ -297,42 +301,26 @@ class CmapBlockIndex final {
         bool operator==(const iterator &obj) const {
             if(fNotfound==obj.fNotfound)
                 return true;
-            return imap==obj.imap;
+            return imap==obj.imap && vbuffer==obj.vbuffer;
         }
         bool operator!=(const iterator &obj) const {
             return !operator==(obj);
         }
         const std::pair<HASH, CBlockIndex_impl<HASH> *> operator*() const {
-            if(imap==pmap->end()) {
-                std::vector<char> vchKey;
-                CDBStream ssKey(&vchKey);
-                std::vector<char> vchValue;
-                CDBStream ssValue(&vchValue, 10000);
-                int ret = CSqliteDB::ReadAtCursor(*pidb, ssKey, ssValue);
-                if(ret==DB_NOTFOUND) {
-                    throw std::runtime_error("CmapBlockIndex operator() DB_NOTFOUND: *end()");
-                }
-                try {
-                    std::string str;
-                    HASH hash;
-                    CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
-                    ::Unserialize(ssKey, str);
-                    ::Unserialize(ssKey, hash);
-                    ::Unserialize(ssValue, *pobj);
-                    pmap->insert(std::make_pair(hash, pobj));
-                    imap = pmap->find(hash);
-                    return *imap;
-                } catch (const std::exception &) {
-                    throw std::runtime_error("CmapBlockIndex inc() out of memory");
-                }
-            } else
+            if(vbuffer.size()==0)
                 return *imap;
+            else
+                return *ibuffer;
         }
      private:
         mutable bool fNotfound;
         IDB::DbIterator *pidb;
         std::map<HASH, CBlockIndex_impl<HASH> *> *pmap;
-        mutable typename std::map<HASH, CBlockIndex_impl<HASH> *>::const_iterator imap;
+        typename std::map<HASH, CBlockIndex_impl<HASH> *>::iterator imap;
+
+        // temp buffer
+        std::vector<std::pair<HASH, CBlockIndex_impl<HASH> *>> vbuffer;
+        typename std::vector<std::pair<HASH, CBlockIndex_impl<HASH> *>>::iterator ibuffer;
     };
 
     static CmapBlockIndex &get_instance() {
@@ -349,7 +337,7 @@ class CmapBlockIndex final {
                 delete pobj;
                 return 0;
             }
-            _mapBlockIndex.insert(std::make_pair(hash, pobj));
+            _mapBlockIndex.emplace(hash, pobj);
             return 1;
         } catch (const std::exception &) {
             throw std::runtime_error("CmapBlockIndex count() out of memory");
@@ -364,13 +352,17 @@ class CmapBlockIndex final {
 
     iterator begin() {
         if(_mapBlockIndex.size()==0) {
-            CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
-            HASH hash;
-            if(getnextBlockIndex(_ite, hash, *pobj)==false) {
-                delete pobj;
-                return end();
+            try {
+                CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
+                HASH hash;
+                if(getnextBlockIndex(_ite, hash, *pobj)==false) {
+                    delete pobj;
+                    return end();
+                }
+                _mapBlockIndex.emplace(hash, pobj);
+            } catch (const std::exception &) {
+                throw std::runtime_error("CmapBlockIndex begin: out of memory");
             }
-            _mapBlockIndex.insert(std::make_pair(hash, pobj));
         }
         return std::move(iterator(&_ite, &_mapBlockIndex, _mapBlockIndex.begin()));
     }
@@ -380,14 +372,14 @@ class CmapBlockIndex final {
     }
 
     CBlockIndex_impl<HASH> *operator[](const HASH &hash) const {
-        if(_mapBlockIndex->count(hash))
-            return (*_mapBlockIndex)[hash];
+        if(_mapBlockIndex.count(hash))
+            return _mapBlockIndex[hash];
         try {
             CBlockIndex_impl<HASH> *pobj = new CBlockIndex_impl<HASH>;
             if(! getsqlBlockIndex(hash, pobj))
                 throw std::runtime_error("CmapBlockIndex [] getsqlBlockIndex failure");
-            _mapBlockIndex->insert(std::make_pair(hash, pobj));
-            return (*_mapBlockIndex)[hash];
+            _mapBlockIndex.emplace(hash, pobj);
+            return _mapBlockIndex[hash];
         } catch (const std::exception &e) {
             throw std::runtime_error(e.what());
         }
@@ -406,8 +398,7 @@ class CmapBlockIndex final {
         CDBStream ssValue(&vchValue, 10000);
         if(CSqliteDB::ReadAtCursor(ite, ssKey, ssValue)!=0)
             return false;
-        std::string str;
-        ::Unserialize(ssKey, str);
+        ssKey.ignore();
         ::Unserialize(ssKey, hash);
         ::Unserialize(ssValue, blockIndex);
         return true;

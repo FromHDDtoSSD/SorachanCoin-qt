@@ -683,8 +683,13 @@ public:
         return pbegin;
     }
 
-    size_t size() const noexcept {
-        return (size_t)wpos;
+    uint32_t size() const noexcept {
+        return wpos;
+    }
+
+    void ignore() noexcept {
+        uint32_t size = (uint32_t)pbegin[rpos];
+        rpos += size + 1;
     }
 
     void clear() { // if exists pvch, using clear()
