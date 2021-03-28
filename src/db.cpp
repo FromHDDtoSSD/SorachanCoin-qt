@@ -588,7 +588,7 @@ void CSqliteDBEnv::Close() {
 }
 
 bool CSqliteDBEnv::Flush(const std::string &strFile) {
-    assert(strFile!=CSqliteDBEnv::getname_mainchain()); // mainchain is always have iterator.
+    //assert(strFile!=CSqliteDBEnv::getname_mainchain()); // mainchain is always have iterator. (if mainchain, only call at the end is ok)
     LOCK3(cs_sqlite, sqlobj[strFile]->cs_sql, sqlobj[strFile]->cs_iterator);
     //if(args_bool::fShutdown)
     //    return true;
@@ -846,15 +846,31 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
 
 }
 
-bool CSqliteDB::PortToSqlite(DbIterator ite) {
-    // if exists "minversion", already port completed. therefore, skip PortToSqlite.
-    LOCK(cs_db);
-    const std::string tykey("minversion");
-    int tyValue;
-    bool version_ret = Read(tykey, tyValue);
-    debugcs::instance() << "portToSqlite minversion version_ret(bool): " << version_ret << debugcs::endl();
-    if(version_ret)
-        return true;
+bool CSqliteDB::PortToSqlite(DbIterator ite, int type) {
+    if(type==0) { // wallet (BDB to SQLite)
+        // if exists "minversion", already port completed. therefore, skip PortToSqlite.
+        LOCK(cs_db);
+        const std::string tykey("minversion");
+        int tyValue;
+        bool version_ret = Read(tykey, tyValue);
+        debugcs::instance() << "portToSqlite minversion version_ret(bool): " << version_ret << debugcs::endl();
+        if(version_ret)
+            return true;
+    } else if (type==1) { // Blockchain (LevelDB to SQLite)
+        // if exists "hashGenesisChain", already port completed. therefore, skip PortToSqlite.
+        LOCK(cs_db);
+        const std::string tykey("hashBestChain");
+        uint256 tyValue;
+        bool hash_ret = Read(tykey, tyValue);
+        debugcs::instance() << "portToSqlite hashBestChain hash_ret(bool): " << hash_ret << debugcs::endl();
+        if(hash_ret)
+            return true;
+        // cleanse
+        char *err;
+        if(::sqlite3_exec(pdb, "delete from key_value;", nullptr, nullptr, &err)!=SQLITE_OK)
+            return false;
+    } else
+        return false;
 
     sqlite3_stmt *stmt=nullptr;
     bool result = false;
@@ -1101,7 +1117,8 @@ IDB::DbIterator CLevelDB::GetIteCursor() {
     leveldb::Iterator *p = pdb->NewIterator(leveldb::ReadOptions());
     if(! p)
         throw std::runtime_error("CLevelDB::GetIteCursor memory allocate failure");
-    p->SeekToFirst();
+    const std::string dbtop("0");
+    p->Seek(dbtop);
     return std::move(DbIterator(std::move(p), &cs_db));
 }
 

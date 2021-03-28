@@ -30,6 +30,10 @@ FILE *fopen(const fs::path &p, const char *mode) {
 #endif
 }
 
+bool file_is(const fs::path &absdir) {
+    return !fs::is_directory(absdir);
+}
+
 bool file_size(const fs::path &p, size_t *size) {
     struct stat stbuf;
     int fd = ::open(p.string().c_str(), O_RDONLY);
@@ -83,18 +87,34 @@ bool file_exists(const fs::path &abspath) {
     return fs::exists(abspath);
 }
 
-bool dir_create(const fs::path &dir, bool fexists_ok/*=true*/) {
-    if(fexists_ok && dir_exists(dir)) return true;
-    return fs::create_directory(dir);
+bool file_safe_remove(const fs::path &abspath) {
+    if(! file_is(abspath)) return false;
+    const std::string req("SorachanCoin");
+    if(abspath.string().find(req)==std::string::npos)
+        return false;
+    return fs::remove(abspath);
 }
 
-bool dir_is(const fs::path &dir) {
-    return fs::is_directory(dir);
+bool dir_create(const fs::path &absdir, bool fexists_ok/*=true*/) {
+    if(fexists_ok && dir_exists(absdir)) return true;
+    return fs::create_directory(absdir);
 }
 
-bool dir_exists(const fs::path &dir) {
-    if(! dir_is(dir)) return false;
-    return fs::exists(dir);
+bool dir_is(const fs::path &absdir) {
+    return fs::is_directory(absdir);
+}
+
+bool dir_exists(const fs::path &absdir) {
+    if(! dir_is(absdir)) return false;
+    return fs::exists(absdir);
+}
+
+bool dir_safe_remove_all(const fs::path &absdir) {
+    if(! dir_is(absdir)) return false;
+    const std::string req("SorachanCoin");
+    if(absdir.string().find(req)==std::string::npos)
+        return false;
+    return fs::remove_all(absdir);
 }
 
 bool dir_size(const fs::path &absdir, size_t *size, bool size_reset/*=true*/) {

@@ -35,8 +35,12 @@ class CTxIndex;
 class CWallet;
 class CWalletTx;
 
-// SorachanCoin: wallet SQLite
+/*
+ * SorachanCoin: wallet SQLite (after v3.5.10)
+ * SorachanCoin: blockchain SQLite
+ */
 #define WALLET_SQL_MODE
+#define BLK_SQL_MODE
 
 namespace wallet_dispatch
 {
@@ -1326,7 +1330,7 @@ public:
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
 
-    bool PortToSqlite(DbIterator ite);
+    bool PortToSqlite(DbIterator ite, int type); // type 0: wallet, type 1: Blockchain
 
     // below Read/Write are from "key_value" table.
     template<typename K, typename T>

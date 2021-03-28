@@ -31,16 +31,19 @@ namespace fsbridge {
     FILE *fopen(const fs::path &p, const char *mode);
 
     // file
+    bool file_is(const fs::path &absdir);
     bool file_size(const fs::path &p, size_t *size);
     bool file_copy(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const std::string &suffix);
     bool file_exists(const fs::path &abspath);
+    bool file_safe_remove(const fs::path &abspath);
 
     // directory
-    bool dir_create(const fs::path &dir, bool fexists_ok=true);
-    bool dir_is(const fs::path &dir);
-    bool dir_exists(const fs::path &dir);
+    bool dir_create(const fs::path &absdir, bool fexists_ok=true);
+    bool dir_is(const fs::path &absdir);
+    bool dir_exists(const fs::path &absdir);
+    bool dir_safe_remove_all(const fs::path &absdir);
     NODISCARD bool dir_size(const fs::path &absdir, size_t *size, bool size_reset=true);
 
     class FileLock

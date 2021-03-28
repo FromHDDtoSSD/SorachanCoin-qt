@@ -868,9 +868,9 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 5: verify database integrity (CDBEnv and CLevelDBEnv)")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
-    const fs::path bdb_path = iofs::GetDataDir() / strWalletFileName.c_str();
+    const fs::path bdbwallet_path = iofs::GetDataDir() / strWalletFileName.c_str();
 #ifndef WALLET_SQL_MODE
-    assert(fsbridge::file_exists(bdb_path));
+    assert(fsbridge::file_exists(bdbwallet_path));
 #endif
 
     if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
@@ -887,32 +887,34 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
 #ifdef BLK_SQL_MODE
-    // port from LevelDB to CSqliteDB
-    const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
-    if(! fsbridge::file_exists(blksql_path)){
-        LOCK(CLevelDBEnv::cs_leveldb);
-        CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
-        CLevelDB ldb(CLevelDBEnv::getname_mainchain(), "r");
-        IDB::DbIterator ite = ldb.GetIteCursor(std::string("blockindex"), uint256(0));
-        CSqliteDB sqldb(CSqliteDBEnv::getname_mainchain(), "r+");
-        if(! sqldb.PortToSqlite(std::move(ite))) {
-            fs::remove(blksql_path);
-            return InitError(std::string("[Blockchain] Data migrate from LevelDB to SQLite failure."));
+    {
+        // port from LevelDB to CSqliteDB
+        const fs::path leveldb_path = iofs::GetDataDir() / CLevelDBEnv::getname_mainchain();
+        if(fsbridge::dir_exists(leveldb_path)) { // Blockchain
+            LOCK(CLevelDBEnv::cs_leveldb);
+            CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
+            if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor(std::string(""), uint256(0))), 1)) {
+                CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_mainchain());
+                const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
+                fsbridge::file_safe_remove(blksql_path);
+                return InitError(std::string("[Blockchain] Data migrate from LevelDB to SQLite failure."));
+            }
+            CLevelDBEnv::get_instance().CloseDb(CLevelDBEnv::getname_mainchain());
         }
-        CLevelDBEnv::get_instance().CloseDb(CLevelDBEnv::getname_mainchain());
     }
 #endif
 
 #ifdef WALLET_SQL_MODE
     // port from CDB to CSqliteDB
-    if(fsbridge::file_exists(bdb_path)) {
+    if(fsbridge::file_exists(bdbwallet_path)) { // wallet
         LOCK(CDBEnv::cs_db);
         CClientUIInterface::uiInterface.InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
-        CDB bdb(strWalletFileName.c_str(), "r");
-        IDB::DbIterator ite = bdb.GetIteCursor();
-        CSqliteDB sqldb(CSqliteDBEnv::getname_wallet(), "r+");
-        if(! sqldb.PortToSqlite(std::move(ite)))
+        if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()), 0)) {
+            CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_wallet());
+            const fs::path sqlwallet_path = iofs::GetDataDir() / CSqliteDBEnv::getname_wallet();
+            fsbridge::file_safe_remove(sqlwallet_path);
             return InitError(std::string("[Wallet] Data migrate from BerkeleyDB to SQLite failure."));
+        }
         CDBEnv::get_instance().CloseDb(strWalletFileName.c_str());
     }
 #else
