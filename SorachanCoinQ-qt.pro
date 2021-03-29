@@ -86,6 +86,8 @@ USE_O3=1
 USE_UPNP=1
 USE_IPV6=1
 USE_QRCODE=1
+USE_BLK_SQLITE=1
+USE_WALLET_SQLITE=1
 
 #
 # prevector or std::vector<uint8_t>
@@ -146,11 +148,11 @@ BDB_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix/.libs
 OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2/include
 OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2
 QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/include
-QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/lib
+QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/lib/libqrencode.a
 UPNP_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc
 UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
 BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
-BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs
+BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
 SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
 SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs/libsqlite3.a
 
@@ -177,6 +179,10 @@ contains(RELEASE, 1) {
     QMAKE_CFLAGS += -g -O0
     QMAKE_CXXCFLAGS += -g -O0
 }
+
+# Blake2
+INCLUDEPATH += $$BLAKE2_INC_PATH
+LIBS += $$BLAKE2_LIB_PATH
 
 #
 # -O3 optimized setting
@@ -279,7 +285,32 @@ contains(USE_QRCODE, -) {
 } else {
     message(Building with QRCode support)
     DEFINES += USE_QRCODE
-    LIBS += -lqrencode
+    LIBS += $$QRENCODE_LIB_PATH
+}
+
+#
+# SQLite
+#
+contains(USE_BLK_SQLITE, -) {
+    message(Blockchain with LevelDB)
+} else {
+    message(Blockchain with SQLite)
+    DEFINES += BLK_SQL_MODE
+}
+
+contains(USE_WALLET_SQLITE, -) {
+    message(Wallet with BerkeleyDB)
+} else {
+    message(Wallet with SQLite)
+    DEFINES += WALLET_SQL_MODE
+}
+
+INCLUDEPATH += $$SQLITE_INC_PATH
+LIBS += $$SQLITE_LIB_PATH
+contains(USE_BLK_SQLITE, -) {
+    contains(USE_WALLET_SQLITE, -) {
+        LIBS -= $$SQLITE_LIB_PATH
+    }
 }
 
 #
@@ -299,12 +330,6 @@ contains(USE_PREVECTOR_S, 1) {
 } else {
     message(Building without ptrvector_s support)
 }
-
-INCLUDEPATH += $$BLAKE2_INC_PATH
-LIBS += -lb2
-
-INCLUDEPATH += $$SQLITE_INC_PATH
-LIBS += $$SQLITE_LIB_PATH
 
 #
 # use: qmake "USE_KNOWLEDGE_DB=1" ( enabled by default)

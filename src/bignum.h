@@ -16,7 +16,7 @@
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using bignum_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-using bignum_vector = typedef std::vector<uint8_t>;
+using bignum_vector = std::vector<uint8_t>;
 #endif
 
 /** Errors thrown by the bignum class */

@@ -887,13 +887,14 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
 #ifdef BLK_SQL_MODE
-    {
-        // port from LevelDB to CSqliteDB
+    bool fPortLevelDBtoSqlite = map_arg::GetBoolArg("-portblockchain", false);
+    if(!args_bool::fServer && fPortLevelDBtoSqlite) {
+        // [Option] port from LevelDB to CSqliteDB
         const fs::path leveldb_path = iofs::GetDataDir() / CLevelDBEnv::getname_mainchain();
         if(fsbridge::dir_exists(leveldb_path)) { // Blockchain
             LOCK(CLevelDBEnv::cs_leveldb);
             CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
-            if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor(std::string(""), uint256(0))), 1)) {
+            if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor()), 1)) {
                 CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_mainchain());
                 const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
                 fsbridge::file_safe_remove(blksql_path);

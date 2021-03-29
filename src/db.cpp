@@ -1117,8 +1117,7 @@ IDB::DbIterator CLevelDB::GetIteCursor() {
     leveldb::Iterator *p = pdb->NewIterator(leveldb::ReadOptions());
     if(! p)
         throw std::runtime_error("CLevelDB::GetIteCursor memory allocate failure");
-    const std::string dbtop("0");
-    p->Seek(dbtop);
+    p->SeekToFirst();
     return std::move(DbIterator(std::move(p), &cs_db));
 }
 

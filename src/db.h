@@ -37,10 +37,8 @@ class CWalletTx;
 
 /*
  * SorachanCoin: wallet SQLite (after v3.5.10)
- * SorachanCoin: blockchain SQLite
+ * SorachanCoin: blockchain SQLite (after v3.6.10)
  */
-#define WALLET_SQL_MODE
-#define BLK_SQL_MODE
 
 namespace wallet_dispatch
 {
@@ -995,7 +993,7 @@ public:
         }
         return std::move(const_iterator(std::move(p), &cs_db));
     }
-    constexpr const_iterator end() const noexcept {
+    const_iterator end() const noexcept {
         return std::move(const_iterator());
     }
 

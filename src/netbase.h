@@ -213,7 +213,7 @@ public:
     inline void SerializationOp(Stream &s, Operation ser_action) {
         CService *pthis = const_cast<CService *>(this);
         READWRITE(FLATDATA(this->ip));
-        unsigned short portN = ::htons(this->port);
+        unsigned short portN = htons(this->port);
         READWRITE(portN);
         if (ser_action.ForRead()) {
             pthis->port = ntohs(portN);
