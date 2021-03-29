@@ -12,14 +12,24 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <db_cxx.h>
-#include <leveldb/db.h>
-#include <leveldb/env.h>
-#include <leveldb/cache.h>
-#include <leveldb/filter_policy.h>
-#include <leveldb/write_batch.h>
-#include <memenv/memenv.h>
-#include <sqlite/sqlite3.h>
+#ifdef USE_BERKELEYDB
+# include <db_cxx.h>
+#endif
+#ifdef USE_LEVELDB
+# include <leveldb/db.h>
+# include <leveldb/env.h>
+# include <leveldb/cache.h>
+# include <leveldb/filter_policy.h>
+# include <leveldb/write_batch.h>
+# include <memenv/memenv.h>
+#endif
+#if defined(WALLET_SQL_MODE) || defined(BLK_SQL_MODE)
+# ifdef SQLITE_DYNAMIC_LINK
+#  include <sqlite3.h>
+# else
+#  include <sqlite/sqlite3.h>
+# endif
+#endif
 
 class CAddress;
 class CAddrMan;
@@ -39,6 +49,15 @@ class CWalletTx;
  * SorachanCoin: wallet SQLite (after v3.5.10)
  * SorachanCoin: blockchain SQLite (after v3.6.10)
  */
+
+#ifndef USE_BERKELEYDB
+struct Dbc {intptr_t unused;}
+#endif
+#ifndef USE_LEVELDB
+namespace leveldb {
+    struct Iterator {intptr_t unused;}
+}
+#endif
 
 namespace wallet_dispatch
 {
@@ -319,6 +338,7 @@ public:
 /**
  * Berkeley DB Manager
  */
+#ifdef USE_BERKELEYDB
 class CDBEnv final : public IDBEnv
 {
 private:
@@ -414,10 +434,12 @@ public:
     bool RemoveDb(const std::string &strFile);
     DbTxn *TxnBegin(int flags = DB_TXN_WRITE_NOSYNC);
 };
+#endif // USE_BERKELEYDB
 
 /**
  * Level DB Manager
  */
+#ifdef USE_LEVELDB
 class CLevelDBEnv final : public IDBEnv
 {
 private:
@@ -493,6 +515,7 @@ public:
     void CloseDb(const std::string &strDb);
     bool RemoveDb(const std::string &strDb);
 };
+#endif // USE_LEVELDB
 
 /**
  * Sqlite DB Manager
@@ -716,6 +739,7 @@ private:
  * RAII class that provides access to a Berkeley database
  * using (Wallet): old CWalletDB (up to v3)
  */
+#ifdef USE_BERKELEYDB
 class CDB : public IDB
 {
 private:
@@ -867,12 +891,14 @@ public:
     static bool Rewrite(const std::string &strFile, const char *pszSkip = nullptr);
 #endif
 };
+#endif // USE_BERKELEYDB
 
 /**
  * Level DB
  * RAII class that provides access to a LevelDB database
  * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
  */
+#ifdef USE_LEVELDB
 class CLevelDB : public IDB
 {
 private:
@@ -1282,6 +1308,7 @@ private:
         return status.IsNotFound() == false;
     }
 };
+#endif // USE_LEVELDB
 
 /**
  * Sqlite DB
@@ -1289,7 +1316,7 @@ private:
  * using: CWalletDB
  *
  * checked buffer scope: about using SQLITE_STATIC.
- * USE SecureAllocator:
+ * BE USED SecureAllocator:
  * Be careful when using SQLITE_TRANSIENT to prevent accidental memcpy in internal.
  */
 class CSqliteDB : public IDB

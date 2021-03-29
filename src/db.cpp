@@ -18,8 +18,12 @@
 # include "sys/stat.h"
 #endif
 
+#ifdef USE_BERKELEYDB
 CCriticalSection CDBEnv::cs_db;
+#endif
+#ifdef USE_LEVELDB
 CCriticalSection CLevelDBEnv::cs_leveldb;
+#endif
 CCriticalSection CSqliteDBEnv::cs_sqlite;
 
 static CCriticalSection cs_w_update;
@@ -46,6 +50,7 @@ bool dbparam::IsChainFile(std::string strFile) {
 // CDBEnv class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_BERKELEYDB
 void CDBEnv::EnvShutdown() {
     LOCK(cs_db);
     if (! fDbEnvInit)
@@ -409,11 +414,13 @@ void CDBEnv::Flush(bool fShutdown)
         }
     }
 }
+#endif // USE_BERKELEYDB
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CLevelDBEnv class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_LEVELDB
 CLevelDBEnv::CLevelDBEnv(std::vector<std::string> instIn) : fLevelDbEnvInit(false), instance(instIn) {
     LOCK(cs_leveldb);
     this->options = CLevelDBEnv::GetOptions();
@@ -524,6 +531,7 @@ bool CLevelDBEnv::RemoveDb(const std::string &strDb) {
     lobj.erase(strDb);
     return true;
 }
+#endif // USE_LEVELDB
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CSqliteDBEnv class
@@ -631,6 +639,7 @@ bool CSqliteDBEnv::RemoveDb(const std::string &strFile) {
 // CDB class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_BERKELEYDB
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr) {
     LOCK(CDBEnv::cs_db);
     if (pszFile == nullptr)
@@ -681,6 +690,7 @@ void CDB::Close() {
     CDBEnv::get_instance().TxnCheckPoint(nMinutes ? map_arg::GetArgUInt("-dblogsize", 100) * 1024 : 0, nMinutes);
     CDBEnv::get_instance().DecUseCount(strFile);
 }
+#endif // USE_BERKELEYDB
 
 // fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
@@ -899,6 +909,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite, int type) {
     return result;
 }
 
+#ifdef USE_BERKELEYDB
 bool CDB::TxnBegin() {
     LOCK(CDBEnv::cs_db);
     if (!pdb || activeTxn)
@@ -1045,11 +1056,13 @@ bool CDB::Rewrite(const std::string &strFile, const char *pszSkip/* = nullptr */
     return false;
 }
 #endif
+#endif // USE_BERKELEYDB
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CLevelDB class
 //////////////////////////////////////////////////////////////////////////////////////////////
 
+#ifdef USE_LEVELDB
 namespace {
 class CBatchScanner final : public leveldb::WriteBatch::Handler
 {
@@ -1180,6 +1193,7 @@ bool CLevelDB::WriteVersion(int nVersion) {
     LOCK(cs_db);
     return Write(std::string("version"), nVersion);
 }
+#endif // USE_LEVELDB
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 // CSqliteDB class

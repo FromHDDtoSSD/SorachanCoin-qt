@@ -873,14 +873,18 @@ bool entry::AppInit2(bool restart/*=false*/)
     assert(fsbridge::file_exists(bdbwallet_path));
 #endif
 
+#ifdef USE_BERKELEYDB
     if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
+#endif
+#ifdef USE_LEVELDB
     if (! CLevelDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);
     }
+#endif
     if (! CSqliteDBEnv::get_instance().Open(iofs::GetDataDir())) {
         std::string msg = tfm::format(_("Error initializing database environment %s! To recover, BACKUP THAT DIRECTORY, then remove everything from it except for wallet.dat."), strDataDir.c_str());
         return InitError(msg);

@@ -75,6 +75,8 @@ DEBUG_ALGO_CS_OUTPUT=0
 # Build mode
 #
 USE_DBUS=0
+USE_BERKELEYDB=1
+USE_LEVELDB=1
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -219,12 +221,18 @@ win32:QMAKE_LFLAGS *= -Wl,--dynamicbase -Wl,--nxcompat
 win32:QMAKE_LFLAGS += -static-libgcc -static-libstdc++
 
 #
-# DSUB and QT_PLUGINS
+# DSUB, BerkeleyDB and QT_PLUGINS
 #
 contains(USE_DBUS, 1) {
     message(Building with DBUS (Freedesktop notifications) support)
     DEFINES += USE_DBUS
     QT += dbus
+}
+contains(USE_BERKELEYDB, 1) {
+    message(Building with BerkeleyDB supported)
+    DEFINES += USE_BERKELEYDB
+    INCLUDEPATH += $$BDB_INCLUDE_PATH
+    LIBS += $$join(BDB_LIB_PATH,,-L,)
 }
 contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS
@@ -234,13 +242,19 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 #
 # LEVEL DB
 #
-INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
-LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
-genleveldb.target = $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
-genleveldb.depends = FORCE
-PRE_TARGETDEPS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
-QMAKE_EXTRA_TARGETS += genleveldb
-SOURCES += src/txdb-leveldb.cpp
+contains(USE_LEVELDB, 1) {
+    message(Building with LevelDB)
+    INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
+    LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
+    genleveldb.target = $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
+    genleveldb.depends = FORCE
+    PRE_TARGETDEPS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
+    QMAKE_EXTRA_TARGETS += genleveldb
+    SOURCES += src/txdb-leveldb.cpp
+    DEFINES += USE_LEVELDB
+} else {
+    message(Building without LevelDB)
+}
 
 #
 # use: qmake "USE_IPV6=1" (enabled by default; default)
@@ -892,8 +906,8 @@ macx:QMAKE_CXXFLAGS_THREAD += -pthread
 #
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
 #
-INCLUDEPATH += $$BOOST_INCLUDE_PATH $$BDB_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(BDB_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(BLAKE2_LIB_PATH,,-L,)
+INCLUDEPATH += $$BOOST_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(BLAKE2_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto -ldb_cxx$${BDB_LIB_SUFFIX}
 
 #
