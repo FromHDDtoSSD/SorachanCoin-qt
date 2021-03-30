@@ -780,7 +780,11 @@ void wallet_dispatch::ThreadFlushWalletDB(void *parg)
     bitthread::RenameThread(strCoinName "-wallet");
 
     {
+#ifdef USE_BERKELEYDB
         LOCK(CDBEnv::get_instance().cs_db);
+#else
+        LOCK(CSqliteDBEnv::get_instance().cs_sqlite);
+#endif
         static bool fOneThread = false;
         if (fOneThread) {
             return;
@@ -1097,6 +1101,7 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string &strLocat
 //
 // Try to (very carefully!) recover wallet.dat if there is a problem.
 //
+#ifdef USE_BERKELEYDB
 bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
 {
     //
@@ -1173,3 +1178,4 @@ bool CWalletDB::Recover(std::string filename, bool fOnlyKeys/*=false*/)
 
     return fSuccess;
 }
+#endif

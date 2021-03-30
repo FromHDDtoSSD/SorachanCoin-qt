@@ -8,10 +8,12 @@
 #include <boost/version.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
-#include <leveldb/env.h>
-#include <leveldb/cache.h>
-#include <leveldb/filter_policy.h>
-#include <memenv/memenv.h>
+#ifdef USE_LEVELDB
+# include <leveldb/env.h>
+# include <leveldb/cache.h>
+# include <leveldb/filter_policy.h>
+# include <memenv/memenv.h>
+#endif
 #include <kernel.h>
 #include <checkpoints.h>
 #include <txdb.h>
@@ -30,10 +32,29 @@ CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_ma
 CTxDBHybrid::~CTxDBHybrid() {}
 
 
-static void oldblockindex_remove(bool fRemoveOld) {
+static void leveldb_oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
     if (fRemoveOld) {
         fs::remove_all(directory); // remove directory
+        unsigned int nFile = 1;
+        for (;;) {
+            fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
+
+            // Break if no such file
+            if (! fs::exists(strBlockFile)) {
+                break;
+            }
+
+            fs::remove(strBlockFile);
+            ++nFile;
+        }
+    }
+}
+
+static void sqlite_oldblockindex_remove(bool fRemoveOld) {
+    fs::path sqlfile = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
+    if (fRemoveOld) {
+        fs::remove(sqlfile);
         unsigned int nFile = 1;
         for (;;) {
             fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
@@ -61,12 +82,18 @@ void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= 
         if (nVersion < version::DATABASE_VERSION) {
             logging::LogPrintf("Required index version is %d, removing old database\n", version::DATABASE_VERSION);
 
+#ifdef USE_LEVELDB
             // Leveldb instance destruction
             // Note: activeBatch is nullptr.
             // Remove directory and create new database.
-            if(! CLevelDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, oldblockindex_remove)) {
+            if(! CLevelDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, leveldb_oldblockindex_remove)) {
                 throw std::runtime_error("CTxDB_impl::init_blockindex(): error opening database environment");
             }
+#else
+            if(! CSqliteDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, sqlite_oldblockindex_remove)) {
+                throw std::runtime_error("CTxDB_impl::init_blockindex(): error opening database environment");
+            }
+#endif
 
             WriteVersion(version::DATABASE_VERSION); // Save transaction index version
         }

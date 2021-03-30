@@ -51,12 +51,32 @@ class CWalletTx;
  */
 
 #ifndef USE_BERKELEYDB
-struct Dbc {intptr_t unused;}
+struct Db {intptr_t unused;};
+struct Dbc {
+    intptr_t unused;
+    void close() const noexcept {}
+};
 #endif
 #ifndef USE_LEVELDB
 namespace leveldb {
-    struct Iterator {intptr_t unused;}
+    struct Iterator {intptr_t unused;};
 }
+#endif
+
+#ifndef DB_SET
+# define DB_SET 27
+#endif
+#ifndef DB_SET_RANGE
+# define DB_SET_RANGE 28
+#endif
+#ifndef DB_GET_BOTH
+# define DB_GET_BOTH 8
+#endif
+#ifndef DB_GET_BOTH_RANGE
+# define DB_GET_BOTH_RANGE 10
+#endif
+#ifndef DB_NOTFOUND
+# define DB_NOTFOUND (-30988)
 #endif
 
 namespace wallet_dispatch
@@ -648,6 +668,13 @@ public:
         return ::sqlite3_open(pathSrc.string().c_str(), &sqlobj[strFileSrc]->psql)==SQLITE_OK;
     }
 
+    bool restart(fs::path pathEnv_, bool fRemoveOld, void (*func)(bool fRemoveOld)) {
+        LOCK(cs_sqlite);
+        EnvShutdown();
+        func(fRemoveOld);
+        return Open(pathEnv_);
+    }
+
     bool Open(fs::path pathEnv_);
 
     void Close();
@@ -1030,21 +1057,6 @@ public:
     //
     // About CLevelDB: Get Cursor (if fSecure == true)
     //
-#ifndef DB_SET
-# define DB_SET 27
-#endif
-#ifndef DB_SET_RANGE
-# define DB_SET_RANGE 28
-#endif
-#ifndef DB_GET_BOTH
-# define DB_GET_BOTH 8
-#endif
-#ifndef DB_GET_BOTH_RANGE
-# define DB_GET_BOTH_RANGE 10
-#endif
-#ifndef DB_NOTFOUND
-# define DB_NOTFOUND (-30988)
-#endif
     DbIterator GetIteCursor();
     template <typename KEY, typename VALUE>
     DbIterator GetIteCursor(const KEY &key, const VALUE &value) {

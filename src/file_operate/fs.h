@@ -38,6 +38,7 @@ namespace fsbridge {
     bool file_rename(const fs::path &src, const std::string &suffix);
     bool file_exists(const fs::path &abspath);
     bool file_safe_remove(const fs::path &abspath);
+    bool file_remove(const fs::path &abspath);
 
     // directory
     bool dir_create(const fs::path &absdir, bool fexists_ok=true);

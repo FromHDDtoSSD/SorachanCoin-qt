@@ -16,8 +16,10 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <leveldb/db.h>
-#include <leveldb/write_batch.h>
+#ifdef USE_LEVELDB
+# include <leveldb/db.h>
+# include <leveldb/write_batch.h>
+#endif
 #include <util/thread.h>
 #include <db.h>
 

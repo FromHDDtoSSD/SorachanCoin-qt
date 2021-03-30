@@ -169,11 +169,13 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData
     }
 
     // Shutdown will take long enough that the response should get back
+#ifdef USE_BERKELEYDB
     if (params.size() > 0) {
         json_spirit::json_flags status;
         CDBEnv::get_instance().SetDetach(params[0].get_bool(status));
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     }
+#endif
     boot::StartShutdown();
     return data.JSONRPCSuccess(strCoinName " server stopping");
 }

@@ -17,7 +17,9 @@
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
-#include <db_cxx.h>
+#ifdef USE_BERKELEYDB
+# include <db_cxx.h>
+#endif
 #include <allocator/qtsecure.h>
 #include <db.h>
 

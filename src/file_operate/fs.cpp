@@ -95,6 +95,11 @@ bool file_safe_remove(const fs::path &abspath) {
     return fs::remove(abspath);
 }
 
+bool file_remove(const fs::path &abspath) {
+    if(! file_is(abspath)) return false;
+    return fs::remove(abspath);
+}
+
 bool dir_create(const fs::path &absdir, bool fexists_ok/*=true*/) {
     if(fexists_ok && dir_exists(absdir)) return true;
     return fs::create_directory(absdir);

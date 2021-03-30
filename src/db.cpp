@@ -692,7 +692,7 @@ void CDB::Close() {
 }
 #endif // USE_BERKELEYDB
 
-// fFlags: DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
+// fFlags(BDB): DB_SET_RANGE, DB_NEXT, DB_NEXT, ...
 int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
     auto sqldb = [&]() {
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
@@ -747,6 +747,7 @@ int CSqliteDB::IgnoreAtCursor(const DbIterator &pcursor) {
 }
 
 int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream &ssValue, unsigned int fFlags /*= DB_NEXT*/) {
+#ifdef USE_LEVELDB
     auto ldb = [&]() {
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
             // no statement
@@ -771,6 +772,8 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         ite->Next();
         return ite->Valid() ? 0: DB_NOTFOUND;
     };
+#endif
+#ifdef USE_BERKELEYDB
     auto bdb = [&]() {
         Dbt datKey;
         if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
@@ -807,6 +810,7 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         ::free(datValue.get_data());
         return 0;
     };
+#endif
     auto sqldb = [&]() {
         //if (fFlags == DB_SET || fFlags == DB_SET_RANGE || fFlags == DB_GET_BOTH || fFlags == DB_GET_BOTH_RANGE) {
             // no statement
@@ -845,6 +849,7 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         return 0;
     };
     LOCK(pcursor.get_cs());
+#if defined(USE_BERKELEYDB) && defined(USE_LEVELDB)
     if(pcursor.is_bdb())
         return bdb();
     else if(pcursor.is_leveldb())
@@ -853,7 +858,26 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
         return sqldb();
     else
         return 99999;
-
+#elif defined(USE_BERKELEYDB)
+    if(pcursor.is_bdb())
+        return bdb();
+    else if(pcursor.is_sqlite())
+        return sqldb();
+    else
+        return 99999;
+#elif defined(USE_LEVELDB)
+    if(pcursor.is_leveldb())
+        return ldb();
+    else if(pcursor.is_sqlite())
+        return sqldb();
+    else
+        return 99999;
+#else
+    if(pcursor.is_sqlite())
+        return sqldb();
+    else
+        return 99999;
+#endif
 }
 
 bool CSqliteDB::PortToSqlite(DbIterator ite, int type) {

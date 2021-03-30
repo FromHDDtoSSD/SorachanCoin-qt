@@ -75,8 +75,8 @@ DEBUG_ALGO_CS_OUTPUT=0
 # Build mode
 #
 USE_DBUS=0
-USE_BERKELEYDB=1
-USE_LEVELDB=1
+USE_BERKELEYDB=0
+USE_LEVELDB=0
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -146,7 +146,7 @@ BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
 BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}
 BOOST_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
 BDB_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix
-BDB_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix/.libs
+BDB_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix/.libs/libdb_cxx$${BDB_LIB_SUFFIX}.a
 OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2/include
 OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2
 QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/include
@@ -232,7 +232,11 @@ contains(USE_BERKELEYDB, 1) {
     message(Building with BerkeleyDB supported)
     DEFINES += USE_BERKELEYDB
     INCLUDEPATH += $$BDB_INCLUDE_PATH
-    LIBS += $$join(BDB_LIB_PATH,,-L,)
+    #LIBS += $$join(BDB_LIB_PATH,,-L,)
+    #LIBS += -ldb_cxx$${BDB_LIB_SUFFIX}
+    LIBS += $$BDB_LIB_PATH
+} else {
+    message(Building without BerkeleyDB)
 }
 contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS
@@ -253,6 +257,7 @@ contains(USE_LEVELDB, 1) {
     SOURCES += src/txdb-leveldb.cpp
     DEFINES += USE_LEVELDB
 } else {
+    SOURCES += src/txdb-leveldb.cpp
     message(Building without LevelDB)
 }
 
@@ -908,7 +913,7 @@ macx:QMAKE_CXXFLAGS_THREAD += -pthread
 #
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
 LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(BLAKE2_LIB_PATH,,-L,)
-LIBS += -lssl -lcrypto -ldb_cxx$${BDB_LIB_SUFFIX}
+LIBS += -lssl -lcrypto
 
 #
 # -lgdi32 has to happen after -lcrypto

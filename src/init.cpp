@@ -80,11 +80,20 @@ void boot::Shutdown(void *parg)
         args_bool::fShutdown = true;
         args_bool::fRequestShutdown = true;
         block_info::nTransactionsUpdated++;
-        // CTxDB().Close();
-        CDBEnv::get_instance().Flush(false);
+
+#ifdef USE_BERKELEYDB
+        CDBEnv::get_instance().Flush(false); // wallet
         net_node::StopNode();
-        CDBEnv::get_instance().Flush(true);
-        boost::filesystem::remove(iofs::GetPidFile());
+        CDBEnv::get_instance().Flush(true); // wallet
+#endif
+#ifdef USE_BERKELEYDB
+        CSqliteDBEnv::get_instance().Flush(true); // wallet (option)
+#else
+        net_node::StopNode();
+        CSqliteDBEnv::get_instance().Flush(true); // wallet (option)
+#endif
+
+        fsbridge::file_remove(iofs::GetPidFile());
 
         wallet_process::manage::UnregisterWallet(entry::pwalletMain);
         delete entry::pwalletMain;
@@ -99,8 +108,7 @@ void boot::Shutdown(void *parg)
         ::exit(0);
 #endif
     } else {
-        while (! fExit)
-        {
+        while (! fExit) {
             util::Sleep(500);
         }
         util::Sleep(100);
@@ -738,7 +746,9 @@ bool entry::AppInit2(bool restart/*=false*/)
         args_bool::fDebugNet = map_arg::GetBoolArg("-debugnet");
     }
 
+#ifdef USE_BERKELEYDB
     CDBEnv::get_instance().SetDetach(map_arg::GetBoolArg("-detachdb", false));
+#endif
 
 #if !defined(WIN32) && !defined(QT_GUI)
     args_bool::fDaemon = map_arg::GetBoolArg("-daemon");
@@ -868,7 +878,9 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 5: verify database integrity (CDBEnv and CLevelDBEnv)")
 
     CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
+#ifdef USE_BERKELEYDB
     const fs::path bdbwallet_path = iofs::GetDataDir() / strWalletFileName.c_str();
+#endif
 #ifndef WALLET_SQL_MODE
     assert(fsbridge::file_exists(bdbwallet_path));
 #endif
@@ -890,7 +902,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
-#ifdef BLK_SQL_MODE
+#if defined(BLK_SQL_MODE) && defined(USE_LEVELDB)
     bool fPortLevelDBtoSqlite = map_arg::GetBoolArg("-portblockchain", false);
     if(!args_bool::fServer && fPortLevelDBtoSqlite) {
         // [Option] port from LevelDB to CSqliteDB
@@ -909,7 +921,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 #endif
 
-#ifdef WALLET_SQL_MODE
+#if defined(WALLET_SQL_MODE) && defined(USE_BERKELEYDB)
     // port from CDB to CSqliteDB
     if(fsbridge::file_exists(bdbwallet_path)) { // wallet
         LOCK(CDBEnv::cs_db);
@@ -922,9 +934,9 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
         CDBEnv::get_instance().CloseDb(strWalletFileName.c_str());
     }
-#else
+#elif defined(USE_BERKELEYDB)
     /*
-     * SorachaCoin: removed Salvage command (using CSqliteDB)
+     * SorachaCoin: be removed Salvage command (using CSqliteDB)
      */
     if (map_arg::GetBoolArg("-salvagewallet")) {
         // Recover readable keypairs:

@@ -7,11 +7,8 @@
 #include <db_addr.h>
 #include <block/block_info.h>
 #include <random/random.h>
-#include <file_operate/fs.h>
+//#include <file_operate/fs.h>
 
-//
-// CAddrDB
-//
 CAddrDB::CAddrDB()
 {
     const std::string suffix(".v1.old");
