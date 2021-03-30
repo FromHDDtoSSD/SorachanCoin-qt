@@ -7,6 +7,7 @@
 #include <txdb.h>
 #include <walletdb.h>
 #include <rpc/bitcoinrpc.h>
+#include <db_addr.h>
 #include <net.h>
 #include <init.h>
 #include <util.h>

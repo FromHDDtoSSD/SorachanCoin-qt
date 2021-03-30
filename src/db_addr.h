@@ -11,15 +11,11 @@
 #include <addrman.h>
 #include <string>
 #include <vector>
-#ifdef USE_BERKELEYDB
-# include <db_cxx.h>
-#endif
 #include <file_operate/fs.h>
-//#include <boost/filesystem.hpp>
-//#include <boost/filesystem/fstream.hpp>
+#include <db.h>
 
 /*
- * Access to the (IP) address database (peers.dat)
+ * Access to the (IP) address database (SQLite: peers_sql.dat)
  */
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using addrdb_vector = prevector<PREVECTOR_N, uint8_t>;
@@ -32,13 +28,13 @@ class CAddrDB
     CAddrDB(CAddrDB &&)=delete;
     CAddrDB &operator=(const CAddrDB &)=delete;
     CAddrDB &operator=(CAddrDB &&)=delete;
-private:
-    fs::path pathAddr;
-
 public:
 	CAddrDB();
 	bool Write(const CAddrMan &addr);
 	bool Read(CAddrMan &addr);
+private:
+    fs::path pathAddr;
+    CSqliteDB sqldb;
 };
 
 #endif

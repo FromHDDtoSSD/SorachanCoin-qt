@@ -8,7 +8,6 @@
 #define BITCOIN_DB_H
 
 #include <main.h>
-#include <db_addr.h>
 #include <map>
 #include <string>
 #include <vector>
@@ -614,7 +613,7 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_wallet()});
         return obj;
     }
 
@@ -629,6 +628,9 @@ public:
     }
     static std::string getname_headeronlychain() {
         return "blkheaderonlychain.dat";
+    }
+    static std::string getname_peers() {
+        return "peers_sql.dat";
     }
     static std::string getname_wallet() {
         return "walletsql.dat";
