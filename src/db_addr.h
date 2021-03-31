@@ -11,7 +11,6 @@
 #include <addrman.h>
 #include <string>
 #include <vector>
-#include <file_operate/fs.h>
 #include <db.h>
 
 /*
@@ -44,7 +43,6 @@ public:
 	bool Write(const CAddrMan &addr);
 	bool Read(CAddrMan &addr);
 private:
-    //fs::path pathAddr;
     CSqliteDB sqldb;
 };
 

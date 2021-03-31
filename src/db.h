@@ -206,22 +206,27 @@ public:
             obj.lp = nullptr;
             this->qp = obj.qp;
             obj.qp = nullptr;
+            this->fUsingIterator = obj.fUsingIterator;
+            obj.fUsingIterator = nullptr;
             return *this;
         }
 
         DbIterator(DbIterator &&obj) noexcept {
             operator=(std::move(obj));
         }
-        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr) {}
-        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept : bp(p), lp(nullptr), qp(nullptr), cs(csIn) {
+        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr), cs_ite(nullptr), fUsingIterator(nullptr) {}
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept :
+            bp(p), lp(nullptr), qp(nullptr), cs(csIn), cs_ite(nullptr), fUsingIterator(nullptr) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept : bp(nullptr), lp(p), qp(nullptr), cs(csIn) {
+        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept :
+            bp(nullptr), lp(p), qp(nullptr), cs(csIn), cs_ite(nullptr), fUsingIterator(nullptr) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn, CCriticalSection *cs_iteIn) noexcept : bp(nullptr), lp(nullptr), qp(p), cs(csIn), cs_ite(cs_iteIn) {
+        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn, CCriticalSection *cs_iteIn, bool *fUsingIterator_In) noexcept :
+            bp(nullptr), lp(nullptr), qp(p), cs(csIn), cs_ite(cs_iteIn), fUsingIterator(fUsingIterator_In) {
             assert(cs);
             p = nullptr;
         }
@@ -232,6 +237,7 @@ public:
                 delete lp;
             if(qp) {
                 ::sqlite3_finalize(qp);
+                *fUsingIterator = false;
                 LEAVE_CRITICAL_SECTION(*cs_ite);
             }
         }
@@ -271,6 +277,8 @@ public:
             lp=nullptr;
             qp=nullptr;
             cs=nullptr;
+            cs_ite=nullptr;
+            fUsingIterator=nullptr;
         }
 
     private:
@@ -279,6 +287,7 @@ public:
         sqlite3_stmt *qp;
         CCriticalSection *cs;
         CCriticalSection *cs_ite;
+        bool *fUsingIterator;
     };
 
     //
@@ -557,8 +566,10 @@ private:
     struct sqlite_object {
         CCriticalSection cs_sql;
         CCriticalSection cs_iterator;
+        bool fUsingIterator;
         sqlite3 *psql;
         sqlite_object() {
+            fUsingIterator = false;
             psql = nullptr;
         }
     };
@@ -654,9 +665,18 @@ public:
         return sqlobj[name]->cs_iterator;
     }
 
+    bool &get_using_ite(const std::string &name) const {
+        LOCK(cs_sqlite);
+        assert(sqlobj.count(name)>0);
+        return sqlobj[name]->fUsingIterator;
+    }
+
     bool backup(fs::path pathEnv_, const std::string &strFileSrc, const std::string &strFileOrDirDest) {
         assert(sqlobj.count(strFileSrc)>0);
-        LOCK2(cs_sqlite, sqlobj[strFileSrc]->cs_sql);
+        LOCK3(cs_sqlite, sqlobj[strFileSrc]->cs_sql, sqlobj[strFileSrc]->cs_iterator);
+        if(sqlobj[strFileSrc]->fUsingIterator)
+            return false; // please wait, implement event.
+
         const fs::path pathSrc = pathEnv_ / strFileSrc;
         fs::path pathDest(strFileOrDirDest);
         if(fsbridge::dir_is(pathDest))
@@ -1327,7 +1347,7 @@ private:
 /**
  * Sqlite DB
  * RAII class that provides access to a SqliteDB database
- * using: CWalletDB
+ * using: CWalletDB, Blockchain(CTxDB)
  *
  * checked buffer scope: about using SQLITE_STATIC.
  * BE USED SecureAllocator:
@@ -1347,6 +1367,7 @@ private:
     sqlite3 *&pdb;
     CCriticalSection &cs_db;
     CCriticalSection &cs_iterator;
+    bool &fUsingIterator;
 
     CTxnSecureBuffer *txn;
 

@@ -596,10 +596,13 @@ void CSqliteDBEnv::Close() {
 }
 
 bool CSqliteDBEnv::Flush(const std::string &strFile) {
-    //assert(strFile!=CSqliteDBEnv::getname_mainchain()); // mainchain is always have iterator. (if mainchain, only call at the end is ok)
     LOCK3(cs_sqlite, sqlobj[strFile]->cs_sql, sqlobj[strFile]->cs_iterator);
     //if(args_bool::fShutdown)
     //    return true;
+
+    ::sqlite3_db_cacheflush(sqlobj[strFile]->psql); // this is bool, therefore exactly due to flush, database stopped then resume (except using iterator).
+    if(sqlobj[strFile]->fUsingIterator)
+        return true;
 
     if(::sqlite3_close(sqlobj[strFile]->psql)!=SQLITE_OK)
         return false;
@@ -1225,7 +1228,8 @@ bool CLevelDB::WriteVersion(int nVersion) {
 //////////////////////////////////////////////////////////////////////////////////////////////
 
 CSqliteDB::CSqliteDB(const std::string &strFile, const char *pszMode /*= "r+"*/, bool fSecureIn /*= false*/) :
-    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)), cs_iterator(CSqliteDBEnv::get_instance().get_rcs_ite(strFile)), txn(nullptr) {
+    pdb(CSqliteDBEnv::get_instance().get_psqldb(strFile)), cs_db(CSqliteDBEnv::get_instance().get_rcs(strFile)),
+    cs_iterator(CSqliteDBEnv::get_instance().get_rcs_ite(strFile)), txn(nullptr), fUsingIterator(CSqliteDBEnv::get_instance().get_using_ite(strFile)) {
     fSecure = fSecureIn;
 
     fReadOnly = (!::strchr(pszMode, '+') && !::strchr(pszMode, 'w'));
@@ -1237,28 +1241,33 @@ CSqliteDB::~CSqliteDB() {
 IDB::DbIterator CSqliteDB::GetIteCursor() {
     LOCK(cs_db);
     ENTER_CRITICAL_SECTION(cs_iterator);
+    fUsingIterator = true;
     sqlite3_stmt *stmt;
     if(::sqlite3_prepare_v2(pdb, "select * from key_value;", -1, &stmt, nullptr)!=SQLITE_OK) {
+        fUsingIterator = false;
         LEAVE_CRITICAL_SECTION(cs_iterator);
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
     }
-    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator));
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator, &fUsingIterator));
 }
 
 IDB::DbIterator CSqliteDB::GetIteCursor(std::string mkey) {
     LOCK(cs_db);
     ENTER_CRITICAL_SECTION(cs_iterator);
+    fUsingIterator = true;
     sqlite3_stmt *stmt;
     if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK) {
+        fUsingIterator = false;
         LEAVE_CRITICAL_SECTION(cs_iterator);
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
     }
     if(::sqlite3_bind_blob(stmt, 1, (const char *)mkey.c_str(), mkey.size(), SQLITE_TRANSIENT)!=SQLITE_OK) {
         ::sqlite3_finalize(stmt);
+        fUsingIterator = false;
         LEAVE_CRITICAL_SECTION(cs_iterator);
         throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
     }
-    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator));
+    return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator, &fUsingIterator));
 }
 
 void CSqliteDB::Close() {

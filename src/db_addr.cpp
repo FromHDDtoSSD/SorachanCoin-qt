@@ -6,8 +6,14 @@
 
 #include <db_addr.h>
 #include <block/block_info.h>
+#include <file_operate/fs.h>
 
-CAddrDB::CAddrDB() : sqldb(CSqliteDBEnv::getname_peers(), "r+") {}
+CAddrDB::CAddrDB() : sqldb(CSqliteDBEnv::getname_peers(), "r+") {
+    const fs::path peers_v1 = iofs::GetDataDir() / "peers.dat.v1.old";
+    const fs::path peers = iofs::GetDataDir() / "peers.dat";
+    fsbridge::file_safe_remove(peers_v1);
+    fsbridge::file_safe_remove(peers);
+}
 
 bool CAddrDB::Write(const CAddrMan &addr) {
     addrdb_info adi;
@@ -47,10 +53,14 @@ bool CAddrDB::Read(CAddrMan &addr) {
     ssHash.reserve(1000);
     ssHash << adi;
 
+    const size_t gpchMessageSize = (END(block_info::gpchMessageStart)-BEGIN(block_info::gpchMessageStart))/sizeof(unsigned char);
+
     if(str!="addrdb")
         return logging::error("CAddrman::Read() : invalid db key");
     if(checksum!=hash_basis::Hash(ssHash.begin(), ssHash.end()))
         return logging::error("CAddrman::Read() : checksum mismatch; data corrupted");
+    if(gpchMessageSize!=adi.message.size())
+        return logging::error("CAddrman::Read() : invalid network magic number size");
     if(std::memcmp(adi.message.data(), block_info::gpchMessageStart, adi.message.size())!=0)
         return logging::error("CAddrman::Read() : invalid network magic number");
 
