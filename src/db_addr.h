@@ -29,11 +29,22 @@ class CAddrDB
     CAddrDB &operator=(const CAddrDB &)=delete;
     CAddrDB &operator=(CAddrDB &&)=delete;
 public:
+    struct addrdb_info {
+        std::vector<char> message;
+        std::vector<char> addr;
+
+        ADD_SERIALIZE_METHODS
+        template <typename Stream, typename Operation>
+        inline void SerializationOp(Stream &s, Operation ser_action) {
+            READWRITE(message);
+            READWRITE(addr);
+        }
+    };
 	CAddrDB();
 	bool Write(const CAddrMan &addr);
 	bool Read(CAddrMan &addr);
 private:
-    fs::path pathAddr;
+    //fs::path pathAddr;
     CSqliteDB sqldb;
 };
 

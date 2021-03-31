@@ -6,105 +6,56 @@
 
 #include <db_addr.h>
 #include <block/block_info.h>
-#include <random/random.h>
 
-CAddrDB::CAddrDB() : sqldb(CSqliteDBEnv::getname_peers(), "r+") {
-    const std::string suffix(".v1.old");
-    const fs::path addr = iofs::GetDataDir() / "peers.dat";
-    const fs::path old_addr = fs::system_complete(addr.string() + suffix);
-    if(fsbridge::file_exists(addr) && !fsbridge::file_exists(old_addr)) {
-        fsbridge::file_rename(addr, old_addr);
-    }
-    pathAddr = addr;
-}
+CAddrDB::CAddrDB() : sqldb(CSqliteDBEnv::getname_peers(), "r+") {}
 
-bool CAddrDB::Write(const CAddrMan &addr)
-{
-    // Generate random temporary filename
-    unsigned short randv = 0;
-    latest_crypto::random::GetStrongRandBytes((unsigned char *)&randv, sizeof(randv));
-    std::string tmpfn = tfm::format("peers.dat.%04x", randv);
+bool CAddrDB::Write(const CAddrMan &addr) {
+    addrdb_info adi;
+    adi.message.insert(adi.message.end(), BEGIN(block_info::gpchMessageStart), END(block_info::gpchMessageStart));
+    CDBStream ssAddr(&adi.addr, 10000);
+    ::Serialize(ssAddr, addr);
 
-    // serialize addresses, checksum data up to that point, then append csum
-    CDataStream ssPeers(0, 0);
-    ssPeers << FLATDATA(block_info::gpchMessageStart);
-    ssPeers << addr;
-    uint256 hash = hash_basis::Hash(ssPeers.begin(), ssPeers.end());
-    ssPeers << hash;
+    CDataStream ssHash;
+    ssHash.reserve(10000);
+    ssHash << adi;
+    uint256 checksum = hash_basis::Hash(ssHash.begin(), ssHash.end());
 
-    // open temp output file, and associate with CAutoFile
-    boost::filesystem::path pathTmp = iofs::GetDataDir() / tmpfn;
-    CAutoFile fileout = CAutoFile(::fopen(pathTmp.string().c_str(), "wb"), 0, 0);
-    if(! fileout) {
-        return logging::error("CAddrman::Write() : open failed");
-    }
-
-    // Write and commit header, data
-    try {
-        fileout << ssPeers;
-    } catch(const std::exception &) {
+    if(! sqldb.Write(std::make_pair(std::string("addrdb"), checksum), adi))
         return logging::error("CAddrman::Write() : I/O error");
-    }
 
-    iofs::FileCommit(fileout);
-    fileout.fclose();
-
-    // replace existing peers.dat, if any, with new peers.dat.XXXX
-    if(! iofs::RenameOver(pathTmp, pathAddr)) {
-        return logging::error("CAddrman::Write() : Rename-into-place failed");
-    }
+    debugcs::instance() << "CAddrDB Write() success" << debugcs::endl();
     return true;
 }
 
-bool CAddrDB::Read(CAddrMan &addr)
-{
-    // open input file, and associate with CAutoFile
-    CAutoFile filein = CAutoFile(::fopen(pathAddr.string().c_str(), "rb"), 0, 0);
-    if(! filein) {
-        return logging::error("CAddrman::Read() : open failed");
-    }
+bool CAddrDB::Read(CAddrMan &addr) {
 
-    // use file size to size memory buffer
-    int fileSize = iofs::GetFilesize(filein);
-    int dataSize = fileSize - sizeof(uint256);
+    CDataStream ssKey;
+    ssKey.reserve(1000);
+    CDataStream ssValue;
+    ssValue.reserve(10000);
+    if(IDB::ReadAtCursor(std::move(sqldb.GetIteCursor(std::string("%addrdb%"))), ssKey, ssValue)!=0)
+        return logging::error("CAddrman::Read() : no data");
 
-    // Don't try to resize to a negative number if file is small
-    if(dataSize < 0) { dataSize = 0; }
-    addrdb_vector vchData;
-    vchData.resize(dataSize);
-    uint256 hashIn;
+    std::string str;
+    uint256 checksum;
+    ssKey >> str;
+    ssKey >> checksum;
 
-    // read data and checksum from file
-    try {
-        filein.read((char *)&vchData[0], dataSize);
-        filein >> hashIn;
-    } catch(const std::exception &) {
-        return logging::error("CAddrman::Read() 2 : I/O error or stream data corrupted");
-    }
-    filein.fclose();
+    addrdb_info adi;
+    ssValue >> adi;
+    CDataStream ssHash;
+    ssHash.reserve(1000);
+    ssHash << adi;
 
-    CDataStream ssPeers(vchData, 0, 0);
-
-    // verify stored checksum matches input data
-    uint256 hashTmp = hash_basis::Hash(ssPeers.begin(), ssPeers.end());
-    if(hashIn != hashTmp) {
+    if(str!="addrdb")
+        return logging::error("CAddrman::Read() : invalid db key");
+    if(checksum!=hash_basis::Hash(ssHash.begin(), ssHash.end()))
         return logging::error("CAddrman::Read() : checksum mismatch; data corrupted");
-    }
+    if(std::memcmp(adi.message.data(), block_info::gpchMessageStart, adi.message.size())!=0)
+        return logging::error("CAddrman::Read() : invalid network magic number");
 
-    unsigned char pchMsgTmp[4];
-    try {
-        // de-serialize file header (block_info::gpchMessageStart magic number) and
-        ssPeers >> FLATDATA(pchMsgTmp);
-
-        // verify the network matches ours
-        if(::memcmp(pchMsgTmp, block_info::gpchMessageStart, sizeof(pchMsgTmp))) {
-            return logging::error("CAddrman::Read() : invalid network magic number");
-        }
-
-        // de-serialize address data into one CAddrMan object
-        ssPeers >> addr;
-    } catch(const std::exception &) {
-        return logging::error("CAddrman::Read() : I/O error or stream data corrupted");
-    }
+    CDBStream ssAddr(&adi.addr);
+    ::Unserialize(ssAddr, addr);
+    debugcs::instance() << "CAddrDB Read() success" << debugcs::endl();
     return true;
 }
