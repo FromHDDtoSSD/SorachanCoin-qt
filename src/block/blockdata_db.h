@@ -31,7 +31,7 @@ public:
 
     template <typename HASH>
     bool Write(const CBlock_impl<HASH> &data, unsigned int &nFileRet, unsigned int &nBlockPosRet) {
-        unsigned int blklastpos; // CAutoFile: offset bytes CBlockdataDB: number
+        unsigned int blklastpos; // CAutoFile: offset bytes CBlockdataDB: number (start 0)
         if(! sqldb.Exists(std::string("blklastpos"))) {
             blklastpos = 0;
         } else {
@@ -48,7 +48,26 @@ public:
 
     template <typename HASH>
     bool Read(CBlock_impl<HASH> &data, unsigned int nFile, unsigned int nBlockPos) {
+        (void)nFile;
         return sqldb.Read(std::make_pair(std::string("blkdata"), nBlockPos), data);
+    }
+
+    template <typename HASH>
+    bool Read(CTransaction_impl<HASH> &tx, unsigned int nFile, unsigned int nBlockPos, unsigned int nTxPos) {
+        (void)nFile;
+        std::vector<char> vchKey;
+        CDBStream ssKey(&vchKey);
+        ::Serialize(ssKey, std::make_pair(std::string("blkdata"), nBlockPos));
+        IDB::DbIterator ite = sqldb.GetIteCursor(std::string(vchKey.begin(), vchKey.end()));
+        std::vector<char> vchKey2;
+        CDBStream ssKey2(&vchKey2);
+        std::vector<char> vchValue;
+        CDBStream ssValue(&vchValue, 10000);
+        if(CSqliteDB::ReadAtCursor(ite, ssKey2, ssValue)!=0)
+            return false;
+        CDBStream ssTx(&vchValue[nTxPos]);
+        ::Unserialize(ssTx, tx);
+        return true;
     }
 
 private:

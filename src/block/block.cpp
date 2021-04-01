@@ -814,7 +814,6 @@ template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions/*=true*/) {
 #ifdef USE_CAUTOFILE
     //debugcs::instance() << "CBlock_impl() ReadFromDisk nFile: " << nFile << " nBlockPos: " << nBlockPos << " fReadTransactions: " << fReadTransactions << debugcs::endl();
-    //assert(nBlockPos!=0);
 
     SetNull();
     // Open history file to read
