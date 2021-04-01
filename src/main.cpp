@@ -319,6 +319,7 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
     {
         LOCK(block_process::cs_main);
         try {
+#ifdef USE_CAUTOFILE
             CAutoFile blkdat(fileIn, SER_DISK, version::CLIENT_VERSION);
             unsigned int nPos = 0;
             while (nPos != std::numeric_limits<uint32_t>::max() && blkdat.good() && !args_bool::fRequestShutdown)
@@ -361,6 +362,7 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
                     }
                 }
             }
+#endif
         } catch (const std::exception &) {
             logging::LogPrintf("%s() : Deserialize or I/O error caught during load\n", BOOST_CURRENT_FUNCTION);
         }

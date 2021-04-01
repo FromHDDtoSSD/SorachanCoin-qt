@@ -624,15 +624,18 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_maindata(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_wallet()});
         return obj;
     }
 
     static std::string getname_finexdrivechain() {
         return "blkfinexdrivechain.dat";
     }
-    static std::string getname_mainchain() {
+    static std::string getname_mainchain() { // mainchain index-record
         return "blkindexsql.dat";
+    }
+    static std::string getname_maindata() { // mainchain data
+        return "blkdata.dat";
     }
     static std::string getname_autocheckpoints() {
         return "blkautocheckpoints.dat";

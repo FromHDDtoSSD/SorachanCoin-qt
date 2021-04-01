@@ -16,6 +16,7 @@
 #include <block/block_info.h>
 #include <prime/autocheckpoint.h>
 #include <util/system.h>
+#include <block/blockdata_db.h>
 
 /*
 ** collect Block Print
@@ -780,6 +781,9 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 
 template<typename T>
 bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet) {
+#ifdef USE_CAUTOFILE
+    //debugcs::instance() << "CBlock_impl() WriteToDisk nFileRet: " << nFileRet << " nBlockPosRet: " << nBlockPosRet << debugcs::endl();
+
     // Open history file to append
     CAutoFile fileout = CAutoFile(file_open::AppendBlockFile(nFileRet), SER_DISK, version::CLIENT_VERSION);
     if (! fileout) return logging::error("CBlock::WriteToDisk() : file_open::AppendBlockFile failed");
@@ -796,10 +800,22 @@ bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPos
     if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
         iofs::FileCommit(fileout);
     return true;
+
+#else
+    if(! CBlockDataDB().Write(*this, nFileRet, nBlockPosRet))
+        return logging::error("CBlock::WriteToDisk() : CBlockDataDB write failed");
+    if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
+        CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_maindata());
+    return true;
+#endif
 }
 
 template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions/*=true*/) {
+#ifdef USE_CAUTOFILE
+    //debugcs::instance() << "CBlock_impl() ReadFromDisk nFile: " << nFile << " nBlockPos: " << nBlockPos << " fReadTransactions: " << fReadTransactions << debugcs::endl();
+    //assert(nBlockPos!=0);
+
     SetNull();
     // Open history file to read
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(nFile, nBlockPos, "rb"), SER_DISK, version::CLIENT_VERSION);
@@ -815,6 +831,13 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
+#else
+    if(! CBlockDataDB().Read(*this, nFile, nBlockPos))
+        return logging::error("CBlockDataDB deserialize or I/O error");
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
+        return logging::error("CBlock::ReadFromDisk() : errors in block header");
+    return true;
+#endif
 }
 
 template <typename T>

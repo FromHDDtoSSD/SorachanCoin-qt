@@ -77,6 +77,7 @@ DEBUG_ALGO_CS_OUTPUT=0
 USE_DBUS=0
 USE_BERKELEYDB=1
 USE_LEVELDB=1
+USE_CAUTOFILE=1
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -237,6 +238,12 @@ contains(USE_BERKELEYDB, 1) {
     LIBS += $$BDB_LIB_PATH
 } else {
     message(Building without BerkeleyDB)
+}
+contains(USE_CAUTOFILE, 1) {
+    message(Using CAutoFile)
+    DEFINES += USE_CAUTOFILE
+} else {
+    message(Using SQLite blkdata.dat)
 }
 contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS
@@ -537,6 +544,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/block/block_info.h \
     src/block/block_alert.h \
     src/block/block_check.h \
+    src/block/blockdata_db.h \
     src/prime/autocheckpoint.h \
     src/merkle/merkle_tx.h \
     src/merkle/merkle_tree.h \

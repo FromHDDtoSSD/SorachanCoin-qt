@@ -1,20 +1,19 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_NETBASE_H
 #define BITCOIN_NETBASE_H
 
 #include <string>
 #include <vector>
-
 #include <serialize.h>
 #include <compat.h>
 #include <sync/sync.h>
 
 #ifdef WIN32
 // In MSVC, this is defined as a macro, undefine it to prevent a compile and link error
-#undef SetPort
+# undef SetPort
 #endif
 
 class CNetAddr;
@@ -75,12 +74,10 @@ namespace netbase
 //
 class CNetAddr
 {
-//private:
     // CNetAddr(const CNetAddr &)=delete;
     // CNetAddr &operator=(const CNetAddr &)=delete;
     // CNetAddr(CNetAddr &&)=delete;
     // CNetAddr &operator=(CNetAddr &&)=delete;
-
 private:
     static const unsigned char pchIPv4[12]; // = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
     static const unsigned char pchOnionCat[6]; // = { 0xFD, 0x87, 0xD8, 0x7E, 0xEB, 0x43 };
@@ -165,12 +162,10 @@ public:
 //
 class CService : public CNetAddr
 {
-//private:
     // CService(const CService &)=delete;
     // CService &operator=(const CService &)=delete;
     // CService(CService &&)=delete;
     // CService &operator=(CService &&)=delete;
-
 protected:
     unsigned short port; // host order
 

@@ -1,7 +1,7 @@
 // Copyright (c) 2012 Pieter Wuille
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef _BITCOIN_ADDRMAN
 #define _BITCOIN_ADDRMAN 1
 
@@ -11,19 +11,16 @@
 #include <sync/sync.h>
 #include <map>
 #include <vector>
-//#include <openssl/rand.h>
 
 //
 // Extended statistics about a CAddress
 //
 class CAddrInfo : public CAddress
 {
-//private:
     // CAddrInfo(const CAddrInfo &)=delete;
     // CAddrInfo &operator=(const CAddrInfo &&)=delete;
     // CAddrInfo(CAddrInfo &&)=delete;
     // CAddrInfo &operator=(CAddrInfo &&)=delete;
-
 private:
     friend class CAddrMan;
 
@@ -149,12 +146,11 @@ public:
 //
 class CAddrMan
 {
+    CAddrMan(const CAddrMan &)=delete;
+    CAddrMan &operator=(const CAddrMan &)=delete;
+    CAddrMan(CAddrMan &&)=delete;
+    CAddrMan &operator=(CAddrMan &&)=delete;
 private:
-    CAddrMan(const CAddrMan &);
-    CAddrMan &operator=(const CAddrMan &);
-    CAddrMan(CAddrMan &&);
-    CAddrMan &operator=(const CAddrMan &&);
-
     mutable CCriticalSection cs;        // critical section to protect the inner data structures
 
     std::vector<unsigned char> nKey;    // secret key to randomize bucket select with
@@ -182,7 +178,7 @@ protected:
     void MakeTried(CAddrInfo& info, int nId, int nOrigin);    // Move an entry from the "new" table(s) to the "tried" table @pre vvUnkown[nOrigin].count(nId) != 0
     
     void Good_(const CService &addr, int64_t nTime);                                  // Mark an entry "good", possibly moving it from "new" to "tried".
-    bool Add_(const CAddress &addr, const CNetAddr& source, int64_t nTimePenalty);    // Add an entry to the "new" table.
+    bool Add_(const CAddress &addr, const CNetAddr &source, int64_t nTimePenalty);    // Add an entry to the "new" table.
     void Attempt_(const CService &addr, int64_t nTime);       // Mark an entry as attempted to connect.
     CAddress Select_(int nUnkBias);        // Select an address to connect to. nUnkBias determines how much to favor new addresses over tried ones (min=0, max=100)
 
@@ -249,8 +245,7 @@ public:
         {
             LOCK(cs);
             Check();
-            for (std::vector<CAddress>::const_iterator it = vAddr.begin(); it != vAddr.end(); it++)
-            {
+            for (std::vector<CAddress>::const_iterator it = vAddr.begin(); it != vAddr.end(); it++) {
                 nAdd += Add_(*it, source, nTimePenalty) ? 1 : 0;
             }
             Check();
