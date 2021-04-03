@@ -26,7 +26,7 @@ class CBlockDataDB final {
     constexpr static int nFile = 1; // fixed nFile number
 
 public:
-    CBlockDataDB(const char *mode="r+") : sqldb(CSqliteDBEnv::getname_maindata(), mode) {}
+    CBlockDataDB(const char *mode="r+") : sqldb(CSqliteDBEnv::getname_mainchain(), mode) {}
     ~CBlockDataDB() {}
 
     template <typename HASH>
@@ -65,7 +65,7 @@ public:
         CDBStream ssValue(&vchValue, 10000);
         if(CSqliteDB::ReadAtCursor(ite, ssKey2, ssValue)!=0)
             return false;
-        CDBStream ssTx(&vchValue[nTxPos]);
+        CDBStream ssTx(&vchValue[nTxPos], vchValue.size()-nTxPos);
         ::Unserialize(ssTx, tx);
         return true;
     }

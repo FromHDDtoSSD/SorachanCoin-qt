@@ -903,6 +903,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
+    /*
 #if defined(BLK_SQL_MODE) && defined(USE_LEVELDB)
     bool fPortLevelDBtoSqlite = map_arg::GetBoolArg("-portblockchain", false);
     if(!args_bool::fServer && fPortLevelDBtoSqlite) {
@@ -921,13 +922,14 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
 #endif
+    */
 
 #if defined(WALLET_SQL_MODE) && defined(USE_BERKELEYDB)
     // port from CDB to CSqliteDB
     if(fsbridge::file_exists(bdbwallet_path)) { // wallet
         LOCK(CDBEnv::cs_db);
         CClientUIInterface::uiInterface.InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
-        if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()), 0)) {
+        if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()))) {
             CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_wallet());
             const fs::path sqlwallet_path = iofs::GetDataDir() / CSqliteDBEnv::getname_wallet();
             fsbridge::file_safe_remove(sqlwallet_path);

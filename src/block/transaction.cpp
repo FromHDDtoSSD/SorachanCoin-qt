@@ -11,6 +11,7 @@
 #include <checkpoints.h>
 #include <txdb.h>
 #include <wallet.h>
+#include <block/blockdata_db.h>
 
 template <typename T> CTxMemPool_impl<T> CTxMemPool_impl<T>::mempool;
 template <typename T> CBlockIndex_impl<T> *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;

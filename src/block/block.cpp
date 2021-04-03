@@ -805,7 +805,7 @@ bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPos
     if(! CBlockDataDB().Write(*this, nFileRet, nBlockPosRet))
         return logging::error("CBlock::WriteToDisk() : CBlockDataDB write failed");
     if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
-        CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_maindata());
+        CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_mainchain());
     return true;
 #endif
 }
