@@ -510,13 +510,15 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
             return logging::error("LoadBlockIndex() : sql read failure");
 
         // Unpack keys and values.
-        std::string strType;
-        ::Unserialize(ssKey, strType);
+        //std::string strType;
+        //::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
-        if (args_bool::fRequestShutdown || strType != "blockindex") {
+        //if (args_bool::fRequestShutdown || strType != "blockindex") {
+        //    break;
+        //}
+        if (args_bool::fRequestShutdown)
             break;
-        }
 
         CDiskBlockIndex_impl<HASH> diskindex;
         ::Unserialize(ssValue, diskindex);
@@ -559,6 +561,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
     }
+
+    debugcs::instance() << "LoadBlockIndex done" << debugcs::endl();
 
     // debug
     // checking mapBlockIndex

@@ -77,7 +77,6 @@ DEBUG_ALGO_CS_OUTPUT=0
 USE_DBUS=0
 USE_BERKELEYDB=1
 USE_LEVELDB=1
-USE_CAUTOFILE=0
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -238,12 +237,6 @@ contains(USE_BERKELEYDB, 1) {
     LIBS += $$BDB_LIB_PATH
 } else {
     message(Building without BerkeleyDB)
-}
-contains(USE_CAUTOFILE, 1) {
-    message(Using CAutoFile)
-    DEFINES += USE_CAUTOFILE
-} else {
-    message(Using SQLite blkdata)
 }
 contains(BITCOIN_NEED_QT_PLUGINS, 1) {
     DEFINES += BITCOIN_NEED_QT_PLUGINS

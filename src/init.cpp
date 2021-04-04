@@ -903,16 +903,15 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
-    /*
 #if defined(BLK_SQL_MODE) && defined(USE_LEVELDB)
-    bool fPortLevelDBtoSqlite = map_arg::GetBoolArg("-portblockchain", false);
+    bool fPortLevelDBtoSqlite = true;//map_arg::GetBoolArg("-portblockchain", false);
     if(!args_bool::fServer && fPortLevelDBtoSqlite) {
         // [Option] port from LevelDB to CSqliteDB
         const fs::path leveldb_path = iofs::GetDataDir() / CLevelDBEnv::getname_mainchain();
         if(fsbridge::dir_exists(leveldb_path)) { // Blockchain
             LOCK(CLevelDBEnv::cs_leveldb);
             CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
-            if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor()), 1)) {
+            if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor()), CSqliteDB::MIGRATE_BLOCKCHAIN)) {
                 CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_mainchain());
                 const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
                 fsbridge::file_safe_remove(blksql_path);
@@ -922,14 +921,13 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
 #endif
-    */
 
 #if defined(WALLET_SQL_MODE) && defined(USE_BERKELEYDB)
     // port from CDB to CSqliteDB
     if(fsbridge::file_exists(bdbwallet_path)) { // wallet
         LOCK(CDBEnv::cs_db);
         CClientUIInterface::uiInterface.InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
-        if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()))) {
+        if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()), CSqliteDB::MIGRATE_WALLET)) {
             CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_wallet());
             const fs::path sqlwallet_path = iofs::GetDataDir() / CSqliteDBEnv::getname_wallet();
             fsbridge::file_safe_remove(sqlwallet_path);

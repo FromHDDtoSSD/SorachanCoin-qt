@@ -564,7 +564,6 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
 
 template <typename T>
 bool CTransaction_impl<T>::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
-#ifdef USE_CAUTOFILE
     debugcs::instance() << "CTransaction ReadFromDisk pos: " << pos.get_nTxPos() << " pfileRet: " << (intptr_t)pfileRet << debugcs::endl();
 
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(pos.get_nFile(), 0, pfileRet ? "rb+" : "rb"), SER_DISK, version::CLIENT_VERSION);
@@ -584,9 +583,7 @@ bool CTransaction_impl<T>::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullpt
         *pfileRet = filein.release();
     }
     return true;
-#else
-    return CBlockDataDB().Read(*this, pos.get_nFile(), pos.get_nBlockPos(), pos.get_nTxPos());
-#endif
+    //return CBlockDataDB().Read(*this, pos.get_nFile(), pos.get_nBlockPos(), pos.get_nTxPos());
 }
 
 template <typename T>

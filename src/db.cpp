@@ -883,9 +883,8 @@ int IDB::ReadAtCursor(const DbIterator &pcursor, CDataStream &ssKey, CDataStream
 #endif
 }
 
-bool CSqliteDB::PortToSqlite(DbIterator ite) {
-    const int type=0;
-    if(type==0) { // wallet (BDB to SQLite)
+bool CSqliteDB::PortToSqlite(DbIterator ite, migrate type) {
+    if(type==MIGRATE_WALLET) { // wallet (BDB to SQLite)
         // if exists "minversion", already port completed. therefore, skip PortToSqlite.
         LOCK(cs_db);
         const std::string tykey("minversion");
@@ -895,8 +894,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
         if(version_ret)
             return true;
     }
-    /*
-    else if (type==1) { // Blockchain (LevelDB to SQLite)
+    else if (type==MIGRATE_BLOCKCHAIN) { // Blockchain (LevelDB to SQLite)
         // if exists "hashGenesisChain", already port completed. therefore, skip PortToSqlite.
         LOCK(cs_db);
         const std::string tykey("hashBestChain");
@@ -910,7 +908,6 @@ bool CSqliteDB::PortToSqlite(DbIterator ite) {
         if(::sqlite3_exec(pdb, "delete from key_value;", nullptr, nullptr, &err)!=SQLITE_OK)
             return false;
     }
-    */
     else
         return false;
 

@@ -781,7 +781,6 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 
 template<typename T>
 bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet) {
-#ifdef USE_CAUTOFILE
     //debugcs::instance() << "CBlock_impl() WriteToDisk nFileRet: " << nFileRet << " nBlockPosRet: " << nBlockPosRet << debugcs::endl();
 
     // Open history file to append
@@ -801,18 +800,17 @@ bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPos
         iofs::FileCommit(fileout);
     return true;
 
-#else
+    /*
     if(! CBlockDataDB().Write(*this, nFileRet, nBlockPosRet))
         return logging::error("CBlock::WriteToDisk() : CBlockDataDB write failed");
     if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
         CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_mainchain());
     return true;
-#endif
+    */
 }
 
 template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions/*=true*/) {
-#ifdef USE_CAUTOFILE
     //debugcs::instance() << "CBlock_impl() ReadFromDisk nFile: " << nFile << " nBlockPos: " << nBlockPos << " fReadTransactions: " << fReadTransactions << debugcs::endl();
 
     SetNull();
@@ -830,13 +828,14 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
-#else
+
+    /*
     if(! CBlockDataDB().Read(*this, nFile, nBlockPos))
         return logging::error("CBlockDataDB deserialize or I/O error");
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
-#endif
+    */
 }
 
 template <typename T>

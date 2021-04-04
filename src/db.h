@@ -624,7 +624,7 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_banlist(), getname_wallet()});
         return obj;
     }
 
@@ -642,6 +642,9 @@ public:
     }
     static std::string getname_peers() {
         return "peers_sql.dat";
+    }
+    static std::string getname_banlist() {
+        return "banlist.dat";
     }
     static std::string getname_wallet() {
         return "walletsql.dat";
@@ -1390,7 +1393,11 @@ public:
     bool ReadVersion(int &nVersion);
     bool WriteVersion(int nVersion);
 
-    bool PortToSqlite(DbIterator ite); // type 0: wallet, type 1: Blockchain
+    enum migrate {
+        MIGRATE_BLOCKCHAIN,
+        MIGRATE_WALLET
+    };
+    bool PortToSqlite(DbIterator ite, migrate type);
 
     // below Read/Write are from "key_value" table.
     template<typename K, typename T>

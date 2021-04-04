@@ -5,17 +5,9 @@
 #ifndef SORA_BLOCKDATA_DB_H
 #define SORA_BLOCKDATA_DB_H
 
-// Blockchain file system by SQL database
-// step1(v3.7.10): replaced from CAutoFile to CBlockDataDB
-// step2(v4): like NTFS, will implement large block data I/O system
-
 #include <serialize.h>
 #include <block/block.h>
 #include <db.h>
-
-/*
- * replaced from CAutoFile to CBlockDataDB
- */
 
 class CBlockDataDB final {
     CBlockDataDB(const CBlockDataDB &)=delete;
