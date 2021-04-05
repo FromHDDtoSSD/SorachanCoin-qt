@@ -8,7 +8,7 @@
     //
     // Client version number
     //
-    #define CLIENT_VERSION_SUFFIX   "-leveldb"
+    #define CLIENT_VERSION_SUFFIX   "-sqlite"
 
     //
     // Compiler name
@@ -61,7 +61,7 @@
 #define GIT_ARCHIVE 1
 #ifdef GIT_ARCHIVE
 #    define GIT_COMMIT_ID "----"
-#    define GIT_COMMIT_DATE "Mar-2021"
+#    define GIT_COMMIT_DATE "Apr-2021"
 #endif
 
 #define BUILD_DESC_FROM_COMMIT(maj,min,rev,build,commit) \
