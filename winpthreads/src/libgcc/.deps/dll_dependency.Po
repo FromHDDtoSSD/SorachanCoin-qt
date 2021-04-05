@@ -1,0 +1,1 @@
+src/libgcc/dll_dependency.o: src/libgcc/dll_dependency.S
