@@ -127,7 +127,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
         }
     };
 
-    logging::LogPrintf("GetDefaultPort type_%d\n", (int)type);
+    //logging::LogPrintf("GetDefaultPort type_%d\n", (int)type);
     const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet : tcp_port::uMainnet;
 
     {
@@ -150,26 +150,7 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                 }
                 bool ret = pszDest ? netbase::manage::ConnectSocketByName(addrConnect, hSocket, pszDest, port_target) : netbase::manage::ConnectSocket(addrConnect, hSocket);
                 if(ret) {
-                    //
-                    // SorachanCoin
-                    // connected test
-                    //
-                    datastream_signed_vector vchMsg;
-                    vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
-                    CDataStream sMsg(vchMsg);
-                    std::string retstr;
-                    if(! IsNoneblockSend(hSocket)) {
-                        netbase::manage::CloseSocket(hSocket);
-                        util::Sleep(20);
-                        continue;
-                    }
-                    if(::send(hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT) <= 0) {
-                        netbase::manage::CloseSocket(hSocket);
-                        util::Sleep(20);
-                        continue;
-                    }
-                    bool ret = net_basis::RecvLine(hSocket, retstr);
-                    if(ret && retstr == coin_param::strEcho) {
+                    if(true) { // always true
                         struct in_addr ipv4;
                         if(addrConnect.GetInAddr(&ipv4)) {
                             CNetAddr netAddr = CNetAddr(ipv4);
@@ -1078,39 +1059,14 @@ void net_node::ThreadSocketHandler2(void *parg)
                         pnode->CloseSocketDisconnect();
                     } else {
                         // typical socket buffer is 8K-64K
-                        char pchBuf[0x10000];
-                        int nBytes = recv(pnode->hSocket, pchBuf, sizeof(pchBuf), MSG_DONTWAIT);
+                        //char pchBuf[0x10000];
+                        std::vector<char> pchBuf;
+                        pchBuf.resize(0x10000);
+                        int nBytes = recv(pnode->hSocket, &pchBuf[0], pchBuf.size(), MSG_DONTWAIT);
 
-                        datastream_signed_vector vchMsg;
-                        vchMsg.assign(coin_param::strEcho.c_str(), coin_param::strEcho.c_str() + coin_param::strEcho.length());
-                        CDataStream sMsg(vchMsg);
-                        datastream_signed_vector vchQuantum;
-                        vchQuantum.assign(coin_param::strQuantum.c_str(), coin_param::strQuantum.c_str() + coin_param::strQuantum.length());
-                        CDataStream sQuantum(vchQuantum);
-                        if(nBytes > 0 && ::memcmp(&sMsg[0], pchBuf, sMsg.size()) == 0) {
-                            //
-                            // Echo SorachanCoin
-                            //
-                            if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
-                                pnode->CloseSocketDisconnect();
-                            } else {
-                                (void)send(pnode->hSocket, &sMsg[0], sMsg.size(), MSG_NOSIGNAL | MSG_DONTWAIT);
-                                pnode->CloseSocketDisconnect();
-                            }
-                        } else if(nBytes > 0 && ::memcmp(&sQuantum[0], pchBuf, sQuantum.size()) == 0) {
-                            //
-                            // Quantum SorachanCoin
-                            //
-                            logging::LogPrintf("socket of quantum is send, and closed socket\n");
-                            if(! net_basis::IsNoneblockSend(pnode->hSocket)) {
-                                pnode->CloseSocketDisconnect();
-                            } else {
-                                (void)send(pnode->hSocket, &sQuantum[0], sQuantum.size(), MSG_NOSIGNAL | MSG_DONTWAIT);
-                                pnode->CloseSocketDisconnect();
-                            }
-                        } else if(nBytes > 0) {
+                        if(nBytes > 0) {
                             vRecv.resize(nPos + nBytes);
-                            std::memcpy(&vRecv[nPos], pchBuf, nBytes);
+                            std::memcpy(&vRecv[nPos], pchBuf.data(), nBytes);
                             pnode->nLastRecv = bitsystem::GetTime();
                             pnode->nRecvBytes += nBytes;
                             pnode->RecordBytesRecv(nBytes);
@@ -1124,7 +1080,7 @@ void net_node::ThreadSocketHandler2(void *parg)
                             // error
                             int nErr = WSAGetLastError();
                             if(nErr != WSAEWOULDBLOCK && nErr != WSAEMSGSIZE && nErr != WSAEINTR && nErr != WSAEINPROGRESS) {
-                                if(!pnode->fDisconnect) {
+                                if(! pnode->fDisconnect) {
                                     logging::LogPrintf("socket recv error %d\n", nErr);
                                 }
                                 pnode->CloseSocketDisconnect();

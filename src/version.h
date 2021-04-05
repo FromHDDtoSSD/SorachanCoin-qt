@@ -15,11 +15,6 @@
 //
 #define strCoinName  "SorachanCoin"
 #define strCoinNameL "sorachancoin"
-namespace coin_param
-{
-    const std::string strEcho = "SorachanCoin_Echo";
-    const std::string strQuantum = "SorachanCoin_Quantum";
-}
 
 namespace version
 {
