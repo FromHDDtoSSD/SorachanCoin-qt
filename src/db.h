@@ -786,6 +786,14 @@ private:
     std::vector<char> *const pvch;
 };
 
+class CDBStreamInvalid {
+public:
+    CDBStreamInvalid() noexcept : dbinvalid((char *)0, 1) {}
+    CDBStream &get() noexcept {return dbinvalid;}
+private:
+    CDBStream dbinvalid;
+};
+
 /**
  * Berkeley DB
  * RAII class that provides access to a Berkeley database

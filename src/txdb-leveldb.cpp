@@ -500,23 +500,14 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
     // Now read each entry.
     int ret;
-    std::vector<char> vchKey;
-    CDBStream ssKey(&vchKey);
     std::vector<char> vchValue;
     CDBStream ssValue(&vchValue, 10000);
-    while((ret=CSqliteDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND)
+    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid().get(), ssValue))!=DB_NOTFOUND)
     {
         if(ret>0)
             return logging::error("LoadBlockIndex() : sql read failure");
 
-        // Unpack keys and values.
-        //std::string strType;
-        //::Unserialize(ssKey, strType);
-
-        // Did we reach the end of the data to read?
-        //if (args_bool::fRequestShutdown || strType != "blockindex") {
-        //    break;
-        //}
+        // Unpack values.
         if (args_bool::fRequestShutdown)
             break;
 

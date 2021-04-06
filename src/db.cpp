@@ -714,8 +714,10 @@ int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStre
             const int valuesize = ::sqlite3_column_bytes(stmt, 1) / sizeof(char);
 
             try {
-                ssKey.clear();
-                ssKey.write(pkey, keysize);
+                if(ssKey.data()!=(char *)0) {
+                    ssKey.clear();
+                    ssKey.write(pkey, keysize);
+                }
                 ssValue.clear();
                 ssValue.write(pvalue, valuesize);
             } catch (const std::exception &) {

@@ -903,8 +903,9 @@ bool entry::AppInit2(bool restart/*=false*/)
         return InitError(msg);
     }
 
+    /*
 #if defined(BLK_SQL_MODE) && defined(USE_LEVELDB)
-    bool fPortLevelDBtoSqlite = true;//map_arg::GetBoolArg("-portblockchain", false);
+    bool fPortLevelDBtoSqlite = map_arg::GetBoolArg("-portblockchain", false);
     if(!args_bool::fServer && fPortLevelDBtoSqlite) {
         // [Option] port from LevelDB to CSqliteDB
         const fs::path leveldb_path = iofs::GetDataDir() / CLevelDBEnv::getname_mainchain();
@@ -921,6 +922,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
 #endif
+    */
 
 #if defined(WALLET_SQL_MODE) && defined(USE_BERKELEYDB)
     // port from CDB to CSqliteDB
