@@ -6,8 +6,8 @@
 
 #include <map>
 #include <boost/version.hpp>
-#include <boost/filesystem.hpp>
-#include <boost/filesystem/fstream.hpp>
+//#include <boost/filesystem.hpp>
+//#include <boost/filesystem/fstream.hpp>
 #ifdef USE_LEVELDB
 # include <leveldb/env.h>
 # include <leveldb/cache.h>
@@ -35,36 +35,52 @@ CTxDBHybrid::~CTxDBHybrid() {}
 static void leveldb_oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
     if (fRemoveOld) {
-        fs::remove_all(directory); // remove directory
+        fsbridge::dir_safe_remove_all(directory); // remove directory
         unsigned int nFile = 1;
         for (;;) {
             fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
 
             // Break if no such file
-            if (! fs::exists(strBlockFile)) {
+            if (! fsbridge::file_exists(strBlockFile))
                 break;
-            }
 
-            fs::remove(strBlockFile);
+            fsbridge::file_remove(strBlockFile);
             ++nFile;
         }
     }
 }
 
+// extern (from LevelDB to SQLite)
+void leveldb_to_sqlite_blockchain() {
+    fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
+    if(! fsbridge::file_exists(sqlpath)) {
+        leveldb_oldblockindex_remove(true);
+        return;
+    }
+
+    size_t size = 100*1024;
+    if(! fsbridge::file_size(sqlpath, &size))
+        return;
+
+    // removed if blkmainchain.sql size < 20KB
+    debugcs::instance() << "sqlblockchain size: " << size << debugcs::endl();
+    if(size < 20 * 1024)
+        leveldb_oldblockindex_remove(true);
+}
+
 static void sqlite_oldblockindex_remove(bool fRemoveOld) {
     fs::path sqlfile = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
     if (fRemoveOld) {
-        fs::remove(sqlfile);
+        fsbridge::file_remove(sqlfile);
         unsigned int nFile = 1;
         for (;;) {
             fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
 
             // Break if no such file
-            if (! fs::exists(strBlockFile)) {
+            if (! fsbridge::file_exists(strBlockFile))
                 break;
-            }
 
-            fs::remove(strBlockFile);
+            fsbridge::file_remove(strBlockFile);
             ++nFile;
         }
     }
@@ -502,7 +518,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     int ret;
     std::vector<char> vchValue;
     CDBStream ssValue(&vchValue, 10000);
-    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid().get(), ssValue))!=DB_NOTFOUND)
+    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid(), ssValue))!=DB_NOTFOUND)
     {
         if(ret>0)
             return logging::error("LoadBlockIndex() : sql read failure");

@@ -25,8 +25,15 @@ FILE *fopen(const fs::path &p, const char *mode) {
 #ifndef WIN32
     return ::fopen(p.string().c_str(), mode);
 #else
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t> utf8_cvt;
-    return ::_wfopen(p.wstring().c_str(), utf8_cvt.from_bytes(mode).c_str());
+    //std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>,wchar_t> utf8_cvt;
+    //return ::_wfopen(p.wstring().c_str(), utf8_cvt.from_bytes(mode).c_str());
+    FILE *fp;
+    errno_t err = ::fopen_s(&fp, p.string().c_str(), mode);
+    if(err!=0) {
+        debugcs::instance() << "fsbridge::fopen errno: " << err << debugcs::endl();
+        return nullptr;
+    }
+    return fp;
 #endif
 }
 
@@ -103,6 +110,11 @@ bool file_remove(const fs::path &abspath) {
 bool dir_create(const fs::path &absdir, bool fexists_ok/*=true*/) {
     if(fexists_ok && dir_exists(absdir)) return true;
     return fs::create_directory(absdir);
+}
+
+bool dir_creaties(const fs::path &absdir, bool fexists_ok/*=true*/) {
+    if(fexists_ok && dir_exists(absdir)) return true;
+    return fs::create_directories(absdir);
 }
 
 bool dir_is(const fs::path &absdir) {

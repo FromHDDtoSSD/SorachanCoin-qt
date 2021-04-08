@@ -39,9 +39,9 @@ public:
             READWRITE(addr);
         }
     };
-	CAddrDB();
-	bool Write(const CAddrMan &addr);
-	bool Read(CAddrMan &addr);
+    CAddrDB();
+    bool Write(const CAddrMan &addr);
+    bool Read(CAddrMan &addr);
 private:
     CSqliteDB sqldb;
 };

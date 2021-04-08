@@ -42,6 +42,7 @@ namespace fsbridge {
 
     // directory
     bool dir_create(const fs::path &absdir, bool fexists_ok=true);
+    bool dir_creaties(const fs::path &absdir, bool fexists_ok=true);
     bool dir_is(const fs::path &absdir);
     bool dir_exists(const fs::path &absdir);
     bool dir_safe_remove_all(const fs::path &absdir);

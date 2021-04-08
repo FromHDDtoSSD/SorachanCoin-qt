@@ -41,14 +41,21 @@ bool BCLog::Logger::OpenDebugLog() {
 
     assert(m_fileout == nullptr);
     // if(m_fileout) ::fclose(m_fileout);
-    assert(!m_file_path.empty());
+    assert(! m_file_path.empty());
+    fs::path dir = m_file_path;
+    dir.remove_filename();
+    fsbridge::dir_create(dir);
+    //debugcs::instance() << "open logging path: " << m_file_path.string().c_str() << debugcs::endl();
     m_fileout = fsbridge::fopen(m_file_path, "a");
-    if (! m_fileout)
+    if (! m_fileout) {
+        debugcs::instance() << "open FAIL logging path: " << m_file_path.string().c_str() << debugcs::endl();
         return false;
+    }
+    debugcs::instance() << "open OK logging path: " << m_file_path.string().c_str() << debugcs::endl();
 
     setbuf(m_fileout, nullptr); // unbuffered
     // dump buffered messages from before we opened the log
-    while (!m_msgs_before_open.empty()) {
+    while (! m_msgs_before_open.empty()) {
         FileWriteStr(m_msgs_before_open.front(), m_fileout);
         m_msgs_before_open.pop_front();
     }

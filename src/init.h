@@ -71,4 +71,7 @@ public:
     static bool AppInit2(bool restart=false);
 };
 
+// txdb-leveldb.cpp
+extern void leveldb_to_sqlite_blockchain();
+
 #endif

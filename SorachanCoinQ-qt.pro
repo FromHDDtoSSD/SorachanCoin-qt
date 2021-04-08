@@ -77,6 +77,7 @@ DEBUG_ALGO_CS_OUTPUT=0
 USE_DBUS=0
 USE_BERKELEYDB=1
 USE_LEVELDB=0
+USE_LEBRESSL=1
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -330,6 +331,16 @@ contains(USE_BLK_SQLITE, -) {
     contains(USE_WALLET_SQLITE, -) {
         LIBS -= $$SQLITE_LIB_PATH
     }
+}
+
+#
+# LebreSSL
+#
+contains(USE_LEBRESSL, 1) {
+    message(Using LebreSSL)
+    DEFINES += USE_LEBRESSL
+} else {
+    message(Using OpenSSL)
 }
 
 #

@@ -714,12 +714,14 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
 
-    // ********************************************************* log open
+    // ********************************************************* open log and remove old blockchain
     I_DEBUG_CS("log open")
     if(restart==false) {
         InitLogging();
         OpenDebugFile();
     }
+
+    leveldb_to_sqlite_blockchain();
 
     // ********************************************************* Step 3: parameter-to-internal-flags
     I_DEBUG_CS("Step 3: parameter-to-internal-flags")

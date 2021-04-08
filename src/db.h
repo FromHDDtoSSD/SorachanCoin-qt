@@ -787,9 +787,15 @@ private:
 };
 
 class CDBStreamInvalid {
+    CDBStreamInvalid(const CDBStreamInvalid &)=delete;
+    CDBStreamInvalid(CDBStreamInvalid &&)=delete;
+    CDBStreamInvalid &operator=(CDBStreamInvalid &)=delete;
+    CDBStreamInvalid &operator=(const CDBStreamInvalid &&)=delete;
 public:
     CDBStreamInvalid() noexcept : dbinvalid((char *)0, 1) {}
-    CDBStream &get() noexcept {return dbinvalid;}
+    operator CDBStream &() noexcept {
+        return dbinvalid;
+    }
 private:
     CDBStream dbinvalid;
 };

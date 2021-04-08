@@ -26,7 +26,7 @@ bool CAddrDB::Write(const CAddrMan &addr) {
     ssHash << adi;
     uint256 checksum = hash_basis::Hash(ssHash.begin(), ssHash.end());
 
-    if(! sqldb.Write(std::make_pair(std::string("addrdb"), checksum), adi))
+    if(! sqldb.Write(std::string("addrdb"), std::make_pair(adi, checksum)))
         return logging::error("CAddrman::Write() : I/O error");
 
     debugcs::instance() << "CAddrDB Write() success" << debugcs::endl();
@@ -43,12 +43,12 @@ bool CAddrDB::Read(CAddrMan &addr) {
         return logging::error("CAddrman::Read() : no data");
 
     std::string str;
-    uint256 checksum;
     ssKey >> str;
-    ssKey >> checksum;
 
     addrdb_info adi;
+    uint256 checksum;
     ssValue >> adi;
+    ssValue >> checksum;
     CDataStream ssHash;
     ssHash.reserve(1000);
     ssHash << adi;
