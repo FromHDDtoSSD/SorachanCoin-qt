@@ -428,6 +428,9 @@ void TransactionView::showDetails()
     if(! transactionView->selectionModel()) {
         return;
     }
+    if(block_notify<uint256>::IsInitialBlockDownload()) {
+        return;
+    }
 
     QModelIndexList selection = transactionView->selectionModel()->selectedRows();
     if(! selection.isEmpty()) {

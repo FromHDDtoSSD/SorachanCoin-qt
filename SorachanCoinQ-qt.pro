@@ -78,6 +78,7 @@ USE_DBUS=0
 USE_BERKELEYDB=1
 USE_LEVELDB=0
 USE_LEBRESSL=1
+USE_AUTOCHECKPOINTS=0
 BITCOIN_NEED_QT_PLUGINS=0
 64BIT_BUILD=0
 
@@ -341,6 +342,16 @@ contains(USE_LEBRESSL, 1) {
     DEFINES += USE_LEBRESSL
 } else {
     message(Using OpenSSL)
+}
+
+#
+# Autocheckpoints
+#
+contains(USE_AUTOCHECKPOINTS, 1) {
+    message(Using Autocheckpoints)
+    DEFINES += USE_AUTOCHECKPOINTS
+} else {
+    message(Using Autocheckpoints)
 }
 
 #

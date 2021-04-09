@@ -721,7 +721,9 @@ bool entry::AppInit2(bool restart/*=false*/)
         OpenDebugFile();
     }
 
+#ifndef USE_LEVELDB
     leveldb_to_sqlite_blockchain();
+#endif
 
     // ********************************************************* Step 3: parameter-to-internal-flags
     I_DEBUG_CS("Step 3: parameter-to-internal-flags")
@@ -1362,10 +1364,12 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
     // ********************************************************* Step 10: load Autocheckpoints.dat
-    I_DEBUG_CS("Step 10: load Autocheckpoints.dat")
+    I_DEBUG_CS("Step 10: load Autocheckpoints")
 
-    //if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
-    //    return false;
+#ifdef USE_AUTOCHECKPOINTS
+    if(! CAutocheckPoint::get_instance().BuildAutocheckPoints())
+        return false;
+#endif
 
     // ********************************************************* Step 11: load peers
     I_DEBUG_CS("Step 11: load peers")
