@@ -35,7 +35,7 @@ public:
         ssData << data;
         CDataStream ssKey;
         ssKey.reserve(1000);
-        ssKey << hash_basis::Hash65536(&ssData[0], &ssData[0]+ssData.size());
+        ssKey << hash_basis::Hash(&ssData[0], &ssData[0]+ssData.size());
         if(! sqldb.Write(std::make_pair(std::string("qhash"), ssKey), ssData))
             return false;
         CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_autocheckpoints());
@@ -52,9 +52,11 @@ public:
         while((ret=IDB::ReadAtCursor(ite, ssKey, ssValue))!=DB_NOTFOUND) {
             if(ret!=0)
                 break;
-            std::pair<std::string, uint65536> key;
-            ssKey >> key;
-            if(key.first!="qhash" && key.second!=hash_basis::Hash65536(&ssValue[0], &ssValue[0]+ssValue.size()))
+            std::string str;
+            uint256 hash;
+            ssKey >> str;
+            ssKey >> hash;
+            if(str!="qhash" && hash!=hash_basis::Hash(&ssValue[0], &ssValue[0]+ssValue.size()))
                 return false;
             AutoCheckData value;
             ssValue >> value;
@@ -129,7 +131,8 @@ bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckp
         const CBlockIndex_impl<T> *const bestBlock = block_info::mapBlockIndex[block_info::hashBestChain];
         for (int i=0; i < nCheckBlocks; ++i) {
             const auto &autocpValue = mapAutocheck.find(bestBlock->get_nHeight()-i);
-            if(autocpValue==mapAutocheck.end()) continue;
+            if(autocpValue==mapAutocheck.end())
+                continue;
 
             const CBlockIndex_impl<T> *target = bestBlock;
             for(;;) {
@@ -152,7 +155,7 @@ bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckp
 template <typename T>
 bool CAutocheckPoint_impl<T>::Sign() const {
     LOCK(cs_autocp);
-    // under development (v3, instead of checksum hash_65536)
+    // under development (v3, instead of checksum sha256)
 
     return false;
 }
@@ -160,7 +163,7 @@ bool CAutocheckPoint_impl<T>::Sign() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::Verify() const {
     LOCK(cs_autocp);
-    // under development (v3, instead of checksum hash_65536)
+    // under development (v3, instead of checksum sha256)
 
     return false;
 }
@@ -169,15 +172,6 @@ template <typename T>
 bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     LOCK(cs_autocp);
     const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
-
-    /* checked mapBlockIndex
-    for(const auto &ref: block_info::mapBlockIndex) {
-        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex hash: %s", ref.first.ToString()))
-        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex blockHeight: %d", ref.second->get_nHeight()))
-        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex prev: %s", ref.second->get_hashPrevBlock().ToString()))
-        CP_DEBUG_CS(tfm::format("block_info::mapBlockIndex prev2: %s", ref.second->get_pprev()->get_phashBlock()->ToString()))
-    }
-    */
 
     assert(block);
     CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block));
