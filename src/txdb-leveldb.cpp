@@ -220,10 +220,13 @@ template <typename HASH>
 bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
     //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
+    /*
     bool ret1 = Write(std::string("hashBestChain"), hashBestChain);
     bool ret2 = Write(std::string("hashGenesisChain"),
                      (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
     return ret1 && ret2;
+    */
+    return Write(std::string("hashBestChain"), hashBestChain);
 }
 
 template <typename HASH>

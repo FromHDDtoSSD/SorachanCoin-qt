@@ -718,8 +718,10 @@ int CSqliteDB::ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStre
                     ssKey.clear();
                     ssKey.write(pkey, keysize);
                 }
-                ssValue.clear();
-                ssValue.write(pvalue, valuesize);
+                if(ssValue.data()!=(char *)0) {
+                    ssValue.clear();
+                    ssValue.write(pvalue, valuesize);
+                }
             } catch (const std::exception &) {
                 throw std::runtime_error("CSqliteDB::ReadAtCursor memory allocate failure");
             }
