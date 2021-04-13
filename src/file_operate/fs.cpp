@@ -71,6 +71,50 @@ bool file_copy(const fs::path &src, const fs::path &dest) {
 #endif
 }
 
+bool file_copy_ap(const fs::path &src, const std::vector<fs::path> &target) {
+    class AUTOFILE {
+        AUTOFILE()=delete;
+        AUTOFILE(AUTOFILE &&)=delete;
+        AUTOFILE(const AUTOFILE &)=delete;
+        AUTOFILE &operator=(const AUTOFILE &)=delete;
+        AUTOFILE &operator=(AUTOFILE &&)=delete;
+    public:
+        explicit AUTOFILE(FILE *fpIn) noexcept : fp(fpIn) {}
+        ~AUTOFILE() {if(fp) ::fclose(fp);}
+        operator FILE *() {return fp;}
+    private:
+        FILE *fp;
+    };
+
+    AUTOFILE wp(::fopen(src.string().c_str(), "wb"));
+    if(wp==(FILE *)nullptr)
+        return false;
+    for(int i=0; i<target.size(); ++i) {
+        size_t remain=0;
+        if(! file_size(target[i].string().c_str(), &remain))
+            return false;
+        AUTOFILE rp(::fopen(target[i].string().c_str(), "rb"));
+        if(rp==(FILE *)nullptr)
+            return false;
+        while(remain>0) {
+            char buf[1024];
+            size_t size = ::fread(buf, sizeof(char), sizeof(buf)/sizeof(char), rp);
+            if(::ferror(rp)!=0)
+                return false;
+            ::clearerr(rp);
+            if(size==0)
+                break;
+            if(::fwrite(buf, sizeof(char), size, wp)!=size)
+                return false;
+            if(::ferror(wp)!=0)
+                return false;
+            ::clearerr(wp);
+            remain -= size;
+        }
+    }
+    return true;
+}
+
 bool file_rename(const fs::path &src, const fs::path &dest) {
     if(! file_exists(src)) return false;
     if(dest.string().empty()) return false;

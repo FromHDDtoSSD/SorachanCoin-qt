@@ -98,16 +98,14 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
 {
     class NET_ADDR_TYPE
     {
+        NET_ADDR_TYPE()=delete;
     private:
-        NET_ADDR_TYPE(); // {}
-
         CNetAddr netAddr;
         GET_PORT_TYPE type;
         void insert(const CNetAddr &_netAddr, GET_PORT_TYPE _type) {
             netAddr = _netAddr;
             type = _type;
         }
-
     public:
         bool operator==(const NET_ADDR_TYPE &obj) const {
             return (netAddr == obj.netAddr) && (type == obj.type);
@@ -127,19 +125,15 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
         }
     };
 
-    //logging::LogPrintf("GetDefaultPort type_%d\n", (int)type);
     const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet : tcp_port::uMainnet;
-
     {
         LOCK(net_basis::cs_port);
         static std::map<NET_ADDR_TYPE, unsigned short> map_port_info;
-
         if(pNetAddr || pszDest) {
-            for(int i = 0; i < tcp_port::nPortLen; ++i)
-            {
-                if(args_bool::fShutdown) {
+            for(int i = 0; i < tcp_port::nPortLen; ++i) {
+                if(args_bool::fShutdown)
                     break;
-                }
+
                 unsigned short port_target = p_uport[i];
                 CService addrConnect; // pNetAddr: set, pszDest: get
                 SOCKET hSocket;
@@ -171,7 +165,6 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
 #endif
                         netbase::manage::CloseSocket(hSocket);
                         util::Sleep(20);
-                        //logging::LogPrintf("GetDefaultPort port_target %d\n", (int)port_target);
                         return port_target;
                     } else {
                         netbase::manage::CloseSocket(hSocket);
@@ -189,39 +182,28 @@ unsigned short net_basis::GetDefaultPort(GET_PORT_TYPE type, const CNetAddr *pNe
                 std::map<NET_ADDR_TYPE, unsigned short>::const_iterator ite = map_port_info.find(key);
                 if(ite != map_port_info.end()) {
                     const std::pair<const NET_ADDR_TYPE, unsigned short> data = *ite;
-                    //logging::LogPrintf("GetDefaultPort map_port find %d\n", (int)data.second);
                     return data.second;
                 }
             }
         }
     }
 
-    //
-    // no connect or addnode or default (Ver1.0.0 - Ver1.0.4)
-    //
-
-    //logging::LogPrintf("GetDefaultPort default selected %d\n", (int)p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default]);
+    // no connect or addnode or default (v1.0.0 - v1.0.4)
     return p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default];
 }
 
 unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN */)
 {
-    //
-    // Listen port : SHA256_BLOCKCHAIN, QUANTUM_BLOCKCHAIN
-    //
     const unsigned short *p_uport = (args_bool::fTestNet) ? tcp_port::uTestnet : tcp_port::uMainnet;
-
     unsigned short port_default = p_uport[args_bool::fTestNet ? tcp_port::nTestnet_default : tcp_port::nMainnet_default];
     if(type == SHA256_BLOCKCHAIN) {
         unsigned short port = static_cast<unsigned short>(map_arg::GetArg("-port", port_default));
-        if(port_default != port) {
+        if(port_default != port)
             return port;
-        }
     } else if(type == QUANTUM_BLOCKCHAIN) {
         unsigned short port = static_cast<unsigned short>(map_arg::GetArg("-port-quantum", port_default));
-        if(port_default != port) {
+        if(port_default != port)
             return port;
-        }
     }
 
     {
@@ -230,7 +212,6 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         std::map<GET_PORT_TYPE, unsigned short>::const_iterator ite = map_port_type.find(type);
         if(ite != map_port_type.end()) {
             std::pair<GET_PORT_TYPE, unsigned short> data = *ite;
-            //logging::LogPrintf("GetListenPort map_port %d\n", (int)data.second);
             return data.second;
         } else {
             std::string strError;
@@ -241,7 +222,6 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
             {
                 unsigned short port_target = p_uport[i];
                 if(entry::BindListenPort(CService(inaddr_loopback, port_target), strError, true)) {
-                    //logging::LogPrintf("GetListenPort confirm type %d, port %d\n", type, (int)port_target);
                     std::pair<GET_PORT_TYPE, unsigned short> data = std::make_pair(type, port_target);
                     map_port_type.insert(data);
                     return port_target;
@@ -251,7 +231,6 @@ unsigned short net_basis::GetListenPort(GET_PORT_TYPE type/* = SHA256_BLOCKCHAIN
         }
 
         // can not bind
-        //logging::LogPrintf("GetListenPort can not bind port %d\n", (int)port_default);
         return port_default;
     }
 }
@@ -261,13 +240,11 @@ void CNode::PushGetBlocks(CBlockIndex *pindexBegin, uint256 hashEnd)
     //
     // Filter out duplicate requests
     //
-    if(pindexBegin == pindexLastGetBlocksBegin && hashEnd == hashLastGetBlocksEnd) {
+    if(pindexBegin == pindexLastGetBlocksBegin && hashEnd == hashLastGetBlocksEnd)
         return;
-    }
 
     pindexLastGetBlocksBegin = pindexBegin;
     hashLastGetBlocksEnd = hashEnd;
-
     PushMessage("getblocks", CBlockLocator(pindexBegin), hashEnd);
 }
 
@@ -276,13 +253,11 @@ void CNode::PushGetBlocks(CBlockIndex *pindexBegin, uint256 hashEnd)
 //
 bool ext_ip::GetLocal(CService &addr, const CNetAddr *paddrPeer/* = nullptr */)
 {
-    if(args_bool::fNoListen) {
+    if(args_bool::fNoListen)
         return false;
-    }
 
     int nBestScore = -1;
     int nBestReachability = -1;
-
     {
         LOCK(ext_ip::cs_mapLocalHost);
         for(std::map<CNetAddr, ext_ip::LocalServiceInfo>::iterator it = ext_ip::mapLocalHost.begin(); it != ext_ip::mapLocalHost.end(); ++it)

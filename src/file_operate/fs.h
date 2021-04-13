@@ -34,6 +34,7 @@ namespace fsbridge {
     bool file_is(const fs::path &absdir);
     bool file_size(const fs::path &p, size_t *size);
     bool file_copy(const fs::path &src, const fs::path &dest);
+    bool file_copy_ap(const fs::path &src, const std::vector<fs::path> &target);
     bool file_rename(const fs::path &src, const fs::path &dest);
     bool file_rename(const fs::path &src, const std::string &suffix);
     bool file_exists(const fs::path &abspath);

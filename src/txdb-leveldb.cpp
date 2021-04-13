@@ -6,8 +6,6 @@
 
 #include <map>
 #include <boost/version.hpp>
-//#include <boost/filesystem.hpp>
-//#include <boost/filesystem/fstream.hpp>
 #ifdef USE_LEVELDB
 # include <leveldb/env.h>
 # include <leveldb/cache.h>
@@ -52,11 +50,17 @@ static void leveldb_oldblockindex_remove(bool fRemoveOld) {
 
 // extern (from LevelDB to SQLite)
 void leveldb_to_sqlite_blockchain() {
-    fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
-    if(! fsbridge::file_exists(sqlpath)) {
-        leveldb_oldblockindex_remove(true);
-        return;
+    std::vector<fs::path> blocksPath;
+    for(int nFile=0;;++nFile) {
+        fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04%", nFile);
+        if(! fsbridge::file_exists(strBlockFile))
+            break;
+        blocksPath.push_back(strBlockFile);
     }
+
+    fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
+    if(! fsbridge::file_exists(sqlpath))
+        return;
 
     size_t size = 100*1024;
     if(! fsbridge::file_size(sqlpath, &size))
@@ -64,8 +68,11 @@ void leveldb_to_sqlite_blockchain() {
 
     // removed if blkmainchain.sql size < 20KB
     debugcs::instance() << "sqlblockchain size: " << size << debugcs::endl();
-    if(size < 20 * 1024)
+    if(size < 20 * 1024) {
+        fs::path bootstrapPath = iofs::GetDataDir() / "bootstrap.dat";
+        fsbridge::file_copy_ap(bootstrapPath, blocksPath);
         leveldb_oldblockindex_remove(true);
+    }
 }
 
 static void sqlite_oldblockindex_remove(bool fRemoveOld) {
@@ -219,8 +226,8 @@ bool CTxDB_impl<HASH>::ReadHashBestChain(HASH &hashBestChain)
 template <typename HASH>
 bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
-    //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
     /*
+    debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
     bool ret1 = Write(std::string("hashBestChain"), hashBestChain);
     bool ret2 = Write(std::string("hashGenesisChain"),
                      (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
@@ -535,6 +542,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         HASH blockHash = diskindex.GetBlockHash();
         //debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
+        //if(diskindex.get_nHeight() > 1400000)
+        //    debugcs::instance() << "CTxDB_impl ReadAtCursor height: " << diskindex.get_nHeight() << debugcs::endl();
 
         // Construct block index object
         CBlockIndex_impl<HASH> *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
