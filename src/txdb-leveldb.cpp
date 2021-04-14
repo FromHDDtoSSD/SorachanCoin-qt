@@ -51,17 +51,26 @@ static void leveldb_oldblockindex_remove(bool fRemoveOld) {
 // extern (from LevelDB to SQLite)
 void leveldb_to_sqlite_blockchain() {
     std::vector<fs::path> blocksPath;
-    for(int nFile=0;;++nFile) {
-        fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04%", nFile);
+    for(int nFile=1;;++nFile) {
+        fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
+        debugcs::instance() << "strBlockFile path: " << strBlockFile.string().c_str() << debugcs::endl();
         if(! fsbridge::file_exists(strBlockFile))
             break;
         blocksPath.push_back(strBlockFile);
     }
 
+    // sqlite exists check
     fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
-    if(! fsbridge::file_exists(sqlpath))
+    if(! fsbridge::file_exists(sqlpath)) {
+        fs::path bootstrapPath = iofs::GetDataDir() / "bootstrap.dat";
+        if(! fsbridge::file_copy_ap(bootstrapPath, blocksPath)) {
+            debugcs::instance() << "sqlblockchain file_copy_cp failure" << debugcs::endl();
+        }
+        leveldb_oldblockindex_remove(true);
         return;
+    }
 
+    // sqlite size get
     size_t size = 100*1024;
     if(! fsbridge::file_size(sqlpath, &size))
         return;
@@ -70,7 +79,9 @@ void leveldb_to_sqlite_blockchain() {
     debugcs::instance() << "sqlblockchain size: " << size << debugcs::endl();
     if(size < 20 * 1024) {
         fs::path bootstrapPath = iofs::GetDataDir() / "bootstrap.dat";
-        fsbridge::file_copy_ap(bootstrapPath, blocksPath);
+        if(! fsbridge::file_copy_ap(bootstrapPath, blocksPath)) {
+            debugcs::instance() << "sqlblockchain file_copy_cp failure" << debugcs::endl();
+        }
         leveldb_oldblockindex_remove(true);
     }
 }

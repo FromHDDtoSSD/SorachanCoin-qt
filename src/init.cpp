@@ -598,15 +598,17 @@ bool entry::AppInit2(bool restart/*=false*/)
     // A failure is non-critical and needs no further attention!
     //
  #ifndef PROCESS_DEP_ENABLE
-  // We define this here, because GCCs winbase.h limits this to _WIN32_WINNT >= 0x0601 (Windows 7),
-  // which is not correct. Can be removed, when GCCs winbase.h is fixed!
-  #define PROCESS_DEP_ENABLE 0x00000001
+    // We define this here, because GCCs winbase.h limits this to _WIN32_WINNT >= 0x0601 (Windows 7),
+    // which is not correct. Can be removed, when GCCs winbase.h is fixed!
+ # define PROCESS_DEP_ENABLE 0x00000001
  #endif
 
-    typedef BOOL (WINAPI *PSETPROCDEPPOL)(DWORD);
-    PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(::GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
-    if (setProcDEPPol != NULL) {
-        setProcDEPPol(PROCESS_DEP_ENABLE);
+    {
+        typedef BOOL (WINAPI *PSETPROCDEPPOL)(DWORD);
+        PSETPROCDEPPOL setProcDEPPol = (PSETPROCDEPPOL)GetProcAddress(::GetModuleHandleA("Kernel32.dll"), "SetProcessDEPPolicy");
+        if (setProcDEPPol != nullptr) {
+            setProcDEPPol(PROCESS_DEP_ENABLE);
+        }
     }
 
     //
@@ -614,9 +616,8 @@ bool entry::AppInit2(bool restart/*=false*/)
     //
     WSADATA wsadata;
     int ret = ::WSAStartup(MAKEWORD(2,2), &wsadata);
-    if (ret != NO_ERROR) {
+    if (ret != NO_ERROR)
         return InitError(tfm::format("Error: TCP/IP socket library failed to start (WSAStartup returned error %d)", ret));
-    }
 #endif
 #ifndef WIN32
     umask(077);
@@ -628,8 +629,8 @@ bool entry::AppInit2(bool restart/*=false*/)
     sa.sa_handler = HandleSIGTERM;
     sigemptyset(&sa.sa_mask);
     sa.sa_flags = 0;
-    sigaction(SIGTERM, &sa, NULL);
-    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, nullptr);
+    sigaction(SIGINT, &sa, nullptr);
 
     //
     // Reopen debug.log on SIGHUP
@@ -638,7 +639,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     sa_hup.sa_handler = HandleSIGHUP;
     sigemptyset(&sa_hup.sa_mask);
     sa_hup.sa_flags = 0;
-    sigaction(SIGHUP, &sa_hup, NULL);
+    sigaction(SIGHUP, &sa_hup, nullptr);
 #endif
 
     // ********************************************************* Step 2: parameter interactions
@@ -722,6 +723,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     }
 
 #ifndef USE_LEVELDB
+    CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] migrate from LevelDB to SQLite, Blockchain database ..."));
     leveldb_to_sqlite_blockchain();
 #endif
 

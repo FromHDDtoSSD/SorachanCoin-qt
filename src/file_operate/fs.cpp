@@ -81,10 +81,13 @@ bool file_copy_ap(const fs::path &src, const std::vector<fs::path> &target) {
     public:
         explicit AUTOFILE(FILE *fpIn) noexcept : fp(fpIn) {}
         ~AUTOFILE() {if(fp) ::fclose(fp);}
-        operator FILE *() {return fp;}
+        operator FILE *() noexcept {return fp;}
     private:
         FILE *fp;
     };
+
+    if(target.size()==0)
+        return false;
 
     AUTOFILE wp(::fopen(src.string().c_str(), "wb"));
     if(wp==(FILE *)nullptr)
@@ -97,6 +100,7 @@ bool file_copy_ap(const fs::path &src, const std::vector<fs::path> &target) {
         if(rp==(FILE *)nullptr)
             return false;
         while(remain>0) {
+            //debugcs::instance() << "file_copy_ap remain: " << remain << debugcs::endl();
             char buf[1024];
             size_t size = ::fread(buf, sizeof(char), sizeof(buf)/sizeof(char), rp);
             if(::ferror(rp)!=0)
