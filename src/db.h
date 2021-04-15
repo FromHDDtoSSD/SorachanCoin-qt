@@ -624,7 +624,7 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_banlist(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_banlist(), getname_soraradb(), getname_wallet()});
         return obj;
     }
 
@@ -645,6 +645,9 @@ public:
     }
     static std::string getname_banlist() {
         return "banlist.dat";
+    }
+    static std::string getname_soraradb() {
+        return "soraradb.dat";
     }
     static std::string getname_wallet() {
         return "walletsql.dat";
