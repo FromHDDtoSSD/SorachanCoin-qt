@@ -625,6 +625,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
     return true;
 }
 
+#define ACCEPT_DEBUG_CS(k, v) debugcs::instance() << (k) << (v) << debugcs::endl()
 template <typename T>
 bool CBlock_impl<T>::AcceptBlock()
 {
@@ -640,10 +641,12 @@ bool CBlock_impl<T>::AcceptBlock()
 
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
+    ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
 
     // Check proof-of-work or proof-of-stake
     if (CBlockHeader<T>::nBits != diff::spacing::GetNextTargetRequired(pindexPrev, IsProofOfStake()))
         return DoS(100, logging::error("CBlock::AcceptBlock() : incorrect %s", IsProofOfWork() ? "proof-of-work" : "proof-of-stake"));
+    ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nBits: ", CBlockHeader<T>::nBits);
 
     int64_t nMedianTimePast = pindexPrev->GetMedianTimePast();
     int nMaxOffset = (args_bool::fTestNet || pindexPrev->get_nTime() < timestamps::BLOCKS_ADMIT_HOURS_SWITCH_TIME) ?
