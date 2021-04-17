@@ -552,7 +552,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssValue, diskindex);
 
         HASH blockHash = diskindex.GetBlockHash();
-        //debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
+        debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
         //if(diskindex.get_nHeight() > 1400000)
         //    debugcs::instance() << "CTxDB_impl ReadAtCursor height: " << diskindex.get_nHeight() << debugcs::endl();
 

@@ -1257,15 +1257,23 @@ IDB::DbIterator CSqliteDB::GetIteCursor() {
     return std::move(IDB::DbIterator(std::move(stmt), &cs_db, &cs_iterator, &fUsingIterator));
 }
 
-IDB::DbIterator CSqliteDB::GetIteCursor(std::string mkey) {
+IDB::DbIterator CSqliteDB::GetIteCursor(std::string mkey, bool asc/*=true*/) {
     LOCK(cs_db);
     ENTER_CRITICAL_SECTION(cs_iterator);
     fUsingIterator = true;
     sqlite3_stmt *stmt;
-    if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK) {
-        fUsingIterator = false;
-        LEAVE_CRITICAL_SECTION(cs_iterator);
-        throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+    if(asc) {
+        if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1 order by key asc;", -1, &stmt, nullptr)!=SQLITE_OK) {
+            fUsingIterator = false;
+            LEAVE_CRITICAL_SECTION(cs_iterator);
+            throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+        }
+    } else {
+        if(::sqlite3_prepare_v2(pdb, "select * from key_value where key like $1;", -1, &stmt, nullptr)!=SQLITE_OK) {
+            fUsingIterator = false;
+            LEAVE_CRITICAL_SECTION(cs_iterator);
+            throw std::runtime_error("CSqliteDB::GetIteCursor prepair failure");
+        }
     }
     if(::sqlite3_bind_blob(stmt, 1, (const char *)mkey.c_str(), mkey.size(), SQLITE_TRANSIENT)!=SQLITE_OK) {
         ::sqlite3_finalize(stmt);

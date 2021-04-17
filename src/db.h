@@ -1396,7 +1396,7 @@ public:
     virtual ~CSqliteDB();
 
     DbIterator GetIteCursor(); // all
-    DbIterator GetIteCursor(std::string mkey); // key partial(%mkey%) match
+    DbIterator GetIteCursor(std::string mkey, bool asc=true); // key partial(%mkey%) match
 
     // AtCursor for CSqliteDB
     static int ReadAtCursor(const DbIterator &pcursor, CDBStream &ssKey, CDBStream &ssValue, unsigned int fFlags = DB_NEXT);

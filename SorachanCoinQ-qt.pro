@@ -312,14 +312,14 @@ contains(USE_QRCODE, -) {
 #
 # SQLite
 #
-contains(USE_BLK_SQLITE, -) {
+contains(USE_BLK_SQLITE, 0) {
     message(Blockchain with LevelDB)
 } else {
     message(Blockchain with SQLite)
     DEFINES += BLK_SQL_MODE
 }
 
-contains(USE_WALLET_SQLITE, -) {
+contains(USE_WALLET_SQLITE, 0) {
     message(Wallet with BerkeleyDB)
 } else {
     message(Wallet with SQLite)
@@ -328,7 +328,7 @@ contains(USE_WALLET_SQLITE, -) {
 
 INCLUDEPATH += $$SQLITE_INC_PATH
 LIBS += $$SQLITE_LIB_PATH
-contains(USE_BLK_SQLITE, -) {
+contains(USE_BLK_SQLITE, 1) {
     contains(USE_WALLET_SQLITE, -) {
         LIBS -= $$SQLITE_LIB_PATH
     }
