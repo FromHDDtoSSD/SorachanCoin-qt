@@ -17,6 +17,7 @@
 #include <prime/autocheckpoint.h>
 #include <util/system.h>
 #include <block/blockdata_db.h>
+#include <rpc/bitcoinrpc.h> // cs_accept
 
 /*
 ** collect Block Print
@@ -625,10 +626,13 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
     return true;
 }
 
-#define ACCEPT_DEBUG_CS(k, v) debugcs::instance() << (k) << (v) << debugcs::endl()
+//#define ACCEPT_DEBUG_CS(k, v) debugcs::instance() << (k) << (v) << debugcs::endl()
+#define ACCEPT_DEBUG_CS(k, v)
 template <typename T>
 bool CBlock_impl<T>::AcceptBlock()
 {
+    LOCK(bitrpc::cs_accept);
+
     // Check for duplicate
     T hash = CBlockHeader_impl<T>::GetHash();
     if (block_info::mapBlockIndex.count(hash))

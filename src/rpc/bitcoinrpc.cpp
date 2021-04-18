@@ -30,6 +30,7 @@
 std::map<std::string, const CRPCTable::CRPCCommand *> CRPCTable::mapCommands;
 std::string bitrpc::strRPCUserColonPass;
 CCriticalSection bitrpc::cs_THREAD_RPCHANDLER;
+CCriticalSection bitrpc::cs_accept;
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
 CCriticalSection CRPCTable::cs_getwork;
@@ -1003,6 +1004,7 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData
 }
 
 void bitrpc::ThreadRPCServer3(void *parg) {
+    LOCK(cs_accept);
     logging::LogPrintf("ThreadRPCServer3 started\n");
     arg_data *darg = reinterpret_cast<arg_data *>(parg);
 

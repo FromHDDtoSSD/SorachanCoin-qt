@@ -533,7 +533,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 #ifdef BLK_SQL_MODE
 
     // Seek to start key.
-    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
+    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%", false));
 
     // Now read each entry.
     int ret;
