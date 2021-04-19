@@ -38,7 +38,7 @@ public:
 
 #ifdef BLK_SQL_MODE
     IDB::DbIterator GetIteCursor(std::string mkey) {
-        return std::move(sqldb.GetIteCursor(mkey));
+        return std::move(sqldb.GetIteCursor(mkey, false));
     }
 
     template <typename K, typename T>

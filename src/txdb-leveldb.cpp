@@ -237,14 +237,12 @@ bool CTxDB_impl<HASH>::ReadHashBestChain(HASH &hashBestChain)
 template <typename HASH>
 bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
 {
-    /*
-    debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
+    //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
     bool ret1 = Write(std::string("hashBestChain"), hashBestChain);
     bool ret2 = Write(std::string("hashGenesisChain"),
                      (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
     return ret1 && ret2;
-    */
-    return Write(std::string("hashBestChain"), hashBestChain);
+    //return Write(std::string("hashBestChain"), hashBestChain);
 }
 
 template <typename HASH>
@@ -533,7 +531,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 #ifdef BLK_SQL_MODE
 
     // Seek to start key.
-    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%", false));
+    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
 
     // Now read each entry.
     int ret;
@@ -552,7 +550,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssValue, diskindex);
 
         HASH blockHash = diskindex.GetBlockHash();
-        debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
+        //debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
         //if(diskindex.get_nHeight() > 1400000)
         //    debugcs::instance() << "CTxDB_impl ReadAtCursor height: " << diskindex.get_nHeight() << debugcs::endl();
 
