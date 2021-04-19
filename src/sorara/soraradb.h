@@ -6,6 +6,7 @@
 #define SORA_SORARADB_H
 
 #include <db.h>
+//#include <winapi/sectorbase.h>
 
 #if defined(USE_LEBRESSL) && defined(WIN32)
 # include <windows.h>
@@ -17,6 +18,39 @@ static inline int RAND_event(UINT message, WPARAM wp, LPARAM lp) {
     return 1;
 }
 #endif
+
+//
+// ProofOfSpace [PoSpace]
+// ref: https://github.com/Chia-Network/chia-blockchain
+//
+class CProofOfSpace final {
+    CProofOfSpace()=delete;
+    CProofOfSpace(const CProofOfSpace &)=delete;
+    CProofOfSpace(CProofOfSpace &&)=delete;
+    CProofOfSpace &operator=(const CProofOfSpace &)=delete;
+    CProofOfSpace &operator=(CProofOfSpace &&)=delete;
+public:
+    //CProofOfSpace &get_instance() noexcept {
+    //    static CProofOfSpace obj;
+    //    return obj;
+    //}
+private:
+    //int64_t fromSectorsToGiB(sector_t sectors) const noexcept {
+    //    return (int64_t)BytesPerSector * sectors / (int64_t)(1024*1024*1024);
+    //}
+    static int64_t get_plotsize(int k) noexcept {
+        assert(k>=10);
+        return (int64_t)780 * k * (2<<(k-10));
+    }
+
+    explicit CProofOfSpace(size_t BytesPerSectorIn);
+    bool WriteVersion(int nVersion);
+    bool ReadVersion(int &nVersion);
+
+    size_t BytesPerSector;
+    //sector_io sectorPoSpace;
+    CSqliteDB sqlPoSpace;
+};
 
 class CSoraraDB final {
     CSoraraDB()=delete;

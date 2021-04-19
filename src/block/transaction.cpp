@@ -564,7 +564,7 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
 
 template <typename T>
 bool CTransaction_impl<T>::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
-    debugcs::instance() << "CTransaction ReadFromDisk pos: " << pos.get_nTxPos() << " pfileRet: " << (intptr_t)pfileRet << debugcs::endl();
+    //debugcs::instance() << "CTransaction ReadFromDisk pos: " << pos.get_nTxPos() << " pfileRet: " << (intptr_t)pfileRet << debugcs::endl();
 
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(pos.get_nFile(), 0, pfileRet ? "rb+" : "rb"), SER_DISK, version::CLIENT_VERSION);
     if (! filein) return logging::error("CTransaction_impl<T>::ReadFromDisk() : file_open::OpenBlockFile failed");
