@@ -54,8 +54,10 @@ void leveldb_oldblockchain_remove_once() {
     // sqlite size get
     fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
     size_t size = 100*1024;
-    if(! fsbridge::file_size(sqlpath, &size))
+    if(! fsbridge::file_size(sqlpath, &size)) {
+        leveldb_oldblockindex_remove(true);
         return;
+    }
 
     // removed if blkmainchain.sql size < 20KB
     debugcs::instance() << "sqlblockchain size: " << size << debugcs::endl();
