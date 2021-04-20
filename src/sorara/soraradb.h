@@ -6,7 +6,6 @@
 #define SORA_SORARADB_H
 
 #include <db.h>
-//#include <winapi/sectorbase.h>
 
 #if defined(USE_LEBRESSL) && defined(WIN32)
 # include <windows.h>
@@ -23,32 +22,40 @@ static inline int RAND_event(UINT message, WPARAM wp, LPARAM lp) {
 // ProofOfSpace [PoSpace]
 // ref: https://github.com/Chia-Network/chia-blockchain
 //
+using pos_t = int64_t;
+struct PlotHeader {
+    union {
+        unsigned char mdata[sizeof(uint65536)];
+        uint256 hash;
+    };
+};
+struct PoSpaceEntry {
+    pos_t lp;
+    pos_t rp;
+    unsigned char reserved[48];
+    unsigned char data[1];
+};
 class CProofOfSpace final {
-    CProofOfSpace()=delete;
     CProofOfSpace(const CProofOfSpace &)=delete;
     CProofOfSpace(CProofOfSpace &&)=delete;
     CProofOfSpace &operator=(const CProofOfSpace &)=delete;
     CProofOfSpace &operator=(CProofOfSpace &&)=delete;
 public:
-    //CProofOfSpace &get_instance() noexcept {
-    //    static CProofOfSpace obj;
-    //    return obj;
-    //}
-private:
-    //int64_t fromSectorsToGiB(sector_t sectors) const noexcept {
-    //    return (int64_t)BytesPerSector * sectors / (int64_t)(1024*1024*1024);
-    //}
-    static int64_t get_plotsize(int k) noexcept {
-        assert(k>=10);
-        return (int64_t)780 * k * (2<<(k-10));
+    CProofOfSpace &get_instance() noexcept {
+        static CProofOfSpace obj;
+        return obj;
     }
 
-    explicit CProofOfSpace(size_t BytesPerSectorIn);
+private:
+    static int64_t get_plotsize(int k) noexcept {
+        assert(k>=10);
+        return (int64_t)780 * k * (2<<(k-10)) + sizeof(PlotHeader);
+    }
+
+    explicit CProofOfSpace();
     bool WriteVersion(int nVersion);
     bool ReadVersion(int &nVersion);
 
-    size_t BytesPerSector;
-    //sector_io sectorPoSpace;
     CSqliteDB sqlPoSpace;
 };
 

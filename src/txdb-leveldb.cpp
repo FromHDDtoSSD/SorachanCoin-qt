@@ -29,9 +29,10 @@ CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_ma
 #endif
 CTxDBHybrid::~CTxDBHybrid() {}
 
-
 static void leveldb_oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
+    if(! fsbridge::dir_exists(directory))
+        return;
     if (fRemoveOld) {
         fsbridge::dir_safe_remove_all(directory); // remove directory
         unsigned int nFile = 1;
@@ -45,6 +46,21 @@ static void leveldb_oldblockindex_remove(bool fRemoveOld) {
             fsbridge::file_remove(strBlockFile);
             ++nFile;
         }
+    }
+}
+
+// extern
+void leveldb_oldblockchain_remove_once() {
+    // sqlite size get
+    fs::path sqlpath = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
+    size_t size = 100*1024;
+    if(! fsbridge::file_size(sqlpath, &size))
+        return;
+
+    // removed if blkmainchain.sql size < 20KB
+    debugcs::instance() << "sqlblockchain size: " << size << debugcs::endl();
+    if(size < 20 * 1024) {
+        leveldb_oldblockindex_remove(true);
     }
 }
 

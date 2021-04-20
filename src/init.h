@@ -72,6 +72,7 @@ public:
 };
 
 // txdb-leveldb.cpp
+extern void leveldb_oldblockchain_remove_once();
 extern void leveldb_to_sqlite_blockchain();
 
 #endif
