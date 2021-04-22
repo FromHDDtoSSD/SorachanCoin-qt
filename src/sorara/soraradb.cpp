@@ -6,6 +6,8 @@
 // ref: https://github.com/Chia-Network/chia-blockchain
 
 #include <sorara/soraradb.h>
+#include <key/privkey.h>
+#include <key/pubkey.h>
 
 CCriticalSection CProofOfSpace::cs_pospace;
 
@@ -25,8 +27,13 @@ bool CProofOfSpace::create_plot() const noexcept {
     latest_crypto::random::GetStrongRandBytes(rnd, sizeof(rnd));
     uint256 rndhash = hash_basis::Hash(BEGIN(rnd), END(rnd));
 
+    // create directory
+    fs::path pospacedir = iofs::GetDataDir() / "PoSpace";
+    if(! fsbridge::dir_create(pospacedir))
+        return false;
+
     // filepath
-    fs::path plotname = iofs::GetDataDir() / (std::string(rndhash.ToString()) + ".plot");
+    fs::path plotname = iofs::GetDataDir() / pospacedir / (std::string(rndhash.ToString()) + ".plot");
 
     // require k
     const int k = debug_mode ? 24: 32;
@@ -35,20 +42,22 @@ bool CProofOfSpace::create_plot() const noexcept {
     const size_t size = get_plotsize(k);
 
     // create plot
-    PlotEntry entry;
+    const size_t entry_size = ::GetSerializeSize(PlotEntry());
     PlotHeader header;
     header.k = k;
-    header.entry_size = ::GetSerializeSize(entry);
+    header.entry_size = entry_size;
     CAutoFile plot = CAutoFile(plotname, "r+");
     if(plot==nullptr)
         return false;
     plot << header;
-    const int num = (size - ::GetSerializeSize(header))/::GetSerializeSize(entry);
-    const int remain = (size-::GetSerializeSize(header))-num*::GetSerializeSize(entry);
+    const int num = (size - ::GetSerializeSize(header))/entry_size;
+    const int remain = (size-::GetSerializeSize(header))-num*entry_size;
     debugcs::instance() << "[CProofOfSpace] remain: " << remain << debugcs::endl();
     assert(remain==0);
-    for(int i=0; i < num; ++i)
+    for(int i=0; i < num; ++i) {
+        PlotEntry entry;
         plot << entry;
+    }
 
     return true;
 }

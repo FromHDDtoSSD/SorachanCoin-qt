@@ -40,7 +40,6 @@ struct PlotEntry {
     pos_t rp;
     uint256 lv;
     uint256 rv;
-    std::vector<char> pad;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
