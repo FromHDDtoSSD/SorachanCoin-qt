@@ -20,27 +20,39 @@ static inline int RAND_event(UINT message, WPARAM wp, LPARAM lp) {
 
 //
 // ProofOfSpace [PoSpace]
+// TARGET: HDD
 // ref: https://github.com/Chia-Network/chia-blockchain
 //
 using pos_t = int64_t;
 struct PlotHeader {
-#pragma pack(push, 1)
-    union {
-        unsigned char mdata[sizeof(uint65536)];
-        uint256 hash;
-    };
-#pragma pack(pop)
+    int k;
+    size_t entry_size;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(k);
+        READWRITE(entry_size);
+    }
 };
-struct PoSpaceEntry {
-#pragma pack(push, 1)
-    int32_t size;
+struct PlotEntry {
     pos_t lp;
     pos_t rp;
-    unsigned char reserved[44];
-    unsigned char data[1];
-#pragma pack(pop)
+    uint256 lv;
+    uint256 rv;
+    std::vector<char> pad;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {
+        READWRITE(lp);
+        READWRITE(rp);
+        READWRITE(lv);
+        READWRITE(rv);
+    }
 };
-class CProofOfSpace final {
+
+class CProofOfSpace {
     CProofOfSpace(const CProofOfSpace &)=delete;
     CProofOfSpace(CProofOfSpace &&)=delete;
     CProofOfSpace &operator=(const CProofOfSpace &)=delete;
@@ -54,10 +66,14 @@ public:
         return obj;
     }
 
+    bool create_plot() const noexcept;
+
+    void test(); // alternative verifier, prover
+
 private:
     static int64_t get_plotsize(int k) noexcept {
         assert(k>=10);
-        return (int64_t)780 * k * (2<<(k-10)) + sizeof(PlotHeader);
+        return (int64_t)780 * k * (2<<(k-10)) + ::GetSerializeSize(PlotHeader());
     }
 
     explicit CProofOfSpace();
@@ -79,5 +95,12 @@ public:
 private:
     CSqliteDB sqldb;
 };
+
+//
+// PrrofOfBenchmark [PoBench]
+// TARGET: SSD
+//
+
+
 
 #endif // SORA_SORARADB_H

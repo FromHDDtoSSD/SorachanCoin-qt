@@ -19,4 +19,40 @@ bool CProofOfSpace::ReadVersion(int &nVersion) {
     return sqlPoSpace.Read(std::string("PoSpaceVersion"), nVersion);
 }
 
+bool CProofOfSpace::create_plot() const noexcept {
+    // filename
+    unsigned char rnd[32];
+    latest_crypto::random::GetStrongRandBytes(rnd, sizeof(rnd));
+    uint256 rndhash = hash_basis::Hash(BEGIN(rnd), END(rnd));
+
+    // filepath
+    fs::path plotname = iofs::GetDataDir() / (std::string(rndhash.ToString()) + ".plot");
+
+    // require k
+    const int k = debug_mode ? 24: 32;
+
+    // plot size
+    const size_t size = get_plotsize(k);
+
+    // create plot
+    PlotEntry entry;
+    PlotHeader header;
+    header.k = k;
+    header.entry_size = ::GetSerializeSize(entry);
+    CAutoFile plot = CAutoFile(plotname, "r+");
+    if(plot==nullptr)
+        return false;
+    plot << header;
+    const int num = (size - ::GetSerializeSize(header))/::GetSerializeSize(entry);
+    const int remain = (size-::GetSerializeSize(header))-num*::GetSerializeSize(entry);
+    debugcs::instance() << "[CProofOfSpace] remain: " << remain << debugcs::endl();
+    assert(remain==0);
+    for(int i=0; i < num; ++i)
+        plot << entry;
+
+    return true;
+}
+
+
+
 CSoraraDB::CSoraraDB(const char *mode/*="r+"*/) : sqldb(CSqliteDBEnv::getname_soraradb(), mode) {}
