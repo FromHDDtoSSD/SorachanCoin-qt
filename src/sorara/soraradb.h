@@ -24,24 +24,32 @@ static inline int RAND_event(UINT message, WPARAM wp, LPARAM lp) {
 //
 using pos_t = int64_t;
 struct PlotHeader {
+#pragma pack(push, 1)
     union {
         unsigned char mdata[sizeof(uint65536)];
         uint256 hash;
     };
+#pragma pack(pop)
 };
 struct PoSpaceEntry {
+#pragma pack(push, 1)
+    int32_t size;
     pos_t lp;
     pos_t rp;
-    unsigned char reserved[48];
+    unsigned char reserved[44];
     unsigned char data[1];
+#pragma pack(pop)
 };
 class CProofOfSpace final {
     CProofOfSpace(const CProofOfSpace &)=delete;
     CProofOfSpace(CProofOfSpace &&)=delete;
     CProofOfSpace &operator=(const CProofOfSpace &)=delete;
     CProofOfSpace &operator=(CProofOfSpace &&)=delete;
+    constexpr static bool debug_mode = true; // plot size is 15MB(debug) (k==20)
 public:
-    CProofOfSpace &get_instance() noexcept {
+    static CCriticalSection cs_pospace;
+    static CProofOfSpace &get_instance() noexcept {
+        LOCK(cs_pospace);
         static CProofOfSpace obj;
         return obj;
     }

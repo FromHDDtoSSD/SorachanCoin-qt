@@ -7,6 +7,8 @@
 
 #include <sorara/soraradb.h>
 
+CCriticalSection CProofOfSpace::cs_pospace;
+
 CProofOfSpace::CProofOfSpace() : sqlPoSpace(CSqliteDBEnv::getname_pospacedb(), "r+", true) {} // secure mode
 
 bool CProofOfSpace::WriteVersion(int nVersion) {
