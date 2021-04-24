@@ -889,9 +889,9 @@ bool entry::AppInit2(bool restart/*=false*/)
 #ifdef USE_BERKELEYDB
     const fs::path bdbwallet_path = iofs::GetDataDir() / strWalletFileName.c_str();
 #endif
-#ifndef WALLET_SQL_MODE
-    assert(fsbridge::file_exists(bdbwallet_path));
-#endif
+//#ifndef WALLET_SQL_MODE
+//    assert(fsbridge::file_exists(bdbwallet_path));
+//#endif
 
 #ifdef USE_BERKELEYDB
     if (! CDBEnv::get_instance().Open(iofs::GetDataDir())) {

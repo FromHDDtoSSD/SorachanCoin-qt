@@ -8,7 +8,11 @@
     //
     // Client version number
     //
-    #define CLIENT_VERSION_SUFFIX   "-sqlite"
+#ifdef USE_LEVELDB
+# define CLIENT_VERSION_SUFFIX   "-leveldb"
+#else
+# define CLIENT_VERSION_SUFFIX   "-sqlite"
+#endif
 
     //
     // Compiler name

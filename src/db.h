@@ -28,6 +28,8 @@
 # else
 #  include <sqlite/sqlite3.h>
 # endif
+#else
+# include <sqlite/sqlite3.h>
 #endif
 
 class CAddress;
