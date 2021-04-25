@@ -87,19 +87,31 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexce
     };
 
     debugcs::instance() << "CPubKey " << __func__ << " Bip66 mode: " << entry::b66mode << debugcs::endl();
-    if(entry::b66mode == entry::Bip66_STRICT) {
-        return bip66();
-    } else if (entry::b66mode == entry::Bip66_ADVISORY) {
-        if(bip66())
-            return true;
-        else {
-            logging::LogPrintf("bip66 false, recheck openssl\n");
+    debugcs::instance() << "BlockHeight " << __func__ << " height: " << block_info::nBestHeight << debugcs::endl();
+    if(480000<block_info::nBestHeight) {
+        if(entry::b66mode == entry::Bip66_STRICT) {
+            return bip66() && openssl();
+        } else if (entry::b66mode == entry::Bip66_ADVISORY) {
+            return bip66();
+        } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
             return openssl();
-        }
-    } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
-        return openssl();
-    } else
-        return false;
+        } else
+            return false;
+    } else {
+        if(entry::b66mode == entry::Bip66_STRICT) {
+            return bip66();
+        } else if (entry::b66mode == entry::Bip66_ADVISORY) {
+            if(bip66())
+                return true;
+            else {
+                logging::LogPrintf("bip66 false, recheck openssl\n");
+                return openssl();
+            }
+        } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
+            return openssl();
+        } else
+            return false;
+    }
 }
 
 bool CPubKey::Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const noexcept {

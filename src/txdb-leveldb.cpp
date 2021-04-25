@@ -29,23 +29,27 @@ CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_ma
 #endif
 CTxDBHybrid::~CTxDBHybrid() {}
 
+static void oldblockindex_remove(bool fRemoveOld) {
+    unsigned int nFile = 1;
+    for (;;) {
+        fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
+
+        // Break if no such file
+        if (! fsbridge::file_exists(strBlockFile))
+            break;
+
+        fsbridge::file_remove(strBlockFile);
+        ++nFile;
+    }
+}
+
 static void leveldb_oldblockindex_remove(bool fRemoveOld) {
     fs::path directory = iofs::GetDataDir() / "txleveldb";
     if(! fsbridge::dir_exists(directory))
         return;
     if (fRemoveOld) {
         fsbridge::dir_safe_remove_all(directory); // remove directory
-        unsigned int nFile = 1;
-        for (;;) {
-            fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
-
-            // Break if no such file
-            if (! fsbridge::file_exists(strBlockFile))
-                break;
-
-            fsbridge::file_remove(strBlockFile);
-            ++nFile;
-        }
+        oldblockindex_remove(fRemoveOld);
     }
 }
 
@@ -68,12 +72,15 @@ void leveldb_oldblockchain_remove_once() {
 
 // extern
 void sqlitedb_oldblockchain_remove_once() {
-    fs::path blkfilename = iofs::GetDataDir() / "blk0001.dat";
+    fs::path blksqlfilename = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
     size_t size;
-    if(! fsbridge::file_size(blkfilename, &size))
+    if(! fsbridge::file_size(blksqlfilename, &size))
         return;
-    if(size < 20 * 1024) {
-        leveldb_oldblockindex_remove(true);
+    if(20 * 1024<size) {
+        fs::path directory = iofs::GetDataDir() / "txleveldb";
+        fs::remove_all(directory); // remove directory
+        oldblockindex_remove(true);
+        fsbridge::file_remove(blksqlfilename);
     }
 }
 
