@@ -66,6 +66,17 @@ void leveldb_oldblockchain_remove_once() {
     }
 }
 
+// extern
+void sqlitedb_oldblockchain_remove_once() {
+    fs::path blkfilename = iofs::GetDataDir() / "blk0001.dat";
+    size_t size;
+    if(! fsbridge::file_size(blkfilename, &size))
+        return;
+    if(size < 20 * 1024) {
+        leveldb_oldblockindex_remove(true);
+    }
+}
+
 // extern (from LevelDB to SQLite)
 void leveldb_to_sqlite_blockchain() {
     std::vector<fs::path> blocksPath;

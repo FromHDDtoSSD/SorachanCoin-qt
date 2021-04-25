@@ -51,7 +51,13 @@ struct PlotEntry {
     }
 };
 
-class CProofOfSpace {
+class CProofOfSpaceEnv final {
+public:
+    static fs::path config_path_for_filename(fs::path root_path, fs::path filename);
+    static fs::path config_path_for_filename(fs::path root_path, const std::string &filename);
+};
+
+class CProofOfSpace final {
     CProofOfSpace(const CProofOfSpace &)=delete;
     CProofOfSpace(CProofOfSpace &&)=delete;
     CProofOfSpace &operator=(const CProofOfSpace &)=delete;
@@ -64,6 +70,9 @@ public:
         static CProofOfSpace obj;
         return obj;
     }
+
+    std::string initial_config_file(fs::path filename);
+    void create_default_chia_config(fs::path root_path) const;
 
     bool create_plot() const noexcept;
 

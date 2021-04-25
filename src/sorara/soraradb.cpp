@@ -11,7 +11,32 @@
 
 CCriticalSection CProofOfSpace::cs_pospace;
 
+fs::path CProofOfSpaceEnv::config_path_for_filename(fs::path root_path, fs::path filename) {
+    if (filename.is_absolute())
+        return filename;
+    return root_path / "config" / filename;
+}
+fs::path CProofOfSpaceEnv::config_path_for_filename(fs::path root_path, const std::string &filename) {
+    return config_path_for_filename(root_path, fs::path(filename.c_str()));
+}
+
+
+
+
+
+
 CProofOfSpace::CProofOfSpace() : sqlPoSpace(CSqliteDBEnv::getname_pospacedb(), "r+", true) {} // secure mode
+
+std::string CProofOfSpace::initial_config_file(fs::path filename) {
+    std::string ret;
+    if(! sqlPoSpace.Read(std::make_pair(std::string("initial-"), filename.string()), ret))
+        throw std::runtime_error("PoSpace config read error.");
+    return std::move(ret);
+}
+
+void CProofOfSpace::create_default_chia_config(fs::path root_path) const {
+
+}
 
 bool CProofOfSpace::WriteVersion(int nVersion) {
     return sqlPoSpace.Write(std::string("PoSpaceVersion"), nVersion);

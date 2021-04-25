@@ -726,6 +726,8 @@ bool entry::AppInit2(bool restart/*=false*/)
     //CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] migrate from LevelDB to SQLite, Blockchain database ..."));
     //leveldb_to_sqlite_blockchain();
     leveldb_oldblockchain_remove_once();
+#else
+    sqlitedb_oldblockchain_remove_once();
 #endif
 
     // ********************************************************* Step 3: parameter-to-internal-flags
