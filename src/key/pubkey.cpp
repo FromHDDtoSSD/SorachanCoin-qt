@@ -9,6 +9,7 @@
 #include <ies.h>
 #include <crypter.h>
 #include <init.h>
+#include <checkpoints.h>
 
 #ifdef VERIFY
 # include <debugcs/debugcs.h>
@@ -88,7 +89,16 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexce
 
     debugcs::instance() << "CPubKey " << __func__ << " Bip66 mode: " << entry::b66mode << debugcs::endl();
     debugcs::instance() << "BlockHeight " << __func__ << " height: " << block_info::nBestHeight << debugcs::endl();
-    if(480000<block_info::nBestHeight) {
+    static int sw_blockheight = 0;
+    if(sw_blockheight==0) {
+        const MapCheckpoints &ckpoints = args_bool::fTestNet ? Checkpoints::manage::getMapCheckpointsTestnet(): Checkpoints::manage::getMapCheckpoints();
+        for(auto ite: ckpoints) {
+            if(sw_blockheight<ite.first)
+                sw_blockheight = ite.first;
+        }
+    }
+    debugcs::instance() << "sw_blockheight " << __func__ << " sw_blockheight: " << sw_blockheight << debugcs::endl();
+    if(sw_blockheight<block_info::nBestHeight) {
         if(entry::b66mode == entry::Bip66_STRICT) {
             return bip66() && openssl();
         } else if (entry::b66mode == entry::Bip66_ADVISORY) {
@@ -101,12 +111,15 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexce
         if(entry::b66mode == entry::Bip66_STRICT) {
             return bip66();
         } else if (entry::b66mode == entry::Bip66_ADVISORY) {
+            return openssl();
+            /*
             if(bip66())
                 return true;
             else {
                 logging::LogPrintf("bip66 false, recheck openssl\n");
                 return openssl();
             }
+            */
         } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
             return openssl();
         } else
