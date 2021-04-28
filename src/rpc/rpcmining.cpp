@@ -164,7 +164,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "CBlock::ReadFromDisk() failed");
 
         uint64_t nStakeModifier = 0;
-        if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetHash(), nStakeModifier))
+        if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier))
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No kernel stake modifier generated yet");
 
         std::pair<uint32_t, uint32_t> interval;

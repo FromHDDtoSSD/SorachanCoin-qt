@@ -1,5 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2014-2015 The Dash developers
+// Copyright (c) 2014-2015 Vertcoin Developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -11,6 +13,11 @@
 #include <block/transaction.h>
 #include <block/block_locator.h>
 #include <merkle/merkle_tree.h>
+
+#ifndef SWITCH_LYRE2RE_BLOCK
+# define SWITCH_LYRE2RE_BLOCK (550000) // hardfork: to Lyra2RE2
+# define SWITCH_LYRE2RE_BLOCK_TESTNET (1500000)
+#endif
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -24,9 +31,10 @@
 template <typename T>
 class CBlockHeader {
 protected:
+    //static constexpr int CURRENT_VERSION = 6;
+    static constexpr int CURRENT_VERSION = 7;
 #pragma pack(push, 1)
     // header
-    static constexpr int CURRENT_VERSION = 6;
     int32_t nVersion;
     T hashPrevBlock;
     T hashMerkleRoot;
@@ -34,6 +42,8 @@ protected:
     uint32_t nBits;
     uint32_t nNonce;
 #pragma pack(pop)
+public:
+    int32_t LastHeight;
 public:
     CBlockHeader() {SetNull();}
     void SetNull() {
@@ -43,6 +53,7 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+        LastHeight = 0;
     }
     int32_t get_nVersion() const {return nVersion;}
     const T &get_hashPrevBlock() const {return hashPrevBlock;}
@@ -76,12 +87,14 @@ public:
     bool IsNull() const {
         return (CBlockHeader<T>::nBits == 0);
     }
-    uint256 GetHash() const;
+    uint256 GetPoHash() const;
+    uint256 GetPoHash(int height) const;
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader<T>::nTime;
     }
-    void UpdateTime(const CBlockIndex *pindexPrev) {
+    void UpdateTime(const CBlockIndex_impl<T> *pindexPrev) {
         CBlockHeader<T>::nTime = std::max(GetBlockTime(), bitsystem::GetAdjustedTime());
+        CBlockHeader<T>::LastHeight = pindexPrev->get_nHeight();
     }
 };
 template <typename T>
@@ -165,9 +178,9 @@ public:
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const {
         // Take last bit of block hash as entropy bit
-        unsigned int nEntropyBit = ((CBlockHeader_impl<T>::GetHash().Get64()) & 1llu);
+        unsigned int nEntropyBit = ((CBlockHeader_impl<T>::GetPoHash().Get64()) & 1llu);
         if (args_bool::fDebug && map_arg::GetBoolArg("-printstakemodifier"))
-            logging::LogPrintf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", CBlockHeader_impl<T>::GetHash().ToString().c_str(), nEntropyBit);
+            logging::LogPrintf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", CBlockHeader_impl<T>::GetPoHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
     }
     // ppcoin: two types of block: proof-of-work or proof-of-stake
@@ -463,7 +476,7 @@ public:
         block.set_nTime(CBlockIndex_impl<T>::nTime);
         block.set_nBits(CBlockIndex_impl<T>::nBits);
         block.set_nNonce(CBlockIndex_impl<T>::nNonce);
-        blockHash = block.GetHash();
+        blockHash = block.GetPoHash();
         return blockHash;
     }
     std::string ToString() const;

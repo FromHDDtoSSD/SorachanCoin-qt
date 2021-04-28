@@ -83,7 +83,7 @@ double CRPCTable::GetPoSKernelPS() noexcept {
 
 json_spirit::Object CRPCTable::blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail) {
     json_spirit::Object result;
-    result.push_back(json_spirit::Pair("hash", block.GetHash().GetHex()));
+    result.push_back(json_spirit::Pair("hash", block.GetPoHash().GetHex()));
 
     CMerkleTx txGen(block.get_vtx(0));
     txGen.SetMerkleBranch(&block);

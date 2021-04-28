@@ -423,6 +423,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
+            pblock->LastHeight = pindexPrev->get_nHeight();
             pblock->UpdateTime(pindexPrev);
         }
         pblock->set_nNonce(0);
@@ -500,7 +501,16 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
 
 bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 {
-    uint256 hashBlock = pblock->GetHash();
+    //uint256 hashBlock = pblock->GetHash();
+    CBlockIndex *pindexPrev = nullptr;
+    int nHeight = 0;
+    if (pblock->GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
+        std::map<uint256, CBlockIndex_impl<uint256> *>::iterator mi = block_info::mapBlockIndex.find(pblock->get_hashPrevBlock());
+        pindexPrev = (*mi).second;
+        nHeight = pindexPrev->get_nHeight()+1;
+    }
+
+    uint256 hashBlock = pblock->GetPoHash(nHeight);
     uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     if(! pblock->IsProofOfWork()) {
@@ -545,7 +555,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
 {
     uint256 proofHash = 0, hashTarget = 0;
-    uint256 hashBlock = pblock->GetHash();
+    uint256 hashBlock = pblock->GetPoHash();
 
     if (! pblock->IsProofOfStake()) {
         return logging::error("miner::CheckStake() : %s is not a proof-of-stake block", hashBlock.GetHex().c_str());
@@ -649,7 +659,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
             // Get stake modifier
             uint64_t nStakeModifier = 0;
-            if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetHash(), nStakeModifier)) {
+            if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier)) {
                 continue;
             }
 
@@ -785,7 +795,7 @@ void miner::ThreadStakeMiner(void *parg)
                 miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
 
                 // ... and sign it
-                if (! key.Sign(pblock->GetHash(), pblock->set_vchBlockSig())) {
+                if (! key.Sign(pblock->GetPoHash(), pblock->set_vchBlockSig())) {
                     std::string strMessage = _("Warning: Proof-of-Stake miner is unable to sign the block (locked wallet?). Mining thread has been stopped.");
                     excep::set_strMiscWarning( strMessage );
                     logging::LogPrintf("*** %s\n", strMessage.c_str());

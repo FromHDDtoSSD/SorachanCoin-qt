@@ -95,7 +95,7 @@ int CTxIndex::GetDepthInMainChain() const noexcept
     }
 
     // Find the block in the index
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(block.GetHash());
+    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(block.GetPoHash());
     if (mi == block_info::mapBlockIndex.end()) {
         return 0;
     }
@@ -212,12 +212,12 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         block.set_nBits(diff::bnProofOfWorkLimit.GetCompact());
         block.set_nNonce(!args_bool::fTestNet ? block_params::nGenesisNonceMainnet : block_params::nGenesisNonceTestnet);
 
-        if (true && (block.GetHash() != block_params::hashGenesisBlock)) {
+        if (true && (block.GetPoHash() != block_params::hashGenesisBlock)) {
             //
             // This will figure out a valid hash and Nonce if you're creating a different genesis block
             //
             uint256 hashTarget = CBigNum().SetCompact(block.get_nBits()).getuint256();
-            while (block.GetHash() > hashTarget)
+            while (block.GetPoHash() > hashTarget)
             {
                 ++block.set_nNonce();
                 if (block.get_nNonce() == 0) {
@@ -231,13 +231,13 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         // Genesis check
         //
         block.print();        
-        logging::LogPrintf("block.GetHash() == %s\n", block.GetHash().ToString().c_str());
+        logging::LogPrintf("block.GetHash() == %s\n", block.GetPoHash().ToString().c_str());
         logging::LogPrintf("block.hashMerkleRoot == %s\n", block.get_hashMerkleRoot().ToString().c_str());
         logging::LogPrintf("block.nTime = %u \n", block.get_nTime());
         logging::LogPrintf("block.nNonce = %u \n", block.get_nNonce());
 
         assert(block.get_hashMerkleRoot() == block_params::hashMerkleRoot);
-        assert(block.GetHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
+        assert(block.GetPoHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 
         //

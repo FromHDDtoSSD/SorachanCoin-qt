@@ -26,7 +26,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock *pblock/*=nullptr*/)
         }
 
         // Update the tx's hashBlock
-        hashBlock = pblock->GetHash();
+        hashBlock = pblock->GetPoHash();
 
         // Locate the transaction
         for (nIndex = 0; nIndex < (int)pblock->get_vtx().size(); ++nIndex) {

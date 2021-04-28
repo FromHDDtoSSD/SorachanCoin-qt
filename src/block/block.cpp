@@ -18,6 +18,7 @@
 #include <util/system.h>
 #include <block/blockdata_db.h>
 #include <rpc/bitcoinrpc.h> // cs_accept
+#include <Lyra2RE/Lyra2RE.h>
 
 /*
 ** collect Block Print
@@ -92,7 +93,7 @@ void CBlock_print_impl<T>::PrintBlockTree() {
             pindex->get_nHeight(),
             pindex->get_nFile(),
             pindex->get_nBlockPos(),
-            block.GetHash().ToString().c_str(),
+            block.GetPoHash().ToString().c_str(),
             block.get_nBits(),
             util::DateTimeStrFormat("%x %H:%M:%S", block.GetBlockTime()).c_str(),
             strenc::FormatMoney(pindex->get_nMint()).c_str(),
@@ -155,15 +156,23 @@ bool block_notify<T>::IsInitialBlockDownload()
 }
 
 template <typename T>
-uint256 CBlockHeader_impl<T>::GetHash() const { // todo: from uint256 to T (please replace bitscrypt to T)
-    // debug
-    //uint65536 tt = bitscrypt::scrypt_blockhash_65536((const uint8_t *)this);
-    //assert(0 < tt);
-    //debugcs::instance() << "QHASH65536:" << debugcs::endl();
-    //debugcs::instance() << tt.GetHex() << debugcs::endl() << "------------------------" << debugcs::endl();
+uint256 CBlockHeader_impl<T>::GetPoHash() const {
+    // Note: Be careful, if the std::map references a non-existent element, it will be added as null.
+    const auto &mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
+    if(mi==block_info::mapBlockIndex.end())
+        return bitscrypt::scrypt_blockhash((const char *)this, nullptr);
+    else
+        return bitscrypt::scrypt_blockhash((const char *)this, block_info::mapBlockIndex[CBlockHeader<T>::get_hashPrevBlock()]);
+}
 
-    assert(sizeof(*this)==80); // uint256 blockheader size.
-    return bitscrypt::scrypt_blockhash((const uint8_t *)this);
+template <typename T>
+uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
+    uint256 hash;
+    if((args_bool::fTestNet && height >= SWITCH_LYRE2RE_BLOCK_TESTNET) || height >= SWITCH_LYRE2RE_BLOCK)
+        lyra2re2_hash((const char *)this, BEGIN(hash));
+    else
+        hash = GetPoHash();
+    return hash;
 }
 
 template <typename T>
@@ -193,6 +202,8 @@ bool CBlock_impl<T>::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
 template <typename T>
 bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=false*/)
 {
+    CBlockHeader<T>::LastHeight = pindex->get_nHeight();
+
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))
         return false;
@@ -329,13 +340,14 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
 template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions/*=true*/)
 {
+    CBlockHeader<T>::LastHeight = pindex->get_nHeight() - 1;
     if (! fReadTransactions) {
         *this = pindex->GetBlockHeader();
         return true;
     }
     if (! ReadFromDisk(pindex->get_nFile(), pindex->get_nBlockPos(), fReadTransactions))
         return false;
-    if (CBlockHeader_impl<T>::GetHash() != pindex->GetBlockHash())
+    if (CBlockHeader_impl<T>::GetPoHash() != pindex->GetBlockHash())
         return logging::error("CBlock::ReadFromDisk() : GetHash() doesn't match index");
 
     return true;
@@ -344,7 +356,7 @@ bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransacti
 template <typename T>
 bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
 {
-    T hash = CBlockHeader_impl<T>::GetHash();
+    T hash = CBlockHeader_impl<T>::GetPoHash();
     if (! txdb.TxnBegin())
         return logging::error("SetBestChain() : TxnBegin failed");
 
@@ -450,7 +462,7 @@ template <typename T>
 bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
 {
     // Check for duplicate
-    T hash = CBlockHeader_impl<T>::GetHash();
+    T hash = CBlockHeader_impl<T>::GetPoHash();
     if (block_info::mapBlockIndex.count(hash))
         return logging::error("AddToBlockIndex() : %s already exists", hash.ToString().substr(0,20).c_str());
 
@@ -571,8 +583,24 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         nSigOps += Merkle_t::vtx[1].GetLegacySigOpCount();
     } else {
         // Check proof of work matches claimed amount
-        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
-            return DoS(50, logging::error("CheckBlock() : proof of work failed"));
+        //if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
+        //    return DoS(50, logging::error("CheckBlock() : proof of work failed"));
+        {
+            CBlockIndex_impl<T> *pindexPrev = nullptr;
+            int nHeight = 0;
+            if (CBlockHeader_impl<T>::GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
+                typename std::map<uint256, CBlockIndex_impl<T> *>::iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
+                pindexPrev = (*mi).second;
+                if (mi != block_info::mapBlockIndex.end()) {
+                    if (pindexPrev != nullptr) {
+                        nHeight = pindexPrev->get_nHeight()+1;
+                        // Check proof of work matches claimed amount
+                        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(nHeight), CBlockHeader_impl<T>::get_nBits()))
+                            return DoS(50, logging::error("CheckBlock() : proof of work failed"));
+                    }
+                }
+            }
+        }
 
         // Check timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
@@ -634,7 +662,7 @@ bool CBlock_impl<T>::AcceptBlock()
     LOCK(bitrpc::cs_accept);
 
     // Check for duplicate
-    T hash = CBlockHeader_impl<T>::GetHash();
+    T hash = CBlockHeader_impl<T>::GetPoHash();
     if (block_info::mapBlockIndex.count(hash))
         return logging::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
 
@@ -645,6 +673,7 @@ bool CBlock_impl<T>::AcceptBlock()
 
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
+    CBlockHeader<T>::LastHeight = pindexPrev->get_nHeight();
     ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
 
     // Check proof-of-work or proof-of-stake
@@ -687,9 +716,19 @@ bool CBlock_impl<T>::AcceptBlock()
         excep::set_strMiscWarning( _("WARNING: syncronized checkpoint violation detected, but skipped!") );
 
     // Enforce rule that the coinbase starts with serialized block height
-    CScript expect = CScript() << nHeight;
-    if (Merkle_t::vtx[0].get_vin(0).get_scriptSig().size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].get_vin(0).get_scriptSig().begin()))
-        return DoS(100, logging::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
+    if(CBlockHeader_impl<T>::get_nVersion()<=6) {
+        CScript expect = CScript() << nHeight;
+        if (Merkle_t::vtx[0].get_vin(0).get_scriptSig().size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].get_vin(0).get_scriptSig().begin()))
+            return DoS(100, logging::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
+    } else if (CBlockHeader_impl<T>::get_nVersion()>=7) {
+        // if 750 of the last 1,000 blocks are version 2 or greater (51/100 if testnet):
+        if ((!args_bool::fTestNet && CBlockIndex_impl<T>::IsSuperMajority(7, pindexPrev, 750, 1000)) ||
+             (args_bool::fTestNet && CBlockIndex_impl<T>::IsSuperMajority(7, pindexPrev, 51, 100))) {
+            CScript expect = CScript() << nHeight;
+            if (Merkle_t::vtx[0].get_vin(0).get_scriptSig().size() < expect.size() || !std::equal(expect.begin(), expect.end(), Merkle_t::vtx[0].get_vin(0).get_scriptSig().begin()))
+                return DoS(100, logging::error("CBlock::AcceptBlock() : block height mismatch in coinbase"));
+        }
+    }
 
     // Write block to history file
     if (! file_open::CheckDiskSpace(::GetSerializeSize(*this)))
@@ -755,7 +794,7 @@ bool CBlock_impl<T>::CheckBlockSignature() const
         Script_util::valtype &vchPubKey = vSolutions[0];
         CPubKey key(vchPubKey);
         if (! key.IsValid()) return false;
-        return key.Verify(CBlockHeader_impl<T>::GetHash(), vchBlockSig);
+        return key.Verify(CBlockHeader_impl<T>::GetPoHash(), vchBlockSig);
     }
 
     return false;
@@ -765,7 +804,7 @@ bool CBlock_impl<T>::CheckBlockSignature() const
 template <typename T>
 bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 {
-    T hash = CBlockHeader_impl<T>::GetHash();
+    T hash = CBlockHeader_impl<T>::GetPoHash();
 
     // Adding to current best branch
     if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash)) {
@@ -832,7 +871,10 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
         return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
     // Check the header
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
+    //if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
+    //    return logging::error("CBlock::ReadFromDisk() : errors in block header");
+    //return true;
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
 
@@ -848,7 +890,8 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
 template <typename T>
 void CBlock_impl<T>::print() const {
     logging::LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
-        CBlockHeader_impl<T>::GetHash().ToString().c_str(),
+        //CBlockHeader_impl<T>::GetHash().ToString().c_str(),
+        CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
         CBlockHeader<T>::nVersion,
         CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
         CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),

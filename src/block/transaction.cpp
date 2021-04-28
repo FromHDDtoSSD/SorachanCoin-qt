@@ -108,7 +108,7 @@ bool block_transaction::manage_impl<T>::GetTransaction(const T &hash, CTransacti
         if (tx.ReadFromDisk(txdb, COutPoint(hash, 0), txindex)) {
             CBlock block;
             if (block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false))
-                hashBlock = block.GetHash();
+                hashBlock = block.GetPoHash();
             return true;
         }
     }

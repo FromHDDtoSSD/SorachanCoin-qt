@@ -641,7 +641,17 @@ HEADERS += src/qt/bitcoingui.h \
     src/sorara/soraramodel.h \
     src/sorara/drivemodel.h \
     src/sorara/soraradb.h \
-    src/sorara/soraranet.h
+    src/sorara/soraranet.h \
+    src/Lyra2RE/Lyra2.h \
+    src/Lyra2RE/Lyra2RE.h \
+    src/Lyra2RE/Sponge.h \
+    src/Lyra2RE/sph_blake.h \
+    src/Lyra2RE/sph_bmw.h \
+    src/Lyra2RE/sph_cubehash.h \
+    src/Lyra2RE/sph_groestl.h \
+    src/Lyra2RE/sph_keccak.h \
+    src/Lyra2RE/sph_skein.h \
+    src/Lyra2RE/sph_types.h
 
 SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/qt/intro.cpp \
@@ -830,7 +840,16 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/sorara/soraramodel.cpp \
     src/sorara/drivemodel.cpp \
     src/sorara/soraradb.cpp \
-    src/sorara/soraranet.cpp
+    src/sorara/soraranet.cpp \
+    src/Lyra2RE/Lyra2.c \
+    src/Lyra2RE/Lyra2RE.c \
+    src/Lyra2RE/Sponge.c \
+    src/Lyra2RE/blake.c \
+    src/Lyra2RE/bmw.c \
+    src/Lyra2RE/cubehash.c \
+    src/Lyra2RE/groestl.c \
+    src/Lyra2RE/keccak.c \
+    src/Lyra2RE/skein.c
 
 RESOURCES += \
     src/qt/bitcoin.qrc

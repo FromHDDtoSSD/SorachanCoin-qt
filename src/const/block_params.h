@@ -46,4 +46,8 @@ namespace block_params
     const uint256 hashGenesisBlockTestNet("0x00002f6601da66030580c89a4652b44cf330102c42e2b4e06d97958df7738478");
 }
 
+static inline const uint256 &get_hashGenesisBlock(bool fTestNet) {
+    return fTestNet ? block_params::hashGenesisBlockTestNet: block_params::hashGenesisBlock;
+}
+
 #endif // SORACHANCOIN_BLOCK_PARAMS

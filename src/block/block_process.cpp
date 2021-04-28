@@ -450,7 +450,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
     } else if (strCommand == "block") {
         CBlock block;
         vRecv >> block;
-        uint256 hashBlock = block.GetHash();
+        uint256 hashBlock = block.GetPoHash();
 
         logging::LogPrintf("received block %s\n", hashBlock.ToString().substr(0,20).c_str());
         // block.print();
@@ -804,7 +804,7 @@ uint256 block_process::manage::GetOrphanRoot(const CBlock *pblock)
     // Work back to the first block in the orphan chain
     while (block_process::mapOrphanBlocks.count(pblock->get_hashPrevBlock()))
         pblock = block_process::mapOrphanBlocks[pblock->get_hashPrevBlock()];
-    return pblock->GetHash();
+    return pblock->GetPoHash();
 }
 
 bool block_process::manage::ReserealizeBlockSignature(CBlock *pblock)
@@ -928,7 +928,7 @@ void block_process::manage::ResendWalletTransactions(bool fForceResend /*= false
 
 bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
 {
-    uint256 hash = pblock->GetHash();
+    uint256 hash = pblock->GetPoHash();
 
     // Check for duplicate
     if (block_info::mapBlockIndex.count(hash))
@@ -1038,9 +1038,9 @@ bool block_process::manage::ProcessBlock(CNode *pfrom, CBlock *pblock)
              mi != block_process::manage::mapOrphanBlocksByPrev.upper_bound(hashPrev); ++mi) {
             CBlock *pblockOrphan = (*mi).second;
             if (pblockOrphan->AcceptBlock())
-                vWorkQueue.push_back(pblockOrphan->GetHash());
+                vWorkQueue.push_back(pblockOrphan->GetPoHash());
 
-            block_process::mapOrphanBlocks.erase(pblockOrphan->GetHash());
+            block_process::mapOrphanBlocks.erase(pblockOrphan->GetPoHash());
             block_process::manage::setStakeSeenOrphan.erase(pblockOrphan->GetProofOfStake());
             delete pblockOrphan;    // manage::mapOrphanBlocksByPrev.insert(std::make_pair(first, second) ...
         }
