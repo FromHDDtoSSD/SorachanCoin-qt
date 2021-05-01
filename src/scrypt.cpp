@@ -217,7 +217,8 @@ uint256 bitscrypt::scrypt_blockhash(const void *input, const CBlockIndex_impl<ui
     }
 
     uint256 hash;
-    if((args_bool::fTestNet && pindexPrev->get_nHeight()+1 >= SWITCH_LYRE2RE_BLOCK_TESTNET) || pindexPrev->get_nHeight()+1 >= SWITCH_LYRE2RE_BLOCK)
+    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    if(pindexPrev->get_nHeight()+1 >= sw_height)
         lyra2re2_hash((const char *)input, BEGIN(hash));
     else {
         unsigned char scratchpad[SCRYPT_BUFFER_SIZE];

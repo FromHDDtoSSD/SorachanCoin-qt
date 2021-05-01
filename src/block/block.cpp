@@ -168,7 +168,8 @@ uint256 CBlockHeader_impl<T>::GetPoHash() const {
 template <typename T>
 uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
     uint256 hash;
-    if((args_bool::fTestNet && height >= SWITCH_LYRE2RE_BLOCK_TESTNET) || height >= SWITCH_LYRE2RE_BLOCK)
+    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    if(height >= sw_height)
         lyra2re2_hash((const char *)this, BEGIN(hash));
     else
         hash = GetPoHash();

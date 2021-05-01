@@ -16,7 +16,7 @@
 
 #ifndef SWITCH_LYRE2RE_BLOCK
 # define SWITCH_LYRE2RE_BLOCK (550000) // hardfork: to Lyra2RE2
-# define SWITCH_LYRE2RE_BLOCK_TESTNET (1500000)
+# define SWITCH_LYRE2RE_BLOCK_TESTNET (1495000)
 #endif
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
