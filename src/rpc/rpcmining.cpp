@@ -472,18 +472,20 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         if (modeval.type() == json_spirit::str_type) {
             strMode = modeval.get_str(status);
             if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+        } else if (modeval.type() == json_spirit::null_type) {
+            /* Do nothing */
         } else
-            return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
+            return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 1");
     }
 
     if (strMode != "template")
-        return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode");
+        return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 2");
     if (net_node::vNodes.empty())
         return data.JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
     if (block_notify<uint256>::IsInitialBlockDownload())
         return data.JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
 
-    //static CReserveKey reservekey(entry::pwalletMain);
+    static CReserveKey reservekey(entry::pwalletMain);
 
     // Update block
     static unsigned int nTransactionsUpdatedLast = 0;

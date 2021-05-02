@@ -1068,10 +1068,14 @@ void bitrpc::ThreadRPCServer3(void *parg) {
             if(! status.fSuccess()) {data.JSONRPCError(RPC_JSON_ERROR, status.e); break;}
 
             std::string strReply;
+            logging::LogPrintf("ThreadRPCServer3 type: %d\n", valRequest.type());
 
             // singleton request
             if (valRequest.type() == json_spirit::obj_type) {
-                if(! jreq.parse(valRequest, data)) break;
+                if(! jreq.parse(valRequest, data)) {
+                    logging::LogPrintf("ThreadPRCServer3 parse error\n");
+                    break;
+                }
                 json_spirit::Value result = CRPCTable::execute(jreq.strMethod, jreq.params, data);
 
                 // Send reply
@@ -1149,11 +1153,11 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     }
 
     if(data.ret == CBitrpcData::BITRPC_STATUS_EXCEPT) {
-        logging::LogPrintf("ThreadRPCServer3 execute Except 3\n");
+        logging::LogPrintf("ThreadRPCServer3 actor execute Except 3 %s\n", data.e.c_str());
         //data.code = RPC_MISC_ERROR;
         return data.e;
     } else if (data.ret == CBitrpcData::BITRPC_STATUS_ERROR) {
-        logging::LogPrintf("ThreadRPCServer3 execute Error 3\n");
+        logging::LogPrintf("ThreadRPCServer3 actor execute Error 3 %s\n", data.e.c_str());
         //data.code = RPC_MISC_ERROR;
         return data.e;
     } else {
