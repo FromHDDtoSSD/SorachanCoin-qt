@@ -31,8 +31,8 @@
 template <typename T>
 class CBlockHeader {
 protected:
-    //static constexpr int CURRENT_VERSION = 6;
-    static constexpr int CURRENT_VERSION = 7;
+    static constexpr int CURRENT_VERSION = 6;
+    //static constexpr int CURRENT_VERSION = 7;
 #pragma pack(push, 1)
     // header
     int32_t nVersion;
