@@ -40,10 +40,10 @@ static constexpr int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
 namespace block_transaction
 {
-    const unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS = 36;
-    const unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS_TESTNET = 168;
+    constexpr unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS = 96;
+    constexpr unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS_TESTNET = 4800;
 
-    const unsigned int MAX_ORPHAN_SERIALIZESIZE = 5000; // send-big-orphans memory exhaustion attack. 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
+    constexpr unsigned int MAX_ORPHAN_SERIALIZESIZE = 5000; // send-big-orphans memory exhaustion attack. 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
 
     namespace testnet {
         const int nCoinbaseMaturity = 6;
