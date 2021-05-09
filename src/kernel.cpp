@@ -34,7 +34,6 @@ public:
                 //{ 10, 0xfd11f4e7u } // [OK] NG test
             };
 
-        // finexDriveChain
         bitkernel<uint65536>::mapStakeModifierCheckpoints = {};
         bitkernel<uint65536>::mapStakeModifierCheckpointsTestNet = {};
     }

@@ -136,7 +136,6 @@ public:
                         HASH &nBestChainTrust);
 };
 using CTxDB = CTxDB_impl<uint256>; // mainchain
-//using CTxDB_finexDriveChain = CTxDB_impl<uint65536>; // sidechain-1
 
 // multi-threading DB
 /*

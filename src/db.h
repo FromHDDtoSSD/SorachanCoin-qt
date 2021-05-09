@@ -626,13 +626,10 @@ public:
 
     static CSqliteDBEnv &get_instance() {
         LOCK(cs_sqlite);
-        static CSqliteDBEnv obj({getname_finexdrivechain(), getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_banlist(), getname_soraradb(), getname_pospacedb(), getname_wallet()});
+        static CSqliteDBEnv obj({getname_mainchain(), getname_autocheckpoints(), getname_headeronlychain(), getname_peers(), getname_banlist(), getname_soraradb(), getname_pospacedb(), getname_wallet()});
         return obj;
     }
 
-    static std::string getname_finexdrivechain() { // finexdrivechain
-        return "blkfinexdrivechain.dat";
-    }
     static std::string getname_mainchain() { // mainchain
         return "blkmainchain.dat";
     }
