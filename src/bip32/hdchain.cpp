@@ -69,9 +69,9 @@ class bip39_test {
 public:
     bip39_test() {
         debugcs::instance() << "bip39 test" << debugcs::endl();
-        debugcs::instance() << generate_mnemonic().ToString() << debugcs::endl();
+        //debugcs::instance() << generate_mnemonic().ToString() << debugcs::endl();
         debugcs::instance() << generate_priv_mnemonic().ToString() << debugcs::endl();
-        util::Sleep(3000);
+        //util::Sleep(3000);
     }
     ~bip39_test() {}
 };

@@ -8,7 +8,7 @@
 #include <quantum/quantum.h> // mlock(), mprotect(), SecureAllocator and malloc()
 #include <cleanse/cleanse.h>
 #include <debugcs/debugcs.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <map>
 #include <QString>
 #include <QDialog>

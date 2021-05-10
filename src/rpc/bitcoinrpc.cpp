@@ -6,7 +6,7 @@
 
 #include <init.h>
 #include <util.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <ui_interface.h>
 #include <rpc/bitcoinrpc.h>
 #include <random/random.h>

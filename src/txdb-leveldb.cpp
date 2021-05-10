@@ -19,7 +19,7 @@
 #include <main.h>
 #include <util/logging.h>
 #include <file_operate/iofs.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <debugcs/debugcs.h>
 
 #ifdef BLK_SQL_MODE

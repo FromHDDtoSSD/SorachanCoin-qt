@@ -687,19 +687,19 @@ RECT &operator+=(RECT &rc, const int &d)
 namespace {
 namespace ProgressString
 {
-    static LCCriticalSection cs;
+    static CCriticalSection cs;
     static std::wstring str[PROGRESS_NUM];
 
     inline std::wstring GetString(WORD id)
     {
-        LLOCK(cs);
+        LOCK(cs);
         std::wostringstream stream;
         stream << str[id];
         return stream.str();
     }
     inline void SetString(WORD id, LPCWSTR message, int percent)
     {
-        LLOCK(cs);
+        LOCK(cs);
         std::wostringstream stream;
         if(message)
             stream << message << percent << L" %";

@@ -138,7 +138,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
 
         // Relay sync-checkpoint
         {
-            LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+            LOCK(Checkpoints::cs_hashSyncCheckpoint);
             if (! Checkpoints::checkpointMessage.IsNull())
                 Checkpoints::checkpointMessage.RelayTo(pfrom);
         }

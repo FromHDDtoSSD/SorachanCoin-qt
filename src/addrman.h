@@ -8,7 +8,7 @@
 #include <netbase.h>
 #include <protocol.h>
 #include <util.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <map>
 #include <vector>
 

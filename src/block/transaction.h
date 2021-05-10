@@ -18,7 +18,7 @@
 #include <serialize.h>
 #include <timestamps.h>
 #include <bignum.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <script/script.h>
 #include <scrypt.h>
 #include <checkqueue.h>

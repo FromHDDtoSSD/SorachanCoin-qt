@@ -91,7 +91,7 @@ fs::path iofs::GetDefaultDataDir() {
 
 const fs::path &iofs::GetDataDir(bool fNetSpecific) {
     static fs::path pathCached[2];
-    static LCCriticalSection csPathCached;
+    static CCriticalSection csPathCached;
     static bool cachedPath[2] = {false, false};
 
     fs::path &path = pathCached[fNetSpecific];
@@ -101,7 +101,7 @@ const fs::path &iofs::GetDataDir(bool fNetSpecific) {
     if (cachedPath[fNetSpecific])
         return path;
 
-    LLOCK(csPathCached);
+    LOCK(csPathCached);
     if (map_arg::GetMapArgsCount("-datadir")) {
         path = fs::system_complete(map_arg::GetMapArgsString("-datadir"));
         if (! fs::is_directory(path)) {

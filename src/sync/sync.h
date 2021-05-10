@@ -7,6 +7,10 @@
 #ifndef BITCOIN_SYNC_H
 #define BITCOIN_SYNC_H
 
+// SorachanCoin
+// from sync.h to lsync.h
+static_assert(false, "from sync.h(old core) to lsync.h(latest core)");
+
 #include <mutex>
 #include <condition_variable>
 

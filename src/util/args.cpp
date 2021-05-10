@@ -47,7 +47,7 @@ bool_arg args_bool::fReopenDebugLog(false);
 bool_arg args_bool::fMemoryLockPermissive(false);
 unsigned int args_uint::nNodeLifespan = 0;
 
-LCCriticalSection config::cs_args;
+CCriticalSection config::cs_args;
 std::map<std::string, std::string> map_arg::mapArgs;
 std::map<std::string, std::vector<std::string> > map_arg::mapMultiArgs;
 std::map<std::string, std::vector<std::string> > config::mapConfigArgs;
@@ -100,7 +100,7 @@ std::string config::randomStrGen(int length) {
 }
 
 bool config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     fs::ifstream streamConfig(iofs::GetConfigFile());
     if (! streamConfig.good()) {
         config::createConf();
@@ -137,7 +137,7 @@ bool map_arg::IsArgKnown(const std::string &key) {
 
     return true;
     /* after implement AddArg ...
-    LLOCK(cs_args);
+    LOCK(cs_args);
     for (const auto &arg_map: mapAvailableArgs) {
         if (arg_map.second.count(arg_no_net)) return true;
     }
@@ -146,7 +146,7 @@ bool map_arg::IsArgKnown(const std::string &key) {
 }
 
 bool map_arg::ParseParameters(int argc, const char *const argv[], std::string *error/*=nullptr*/) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     mapArgs.clear();
     mapMultiArgs.clear();
     for (int i = 1; i < argc; ++i) {
@@ -257,7 +257,7 @@ void map_arg::AddArg(const std::string &name, const std::string &help, const boo
         eq_index = name.size();
     }
 
-    LLOCK(cs_args);
+    LOCK(cs_args);
     std::map<std::string, Arg> &arg_map = mapAvailableArgs[cat];
     auto ret = arg_map.emplace(name.substr(0, eq_index), Arg(name.substr(eq_index, name.size() - eq_index), help, debug_only));
     assert(ret.second); // Make sure an insertion actually happened
@@ -337,7 +337,7 @@ public:
      * if it was found (or the empty string if not found).
      */
     static inline std::pair<bool, std::string> GetArg(const ArgsManager &am, const std::string &arg) {
-        LLOCK(am.get_cs_args());
+        LOCK(am.get_cs_args());
         std::pair<bool, std::string> found_result(false, std::string());
 
         // We pass "true" to GetArgHelper in order to return the last
@@ -514,7 +514,7 @@ ArgsManager::~ArgsManager() {
 
 const std::set<std::string> ArgsManager::GetUnsuitableSectionOnlyArgs() const {
     std::set<std::string> unsuitables;
-    LLOCK(cs_args);
+    LOCK(cs_args);
 
     // if there's no section selected, don't worry
     if (m_network.empty()) return std::set<std::string> {};
@@ -552,7 +552,7 @@ const std::set<std::string> ArgsManager::GetUnrecognizedSections() const {
     };
     std::set<std::string> diff;
 
-    LLOCK(cs_args);
+    LOCK(cs_args);
     std::set_difference(
         m_config_sections.begin(), m_config_sections.end(),
         available_sections.begin(), available_sections.end(),
@@ -561,12 +561,12 @@ const std::set<std::string> ArgsManager::GetUnrecognizedSections() const {
 }
 
 void ArgsManager::SelectConfigNetwork(const std::string &network) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     m_network = network;
 }
 
 bool ArgsManager::ParseParameters(int argc, const char *const argv[], std::string &error) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     m_override_args.clear();
     for (int i = 1; i < argc; ++i) {
         std::string key(argv[i]);
@@ -627,7 +627,7 @@ bool ArgsManager::IsArgKnown(const std::string &key) const {
         arg_no_net = std::string("-") + key.substr(option_index + 1, std::string::npos);
     }
 
-    LLOCK(cs_args);
+    LOCK(cs_args);
     for (const auto &arg_map: m_available_args) {
         if (arg_map.second.count(arg_no_net))
             return true;
@@ -639,7 +639,7 @@ std::vector<std::string> ArgsManager::GetArgs(const std::string& strArg) const {
     std::vector<std::string> result = {};
     if (IsArgNegated(strArg)) return result; // special case
 
-    LLOCK(cs_args);
+    LOCK(cs_args);
     ArgsManagerHelper::AddArgs(result, m_override_args, strArg);
     if (! m_network.empty()) {
         ArgsManagerHelper::AddArgs(result, m_config_args, ArgsManagerHelper::NetworkArg(*this, strArg));
@@ -657,7 +657,7 @@ bool ArgsManager::IsArgSet(const std::string &strArg) const {
 }
 
 bool ArgsManager::IsArgNegated(const std::string &strArg) const {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     const auto &ov = m_override_args.find(strArg);
     if (ov != m_override_args.end()) return ov->second.empty();
 
@@ -694,7 +694,7 @@ bool ArgsManager::GetBoolArg(const std::string &strArg, bool fDefault) const {
 }
 
 bool ArgsManager::SoftSetArg(const std::string &strArg, const std::string &strValue) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     if (IsArgSet(strArg)) return false;
     ForceSetArg(strArg, strValue);
     return true;
@@ -708,7 +708,7 @@ bool ArgsManager::SoftSetBoolArg(const std::string &strArg, bool fValue) {
 }
 
 void ArgsManager::ForceSetArg(const std::string &strArg, const std::string &strValue) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     m_override_args[strArg] = {strValue};
 }
 
@@ -719,7 +719,7 @@ void ArgsManager::AddArg(const std::string &name, const std::string &help, const
         eq_index = name.size();
     }
 
-    LLOCK(cs_args);
+    LOCK(cs_args);
     std::map<std::string, Arg>& arg_map = m_available_args[cat];
     auto ret = arg_map.emplace(name.substr(0, eq_index), Arg(name.substr(eq_index, name.size() - eq_index), help, debug_only));
     assert(ret.second); // Make sure an insertion actually happened
@@ -734,7 +734,7 @@ void ArgsManager::AddHiddenArgs(const std::vector<std::string> &names) {
 std::string ArgsManager::GetHelpMessage() const {
     const bool show_debug = ARGS.GetBoolArg("-help-debug", false);
     std::string usage = "";
-    LLOCK(cs_args);
+    LOCK(cs_args);
     for (const auto &arg_map: m_available_args) {
         switch(arg_map.first) {
             case OptionsCategory::OPTIONS:
@@ -799,7 +799,7 @@ std::string ArgsManager::GetHelpMessage() const {
 }
 
 bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, bool ignore_invalid_keys) {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     std::vector<std::pair<std::string, std::string> > options;
     m_config_sections.clear();
     if (! ::GetConfigOptions(stream, error, options, m_config_sections)) {
@@ -834,7 +834,7 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
 
 bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*=false*/) {
     {
-        LLOCK(cs_args);
+        LOCK(cs_args);
         m_config_args.clear();
     }
 
@@ -855,7 +855,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*
         // passed '-noincludeconf' on the command line, in which case we should not include anything
         bool emptyIncludeConf;
         {
-            LLOCK(cs_args);
+            LOCK(cs_args);
             emptyIncludeConf = m_override_args.count("-includeconf") == 0;
         }
         if (emptyIncludeConf) {
@@ -871,7 +871,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*
             // Remove -includeconf from configuration, so we can warn about recursion
             // later
             {
-                LLOCK(cs_args);
+                LOCK(cs_args);
                 m_config_args.erase("-includeconf");
                 m_config_args.erase(std::string("-") + chain_id + ".includeconf");
             }
@@ -917,7 +917,7 @@ bool ArgsManager::ReadConfigFiles(std::string &error, bool ignore_invalid_keys/*
 }
 
 std::string ArgsManager::GetChainName() const {
-    LLOCK(cs_args);
+    LOCK(cs_args);
     bool fRegTest = ArgsManagerHelper::GetNetBoolArg(*this, "-regtest");
     bool fTestNet = ArgsManagerHelper::GetNetBoolArg(*this, "-testnet");
 

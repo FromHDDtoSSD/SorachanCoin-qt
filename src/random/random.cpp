@@ -451,7 +451,7 @@ public:
         static_assert(sizeof(buf) == CSHA512::OUTPUT_SIZE, "Buffer needs to have hasher's output size");
         bool ret;
         {
-            LLOCK(m_mutex);
+            LOCK(m_mutex);
             ret = (m_strongly_seeded |= strong_seed);
             // Write the current state of the RNG into the hasher
             hasher.Write(m_state, 32);

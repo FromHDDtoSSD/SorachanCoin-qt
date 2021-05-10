@@ -14,7 +14,7 @@
 
 uint256 Checkpoints::manage::hashSyncCheckpoint = 0;
 uint256 Checkpoints::manage::hashInvalidCheckpoint = 0;
-LCCriticalSection Checkpoints::cs_hashSyncCheckpoint;
+CCriticalSection Checkpoints::cs_hashSyncCheckpoint;
 uint256 Checkpoints::hashPendingCheckpoint = 0;
 CSyncCheckpoint Checkpoints::checkpointMessage;
 CSyncCheckpoint Checkpoints::checkpointMessagePending;
@@ -108,7 +108,7 @@ CBlockIndex *Checkpoints::manage::GetLastCheckpoint(const std::map<uint256, CBlo
 
 // ppcoin: get last synchronized checkpoint
 CBlockIndex *Checkpoints::manage::GetLastSyncCheckpoint() {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (! block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint)) {
         bool ret = logging::error("Checkpoints::manage::GetSyncCheckpoint: block index missing for current sync-checkpoint %s", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
         (void)ret;
@@ -178,7 +178,7 @@ bool Checkpoints::manage::WriteSyncCheckpoint(const uint256 &hashCheckpoint) {
 }
 
 bool Checkpoints::manage::AcceptPendingSyncCheckpoint() {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (Checkpoints::hashPendingCheckpoint != 0 && block_info::mapBlockIndex.count(Checkpoints::hashPendingCheckpoint)) {
         if (! Checkpoints::manage::ValidateSyncCheckpoint(Checkpoints::hashPendingCheckpoint)) {
             Checkpoints::hashPendingCheckpoint = 0;
@@ -238,7 +238,7 @@ bool Checkpoints::manage::CheckSync(const uint256 &hashBlock, const CBlockIndex 
 
     int nHeight = pindexPrev->get_nHeight() + 1;
 
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
 
     // sync-checkpoint should always be accepted block
     // logging::LogPrintf("Checkpoints::manage::CheckSync: pindexSync - block Checkpoints::manage::hashSyncCheckpoint_%s\n", Checkpoints::manage::hashSyncCheckpoint.ToString().c_str());
@@ -268,7 +268,7 @@ bool Checkpoints::manage::CheckSync(const uint256 &hashBlock, const CBlockIndex 
 }
 
 bool Checkpoints::manage::WantedByPendingSyncCheckpoint(uint256 hashBlock) {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (Checkpoints::hashPendingCheckpoint == 0) {
         return false;
     }
@@ -283,7 +283,7 @@ bool Checkpoints::manage::WantedByPendingSyncCheckpoint(uint256 hashBlock) {
 
 // ppcoin: reset synchronized checkpoint to last hardened checkpoint
 bool Checkpoints::manage::ResetSyncCheckpoint() {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
 
     const uint256 &hash = Checkpoints::manage::mapCheckpoints.rbegin()->second;
     if (block_info::mapBlockIndex.count(hash) && !block_info::mapBlockIndex[hash]->IsInMainChain()) {
@@ -325,7 +325,7 @@ bool Checkpoints::manage::ResetSyncCheckpoint() {
 }
 
 void Checkpoints::manage::AskForPendingSyncCheckpoint(CNode *pfrom) {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (pfrom && Checkpoints::hashPendingCheckpoint != 0 && (!block_info::mapBlockIndex.count(hashPendingCheckpoint)) && (!block_process::mapOrphanBlocks.count(Checkpoints::hashPendingCheckpoint))) {
         pfrom->AskFor(CInv(_CINV_MSG_TYPE::MSG_BLOCK, Checkpoints::hashPendingCheckpoint));
     }
@@ -390,7 +390,7 @@ bool Checkpoints::manage::AutoSendSyncCheckpoint() {
 
 // Is the sync-checkpoint outside maturity window?
 bool Checkpoints::manage::IsMatureSyncCheckpoint() {
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
 
     // sync-checkpoint should always be accepted block
     assert(block_info::mapBlockIndex.count(Checkpoints::manage::hashSyncCheckpoint));
@@ -417,7 +417,7 @@ bool CSyncCheckpoint::ProcessSyncCheckpoint(CNode *pfrom) {
         return false;
     }
 
-    LLOCK(Checkpoints::cs_hashSyncCheckpoint);
+    LOCK(Checkpoints::cs_hashSyncCheckpoint);
     if (! block_info::mapBlockIndex.count(hashCheckpoint)) {
         // We haven't received the checkpoint chain, keep the checkpoint as pending
         Checkpoints::hashPendingCheckpoint = hashCheckpoint;

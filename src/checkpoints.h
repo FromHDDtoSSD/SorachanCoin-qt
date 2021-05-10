@@ -16,9 +16,9 @@
 #endif
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
-typedef prevector<PREVECTOR_N, uint8_t> checkpoints_vector;
+using checkpoints_vector = prevector<PREVECTOR_N, uint8_t>;
 #else
-typedef std::vector<uint8_t> checkpoints_vector;
+using checkpoints_vector = std::vector<uint8_t>;
 #endif
 
 template<typename T> class CBlockIndex_impl;
@@ -27,12 +27,10 @@ using CBlockIndex = CBlockIndex_impl<uint256>;
 // ppcoin: synchronized checkpoint
 class CUnsignedSyncCheckpoint
 {
-private:
     // CUnsignedSyncCheckpoint(const CUnsignedSyncCheckpoint &)=delete;
     // CUnsignedSyncCheckpoint &operator=(const CUnsignedSyncCheckpoint &)=delete;
     // CUnsignedSyncCheckpoint(CUnsignedSyncCheckpoint &&)=delete;
     // CUnsignedSyncCheckpoint &operator=(CUnsignedSyncCheckpoint &&)=delete;
-
 protected:
     int nVersion;
     uint256 hashCheckpoint; // checkpoint block
@@ -77,12 +75,10 @@ public:
 
 class CSyncCheckpoint : public CUnsignedSyncCheckpoint
 {
-//private:
     // CSyncCheckpoint(const CSyncCheckpoint &)=delete;
     // CSyncCheckpoint &operator=(const CSyncCheckpoint &)=delete;
     // CSyncCheckpoint(CSyncCheckpoint &&)=delete;
     // CSyncCheckpoint &operator=(CSyncCheckpoint &&)=delete;
-
 private:
     static const std::string strMasterPubKey;
     static std::string strMasterPrivKey;
@@ -179,7 +175,7 @@ namespace Checkpoints
     };
     extern CPMode CheckpointsMode;
 
-    extern LCCriticalSection cs_hashSyncCheckpoint;
+    extern CCriticalSection cs_hashSyncCheckpoint;
     extern uint256 hashPendingCheckpoint;// = 0;
 
     extern CSyncCheckpoint checkpointMessage;

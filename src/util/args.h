@@ -106,7 +106,7 @@ private:
     static void createConf();
     static std::string randomStrGen(int length);
 protected:    // to class map_arg
-    static LCCriticalSection cs_args;
+    static CCriticalSection cs_args;
     NODISCARD static bool ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet);
 };
 
@@ -226,7 +226,7 @@ public:
 class ArgsManager
 {
 private:
-    mutable LCCriticalSection cs_args;
+    mutable CCriticalSection cs_args;
     mutable std::map<std::string, std::vector<std::string> > m_override_args GUARDED_BY(cs_args);
     mutable std::map<std::string, std::vector<std::string> > m_config_args GUARDED_BY(cs_args);
     mutable std::string m_network GUARDED_BY(cs_args);
@@ -242,7 +242,7 @@ public:
     /**
      * interface
      */
-    LCCriticalSection &get_cs_args() const noexcept {return cs_args;}
+    CCriticalSection &get_cs_args() const noexcept {return cs_args;}
     std::map<std::string, std::vector<std::string>> &get_override_args() const noexcept {return m_override_args;}
     std::map<std::string, std::vector<std::string>> &get_config_args() const noexcept {return m_config_args;}
     std::string &get_network() const noexcept {return m_network;}
@@ -374,7 +374,7 @@ public:
      * Clear available arguments
      */
     void ClearArgs() {
-        LLOCK(cs_args);
+        LOCK(cs_args);
         m_available_args.clear();
     }
 

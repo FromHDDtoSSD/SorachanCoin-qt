@@ -5,7 +5,7 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <util.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <version.h>
 #include <ui_interface.h>
 #include <boost/algorithm/string/join.hpp>

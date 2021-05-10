@@ -11,7 +11,7 @@
 #include <bignum.h>
 #include <key.h>
 #include <main.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <util.h>
 #include <address/key_io.h>
 

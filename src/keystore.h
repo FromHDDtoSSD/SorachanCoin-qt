@@ -7,7 +7,7 @@
 #define BITCOIN_KEYSTORE_H
 
 #include <crypter.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 #include <key.h>
 #include <boost/signals2/signal.hpp>
 #include <boost/variant.hpp>

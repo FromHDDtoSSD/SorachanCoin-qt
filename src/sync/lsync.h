@@ -7,12 +7,10 @@
 #ifndef BITCOIN_LSYNC_H
 #define BITCOIN_LSYNC_H
 
-// SorachanCoin: checking ...
-// current apply: random.h[random.cpp]
 #ifdef LSYNC_DEBUG
 # define HAVE_THREAD_LOCAL
-# define LDEBUG_LOCKCONTENTION
-# define LDEBUG_LOCKORDER
+# define DEBUG_LOCKCONTENTION
+# define DEBUG_LOCKORDER
 # define DEBUG_LSYNC_CS(str) do {debugcs::instance() << (str) << debugcs::endl();} while(0)
 #else
 # define DEBUG_LSYNC_CS(str)
@@ -31,29 +29,30 @@
 /////////////////////////////////////////////////
 
 /*
- * Note:
- * LOCK(), LOCK2() ... sync.h (old core),
- * LLOCK(), LLOCK2() ... lsync.h (latest core)
- *
 RecursiveMutex mutex;
     std::recursive_mutex mutex;
 
-LLOCK(mutex);
+LOCK(mutex);
     std::unique_lock<std::recursive_mutex> criticalblock(mutex);
 
-LLOCK2(mutex1, mutex2);
+LOCK2(mutex1, mutex2);
     std::unique_lock<std::recursive_mutex> criticalblock1(mutex1);
     std::unique_lock<std::recursive_mutex> criticalblock2(mutex2);
 
-LTRY_LOCK(mutex, name);
+LOCK3(mutex1, mutex2, mutex3);
+    std::unique_lock<std::recursive_mutex> criticalblock1(mutex1);
+    std::unique_lock<std::recursive_mutex> criticalblock2(mutex2);
+    std::unique_lock<std::recursive_mutex> criticalblock3(mutex3);
+
+TRY_LOCK(mutex, name);
     std::unique_lock<std::recursive_mutex> name(mutex, std::try_to_lock_t);
 
-LENTER_CRITICAL_SECTION(mutex); // no RAII
+ENTER_CRITICAL_SECTION(mutex); // no RAII
     mutex.lock();
 
-LLEAVE_CRITICAL_SECTION(mutex); // no RAII
+LEAVE_CRITICAL_SECTION(mutex); // no RAII
     mutex.unlock();
- */
+*/
 
 ///////////////////////////////
 //                           //
@@ -61,29 +60,29 @@ LLEAVE_CRITICAL_SECTION(mutex); // no RAII
 //                           //
 ///////////////////////////////
 
-#ifdef LDEBUG_LOCKORDER
-void LEnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);
-void LLeaveCritical();
-std::string LLocksHeld();
-void LAssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) ASSERT_EXCLUSIVE_LOCK(cs);
-void LAssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs);
-void LDeleteLock(void* cs);
+#ifdef DEBUG_LOCKORDER
+void EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false);
+void LeaveCritical();
+std::string LocksHeld();
+void AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) ASSERT_EXCLUSIVE_LOCK(cs);
+void AssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs);
+void DeleteLock(void* cs);
 
 /**
  * Call abort() if a potential lock order deadlock bug is detected, instead of
  * just logging information and throwing a logic_error. Defaults to true, and
- * set to false in LDEBUG_LOCKORDER unit tests.
+ * set to false in DEBUG_LOCKORDER unit tests.
  */
 extern bool g_debug_lockorder_abort;
 #else
-void static inline LEnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false) {}
-void static inline LLeaveCritical() {}
-void static inline LAssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) ASSERT_EXCLUSIVE_LOCK(cs) {}
-void static inline LAssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) {}
-void static inline LDeleteLock(void* cs) {}
+void static inline EnterCritical(const char* pszName, const char* pszFile, int nLine, void* cs, bool fTry = false) {}
+void static inline LeaveCritical() {}
+void static inline AssertLockHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) ASSERT_EXCLUSIVE_LOCK(cs) {}
+void static inline AssertLockNotHeldInternal(const char* pszName, const char* pszFile, int nLine, void* cs) {}
+void static inline DeleteLock(void* cs) {}
 #endif
-#define LAssertLockHeld(cs) LAssertLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
-#define LAssertLockNotHeld(cs) LAssertLockNotHeldInternal(#cs, __FILE__, __LINE__, &cs)
+#define AssertLockHeld(cs) AssertLockHeldInternal(#cs, __FILE__, __LINE__, &cs)
+#define AssertLockNotHeld(cs) AssertLockNotHeldInternal(#cs, __FILE__, __LINE__, &cs)
 
 /**
  * Template mixin that adds -Wthread-safety locking annotations and lock order
@@ -94,7 +93,7 @@ class LOCKABLE AnnotatedMixin : public PARENT
 {
 public:
     ~AnnotatedMixin() {
-        LDeleteLock((void*)this);
+        DeleteLock((void*)this);
     }
 
     void lock() EXCLUSIVE_LOCK_FUNCTION()
@@ -120,13 +119,13 @@ public:
  * TODO: We should move away from using the recursive lock by default.
  */
 using RecursiveMutex = AnnotatedMixin<std::recursive_mutex>;
-typedef AnnotatedMixin<std::recursive_mutex> LCCriticalSection;
+using CCriticalSection = AnnotatedMixin<std::recursive_mutex>;
 
 /** Wrapped mutex: supports waiting but not recursive locking */
-typedef AnnotatedMixin<std::mutex> Mutex;
+using Mutex = AnnotatedMixin<std::mutex>;
 
-#ifdef LDEBUG_LOCKCONTENTION
-void LPrintLockContention(const char* pszName, const char* pszFile, int nLine);
+#ifdef DEBUG_LOCKCONTENTION
+void PrintLockContention(const char* pszName, const char* pszFile, int nLine);
 #endif
 
 /** Wrapper around std::unique_lock style lock for Mutex. */
@@ -136,23 +135,23 @@ class SCOPED_LOCKABLE UniqueLock : public Base
 private:
     void Enter(const char* pszName, const char* pszFile, int nLine)
     {
-        LEnterCritical(pszName, pszFile, nLine, (void*)(Base::mutex()));
-#ifdef LDEBUG_LOCKCONTENTION
+        EnterCritical(pszName, pszFile, nLine, (void*)(Base::mutex()));
+#ifdef DEBUG_LOCKCONTENTION
         if (!Base::try_lock()) {
-            LPrintLockContention(pszName, pszFile, nLine);
+            PrintLockContention(pszName, pszFile, nLine);
 #endif
             Base::lock();
-#ifdef LDEBUG_LOCKCONTENTION
+#ifdef DEBUG_LOCKCONTENTION
         }
 #endif
     }
 
     bool TryEnter(const char* pszName, const char* pszFile, int nLine)
     {
-        LEnterCritical(pszName, pszFile, nLine, (void*)(Base::mutex()), true);
+        EnterCritical(pszName, pszFile, nLine, (void*)(Base::mutex()), true);
         Base::try_lock();
         if (!Base::owns_lock())
-            LLeaveCritical();
+            LeaveCritical();
         return Base::owns_lock();
     }
 
@@ -179,7 +178,7 @@ public:
     ~UniqueLock() UNLOCK_FUNCTION()
     {
         if (Base::owns_lock())
-            LLeaveCritical();
+            LeaveCritical();
     }
 
     operator bool()
@@ -194,26 +193,30 @@ using DebugLock = UniqueLock<typename std::remove_reference<typename std::remove
 #define PASTE(x, y) x ## y
 #define PASTE2(x, y) PASTE(x, y)
 
-#define LLOCK(cs) DebugLock<decltype(cs)> PASTE2(criticalblock, __COUNTER__)(cs, #cs, __FILE__, __LINE__)
-#define LLOCK2(cs1, cs2)                                               \
+#define LOCK(cs) DebugLock<decltype(cs)> PASTE2(criticalblock, __COUNTER__)(cs, #cs, __FILE__, __LINE__)
+#define LOCK2(cs1, cs2)                                               \
     DebugLock<decltype(cs1)> criticalblock1(cs1, #cs1, __FILE__, __LINE__); \
     DebugLock<decltype(cs2)> criticalblock2(cs2, #cs2, __FILE__, __LINE__);
-#define LTRY_LOCK(cs, name) DebugLock<decltype(cs)> name(cs, #cs, __FILE__, __LINE__, true)
-#define LWAIT_LOCK(cs, name) DebugLock<decltype(cs)> name(cs, #cs, __FILE__, __LINE__)
+#define LOCK3(cs1, cs2, cs3)                                          \
+    DebugLock<decltype(cs1)> criticalblock1(cs1, #cs1, __FILE__, __LINE__); \
+    DebugLock<decltype(cs2)> criticalblock2(cs2, #cs2, __FILE__, __LINE__); \
+    DebugLock<decltype(cs3)> criticalblock3(cs3, #cs3, __FILE__, __LINE__);
+#define TRY_LOCK(cs, name) DebugLock<decltype(cs)> name(cs, #cs, __FILE__, __LINE__, true)
+#define WAIT_LOCK(cs, name) DebugLock<decltype(cs)> name(cs, #cs, __FILE__, __LINE__)
 
-#define LENTER_CRITICAL_SECTION(cs)                            \
+#define ENTER_CRITICAL_SECTION(cs)                            \
     {                                                         \
         EnterCritical(#cs, __FILE__, __LINE__, (void*)(&cs)); \
         (cs).lock();                                          \
     }
 
-#define LLEAVE_CRITICAL_SECTION(cs) \
+#define LEAVE_CRITICAL_SECTION(cs) \
     {                              \
         (cs).unlock();             \
         LeaveCritical();           \
     }
 
-class LCSemaphore
+class CSemaphore
 {
 private:
     std::condition_variable condition;
@@ -221,7 +224,7 @@ private:
     int value;
 
 public:
-    explicit LCSemaphore(int init) : value(init) {}
+    explicit CSemaphore(int init) : value(init) {}
 
     void wait()
     {
@@ -250,10 +253,10 @@ public:
 };
 
 /** RAII-style semaphore lock */
-class LCSemaphoreGrant
+class CSemaphoreGrant
 {
 private:
-    LCSemaphore *sem;
+    CSemaphore *sem;
     bool fHaveGrant;
 
 public:
@@ -280,7 +283,7 @@ public:
         return fHaveGrant;
     }
 
-    void MoveTo(LCSemaphoreGrant &grant)
+    void MoveTo(CSemaphoreGrant &grant)
     {
         grant.Release();
         grant.sem = sem;
@@ -288,9 +291,9 @@ public:
         fHaveGrant = false;
     }
 
-    LCSemaphoreGrant() : sem(nullptr), fHaveGrant(false) {}
+    CSemaphoreGrant() : sem(nullptr), fHaveGrant(false) {}
 
-    explicit LCSemaphoreGrant(LCSemaphore &sema, bool fTry = false) : sem(&sema), fHaveGrant(false)
+    explicit CSemaphoreGrant(CSemaphore &sema, bool fTry = false) : sem(&sema), fHaveGrant(false)
     {
         if (fTry)
             TryAcquire();
@@ -298,7 +301,7 @@ public:
             Acquire();
     }
 
-    ~LCSemaphoreGrant()
+    ~CSemaphoreGrant()
     {
         Release();
     }

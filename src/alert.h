@@ -10,7 +10,7 @@
 #include <string>
 #include <uint256.h>
 #include <util.h>
-#include <sync/sync.h>
+#include <sync/lsync.h>
 
 class CNode;
 

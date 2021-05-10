@@ -153,10 +153,10 @@ fs::path lutil::GetDefaultDataDir() {
 static fs::path g_blocks_path_cache_net_specific;
 static fs::path pathCached;
 static fs::path pathCachedNetSpecific;
-static LCCriticalSection csPathCached;
+static CCriticalSection csPathCached;
 
 const fs::path &lutil::GetBlocksDir() {
-    LLOCK(csPathCached);
+    LOCK(csPathCached);
     fs::path &path = g_blocks_path_cache_net_specific;
 
     // This can be called during exceptions by LogPrintf(), so we cache the
@@ -181,7 +181,7 @@ const fs::path &lutil::GetBlocksDir() {
 }
 
 const fs::path &lutil::GetDataDir(bool fNetSpecific) {
-    LLOCK(csPathCached);
+    LOCK(csPathCached);
     fs::path &path = fNetSpecific ? pathCachedNetSpecific : pathCached;
 
     // This can be called during exceptions by LogPrintf(), so we cache the
@@ -210,7 +210,7 @@ const fs::path &lutil::GetDataDir(bool fNetSpecific) {
 }
 
 void lutil::ClearDatadirCache() {
-    LLOCK(csPathCached);
+    LOCK(csPathCached);
 
     pathCached = fs::path();
     pathCachedNetSpecific = fs::path();

@@ -7,7 +7,6 @@
 
 #include <string>
 #include <sstream>
-#include <sync/sync.h>
 #include <compat/compat.h>
 
 #ifdef DEBUG_ALGO_CS_OUTPUT
@@ -33,9 +32,13 @@ static inline void _fprintf_cs(const std::wstring &e) {
 }
 #endif
 
-class debugcs {
-#ifdef DEBUG
-    mutable CCriticalSection cs;
+class debugcs final {
+    debugcs(const debugcs &)=delete;
+    debugcs(debugcs &&)=delete;
+    debugcs &operator=(const debugcs &)=delete;
+    debugcs &operator=(debugcs &&)=delete;
+#if defined(WIN32) && defined(DEBUG)
+    mutable CRITICAL_SECTION cs;
 #endif
 public:
     static debugcs &instance() noexcept {
@@ -43,11 +46,12 @@ public:
         return obj;
     }
     const debugcs &operator<<(const std::wstring &obj) const noexcept {
-#ifdef DEBUG
-        LOCK(cs);
+#if defined(WIN32) && defined(DEBUG)
+        ::EnterCriticalSection(&cs);
         std::wostringstream stream;
         stream << obj;
         ::_fprintf_cs(stream.str());
+        ::LeaveCriticalSection(&cs);
 #else
         (void)obj;
 #endif
@@ -55,11 +59,12 @@ public:
     }
     template <typename T>
     const debugcs &operator<<(const T &obj) const noexcept {
-#ifdef DEBUG
-        LOCK(cs);
+#if defined(WIN32) && defined(DEBUG)
+        ::EnterCriticalSection(&cs);
         std::ostringstream stream;
         stream << obj;
         ::_fprintf_cs(stream.str());
+        ::LeaveCriticalSection(&cs);
 #else
         (void)obj;
 #endif
@@ -70,17 +75,13 @@ public:
     }
 
 private:
-    debugcs(const debugcs &)=delete;
-    debugcs(debugcs &&)=delete;
-    debugcs &operator=(const debugcs &)=delete;
-    debugcs &operator=(debugcs &&)=delete;
-
     debugcs() noexcept {
 #if defined(WIN32) && defined(DEBUG)
         FILE *fp = nullptr;
         ::AllocConsole();
         ::freopen_s(&fp, "CONOUT$", "w", stdout);
         ::freopen_s(&fp, "CONOUT$", "w", stderr);
+        ::InitializeCriticalSection(&cs);
 #endif
     }
     ~debugcs() {

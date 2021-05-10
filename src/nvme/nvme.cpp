@@ -23,7 +23,7 @@ static struct nvme_ctrlr *nvme_ctrlr_get(struct nvme_ctrlr *ctrlr, bool remove)
 {
     struct nvme_ctrlr *c;
 
-    LLOCK(ctrlr_cs);
+    LOCK(ctrlr_cs);
     LIST_FOREACH(c, &ctrlr_head, link) {
         if (c == ctrlr) {
             if (remove)
@@ -143,7 +143,7 @@ struct nvme_ctrlr *nvme::nvme_ctrlr_open(const char *url, struct nvme_ctrlr_opts
         return nullptr;
     }
 
-    LLOCK(ctrlr_cs);
+    LOCK(ctrlr_cs);
 
     /* Verify that this controller is not already open */
     LIST_FOREACH(ctrlr, &ctrlr_head, link) {
@@ -200,7 +200,7 @@ int nvme::nvme_ctrlr_stat(struct nvme_ctrlr *ctrlr, struct nvme_ctrlr_stat *csta
         return -EINVAL;
     }
 
-    LLOCK(ctrlr_cs);
+    LOCK(ctrlr_cs);
     ::memset(cstat, 0, sizeof(struct nvme_ctrlr_stat));
 
     /* Controller serial and model number */
@@ -263,7 +263,7 @@ int nvme::nvme_ctrlr_data(struct nvme_ctrlr *ctrlr, struct nvme_ctrlr_data *cdat
         return -EINVAL;
     }
 
-    LLOCK(ctrlr_cs);
+    LOCK(ctrlr_cs);
 
     /* Controller data */
     if (cdata)
@@ -292,7 +292,7 @@ int nvme::nvme_qpair_stat(struct nvme_qpair *qpair, struct nvme_qpair_stat *qpst
         return -EINVAL;
     }
 
-    LLOCK(ctrlr_cs);
+    LOCK(ctrlr_cs);
 
     qpstat->id = qpair->id;
     qpstat->qd = qpair->entries;
