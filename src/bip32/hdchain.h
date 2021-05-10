@@ -60,4 +60,10 @@ static inline SecureBytes token_bytes(int8_t len) {
     return std::move(buf);
 }
 
+static inline SecureBytes privKey_bytes() {
+    SecureBytes buf(32);
+    std::memcpy(buf, "SorachanCoin_HD_WALLET_priv__key", 32);
+    return std::move(buf);
+}
+
 #endif

@@ -3,9 +3,18 @@
 #include <crypto/hmac_sha512.h>
 
 static std::vector<std::string> bip39_word_list() {
-    return {"tokyonikonaideitadakitai", "omochi", "kinshu", "itutunoko"
-            "kokorowohitotuni", "iekaradenaide", "tokyokaradenaidekudasai",
-            "kokoonorikirimasho"};
+    return {"tokyonikonaideitadakitai",
+            "omochi",
+            "kinshu",
+            "itutunoko",
+            "kokorowohitotuni",
+            "iekaradenaide",
+            "tokyokaradenaidekudasai",
+            "kokoonorikirimasho",
+            "watashinodeban",
+            "tonainochosadesu",
+            "denkiwokeshite",
+            "kibouwomuneni"};
 }
 
 static bool len_check(int8_t size, const std::vector<int8_t> &lens) {
@@ -49,3 +58,21 @@ static uint256 generate_mnemonic() {
     return bytes_to_mnemonic(std::move(mnemonic_bytes));
 }
 
+static uint256 generate_priv_mnemonic() {
+    SecureBytes mnemonic_bytes = privKey_bytes();
+    return bytes_to_mnemonic(std::move(mnemonic_bytes));
+}
+
+// test
+#include <util.h>
+class bip39_test {
+public:
+    bip39_test() {
+        debugcs::instance() << "bip39 test" << debugcs::endl();
+        debugcs::instance() << generate_mnemonic().ToString() << debugcs::endl();
+        debugcs::instance() << generate_priv_mnemonic().ToString() << debugcs::endl();
+        util::Sleep(3000);
+    }
+    ~bip39_test() {}
+};
+bip39_test bip39_obj;
