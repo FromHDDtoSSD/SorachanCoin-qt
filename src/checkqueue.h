@@ -1,17 +1,14 @@
 // Copyright (c) 2012 The Bitcoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-// @@
+
 #ifndef CHECKQUEUE_H
 #define CHECKQUEUE_H
 
 #include <algorithm>
 #include <vector>
-
-#include <boost/foreach.hpp>
-#include <boost/thread/condition_variable.hpp>
-#include <boost/thread/locks.hpp>
-#include <boost/thread/mutex.hpp>
+#include <condition_variable>
+#include <mutex>
 
 template<typename T> class CCheckQueueControl;
 
@@ -27,22 +24,23 @@ template<typename T> class CCheckQueueControl;
 template<typename T>
 class CCheckQueue
 {
+    CCheckQueue()=delete;
+    CCheckQueue(const CCheckQueue &)=delete;
+    CCheckQueue(CCheckQueue &&)=delete;
+    CCheckQueue &operator=(const CCheckQueue &)=delete;
+    CCheckQueue &operator=(CCheckQueue &&)=delete;
 private:
-    CCheckQueue(); // {}
-    CCheckQueue(const CCheckQueue &); // {}
-    CCheckQueue &operator=(const CCheckQueue &); // {}
-
     // Mutex to protect the inner state
-    mutable boost::mutex mutex;
+    mutable std::mutex mutex;
 
     // Worker threads block on this when out of work
-    boost::condition_variable condWorker;
+    std::condition_variable condWorker;
 
     // Master thread blocks on this when out of work
-    boost::condition_variable condMaster;
+    std::condition_variable condMaster;
 
     // Quit method blocks on this until all workers are gone
-    boost::condition_variable condQuit;
+    std::condition_variable condQuit;
 
     // The queue of elements to be processed.
     // As the order of booleans doesn't matter, it is used as a LIFO (stack)
@@ -72,7 +70,7 @@ private:
     // Internal function that does bulk of the verification work.
     //
     bool Loop(bool fMaster = false) {
-        boost::condition_variable &cond = fMaster ? this->condMaster : this->condWorker;
+        std::condition_variable &cond = fMaster ? this->condMaster : this->condWorker;
 
         std::vector<T> vChecks;
         vChecks.reserve(this->nBatchSize);
@@ -82,7 +80,7 @@ private:
         do
         {
             {
-                boost::unique_lock<boost::mutex> lock(this->mutex);
+                std::unique_lock<std::mutex> lock(this->mutex);
 
                 // first do the clean-up of the previous loop run (allowing us to do it in the same critsect)
                 if (nNow) {
@@ -149,7 +147,7 @@ private:
             //
             // execute work
             //
-            BOOST_FOREACH(T &check, vChecks)
+            for(T &check: vChecks)
             {
                 if (fOk) {
                     fOk = check();
@@ -176,9 +174,9 @@ public:
 
     // Add a batch of checks to the queue
     void Add(std::vector<T> &vChecks) {
-        boost::unique_lock<boost::mutex> lock(this->mutex);
+        std::unique_lock<std::mutex> lock(this->mutex);
 
-        BOOST_FOREACH(T &check, vChecks)
+        for(T &check: vChecks)
         {
             this->queue.push_back(T());
             check.swap(queue.back());
@@ -194,7 +192,7 @@ public:
 
     // Shut the queue down
     void Quit() {
-        boost::unique_lock<boost::mutex> lock(this->mutex);
+        std::unique_lock<std::mutex> lock(this->mutex);
 
         this->fQuit = true;
 
@@ -214,7 +212,7 @@ public:
     }
 
     bool IsIdle() const {
-        boost::unique_lock<boost::mutex> lock(this->mutex);
+        std::unique_lock<std::mutex> lock(this->mutex);
 
         return (this->nTotal == nIdle && this->nTodo == 0 && this->fAllOk == true);
     }
@@ -224,25 +222,27 @@ public:
  *  queue is finished before continuing.
  */
 template<typename T> class CCheckQueueControl {
-private:
-    CCheckQueueControl(); // {}
-    CCheckQueueControl(const CCheckQueueControl &); // {}
-    CCheckQueueControl &operator=(const CCheckQueueControl &); // {}
+    CCheckQueueControl()=delete;
+    CCheckQueueControl(const CCheckQueueControl &)=delete;
+    CCheckQueueControl(CCheckQueueControl &&)=delete;
+    CCheckQueueControl &operator=(const CCheckQueueControl &)=delete;
+    CCheckQueueControl &operator=(CCheckQueueControl &&)=delete;
 
+private:
     CCheckQueue<T> *pqueue;
     bool fDone;
 
 public:
     CCheckQueueControl(CCheckQueue<T> *pqueueIn) : pqueue(pqueueIn), fDone(false) {
         // passed queue is supposed to be unused, or NULL
-        if (this->pqueue != NULL) {
+        if (this->pqueue != nullptr) {
             bool isIdle = this->pqueue->IsIdle();
             assert(isIdle);
         }
     }
 
     bool Wait() {
-        if (this->pqueue == NULL) {
+        if (this->pqueue == nullptr) {
             return true;
         }
 
@@ -252,7 +252,7 @@ public:
     }
 
     void Add(std::vector<T> &vChecks) {
-        if (this->pqueue != NULL) {
+        if (this->pqueue != nullptr) {
             this->pqueue->Add(vChecks);
         }
     }

@@ -140,6 +140,7 @@ bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T>
 
 void block_check::thread::ThreadScriptCheck(void *)
 {
+    bitthread::tracethread trace(strCoinName "-scriptch");
     net_node::vnThreadsRunning[THREAD_SCRIPTCHECK]++;
     bitthread::RenameThread(strCoinName "-scriptch");
     scriptcheckqueue.Thread();

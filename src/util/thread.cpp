@@ -9,6 +9,44 @@
 #include <util/exception.h>
 #include <boost/thread.hpp>
 
+template <typename Callable>
+static void TraceThread(const char *name, Callable func) {
+    std::string s = tfm::format("SorachanCoin-%s", name);
+    bitthread::RenameThread(s.c_str());
+    try {
+        logging::LogPrintf("%s thread start\n", name);
+        func();
+        logging::LogPrintf("%s thread exit\n", name);
+    } catch (const boost::thread_interrupted &) {
+        logging::LogPrintf("%s thread interrupt\n", name);
+        throw;
+    } catch (const std::exception &e) {
+        excep::PrintExceptionContinue(&e, name);
+        throw;
+    } catch (...) {
+        excep::PrintExceptionContinue(nullptr, name);
+        throw;
+    }
+}
+
+template <typename Callable>
+static void TraceThread2(Callable func) {
+    try {
+        debugcs::instance() << "thread start" << debugcs::endl();
+        func();
+        debugcs::instance() << "thread exit" << debugcs::endl();
+    } catch (const boost::thread_interrupted &) {
+        debugcs::instance() << "thread interrupt" << debugcs::endl();
+        throw;
+    } catch (const std::exception &e) {
+        excep::PrintExceptionContinue(&e, "");
+        throw;
+    } catch (...) {
+        excep::PrintExceptionContinue(nullptr, "");
+        throw;
+    }
+}
+
 void bitthread::thread_error(const std::string &e) noexcept {
     std::string err(e);
     err += " :thread_error";
@@ -25,22 +63,3 @@ bool bitthread::NewThread(void(*pfn)(void *), void *parg) noexcept {
     return true;
 }
 
-template <typename Callable>
-void bitthread::TraceThread(const char *name, Callable func) {
-    std::string s = tfm::format("SorachanCoin-%s", name);
-    RenameThread(s.c_str());
-    try {
-        logging::LogPrintf("%s thread start\n", name);
-        func();
-        logging::LogPrintf("%s thread exit\n", name);
-    } catch (const boost::thread_interrupted &) {
-        logging::LogPrintf("%s thread interrupt\n", name);
-        throw;
-    } catch (const std::exception &e) {
-        excep::PrintExceptionContinue(&e, name);
-        throw;
-    } catch (...) {
-        excep::PrintExceptionContinue(nullptr, name);
-        throw;
-    }
-}

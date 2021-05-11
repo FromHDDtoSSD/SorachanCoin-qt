@@ -49,10 +49,10 @@ constexpr int CMD_BUFFER_SIZE = 4096;
 constexpr int CMD_SEND_LIMIT = 10;
 constexpr int DRIVE_TARGET_UNUSED = -1;
 constexpr sector_t SCAN_BEGIN_MIN_SECTOR = 1024;
-static const wchar_t *DRIVENAME_GET_FAILURE = L"DRIVE_DEFAULT";
-static const wchar_t *DRIVEVENDOR_GET_FAILURE = L"VENDOR_DEFAULT";
-static const wchar_t *TEMPFILE_DIR = L"__TEMP__";
-static const wchar_t *TEMPFILE_NAME = L"__sorachain.dat";
+#define DRIVENAME_GET_FAILURE L"DRIVE_DEFAULT"
+#define DRIVEVENDOR_GET_FAILURE L"VENDOR_DEFAULT"
+#define TEMPFILE_DIR L"__TEMP__"
+#define TEMPFILE_NAME L"__sorachain.dat"
 
 class sync // port to lsync.h
 {

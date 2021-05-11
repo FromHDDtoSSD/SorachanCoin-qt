@@ -87,6 +87,8 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const noexce
         return ret;
     };
 
+    //static CCriticalSection cs;
+    //LOCK(cs);
     debugcs::instance() << "CPubKey " << __func__ << " Bip66 mode: " << entry::b66mode << debugcs::endl();
     debugcs::instance() << "BlockHeight " << __func__ << " height: " << block_info::nBestHeight << debugcs::endl();
     static int sw_blockheight = 0;

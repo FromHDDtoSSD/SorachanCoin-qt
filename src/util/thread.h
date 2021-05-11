@@ -24,6 +24,7 @@
 #endif
 #include <const/no_instance.h>
 #include <const/attributes.h>
+#include <debugcs/debugcs.h>
 
 /**
  * thiscall thread wrappers
@@ -192,8 +193,20 @@ namespace bitthread
     /**
      * .. and a wrapper that just calls func once
      */
-    template <typename Callable>
-    extern void TraceThread(const char *name, Callable func);
+    //template <typename Callable>
+    //extern void TraceThread(const char *name, Callable func);
+
+    class tracethread {
+        std::string name;
+    public:
+        explicit tracethread(const char *_name) {
+            name = _name;
+            debugcs::instance() << "thread start " << name.c_str() << debugcs::endl();
+        }
+        ~tracethread() {
+            debugcs::instance() << "thread exit" << name.c_str() << debugcs::endl();
+        }
+    };
 } // namespace bitthread
 
 #endif // SORACHANCOIN_THREAD_H
