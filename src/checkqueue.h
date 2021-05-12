@@ -9,6 +9,7 @@
 #include <vector>
 #include <condition_variable>
 #include <mutex>
+#include <debugcs/debugcs.h>
 
 template<typename T> class CCheckQueueControl;
 
@@ -142,7 +143,7 @@ private:
                 // Check whether we need to do work at all
                 //
                 fOk = this->fAllOk;
-            }
+            } // std::mutex
 
             //
             // execute work
@@ -155,6 +156,7 @@ private:
             }
             vChecks.clear();
         } while(true && !args_bool::fShutdown); // HACK: force queue to shut down
+        debugcs::instance() << "checkqueue force shutdown" << debugcs::endl();
         return false;
     }
 
@@ -173,7 +175,7 @@ public:
     }
 
     // Add a batch of checks to the queue
-    void Add(std::vector<T> &vChecks) {
+    void __Add(std::vector<T> &vChecks) {
         std::unique_lock<std::mutex> lock(this->mutex);
 
         for(T &check: vChecks)
@@ -186,6 +188,24 @@ public:
         if (vChecks.size() == 1) {
             this->condWorker.notify_one();
         } else if (vChecks.size() > 1) {
+            this->condWorker.notify_all();
+        }
+    }
+
+    // Add a batch of checks to the queue
+    void Add(std::vector<T> &&vChecks) {
+        std::unique_lock<std::mutex> lock(this->mutex);
+
+        const size_t size = vChecks.size();
+        for(T &check: vChecks) {
+            this->queue.emplace_back(std::move(check));
+        }
+        vChecks.clear();
+
+        this->nTodo += size;
+        if (size == 1) {
+            this->condWorker.notify_one();
+        } else if (size > 1) {
             this->condWorker.notify_all();
         }
     }
@@ -251,9 +271,15 @@ public:
         return fRet;
     }
 
-    void Add(std::vector<T> &vChecks) {
+    void __Add(std::vector<T> &vChecks) {
         if (this->pqueue != nullptr) {
-            this->pqueue->Add(vChecks);
+            this->pqueue->__Add(vChecks);
+        }
+    }
+
+    void Add(std::vector<T> &&vChecks) {
+        if (this->pqueue != nullptr) {
+            this->pqueue->Add(std::move(vChecks));
         }
     }
 

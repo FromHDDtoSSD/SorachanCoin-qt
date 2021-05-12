@@ -291,7 +291,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
             if (! tx.ConnectInputs(txdb, mapInputs, mapQueuedChanges, posThisTx, pindex, true, false, fScriptChecks, nFlags, block_info::nScriptCheckThreads ? &vChecks : nullptr))
                 return false;
 
-            control.Add(vChecks);
+            control.Add(std::move(vChecks));
         }
         mapQueuedChanges[hashTx] = CTxIndex(posThisTx, tx.get_vout().size());
     }
