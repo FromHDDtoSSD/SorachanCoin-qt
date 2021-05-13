@@ -922,31 +922,30 @@ public:
 // Note that this stores references to the spending transaction
 class CScriptCheck
 {
-private:
     //CScriptCheck(const CScriptCheck &)=delete;
     //CScriptCheck(CScriptCheck &)=delete;
     //CScriptCheck &operator=(const CScriptCheck &)=delete;
     //CScriptCheck &operator=(CScriptCheck &&)=delete;
-
-    CScript scriptPubKey;
-    const CTransaction *ptxTo;
-    unsigned int nIn;
-    unsigned int nFlags;
-    int nHashType;
-
 public:
     CScriptCheck() {}
-    CScriptCheck(const CTransaction& txFromIn, const CTransaction& txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
+    CScriptCheck(const CTransaction &txFromIn, const CTransaction &txToIn, unsigned int nInIn, unsigned int nFlagsIn, int nHashTypeIn) :
     scriptPubKey(txFromIn.get_vout(txToIn.get_vin(nInIn).get_prevout().get_n()).get_scriptPubKey()), ptxTo(&txToIn), nIn(nInIn), nFlags(nFlagsIn), nHashType(nHashTypeIn) {}
 
     bool operator()() const;
-    void swap(CScriptCheck &check) {
+    void swap(CScriptCheck &check) { // swap from this to check
         scriptPubKey.swap(check.scriptPubKey);
         std::swap(ptxTo, check.ptxTo);
         std::swap(nIn, check.nIn);
         std::swap(nFlags, check.nFlags);
         std::swap(nHashType, check.nHashType);
     }
+
+private:
+    CScript scriptPubKey;
+    const CTransaction *ptxTo;
+    unsigned int nIn;
+    unsigned int nFlags;
+    int nHashType;
 };
 
 /** A mutable version of CTransaction. */

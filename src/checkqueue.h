@@ -151,7 +151,7 @@ private:
             for(T &check: vChecks)
             {
                 if (fOk) {
-                    fOk = check();
+                    fOk = check(); // operator()
                 }
             }
             vChecks.clear();
@@ -211,7 +211,7 @@ public:
     }
 
     // Shut the queue down
-    void Quit() {
+    void Quit(bool fForce=false) {
         std::unique_lock<std::mutex> lock(this->mutex);
 
         this->fQuit = true;
@@ -219,16 +219,18 @@ public:
         //
         // No need to wake the master, as he will quit automatically when all jobs are done.
         //
+        debugcs::instance() << "Quit notify_all()" << debugcs::endl();
         this->condWorker.notify_all(); 
 
-        while (this->nTotal > 0)
-        {
-            this->condQuit.wait(lock);
+        if(fForce==false) {
+            while (this->nTotal > 0)
+                this->condQuit.wait(lock);
         }
     }
 
     ~CCheckQueue() {
-        Quit();
+        debugcs::instance() << "~CCheckQueue()" << debugcs::endl();
+        Quit(true);
     }
 
     bool IsIdle() const {
