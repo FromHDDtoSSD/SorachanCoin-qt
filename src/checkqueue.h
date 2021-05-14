@@ -80,6 +80,10 @@ private:
         bool fOk = true;
         do
         {
+            if(args_bool::fShutdown) {
+                break;
+            }
+
             {
                 std::unique_lock<std::mutex> lock(this->mutex);
 
@@ -144,6 +148,10 @@ private:
                 //
                 fOk = this->fAllOk;
             } // std::mutex
+
+            if(args_bool::fShutdown) {
+                break;
+            }
 
             //
             // execute work
@@ -219,7 +227,7 @@ public:
         //
         // No need to wake the master, as he will quit automatically when all jobs are done.
         //
-        debugcs::instance() << "Quit notify_all()" << debugcs::endl();
+        debugcs::instance() << "Quit notify_all() flag: " << fForce << debugcs::endl();
         this->condWorker.notify_all(); 
 
         if(fForce==false) {
