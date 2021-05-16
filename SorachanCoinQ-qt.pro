@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.12.10
+VERSION = 3.13.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -20,35 +20,18 @@ message(Qt version: $$[QT_VERSION])
 #message(Translation files: $$[QT_INSTALL_TRANSLATIONS])
 
 #
-# SorachanCoin build conf
-#
-win32: LIB_CURRENT_PATH=E:/cointools
-else {
-    macx: LIB_CURRENT_PATH=/develop/SorachanCoin-qt/cointools
-    else: LIB_CURRENT_PATH=/opt/cointools
-}
-BOOST_PATH_SUFFIX=68_0
-BDB_LIB_SUFFIX=-4.8
-CONFIG += no_include_pwd
-CONFIG += thread
-CONFIG += static
-macx: {
-    QMAKE_CC = /bin/clang
-    QMAKE_CXX = /bin/clang++
-}
-DEFINES += QT_GUI BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
-freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
-linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
-linux-g++-32: QMAKE_TARGET.arch = i686
-linux-g++-64: QMAKE_TARGET.arch = x86_64
-win32-g++-cross: QMAKE_TARGET.arch = $$TARGET_PLATFORM
-
-#
 # RELEASE
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
+
+#
+# GUI_MODE
+# 0: CUI
+# 1: QT GUI
+#
+GUI_MODE=0
 
 #
 # WHEN STARTUP, DEBUG_ALGO_BENCHMARK_TEST
@@ -105,6 +88,33 @@ USE_PREVECTOR_S=1
 # KNOWLEDGE_DB: Blockchain Database (with the "blockchain mini filesystem" library, optional)
 #
 USE_KNOWLEDGE_DB=-
+
+#
+# SorachanCoin build conf
+#
+win32: LIB_CURRENT_PATH=E:/cointools
+else {
+    macx: LIB_CURRENT_PATH=/develop/SorachanCoin-qt/cointools
+    else: LIB_CURRENT_PATH=/opt/cointools
+}
+BOOST_PATH_SUFFIX=68_0
+BDB_LIB_SUFFIX=-4.8
+CONFIG += no_include_pwd
+CONFIG += thread
+CONFIG += static
+macx: {
+    QMAKE_CC = /bin/clang
+    QMAKE_CXX = /bin/clang++
+}
+contains(GUI_MODE, 1) {
+    DEFINES += QT_GUI
+}
+DEFINES += BOOST_THREAD_USE_LIB BOOST_SPIRIT_THREADSAFE __STDC_FORMAT_MACROS __STDC_LIMIT_MACROS
+freebsd-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
+linux-g++: QMAKE_TARGET.arch = $$QMAKE_HOST.arch
+linux-g++-32: QMAKE_TARGET.arch = i686
+linux-g++-64: QMAKE_TARGET.arch = x86_64
+win32-g++-cross: QMAKE_TARGET.arch = $$TARGET_PLATFORM
 
 #
 # Memory and Benchmark test
@@ -416,29 +426,159 @@ QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-
 #
 # target source codes
 #
-DEPENDPATH += src src/json src/qt
-HEADERS += src/qt/bitcoingui.h \
-    src/qt/intro.h \
-    src/qt/transactiontablemodel.h \
-    src/qt/addresstablemodel.h \
-    src/qt/optionsdialog.h \
-    src/qt/coincontroldialog.h \
-    src/qt/coincontroltreewidget.h \
-    src/qt/sendcoinsdialog.h \
-    src/qt/addressbookpage.h \
-    src/qt/signverifymessagedialog.h \
-    src/qt/aboutdialog.h \
-    src/qt/editaddressdialog.h \
-    src/qt/bitcoinaddressvalidator.h \
-    src/qt/mintingfilterproxy.h \
-    src/qt/mintingtablemodel.h \
-    src/qt/mintingview.h \
-    src/qt/peerswidget.h \
-    src/qt/syncwait.h \
-    src/qt/autocheckpoints.h \
-    src/qt/autocheckpointsmodel.h \
-    src/qt/benchmarkpage.h \
-    src/qt/benchmarkmodel.h \
+contains(GUI_MODE, 1) {
+    DEPENDPATH += src/qt
+    HEADERS += \
+        src/qt/bitcoingui.h \
+        src/qt/intro.h \
+        src/qt/transactiontablemodel.h \
+        src/qt/addresstablemodel.h \
+        src/qt/optionsdialog.h \
+        src/qt/coincontroldialog.h \
+        src/qt/coincontroltreewidget.h \
+        src/qt/sendcoinsdialog.h \
+        src/qt/addressbookpage.h \
+        src/qt/signverifymessagedialog.h \
+        src/qt/aboutdialog.h \
+        src/qt/editaddressdialog.h \
+        src/qt/bitcoinaddressvalidator.h \
+        src/qt/mintingfilterproxy.h \
+        src/qt/mintingtablemodel.h \
+        src/qt/mintingview.h \
+        src/qt/peerswidget.h \
+        src/qt/syncwait.h \
+        src/qt/autocheckpoints.h \
+        src/qt/autocheckpointsmodel.h \
+        src/qt/benchmarkpage.h \
+        src/qt/benchmarkmodel.h \
+        src/qt/clientmodel.h \
+        src/qt/guiutil.h \
+        src/qt/transactionrecord.h \
+        src/qt/guiconstants.h \
+        src/qt/optionsmodel.h \
+        src/qt/monitoreddatamapper.h \
+        src/qt/transactiondesc.h \
+        src/qt/transactiondescdialog.h \
+        src/qt/bitcoinamountfield.h \
+        src/qt/transactionfilterproxy.h \
+        src/qt/transactionview.h \
+        src/qt/walletmodel.h \
+        src/qt/overviewpage.h \
+        src/qt/csvmodelwriter.h \
+        src/qt/sendcoinsentry.h \
+        src/qt/qvalidatedlineedit.h \
+        src/qt/bitcoinunits.h \
+        src/qt/qvaluecombobox.h \
+        src/qt/askpassphrasedialog.h \
+        src/qt/trafficgraphwidget.h \
+        src/qt/notificator.h \
+        src/qt/qtipcserver.h \
+        src/qt/rpcconsole.h \
+        src/qt/multisigaddressentry.h \
+        src/qt/multisiginputentry.h \
+        src/qt/multisigdialog.h \
+        src/qt/secondauthdialog.h \
+        src/winapi/winguimain.h \
+        src/winapi/drivebase.h \
+        src/winapi/drivewin.h \
+        src/winapi/sectorbase.h \
+        src/winapi/sectorwin.h \
+        src/winapi/miniwindow.h \
+        src/winapi/common.h \
+        src/winapi/p2pwebsorara.h \
+        src/sorara/soraramodel.h \
+        src/sorara/drivemodel.h \
+        src/sorara/soraradb.h \
+        src/sorara/soraranet.h
+
+    SOURCES += \
+        src/qt/bitcoin.cpp \
+        src/qt/bitcoingui.cpp \
+        src/qt/intro.cpp \
+        src/qt/transactiontablemodel.cpp \
+        src/qt/addresstablemodel.cpp \
+        src/qt/optionsdialog.cpp \
+        src/qt/sendcoinsdialog.cpp \
+        src/qt/coincontroldialog.cpp \
+        src/qt/coincontroltreewidget.cpp \
+        src/qt/addressbookpage.cpp \
+        src/qt/signverifymessagedialog.cpp \
+        src/qt/aboutdialog.cpp \
+        src/qt/editaddressdialog.cpp \
+        src/qt/bitcoinaddressvalidator.cpp \
+        src/qt/trafficgraphwidget.cpp \
+        src/qt/mintingfilterproxy.cpp \
+        src/qt/mintingtablemodel.cpp \
+        src/qt/mintingview.cpp \
+        src/qt/peerswidget.cpp \
+        src/qt/syncwait.cpp \
+        src/qt/autocheckpoints.cpp \
+        src/qt/autocheckpointsmodel.cpp \
+        src/qt/benchmarkpage.cpp \
+        src/qt/benchmarkmodel.cpp \
+        src/qt/clientmodel.cpp \
+        src/qt/guiutil.cpp \
+        src/qt/transactionrecord.cpp \
+        src/qt/optionsmodel.cpp \
+        src/qt/monitoreddatamapper.cpp \
+        src/qt/transactiondesc.cpp \
+        src/qt/transactiondescdialog.cpp \
+        src/qt/bitcoinstrings.cpp \
+        src/qt/bitcoinamountfield.cpp \
+        src/qt/transactionfilterproxy.cpp \
+        src/qt/transactionview.cpp \
+        src/qt/walletmodel.cpp \
+        src/qt/overviewpage.cpp \
+        src/qt/csvmodelwriter.cpp \
+        src/qt/sendcoinsentry.cpp \
+        src/qt/qvalidatedlineedit.cpp \
+        src/qt/bitcoinunits.cpp \
+        src/qt/qvaluecombobox.cpp \
+        src/qt/askpassphrasedialog.cpp \
+        src/qt/multisigaddressentry.cpp \
+        src/qt/multisiginputentry.cpp \
+        src/qt/multisigdialog.cpp \
+        src/qt/secondauthdialog.cpp \
+        src/qt/notificator.cpp \
+        src/qt/qtipcserver.cpp \
+        src/qt/rpcconsole.cpp \
+        src/winapi/winguimain.cpp \
+        src/winapi/drivebase.cpp \
+        src/winapi/drivewin.cpp \
+        src/winapi/sectorbase.cpp \
+        src/winapi/sectorwin.cpp \
+        src/winapi/miniwindow.cpp \
+        src/winapi/p2pwebsorara.cpp \
+        src/sorara/soraramodel.cpp \
+        src/sorara/drivemodel.cpp \
+        src/sorara/soraradb.cpp \
+        src/sorara/soraranet.cpp
+
+    FORMS += \
+        src/qt/forms/intro.ui \
+        src/qt/forms/coincontroldialog.ui \
+        src/qt/forms/sendcoinsdialog.ui \
+        src/qt/forms/addressbookpage.ui \
+        src/qt/forms/signverifymessagedialog.ui \
+        src/qt/forms/aboutdialog.ui \
+        src/qt/forms/editaddressdialog.ui \
+        src/qt/forms/transactiondescdialog.ui \
+        src/qt/forms/overviewpage.ui \
+        src/qt/forms/sendcoinsentry.ui \
+        src/qt/forms/askpassphrasedialog.ui \
+        src/qt/forms/rpcconsole.ui \
+        src/qt/forms/optionsdialog.ui \
+        src/qt/forms/multisigaddressentry.ui \
+        src/qt/forms/multisiginputentry.ui \
+        src/qt/forms/multisigdialog.ui \
+        src/qt/forms/secondauthdialog.ui \
+        src/qt/forms/p2pwebsorara.ui \
+        src/qt/forms/syncview.ui \
+        src/qt/forms/autocheckpoints.ui \
+        src/qt/forms/benchmark.ui
+}
+DEPENDPATH += src src/json
+HEADERS += \
     src/kernelrecord.h \
     src/alert.h \
     src/addrman.h \
@@ -485,43 +625,16 @@ HEADERS += src/qt/bitcoingui.h \
     src/json/json_spirit_reader.h \
     src/json/json_spirit_error_position.h \
     src/json/json_spirit.h \
-    src/qt/clientmodel.h \
-    src/qt/guiutil.h \
-    src/qt/transactionrecord.h \
-    src/qt/guiconstants.h \
-    src/qt/optionsmodel.h \
-    src/qt/monitoreddatamapper.h \
-    src/qt/transactiondesc.h \
-    src/qt/transactiondescdialog.h \
-    src/qt/bitcoinamountfield.h \
     src/wallet.h \
     src/keystore.h \
-    src/qt/transactionfilterproxy.h \
-    src/qt/transactionview.h \
-    src/qt/walletmodel.h \
-    src/qt/overviewpage.h \
-    src/qt/csvmodelwriter.h \
     src/crypter.h \
-    src/qt/sendcoinsentry.h \
-    src/qt/qvalidatedlineedit.h \
-    src/qt/bitcoinunits.h \
-    src/qt/qvaluecombobox.h \
-    src/qt/askpassphrasedialog.h \
-    src/qt/trafficgraphwidget.h \
     src/protocol.h \
-    src/qt/notificator.h \
-    src/qt/qtipcserver.h \
     src/allocator/allocators.h \
     src/ui_interface.h \
-    src/qt/rpcconsole.h \
     src/version.h \
     src/ntp.h \
     src/netbase.h \
     src/const/clientversion.h \
-    src/qt/multisigaddressentry.h \
-    src/qt/multisiginputentry.h \
-    src/qt/multisigdialog.h \
-    src/qt/secondauthdialog.h \
     src/ies.h \
     src/ipcollector.h \
     src/prevector/prevector.h \
@@ -631,18 +744,6 @@ HEADERS += src/qt/bitcoingui.h \
     src/libstr/cmstring.h \
     src/libstr/cmscript.h \
     src/libstr/movestream.h \
-    src/winapi/winguimain.h \
-    src/winapi/drivebase.h \
-    src/winapi/drivewin.h \
-    src/winapi/sectorbase.h \
-    src/winapi/sectorwin.h \
-    src/winapi/miniwindow.h \
-    src/winapi/common.h \
-    src/winapi/p2pwebsorara.h \
-    src/sorara/soraramodel.h \
-    src/sorara/drivemodel.h \
-    src/sorara/soraradb.h \
-    src/sorara/soraranet.h \
     src/Lyra2RE/Lyra2.h \
     src/Lyra2RE/Lyra2RE.h \
     src/Lyra2RE/Sponge.h \
@@ -654,29 +755,7 @@ HEADERS += src/qt/bitcoingui.h \
     src/Lyra2RE/sph_skein.h \
     src/Lyra2RE/sph_types.h
 
-SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
-    src/qt/intro.cpp \
-    src/qt/transactiontablemodel.cpp \
-    src/qt/addresstablemodel.cpp \
-    src/qt/optionsdialog.cpp \
-    src/qt/sendcoinsdialog.cpp \
-    src/qt/coincontroldialog.cpp \
-    src/qt/coincontroltreewidget.cpp \
-    src/qt/addressbookpage.cpp \
-    src/qt/signverifymessagedialog.cpp \
-    src/qt/aboutdialog.cpp \
-    src/qt/editaddressdialog.cpp \
-    src/qt/bitcoinaddressvalidator.cpp \
-    src/qt/trafficgraphwidget.cpp \
-    src/qt/mintingfilterproxy.cpp \
-    src/qt/mintingtablemodel.cpp \
-    src/qt/mintingview.cpp \
-    src/qt/peerswidget.cpp \
-    src/qt/syncwait.cpp \
-    src/qt/autocheckpoints.cpp \
-    src/qt/autocheckpointsmodel.cpp \
-    src/qt/benchmarkpage.cpp \
-    src/qt/benchmarkmodel.cpp \
+SOURCES += \
     src/kernelrecord.cpp \
     src/alert.cpp \
     src/version.cpp \
@@ -701,32 +780,10 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/db.cpp \
     src/walletdb.cpp \
     src/db_addr.cpp \
-    src/qt/clientmodel.cpp \
-    src/qt/guiutil.cpp \
-    src/qt/transactionrecord.cpp \
-    src/qt/optionsmodel.cpp \
-    src/qt/monitoreddatamapper.cpp \
-    src/qt/transactiondesc.cpp \
-    src/qt/transactiondescdialog.cpp \
-    src/qt/bitcoinstrings.cpp \
-    src/qt/bitcoinamountfield.cpp \
     src/wallet.cpp \
     src/keystore.cpp \
-    src/qt/transactionfilterproxy.cpp \
-    src/qt/transactionview.cpp \
-    src/qt/walletmodel.cpp \
-    src/qt/overviewpage.cpp \
-    src/qt/csvmodelwriter.cpp \
     src/crypter.cpp \
-    src/qt/sendcoinsentry.cpp \
-    src/qt/qvalidatedlineedit.cpp \
-    src/qt/bitcoinunits.cpp \
-    src/qt/qvaluecombobox.cpp \
-    src/qt/askpassphrasedialog.cpp \
     src/protocol.cpp \
-    src/qt/notificator.cpp \
-    src/qt/qtipcserver.cpp \
-    src/qt/rpcconsole.cpp \
     src/noui.cpp \
     src/kernel.cpp \
     src/scrypt-arm.S \
@@ -735,10 +792,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/scrypt.cpp \
     src/pbkdf2.cpp \
     src/kernel_worker.cpp \
-    src/qt/multisigaddressentry.cpp \
-    src/qt/multisiginputentry.cpp \
-    src/qt/multisigdialog.cpp \
-    src/qt/secondauthdialog.cpp \
     src/address/base58.cpp \
     src/address/key_io.cpp \
     src/cryptogram.cpp \
@@ -831,17 +884,6 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
     src/util/thread.cpp \
     src/util/exception.cpp \
     src/libstr/cmstring.cpp \
-    src/winapi/winguimain.cpp \
-    src/winapi/drivebase.cpp \
-    src/winapi/drivewin.cpp \
-    src/winapi/sectorbase.cpp \
-    src/winapi/sectorwin.cpp \
-    src/winapi/miniwindow.cpp \
-    src/winapi/p2pwebsorara.cpp \
-    src/sorara/soraramodel.cpp \
-    src/sorara/drivemodel.cpp \
-    src/sorara/soraradb.cpp \
-    src/sorara/soraranet.cpp \
     src/Lyra2RE/Lyra2.c \
     src/Lyra2RE/Lyra2RE.c \
     src/Lyra2RE/Sponge.c \
@@ -855,33 +897,12 @@ SOURCES += src/qt/bitcoin.cpp src/qt/bitcoingui.cpp \
 RESOURCES += \
     src/qt/bitcoin.qrc
 
-FORMS += \
-    src/qt/forms/intro.ui \
-    src/qt/forms/coincontroldialog.ui \
-    src/qt/forms/sendcoinsdialog.ui \
-    src/qt/forms/addressbookpage.ui \
-    src/qt/forms/signverifymessagedialog.ui \
-    src/qt/forms/aboutdialog.ui \
-    src/qt/forms/editaddressdialog.ui \
-    src/qt/forms/transactiondescdialog.ui \
-    src/qt/forms/overviewpage.ui \
-    src/qt/forms/sendcoinsentry.ui \
-    src/qt/forms/askpassphrasedialog.ui \
-    src/qt/forms/rpcconsole.ui \
-    src/qt/forms/optionsdialog.ui \
-    src/qt/forms/multisigaddressentry.ui \
-    src/qt/forms/multisiginputentry.ui \
-    src/qt/forms/multisigdialog.ui \
-    src/qt/forms/secondauthdialog.ui \
-    src/qt/forms/p2pwebsorara.ui \
-    src/qt/forms/syncview.ui \
-    src/qt/forms/autocheckpoints.ui \
-    src/qt/forms/benchmark.ui
-
 contains(USE_QRCODE, 1) {
-    HEADERS += src/qt/qrcodedialog.h
-    SOURCES += src/qt/qrcodedialog.cpp
-    FORMS += src/qt/forms/qrcodedialog.ui
+    contains(GUI_MODE, 1) {
+        HEADERS += src/qt/qrcodedialog.h
+        SOURCES += src/qt/qrcodedialog.cpp
+        FORMS += src/qt/forms/qrcodedialog.ui
+    }
 }
 
 CODECFORTR = UTF-8

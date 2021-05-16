@@ -1148,7 +1148,8 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
     if (pcmd->unlocked)
         result = pcmd->actor(params, data);
     else {
-        LOCK2(block_process::cs_main, entry::pwalletMain->cs_wallet);
+        //LOCK2(block_process::cs_main, entry::pwalletMain->cs_wallet);
+        LOCK(entry::pwalletMain->cs_wallet);
         result = pcmd->actor(params, data);
     }
 
@@ -1236,10 +1237,12 @@ json_spirit::Object bitrpc::CallRPC(CBitrpcData &data, const std::string &strMet
     if(! status.fSuccess()) return data.runtime_error(status.e, 0).get_obj(status);
     if (reply.empty())
         return data.runtime_error("expected reply to have result, error and id properties", 0).get_obj(status);
+    data.JSONRPCSuccess(json_spirit::null_type);
+    return reply;
 
-    json_spirit::Object &obj = data.JSONRPCSuccess(reply).get_obj(status);
-    if(! status.fSuccess()) return data.runtime_error(status.e, 0).get_obj(status);
-    return obj;
+    //json_spirit::Object &obj = data.JSONRPCSuccess(reply).get_obj(status);
+    //if(! status.fSuccess()) return data.runtime_error(status.e, 0).get_obj(status);
+    //return obj;
 }
 
 template<typename T>
@@ -1290,63 +1293,64 @@ json_spirit::Array bitrpc::RPCConvertValues(CBitrpcData &data, const std::string
     size_t n = params.size();
 
     // Special case non-string parameter types
-    if (strMethod == "stop"                   && n > 0) { ConvertTo<bool>(data, params[0]); }
-    if (strMethod == "getaddednodeinfo"       && n > 0) { ConvertTo<bool>(data, params[0]); }
-    if (strMethod == "sendtoaddress"          && n > 1) { ConvertTo<double>(data, params[1]); }
-    if (strMethod == "mergecoins"             && n > 0) { ConvertTo<double>(data, params[0]); }
-    if (strMethod == "mergecoins"             && n > 1) { ConvertTo<double>(data, params[1]); }
-    if (strMethod == "mergecoins"             && n > 2) { ConvertTo<double>(data, params[2]); }
-    if (strMethod == "settxfee"               && n > 0) { ConvertTo<double>(data, params[0]); }
-    if (strMethod == "getreceivedbyaddress"   && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "getreceivedbyaccount"   && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "listreceivedbyaddress"  && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "listreceivedbyaddress"  && n > 1) { ConvertTo<bool>(data, params[1]); }
-    if (strMethod == "listreceivedbyaccount"  && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "listreceivedbyaccount"  && n > 1) { ConvertTo<bool>(data, params[1]); }
-    if (strMethod == "getbalance"             && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "getblock"               && n > 1) { ConvertTo<bool>(data, params[1]); }
-    if (strMethod == "getblockbynumber"       && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "dumpblockbynumber"      && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "getblockbynumber"       && n > 1) { ConvertTo<bool>(data, params[1]); }
-    if (strMethod == "getblockhash"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "getblockqhash"          && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "move"                   && n > 2) { ConvertTo<double>(data, params[2]); }
-    if (strMethod == "move"                   && n > 3) { ConvertTo<int64_t>(data, params[3]); }
-    if (strMethod == "sendfrom"               && n > 2) { ConvertTo<double>(data, params[2]); }
-    if (strMethod == "sendfrom"               && n > 3) { ConvertTo<int64_t>(data, params[3]); }
-    if (strMethod == "listtransactions"       && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "listtransactions"       && n > 2) { ConvertTo<int64_t>(data, params[2]); }
-    if (strMethod == "listaccounts"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "walletpassphrase"       && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "walletpassphrase"       && n > 2) { ConvertTo<bool>(data, params[2]); }
-    if (strMethod == "getblocktemplate"       && n > 0) { ConvertTo<json_spirit::Object>(data, params[0]); }
-    if (strMethod == "listsinceblock"         && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "scaninput"              && n > 0) { ConvertTo<json_spirit::Object>(data, params[0]); }
-    if (strMethod == "sendalert"              && n > 2) { ConvertTo<int64_t>(data, params[2]); }
-    if (strMethod == "sendalert"              && n > 3) { ConvertTo<int64_t>(data, params[3]); }
-    if (strMethod == "sendalert"              && n > 4) { ConvertTo<int64_t>(data, params[4]); }
-    if (strMethod == "sendalert"              && n > 5) { ConvertTo<int64_t>(data, params[5]); }
-    if (strMethod == "sendalert"              && n > 6) { ConvertTo<int64_t>(data, params[6]); }
-    if (strMethod == "sendmany"               && n > 1) { ConvertTo<json_spirit::Object>(data, params[1]); }
-    if (strMethod == "sendmany"               && n > 2) { ConvertTo<int64_t>(data, params[2]); }
-    if (strMethod == "reservebalance"         && n > 0) { ConvertTo<bool>(data, params[0]); }
-    if (strMethod == "reservebalance"         && n > 1) { ConvertTo<double>(data, params[1]); }
-    if (strMethod == "addmultisigaddress"     && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "addmultisigaddress"     && n > 1) { ConvertTo<json_spirit::Array>(data, params[1]); }
-    if (strMethod == "listunspent"            && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "listunspent"            && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "listunspent"            && n > 2) { ConvertTo<json_spirit::Array>(data, params[2]); }
-    if (strMethod == "getrawtransaction"      && n > 1) { ConvertTo<int64_t>(data, params[1]); }
-    if (strMethod == "createrawtransaction"   && n > 0) { ConvertTo<json_spirit::Array>(data, params[0]); }
-    if (strMethod == "createrawtransaction"   && n > 1) { ConvertTo<json_spirit::Object>(data, params[1]); }
-    if (strMethod == "createmultisig"         && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "createmultisig"         && n > 1) { ConvertTo<json_spirit::Array>(data, params[1]); }
-    if (strMethod == "signrawtransaction"     && n > 1) { ConvertTo<json_spirit::Array>(data, params[1], true); }
-    if (strMethod == "signrawtransaction"     && n > 2) { ConvertTo<json_spirit::Array>(data, params[2], true); }
-    if (strMethod == "keypoolrefill"          && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "keypoolreset"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
-    if (strMethod == "importaddress"          && n > 2) { ConvertTo<bool>(data, params[2]); }
-    if (strMethod == "importprivkey"          && n > 2) { ConvertTo<bool>(data, params[2]); }
+         if (strMethod == "stop"                   && n > 0) { ConvertTo<bool>(data, params[0]); }
+    else if (strMethod == "getaddednodeinfo"       && n > 0) { ConvertTo<bool>(data, params[0]); }
+    else if (strMethod == "sendtoaddress"          && n > 1) { ConvertTo<double>(data, params[1]); }
+    else if (strMethod == "mergecoins"             && n > 0) { ConvertTo<double>(data, params[0]); }
+    else if (strMethod == "mergecoins"             && n > 1) { ConvertTo<double>(data, params[1]); }
+    else if (strMethod == "mergecoins"             && n > 2) { ConvertTo<double>(data, params[2]); }
+    else if (strMethod == "settxfee"               && n > 0) { ConvertTo<double>(data, params[0]); }
+    else if (strMethod == "getreceivedbyaddress"   && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "getreceivedbyaccount"   && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "listreceivedbyaddress"  && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "listreceivedbyaddress"  && n > 1) { ConvertTo<bool>(data, params[1]); }
+    else if (strMethod == "listreceivedbyaccount"  && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "listreceivedbyaccount"  && n > 1) { ConvertTo<bool>(data, params[1]); }
+    else if (strMethod == "getbalance"             && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "getblock"               && n > 1) { ConvertTo<bool>(data, params[1]); }
+    else if (strMethod == "getblockbynumber"       && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "dumpblockbynumber"      && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "getblockbynumber"       && n > 1) { ConvertTo<bool>(data, params[1]); }
+    else if (strMethod == "getblockhash"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "getblockqhash"          && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "move"                   && n > 2) { ConvertTo<double>(data, params[2]); }
+    else if (strMethod == "move"                   && n > 3) { ConvertTo<int64_t>(data, params[3]); }
+    else if (strMethod == "sendfrom"               && n > 2) { ConvertTo<double>(data, params[2]); }
+    else if (strMethod == "sendfrom"               && n > 3) { ConvertTo<int64_t>(data, params[3]); }
+    else if (strMethod == "listtransactions"       && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "listtransactions"       && n > 2) { ConvertTo<int64_t>(data, params[2]); }
+    else if (strMethod == "listaccounts"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "walletpassphrase"       && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "walletpassphrase"       && n > 2) { ConvertTo<bool>(data, params[2]); }
+    else if (strMethod == "getblocktemplate"       && n > 0) { ConvertTo<json_spirit::Object>(data, params[0]); }
+    else if (strMethod == "listsinceblock"         && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "scaninput"              && n > 0) { ConvertTo<json_spirit::Object>(data, params[0]); }
+    else if (strMethod == "sendalert"              && n > 2) { ConvertTo<int64_t>(data, params[2]); }
+    else if (strMethod == "sendalert"              && n > 3) { ConvertTo<int64_t>(data, params[3]); }
+    else if (strMethod == "sendalert"              && n > 4) { ConvertTo<int64_t>(data, params[4]); }
+    else if (strMethod == "sendalert"              && n > 5) { ConvertTo<int64_t>(data, params[5]); }
+    else if (strMethod == "sendalert"              && n > 6) { ConvertTo<int64_t>(data, params[6]); }
+    else if (strMethod == "sendmany"               && n > 1) { ConvertTo<json_spirit::Object>(data, params[1]); }
+    else if (strMethod == "sendmany"               && n > 2) { ConvertTo<int64_t>(data, params[2]); }
+    else if (strMethod == "reservebalance"         && n > 0) { ConvertTo<bool>(data, params[0]); }
+    else if (strMethod == "reservebalance"         && n > 1) { ConvertTo<double>(data, params[1]); }
+    else if (strMethod == "addmultisigaddress"     && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "addmultisigaddress"     && n > 1) { ConvertTo<json_spirit::Array>(data, params[1]); }
+    else if (strMethod == "listunspent"            && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "listunspent"            && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "listunspent"            && n > 2) { ConvertTo<json_spirit::Array>(data, params[2]); }
+    else if (strMethod == "getrawtransaction"      && n > 1) { ConvertTo<int64_t>(data, params[1]); }
+    else if (strMethod == "createrawtransaction"   && n > 0) { ConvertTo<json_spirit::Array>(data, params[0]); }
+    else if (strMethod == "createrawtransaction"   && n > 1) { ConvertTo<json_spirit::Object>(data, params[1]); }
+    else if (strMethod == "createmultisig"         && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "createmultisig"         && n > 1) { ConvertTo<json_spirit::Array>(data, params[1]); }
+    else if (strMethod == "signrawtransaction"     && n > 1) { ConvertTo<json_spirit::Array>(data, params[1], true); }
+    else if (strMethod == "signrawtransaction"     && n > 2) { ConvertTo<json_spirit::Array>(data, params[2], true); }
+    else if (strMethod == "keypoolrefill"          && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "keypoolreset"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "importaddress"          && n > 2) { ConvertTo<bool>(data, params[2]); }
+    else if (strMethod == "importprivkey"          && n > 2) { ConvertTo<bool>(data, params[2]); }
+    else                                                     { data.JSONRPCSuccess(json_spirit::Value::null); }
 
     if(data.fSuccess())
         data.JSONRPCSuccess(json_spirit::Value::null);

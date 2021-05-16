@@ -186,15 +186,14 @@ bool entry::AppInit(int argc, char *argv[])
 
             strUsage += "\n" + HelpMessage();
 
-            fprintf(stdout, "%s", strUsage.c_str());
+            ::fprintf(stdout, "%s", strUsage.c_str());
             return false;
         }
 
         //
         // Command-line RPC
         //
-        for (int i = 1; i < argc; ++i)
-        {
+        for (int i = 1; i < argc; ++i) {
             if (!util::IsSwitchChar(argv[i][0]) && !boost::algorithm::istarts_with(argv[i], strCoinName ":")) {
                 args_bool::fCommandLine = true;
             }
@@ -209,7 +208,7 @@ bool entry::AppInit(int argc, char *argv[])
     } catch (const std::exception &e) {
         excep::PrintException(&e, "AppInit()");
     } catch (...) {
-        excep::PrintException(NULL, "AppInit()");
+        excep::PrintException(nullptr, "AppInit()");
     }
     
     if (! fRet) {
@@ -230,10 +229,32 @@ void entry::noui_connect()
 
 int main(int argc, char *argv[])
 {
+#ifdef WIN32
+    bool fConsole=false;
+    if(! ::AttachConsole(ATTACH_PARENT_PROCESS)) {
+        ::AllocConsole();
+        fConsole=true;
+    }
+    FILE *fp1 = nullptr;
+    ::freopen_s(&fp1, "CONOUT$", "w", stdout);
+    FILE *fp2 = nullptr;
+    ::freopen_s(&fp2, "CONOUT$", "w", stderr);
+#endif
+
+    // debug
+    //::fprintf(stdout, "[SORA] printf test\n");
+
     // Connect bitcoind signal handlers
     entry::noui_connect();
 
     bool fRet = entry::AppInit(argc, argv);
+
+#ifdef WIN32
+    ::fclose(fp1);
+    ::fclose(fp2);
+    if(fConsole)
+        ::FreeConsole();
+#endif
 
     if (fRet && args_bool::fDaemon) {
         return 0;
