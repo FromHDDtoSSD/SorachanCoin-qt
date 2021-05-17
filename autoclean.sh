@@ -32,11 +32,17 @@ rm -f stamp-h1
 rm -f compile
 rm -f configure
 
-if [ -f ${srcdir}/src/Makefile.am ]; then
- if [ -f ${srcdir}/src/Makefile.am.library ]; then
-  mv "$srcdir"/src/Makefile.am "$srcdir"/src/Makefile.am.pac
+if [ -f ${srcdir}/src/Makefile.am.sqlite ]; then
+ if [ -f ${srcdir}/src/Makefile.am ]; then
+  if [ -f ${srcdir}/src/Makefile.am.library ]; then
+   mv "$srcdir"/src/Makefile.am "$srcdir"/src/Makefile.am.pac
+  fi
+  if [ -f ${srcdir}/src/Makefile.am.pac ]; then
+   mv "$srcdir"/src/Makefile.am "$srcdir"/src/Makefile.am.library
+  fi
  fi
- if [ -f ${srcdir}/src/Makefile.am.pac ]; then
-  mv "$srcdir"/src/Makefile.am "$srcdir"/src/Makefile.am.library
+else
+ if [ -f ${srcdir}/src/Makefile.am ]; then
+  mv "$srcdir"/src/Makefile.am "$srcdir"/src/Makefile.am.sqlite
  fi
 fi

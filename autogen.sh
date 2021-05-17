@@ -43,6 +43,7 @@ bdb_dir="db-4.8.30"
 boost_dir="boost_1_68_0"
 libressl_dir="libressl-2.8.2"
 blake2_dir="blake2"
+sqlite_dir="sqlite"
 srcdir="$(dirname $(realpath $0))"
 cd "$srcdir"
 mkdir -p "$WORK_DIR"
@@ -104,6 +105,23 @@ build_blake2() {
  ${CMD_MAKE} install
 }
 
+build_sqlite() {
+ sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
+ cd "$srcdir"/"$WORK_DIR"
+ mkdir -p "$sqlite_dir"
+ cd "$sqlite_dir"
+ wget "$sqlite_wget"
+ tar zxvf sqlite-autoconf-3350300.tar.gz
+ unlink sqlite-autoconf-3350300.tar.gz
+ cd sqlite-autoconf-3350300
+ ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"
+ ${CMD_MAKE}
+ ${CMD_MAKE} install
+ cd "$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"/include
+ mkdir sqlite
+ cp sqlite3.h sqlite/sqlite3.h
+}
+
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  cd "$srcdir"/"$LIBRARY_DIR"
  if [ ! -d ${bdb_dir} ]; then
@@ -120,6 +138,10 @@ if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  cd "$srcdir"/"$LIBRARY_DIR"
  if [ ! -d ${blake2_dir} ]; then
   build_blake2
+ fi
+ cd "$srcdir"/"$LIBRARY_DIR"
+ if [ ! -d ${sqlite_dir} ]; then
+  build_sqlite
  fi
 fi
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE"  ]; then
