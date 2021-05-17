@@ -875,10 +875,16 @@ json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, CBitrpc
 
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
-    std::string jparam4 = params[4].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    std::string jparam5 = params[5].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    std::string jparam4;
+    if (params.size() > 4) {
+        jparam4 = params[4].get_str(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
+    std::string jparam5;
+    if (params.size() > 5) {
+        jparam5 = params[5].get_str(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
     if (params.size() > 4 && params[4].type() != json_spirit::null_type && !jparam4.empty())
         wtx.mapValue["comment"] = jparam4;
     if (params.size() > 5 && params[5].type() != json_spirit::null_type && !jparam5.empty())

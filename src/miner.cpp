@@ -123,12 +123,12 @@ public:
 //
 CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL*/)
 {
-    bool fProofOfStake = txCoinStake != NULL;
+    bool fProofOfStake = txCoinStake != nullptr;
 
     // Create new block
-    std::auto_ptr<CBlock> pblock(new CBlock());
+    std::unique_ptr<CBlock> pblock(new (std::nothrow) CBlock());
     if (! pblock.get()) {
-        return NULL;
+        return nullptr;
     }
 
     // Create coinbase tx
@@ -209,7 +209,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
                 continue;
             }
 
-            COrphan *porphan = NULL;
+            COrphan *porphan = nullptr;
             double dPriority = 0;
             int64_t nTotalIn = 0;
             bool fMissingInputs = false;

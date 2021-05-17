@@ -523,6 +523,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     std::map<uint256, int64_t> setTxIndex;
     int i = 0;
     CTxDB txdb("r");
+    //std::vector<CTransaction> &vtx = pblock->set_vtx();
     for(CTransaction &tx: pblock->set_vtx()) {
         uint256 txHash = tx.GetHash();
         setTxIndex[txHash] = i++;
@@ -598,7 +599,8 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
     json_spirit::json_flags status;
     std::string hex = params[0].get_str(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    rpctable_vector blockData(strenc::ParseHex(hex));
+    strenc::hex_vector pach = strenc::ParseHex(hex.c_str());
+    rpctable_vector blockData(pach.begin(), pach.end());
     CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
     CBlock block;
     try {
@@ -607,7 +609,26 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
         return data.JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
     }
 
+    // reward (coinbase)
+    if(block.get_vtx(0).get_vout().size()==0) {
+        CBlockIndex *index = block_info::mapBlockIndex[block.get_hashPrevBlock()];
+        int nHeight = index->get_nHeight();
+        debugcs::instance() << "PoW submitblock coinbase nHeight: " << nHeight << debugcs::endl();
+        CTransaction txCoinBase;
+        txCoinBase.set_vin().resize(1);
+        txCoinBase.set_vin(0).set_prevout().SetNull();
+        txCoinBase.set_vout().resize(1);
+        CReserveKey reservekey(entry::pwalletMain);
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
+        block.set_vtx().clear();
+        block.set_vtx().push_back(txCoinBase);
+        block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
+        return data.JSONRPCSuccess("rejected");
+    }
+
     bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
+    //static CReserveKey reservekey(entry::pwalletMain);
+    //bool fAccepted = miner::CheckWork(&block, *entry::pwalletMain, reservekey);
     if (! fAccepted)
         return data.JSONRPCSuccess("rejected");
 
