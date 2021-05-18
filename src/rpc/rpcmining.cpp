@@ -463,6 +463,44 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     }
 
     LOCK(CRPCTable::cs_getwork);
+
+    //
+    // bip0022 bip0023: Getblocktemplate capabilities flags
+    // Note: when mining getblocktemplate, submitblock require "CTransaction txCoinbase vtx[0]".
+    // capabilities contains "conbasetxn", Getblocktemplate in result require Hex of "txCoinbase".
+    // Acctually, this logic receive RPC in submitblock, but vtx[0] is empty, result in rejected, then "boo".
+    // ref: https://en.bitcoin.it/wiki/Getblocktemplate
+    // ref: https://en.bitcoin.it/wiki/BIP_0023
+    //
+    auto is_bip0023 = [&](){
+        json_spirit::json_flags status;
+        const json_spirit::Object &oparam = params[0].get_obj(status);
+        if(! status.fSuccess())
+            return false;
+        for(const auto &od: oparam) { // checking ... capabilities [bip0023: "coinbasetxn", "workid"]
+            debugcs::instance() << "Bip0023 getblocktemplate param: " << od.name_.c_str() << debugcs::endl();
+            if(od.value_.type()==json_spirit::array_type) {
+                const json_spirit::Array &aod = od.value_.get_array(status);
+                if(! status.fSuccess())
+                    return false;
+                for(const auto &bod: aod) {
+                    const std::string &str = bod.get_str(status).c_str();
+                    if(! status.fSuccess())
+                        return false;
+                    debugcs::instance() << "Bip0023 getblocktemplate attr: " << str.c_str() << debugcs::endl();
+                    if(str=="coinbasetxn") {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    };
+    if(params.size()==0)
+        return data.JSONRPCError(RPC_JSON_ERROR, "Getblocktemplate params[0] is NULL.");
+    bool fBip0023 = is_bip0023(); // if false, bip0022
+    debugcs::instance() << "Bip0023 flag: " << (int)fBip0023 << debugcs::endl();
+
     std::string strMode = "template";
     if (params.size() > 0) { // json_spirit::null_type do nothing
         json_spirit::json_flags status;
@@ -477,6 +515,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         } else
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 1");
     }
+    debugcs::instance() << "Getblocktemplate strMode: " << strMode.c_str() << debugcs::endl();
 
     if (strMode != "template")
         return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 2");

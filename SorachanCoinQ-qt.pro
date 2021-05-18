@@ -24,14 +24,14 @@ message(Qt version: $$[QT_VERSION])
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=1
+RELEASE=0
 
 #
 # GUI_MODE
 # 0: CUI
 # 1: QT GUI
 #
-GUI_MODE=1
+GUI_MODE=0
 
 #
 # WHEN STARTUP, DEBUG_ALGO_BENCHMARK_TEST

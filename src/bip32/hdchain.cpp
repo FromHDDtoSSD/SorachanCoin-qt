@@ -75,4 +75,6 @@ public:
     }
     ~bip39_test() {}
 };
+#ifdef DEBUG
 bip39_test bip39_obj;
+#endif
