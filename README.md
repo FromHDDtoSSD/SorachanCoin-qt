@@ -1,5 +1,5 @@
 
-Welcome to SorachanCoin!  
+Welcome to SorachanCoin  
 https://bitcointalk.org/index.php?topic=5184483
 
 SorachanCoin - a hybrid scrypt PoW + PoS based cryptocurrency.
@@ -18,8 +18,6 @@ For example, recently, the tendency is even stronger,
 and we can not catch notifications of breakdown to regardless of "normal" of status,  
 but actually, just a few changes to the firmware may resume reading.  
   
-And ...  
-  
 We will implement all the basic functions of coin  
 and to develop innovative functions such as failure prediction.  
   
@@ -36,7 +34,7 @@ https://twitter.com/CoinSorachan
 Dev Blog:  
 https://www.iuec-recovery.jp/
 
-How to usage Wallet?
+How to use?
 ===========================
 
 https://www.junkhdd.com/download/usage.html
@@ -48,14 +46,8 @@ How to build?
 ./configure  
 make  
   
-The SorachanCoind will be generated under /src.
+"SorachanCoind" will be generated under /src.
 
-Options
-===========================
-
--h, --help: View usage  
---build-unix: Build a UNIX system (e.g. FreeBSD).  
---with-no-build-library: Use the package without building the necessary libraries.
 
 BlockExplorer
 ===========================
@@ -70,7 +62,4 @@ https://sg.junkhdd.com:7350/
 
 testnet:  
 https://www.junkhdd.com:17350/  
-
-testnet (prediction SORA chain):  
-https://v2.junkhdd.com/  
 

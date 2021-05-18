@@ -25,7 +25,6 @@ SorachanCoind_SOURCES = \
  bench/be_aes.cpp \
  bench/be_bench.cpp \
  bench/be_hash.cpp \
- bench/be_prevector.cpp \
  bip32/hdchain.cpp \
  bip32/hdwalletutil.cpp \
  block/block.cpp \
