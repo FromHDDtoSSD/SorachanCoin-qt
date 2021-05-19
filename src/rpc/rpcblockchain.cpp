@@ -188,7 +188,7 @@ json_spirit::Value CRPCTable::settxfee(const json_spirit::Array &params, CBitrpc
     if(! data.fSuccess()) return data.JSONRPCError();
 
     data.e = "Transaction";
-    block_info::nTransactionFee = AmountFromValue(params[0], data);
+    block_info::nTransactionFee = CRPCTable::AmountFromValue(params[0], data);
     if(! data.fSuccess()) return data.JSONRPCError();
     block_info::nTransactionFee = (block_info::nTransactionFee / block_params::MIN_TX_FEE) * block_params::MIN_TX_FEE;  // round to minimum fee
     return data.JSONRPCSuccess(true);
@@ -265,8 +265,11 @@ json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, CBitrpc
     CBlock block;
     CBlockIndex *pblockindex = block_info::mapBlockIndex[hash];
     block.ReadFromDisk(pblockindex, true);
-    bool fparam1 = params[1].get_bool(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    bool fparam1 = false;
+    if(params.size()>1) {
+        fparam1 = params[1].get_bool(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
     return data.JSONRPCSuccess(blockToJSON(block, pblockindex, params.size() > 1 ? fparam1 : false));
 }
 
@@ -291,14 +294,17 @@ json_spirit::Value CRPCTable::getblockbynumber(const json_spirit::Array &params,
 
     pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
     block.ReadFromDisk(pblockindex, true);
-    bool fparam1 = params[1].get_bool(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    bool fparam1 = false;
+    if(params.size()>1) {
+        fparam1 = params[1].get_bool(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
     return data.JSONRPCSuccess(blockToJSON(block, pblockindex, params.size() > 1 ? fparam1 : false));
 }
 
-bool CRPCTable::ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock) {
-    boost::filesystem::path pathDest = iofs::GetDataDir() / strBlockHash;
-    if (boost::filesystem::is_directory(pathDest))
+static bool ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock) {
+    fs::path pathDest = iofs::GetDataDir() / strBlockHash;
+    if (fs::is_directory(pathDest))
         pathDest /= strBlockHash;
 
     try {

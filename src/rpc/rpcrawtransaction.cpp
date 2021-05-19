@@ -639,6 +639,7 @@ json_spirit::Value CRPCTable::createmultisig(const json_spirit::Array &params, C
 
     json_spirit::json_flags status;
     int nRequired = params[0].get_int(status);
+    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
     const json_spirit::Array &keys = params[1].get_array(status);
     if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
 

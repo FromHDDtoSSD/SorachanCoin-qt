@@ -413,7 +413,7 @@ private:
     static double GetPoSKernelPS() noexcept;
     static double GetPoWMHashPS() noexcept;
     static json_spirit::Object blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail);
-    static bool ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock);
+    //static bool ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock);
 
     static std::string HelpRequiringPassphrase() noexcept; // rpcwallet.cpp
     static json_spirit::Value EnsureWalletIsUnlocked(CBitrpcData &data) noexcept;

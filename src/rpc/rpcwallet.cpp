@@ -466,10 +466,16 @@ json_spirit::Value CRPCTable::sendtoaddress(const json_spirit::Array &params, CB
         return data.JSONRPCError(RPC_WALLET_AMOUNT_TOO_SMALL, "Send amount too small");
 
     // Wallet comments
-    std::string jparam2 = params[2].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    std::string jparam3 = params[3].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    std::string jparam2;
+    if(params.size()>2) {
+        jparam2 = params[2].get_str(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
+    std::string jparam3;
+    if(params.size()>3) {
+        jparam3 = params[3].get_str(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
     CWalletTx wtx;
     if (params.size() > 2 && params[2].type() != json_spirit::null_type && !jparam2.empty())
         wtx.mapValue["comment"] = jparam2;
@@ -927,8 +933,11 @@ json_spirit::Value CRPCTable::sendmany(const json_spirit::Array &params, CBitrpc
 
     CWalletTx wtx;
     wtx.strFromAccount = strAccount;
-    std::string jparam3 = params[3].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    std::string jparam3;
+    if(params.size()>3) {
+        jparam3 = params[3].get_str(status);
+        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    }
     if (params.size() > 3 && params[3].type() != json_spirit::null_type && !jparam3.empty())
         wtx.mapValue["comment"] = jparam3;
 
@@ -2140,7 +2149,7 @@ json_spirit::Value CRPCTable::makekeypair(const json_spirit::Array &params, CBit
     }
 
     std::string strPrefix = "";
-    if (params.size() > 0) {
+    if (params.size() > 0) { // no operate (data.fHelp() || params.size() > 0)
         json_spirit::json_flags status;
         strPrefix = params[0].get_str(status);
         if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
