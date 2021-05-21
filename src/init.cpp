@@ -45,6 +45,7 @@ std::string entry::strWalletFileName;
 std::string entry::strWalletqFileName;
 CWallet *entry::pwalletMain = nullptr;
 enum entry::bip66Mode entry::b66mode = entry::Bip66_ADVISORY;
+std::string boot::strMiscWarning;
 
 //
 // Shutdown

@@ -1,3 +1,8 @@
+// Copyright (c) 2009-2010 Satoshi Nakamoto
+// Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
+// Distributed under the MIT/X11 software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <bip32/hdchain.h>
 #include <crypto/hmac_sha512.h>
@@ -53,28 +58,13 @@ static uint256 bytes_to_mnemonic(SecureBytes mnemonic_bytes) {
     return hash;
 }
 
-static uint256 generate_mnemonic() {
+uint256 bip39_words::generate_mnemonic() {
     SecureBytes mnemonic_bytes = token_bytes(32);
     return bytes_to_mnemonic(std::move(mnemonic_bytes));
 }
 
-static uint256 generate_priv_mnemonic() {
+uint256 bip39_words::generate_priv_mnemonic() {
     SecureBytes mnemonic_bytes = privKey_bytes();
     return bytes_to_mnemonic(std::move(mnemonic_bytes));
 }
 
-// test
-#include <util.h>
-class bip39_test {
-public:
-    bip39_test() {
-        debugcs::instance() << "bip39 test" << debugcs::endl();
-        //debugcs::instance() << generate_mnemonic().ToString() << debugcs::endl();
-        debugcs::instance() << generate_priv_mnemonic().ToString() << debugcs::endl();
-        //util::Sleep(3000);
-    }
-    ~bip39_test() {}
-};
-#ifdef DEBUG
-bip39_test bip39_obj;
-#endif

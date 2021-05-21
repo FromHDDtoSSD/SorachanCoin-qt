@@ -897,6 +897,13 @@ SOURCES += \
 RESOURCES += \
     src/qt/bitcoin.qrc
 
+#
+# TEST
+#
+SOURCES += \
+    src/test/bignum_test.cpp \
+    src/test/bip39_test.cpp
+
 contains(USE_QRCODE, 1) {
     contains(GUI_MODE, 1) {
         HEADERS += src/qt/qrcodedialog.h

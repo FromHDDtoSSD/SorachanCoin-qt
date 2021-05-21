@@ -15,6 +15,18 @@
 class boot : private no_instance
 {
 public:
+    static bool AbortNode(std::string strMessage, std::string userMessage="") {
+        strMiscWarning = strMessage;
+        logging::LogPrintf("*** %s\n", strMessage);
+#ifdef QT_GUI
+        CClientUIInterface::uiInterface.ThreadSafeMessageBox(
+            userMessage.empty() ? _("Error: A fatal internal error occured, see debug.log for details") : userMessage,
+            "", CClientUIInterface::MSG_ERROR);
+#endif
+        StartShutdown();
+        return false;
+    }
+
     static void Shutdown(void *parg); // init.cpp
     static void StartShutdown() {
 #ifdef QT_GUI
@@ -26,6 +38,9 @@ public:
             bitthread::thread_error(std::string(__func__) + " :Shutdown");
 #endif
     }
+
+private:
+    static std::string strMiscWarning; // init.cpp
 };
 
 #endif // BITCOIN_SHUTDOWN_H

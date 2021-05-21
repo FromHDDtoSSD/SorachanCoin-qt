@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2020 The SorachanCoin developers
+// Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //
@@ -267,8 +267,24 @@ public:
     uint64_t Get64(int n = 0) const {
         return pn[2 * n] | (uint64_t)pn[2 * n + 1] << 32;
     }
+    uint64_t GetLow64() const {
+        assert(WIDTH >= 2);
+        return pn[0] | (uint64_t)pn[1] << 32;
+    }
     uint32_t Get32(int n = 0) const {
         return pn[n];
+    }
+    unsigned int bits() const {
+        for (int pos = WIDTH - 1; pos >= 0; pos--) {
+            if (pn[pos]) {
+                for (int bits = 31; bits > 0; bits--) {
+                    if (pn[pos] & 1 << bits)
+                        return 32 * pos + bits + 1;
+                }
+                return 32 * pos + 1;
+            }
+        }
+        return 0;
     }
     unsigned int GetSerializeSize() const {
         return sizeof(pn);
@@ -287,6 +303,48 @@ typedef base_uint<256> base_uint256;
 typedef base_uint<512> base_uint512;
 typedef base_uint<65536> base_uint65536;
 typedef base_uint<131072> base_uint131072;
+
+static void inline HashMix(uint32_t &a, uint32_t &b, uint32_t &c)
+{
+    // Taken from lookup3, by Bob Jenkins.
+    a -= c;
+    a ^= ((c << 4) | (c >> 28));
+    c += b;
+    b -= a;
+    b ^= ((a << 6) | (a >> 26));
+    a += c;
+    c -= b;
+    c ^= ((b << 8) | (b >> 24));
+    b += a;
+    a -= c;
+    a ^= ((c << 16) | (c >> 16));
+    c += b;
+    b -= a;
+    b ^= ((a << 19) | (a >> 13));
+    a += c;
+    c -= b;
+    c ^= ((b << 4) | (b >> 28));
+    b += a;
+}
+
+static void inline HashFinal(uint32_t &a, uint32_t &b, uint32_t &c)
+{
+    // Taken from lookup3, by Bob Jenkins.
+    c ^= b;
+    c -= ((b << 14) | (b >> 18));
+    a ^= c;
+    a -= ((c << 11) | (c >> 21));
+    b ^= a;
+    b -= ((a << 25) | (a >> 7));
+    c ^= b;
+    c -= ((b << 16) | (b >> 16));
+    a ^= c;
+    a -= ((c << 4) | (c >> 28));
+    b ^= a;
+    b -= ((a << 14) | (a >> 18));
+    c ^= b;
+    c -= ((b << 24) | (b >> 8));
+}
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 typedef prevector<PREVECTOR_N, uint8_t> large_uint_vector;
@@ -368,5 +426,94 @@ UINT_DEF(uint256, base_uint256)
 UINT_DEF(uint512, base_uint512)
 UINT_DEF(uint65536, base_uint65536)
 UINT_DEF(uint131072, base_uint131072)
+
+class uint256b : public uint256
+{
+public:
+    uint256b() {}
+    uint256b(const uint256 &b) : uint256(b) {}
+    uint256b(uint64_t b) : uint256(b) {}
+    explicit uint256b(const std::string &str) : uint256(str) {}
+    explicit uint256b(const large_uint_vector &vch) : uint256(vch) {}
+
+    /**
+     * The "compact" format is a representation of a whole
+     * number N using an unsigned 32bit number similar to a
+     * floating point format.
+     * The most significant 8 bits are the unsigned exponent of base 256.
+     * This exponent can be thought of as "number of bytes of N".
+     * The lower 23 bits are the mantissa.
+     * Bit number 24 (0x800000) represents the sign of N.
+     * N = (-1^sign) * mantissa * 256^(exponent-3)
+     *
+     * Satoshi's original implementation used BN_bn2mpi() and BN_mpi2bn().
+     * MPI uses the most significant bit of the first byte as sign.
+     * Thus 0x1234560000 is compact (0x05123456)
+     * and  0xc0de000000 is compact (0x0600c0de)
+     *
+     * Bitcoin only uses this "compact" format for encoding difficulty
+     * targets, which are unsigned 256bit quantities.  Thus, all the
+     * complexities of the sign bit and using base 256 are probably an
+     * implementation accident.
+     */
+    uint256b &SetCompact(uint32_t nCompact, bool *pfNegative = nullptr, bool *pfOverflow = nullptr) {
+        int nSize = nCompact >> 24;
+        uint32_t nWord = nCompact & 0x007fffff;
+        if (nSize <= 3) {
+            nWord >>= 8 * (3 - nSize);
+            *this = nWord;
+        } else {
+            *this = nWord;
+            *this <<= 8 * (nSize - 3);
+        }
+        if (pfNegative)
+            *pfNegative = nWord != 0 && (nCompact & 0x00800000) != 0;
+        if (pfOverflow)
+            *pfOverflow = nWord != 0 && ((nSize > 34) ||
+                         (nWord > 0xff && nSize > 33) ||
+                         (nWord > 0xffff && nSize > 32));
+        return *this;
+    }
+    uint32_t GetCompact(bool fNegative = false) const {
+        int nSize = (bits() + 7) / 8;
+        uint32_t nCompact = 0;
+        if (nSize <= 3) {
+            nCompact = GetLow64() << 8 * (3 - nSize);
+        } else {
+            uint256 bn = *this >> 8 * (nSize - 3);
+            nCompact = bn.GetLow64();
+        }
+        // The 0x00800000 bit denotes the sign.
+        // Thus, if it is already set, divide the mantissa by 256 and increase the exponent.
+        if (nCompact & 0x00800000) {
+            nCompact >>= 8;
+            nSize++;
+        }
+        assert((nCompact & ~0x007fffff) == 0);
+        assert(nSize < 256);
+        nCompact |= nSize << 24;
+        nCompact |= (fNegative && (nCompact & 0x007fffff) ? 0x00800000 : 0);
+        return nCompact;
+    }
+    uint64_t GetHash(const uint256 &salt) const {
+        uint32_t a, b, c;
+        const int WIDTH = 256 / 32;
+        a = b = c = 0xdeadbeef + (WIDTH << 2);
+
+        a += Get32(0) ^ salt.Get32(0);
+        b += Get32(1) ^ salt.Get32(1);
+        c += Get32(2) ^ salt.Get32(2);
+        HashMix(a, b, c);
+        a += Get32(3) ^ salt.Get32(3);
+        b += Get32(4) ^ salt.Get32(4);
+        c += Get32(5) ^ salt.Get32(5);
+        HashMix(a, b, c);
+        a += Get32(6) ^ salt.Get32(6);
+        b += Get32(7) ^ salt.Get32(7);
+        HashFinal(a, b, c);
+
+        return ((((uint64_t)b) << 32) | c);
+    }
+};
 
 #endif

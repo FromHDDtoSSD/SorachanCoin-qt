@@ -66,4 +66,9 @@ static inline SecureBytes privKey_bytes() {
     return std::move(buf);
 }
 
+namespace bip39_words {
+    extern uint256 generate_mnemonic();
+    extern uint256 generate_priv_mnemonic();
+}
+
 #endif

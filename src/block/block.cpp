@@ -20,6 +20,68 @@
 #include <rpc/bitcoinrpc.h> // cs_accept
 #include <Lyra2RE/Lyra2RE.h>
 
+bool CValidationState::Abort(const std::string &msg) {
+    boot::AbortNode(msg);
+    return Error(msg);
+}
+
+/**
+ * CChain_impl implementation
+ */
+template <typename T>
+void CChain_impl<T>::SetTip(CBlockIndex_impl<T> *pindex)
+{
+    if (pindex == nullptr) {
+        vChain.clear();
+        return;
+    }
+    vChain.resize(pindex->get_nHeight() + 1);
+    while (pindex && vChain[pindex->get_nHeight()] != pindex) {
+        vChain[pindex->get_nHeight()] = pindex;
+        pindex = pindex->get_pprev();
+    }
+}
+
+template <typename T>
+CBlockLocator_impl<T> CChain_impl<T>::GetLocator(const CBlockIndex_impl<T> *pindex) const
+{
+    int nStep = 1;
+    std::vector<T> vHave;
+    vHave.reserve(32);
+
+    if (! pindex)
+        pindex = Tip();
+    while (pindex) {
+        vHave.push_back(pindex->GetBlockHash());
+        // Stop when we have added the genesis block.
+        if (pindex->get_nHeight() == 0)
+            break;
+        // Exponentially larger steps back, plus the genesis block.
+        int nHeight = std::max(pindex->get_nHeight() - nStep, 0);
+        if (Contains(pindex)) {
+            // Use O(1) CChain index if possible.
+            pindex = (*this)[nHeight];
+        } else {
+            // Otherwise, use O(log n) skiplist.
+            pindex = pindex->GetAncestor(nHeight);
+        }
+        if (vHave.size() > 10)
+            nStep *= 2;
+    }
+
+    return CBlockLocator_impl<T>(vHave);
+}
+
+template <typename T>
+const CBlockIndex_impl<T> *CChain_impl<T>::FindFork(const CBlockIndex_impl<T> *pindex) const
+{
+    if (pindex->get_nHeight() > Height())
+        pindex = pindex->GetAncestor(Height());
+    while (pindex && !Contains(pindex))
+        pindex = pindex->get_pprev();
+    return pindex;
+}
+
 /*
 ** collect Block Print
 */

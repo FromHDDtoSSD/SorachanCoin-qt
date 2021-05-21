@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2014-2015 The Dash developers
 // Copyright (c) 2014-2015 Vertcoin Developers
+// Copyright (c) 2018 The Merge developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -13,11 +14,81 @@
 #include <block/transaction.h>
 #include <block/block_locator.h>
 #include <merkle/merkle_tree.h>
+#include <const/amount.h>
 
 #ifndef SWITCH_LYRE2RE_BLOCK
-# define SWITCH_LYRE2RE_BLOCK (550000) // hardfork: to Lyra2RE2
+# define SWITCH_LYRE2RE_BLOCK (550000) // hardfork: to Lyra2REv2
 # define SWITCH_LYRE2RE_BLOCK_TESTNET (1495000)
 #endif
+
+/** Capture information about block/transaction validation */
+class CValidationState
+{
+private:
+    enum mode_state {
+        MODE_VALID,   //! everything ok
+        MODE_INVALID, //! network rule violation (DoS value may be set)
+        MODE_ERROR,   //! run-time error
+    } mode;
+    int nDoS;
+    std::string strRejectReason;
+    unsigned char chRejectCode;
+    bool corruptionPossible;
+
+public:
+    CValidationState() : mode(MODE_VALID), nDoS(0), chRejectCode(0), corruptionPossible(false) {}
+    bool DoS(int level, bool ret = false, unsigned char chRejectCodeIn = 0, std::string strRejectReasonIn = "", bool corruptionIn = false)
+    {
+        chRejectCode = chRejectCodeIn;
+        strRejectReason = strRejectReasonIn;
+        corruptionPossible = corruptionIn;
+        if (mode == MODE_ERROR)
+            return ret;
+        nDoS += level;
+        mode = MODE_INVALID;
+        return ret;
+    }
+    bool Invalid(bool ret = false,
+        unsigned char _chRejectCode = 0,
+        std::string _strRejectReason = "")
+    {
+        return DoS(0, ret, _chRejectCode, _strRejectReason);
+    }
+    bool Error(std::string strRejectReasonIn = "")
+    {
+        if (mode == MODE_VALID)
+            strRejectReason = strRejectReasonIn;
+        mode = MODE_ERROR;
+        return false;
+    }
+    bool Abort(const std::string &msg);
+    bool IsValid() const
+    {
+        return mode == MODE_VALID;
+    }
+    bool IsInvalid() const
+    {
+        return mode == MODE_INVALID;
+    }
+    bool IsError() const
+    {
+        return mode == MODE_ERROR;
+    }
+    bool IsInvalid(int& nDoSOut) const
+    {
+        if (IsInvalid()) {
+            nDoSOut = nDoS;
+            return true;
+        }
+        return false;
+    }
+    bool CorruptionPossible() const
+    {
+        return corruptionPossible;
+    }
+    unsigned char GetRejectCode() const { return chRejectCode; }
+    std::string GetRejectReason() const { return strRejectReason; }
+};
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -236,6 +307,14 @@ public:
 };
 using CBlock = CBlock_impl<uint256>;
 
+template <typename T>
+struct CBlockTemplate_impl {
+    CBlock_impl<T> block;
+    std::vector<CAmount> vTxFees;
+    std::vector<int64_t> vTxSigOps;
+};
+using CBlockTemplate = CBlockTemplate_impl<uint256>;
+
 /** The block chain is a tree shaped structure starting with the
  * genesis block at the root, with each block potentially having multiple
  * candidates to be the next block.  pprev and pnext link a path through the
@@ -438,6 +517,82 @@ public:
     }
 };
 using CBlockIndex = CBlockIndex_impl<uint256>;
+
+/** An in-memory indexed chain of blocks. */
+template <typename T>
+class CChain_impl
+{
+private:
+    std::vector<CBlockIndex_impl<T> *> vChain;
+
+public:
+    /** Returns the index entry for the genesis block of this chain, or NULL if none. */
+    CBlockIndex_impl<T> *Genesis() const
+    {
+        return vChain.size() > 0 ? vChain[0] : nullptr;
+    }
+
+    /** Returns the index entry for the tip of this chain, or NULL if none. */
+    CBlockIndex_impl<T> *Tip(bool fProofOfStake = false) const
+    {
+        if (vChain.size() < 1)
+            return nullptr;
+
+        CBlockIndex_impl<T> *pindex = vChain[vChain.size() - 1];
+
+        if (fProofOfStake) {
+            while (pindex && pindex->get_pprev() && !pindex->IsProofOfStake())
+                pindex = pindex->get_pprev();
+        }
+        return pindex;
+    }
+
+    /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
+    CBlockIndex_impl<T> *operator[](int nHeight) const
+    {
+        if (nHeight < 0 || nHeight >= (int)vChain.size())
+            return nullptr;
+        return vChain[nHeight];
+    }
+
+    /** Compare two chains efficiently. */
+    friend bool operator==(const CChain_impl &a, const CChain_impl &b)
+    {
+        return a.vChain.size() == b.vChain.size() &&
+               a.vChain[a.vChain.size() - 1] == b.vChain[b.vChain.size() - 1];
+    }
+
+    /** Efficiently check whether a block is present in this chain. */
+    bool Contains(const CBlockIndex_impl<T> *pindex) const
+    {
+        return (*this)[pindex->get_nHeight()] == pindex;
+    }
+
+    /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
+    CBlockIndex_impl<T> *Next(const CBlockIndex_impl<T> *pindex) const
+    {
+        if (Contains(pindex))
+            return (*this)[pindex->nHeight + 1];
+        else
+            return nullptr;
+    }
+
+    /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
+    int Height() const
+    {
+        return vChain.size() - 1;
+    }
+
+    /** Set/initialize a chain with a given tip. */
+    void SetTip(CBlockIndex_impl<T> *pindex);
+
+    /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
+    CBlockLocator_impl<T> GetLocator(const CBlockIndex_impl<T> *pindex = nullptr) const;
+
+    /** Find the last common block between this chain and a block index entry. */
+    const CBlockIndex_impl<T> *FindFork(const CBlockIndex_impl<T> *pindex) const;
+};
+using CChain = CChain_impl<uint256>;
 
 //
 // Used to marshal pointers into hashes for db storage.
