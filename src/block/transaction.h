@@ -69,6 +69,14 @@ namespace block_transaction
     using manage = manage_impl<uint256>;
 }
 
+namespace tx_util {
+    static inline std::string EncodeHexTx(const CTransaction &tx) {
+        CDataStream ssTx;
+        ssTx << tx;
+        return util::HexStr(ssTx.begin(), ssTx.end());
+    }
+}
+
 // An inpoint - a combination of a transaction and an index n into its vin
 template <typename T>
 class CInPoint_impl

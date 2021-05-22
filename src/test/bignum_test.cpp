@@ -6,13 +6,13 @@ class uint256_bignum_test {
 public:
     uint256_bignum_test() {
         debugcs::instance() << "bignum(uint256b) test" << debugcs::endl();
-        unsigned char data[] = {'a', 'b', 'c', 'd', 'e', '3', '8', '7'};
-        large_uint_vector uvh(BEGIN(data), END(data));
-        CBigNum bNum(uvh);
-        uint256b uNum(uvh);
+        CBigNum bNum;  bNum.SetCompact(123456789);
+        uint256b uNum; uNum.SetCompact(123456789);
+        debugcs::instance() << "CBigNum GetCompact: " << bNum.GetCompact() << debugcs::endl();
+        debugcs::instance() << "uint256b GetCompact: " << uNum.GetCompact() << debugcs::endl();
         assert(bNum.GetCompact()==uNum.GetCompact());
     }
 };
 #ifdef DEBUG
-//uint256_bignum_test bnum_test;
+uint256_bignum_test bnum_test;
 #endif

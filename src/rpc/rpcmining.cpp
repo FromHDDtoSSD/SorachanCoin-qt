@@ -559,40 +559,77 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     pblock->set_nNonce(0);
 
     json_spirit::Array transactions;
-    std::map<uint256, int64_t> setTxIndex;
-    int i = 0;
-    CTxDB txdb("r");
-    //std::vector<CTransaction> &vtx = pblock->set_vtx();
-    for(CTransaction &tx: pblock->set_vtx()) {
-        uint256 txHash = tx.GetHash();
-        setTxIndex[txHash] = i++;
-        if (tx.IsCoinBase() || tx.IsCoinStake())
-            continue;
+    {
+        std::map<uint256, int64_t> setTxIndex;
+        int i = 0;
+        CTxDB txdb("r");
+        //std::vector<CTransaction> &vtx = pblock->set_vtx();
+        for(CTransaction &tx: pblock->set_vtx()) {
+            uint256 txHash = tx.GetHash();
+            setTxIndex[txHash] = i++;
+            if (tx.IsCoinBase() || tx.IsCoinStake())
+                continue;
 
-        json_spirit::Object entry;
-        CDataStream ssTx;
-        ssTx << tx;
-        entry.push_back(json_spirit::Pair("data", util::HexStr(ssTx.begin(), ssTx.end())));
-        entry.push_back(json_spirit::Pair("hash", txHash.GetHex()));
+            json_spirit::Object entry;
+            entry.push_back(json_spirit::Pair("data", tx_util::EncodeHexTx(tx)));
+            entry.push_back(json_spirit::Pair("hash", txHash.GetHex()));
 
-        MapPrevTx mapInputs;
-        std::map<uint256, CTxIndex> mapUnused;
-        bool fInvalid = false;
-        if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
-            entry.push_back(json_spirit::Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
-            json_spirit::Array deps;
-            for(MapPrevTx::value_type &inp: mapInputs) {
-                if (setTxIndex.count(inp.first))
-                    deps.push_back(setTxIndex[inp.first]);
+            MapPrevTx mapInputs;
+            std::map<uint256, CTxIndex> mapUnused;
+            bool fInvalid = false;
+            if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
+                entry.push_back(json_spirit::Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
+                json_spirit::Array deps;
+                for(MapPrevTx::value_type &inp: mapInputs) {
+                    if (setTxIndex.count(inp.first))
+                        deps.push_back(setTxIndex[inp.first]);
+                }
+                entry.push_back(json_spirit::Pair("depends", deps));
+
+                int64_t nSigOps = tx.GetLegacySigOpCount();
+                nSigOps += tx.GetP2SHSigOpCount(mapInputs);
+                entry.push_back(json_spirit::Pair("sigops", nSigOps));
             }
-            entry.push_back(json_spirit::Pair("depends", deps));
 
-            int64_t nSigOps = tx.GetLegacySigOpCount();
-            nSigOps += tx.GetP2SHSigOpCount(mapInputs);
-            entry.push_back(json_spirit::Pair("sigops", nSigOps));
+            transactions.push_back(entry);
         }
+    }
 
-        transactions.push_back(entry);
+    json_spirit::Array coinbasetxn;
+    if(fBip0023) {
+        std::map<uint256, int64_t> setTxIndex;
+        int j = 0;
+        CTxDB txdb("r");
+        for (CTransaction &tx: pblock->set_vtx()) {
+            if(tx.IsCoinBase()){
+                uint256 txHash = tx.GetHash();
+                setTxIndex[txHash] = j++;
+
+                json_spirit::Object entry;
+                entry.push_back(json_spirit::Pair("data", tx_util::EncodeHexTx(tx)));
+                entry.push_back(json_spirit::Pair("hash", txHash.GetHex()));
+
+                json_spirit::Array deps;
+                for (const CTxIn &in: tx.get_vin()) {
+                    if (setTxIndex.count(in.get_prevout().get_hash()))
+                        deps.push_back(setTxIndex[in.get_prevout().get_hash()]);
+                }
+                entry.push_back(json_spirit::Pair("depends", deps));
+
+                MapPrevTx mapInputs;
+                std::map<uint256, CTxIndex> mapUnused;
+                bool fInvalid = false;
+                if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
+                    entry.push_back(json_spirit::Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
+
+                    int64_t nSigOps = tx.GetLegacySigOpCount();
+                    nSigOps += tx.GetP2SHSigOpCount(mapInputs);
+                    entry.push_back(json_spirit::Pair("sigops", nSigOps));
+                }
+
+                coinbasetxn.push_back(entry);
+            }
+        }
     }
 
     json_spirit::Object aux;
@@ -621,6 +658,10 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     result.push_back(json_spirit::Pair("curtime", (int64_t)pblock->get_nTime()));
     result.push_back(json_spirit::Pair("bits", HexBits(pblock->get_nBits())));
     result.push_back(json_spirit::Pair("height", (int64_t)(pindexPrev->get_nHeight()+1)));
+
+    if(fBip0023) {
+        result.push_back(json_spirit::Pair("coinbasetxn", coinbasetxn[0]));
+    }
 
     return data.JSONRPCSuccess(result);
 }
@@ -664,6 +705,9 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
         block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
         return data.JSONRPCSuccess("rejected");
     }
+
+    // debug ...
+    return data.JSONRPCSuccess("rejected");
 
     bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
     //static CReserveKey reservekey(entry::pwalletMain);
