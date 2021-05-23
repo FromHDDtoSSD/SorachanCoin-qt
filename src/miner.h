@@ -54,7 +54,8 @@ public:
     //
     // Generate a new block, without valid proof-of-work/with provided proof-of-stake
     //
-    static CBlock *CreateNewBlock(CWallet *pwallet, CTransaction *txAdd = NULL);
+    static CBlock *CreateNewBlock(CWallet *pwallet, CTransaction *txAdd = nullptr);
+    static CBlockTemplate *CreateNewBlock2(CWallet *pwallet, CTransaction *txAdd = nullptr);
 
     //
     // Modify the extranonce in a block

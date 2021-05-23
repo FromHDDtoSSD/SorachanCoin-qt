@@ -690,6 +690,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
     }
 
     // reward (coinbase)
+    /*
     if(block.get_vtx(0).get_vout().size()==0) {
         CBlockIndex *index = block_info::mapBlockIndex[block.get_hashPrevBlock()];
         int nHeight = index->get_nHeight();
@@ -705,6 +706,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, CBit
         block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
         return data.JSONRPCSuccess("rejected");
     }
+    */
 
     // debug ...
     return data.JSONRPCSuccess("rejected");

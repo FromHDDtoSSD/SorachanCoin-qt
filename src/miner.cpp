@@ -432,6 +432,318 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
     return pblock.release();
 }
 
+CBlockTemplate *miner::CreateNewBlock2(CWallet *pwallet, CTransaction *txCoinStake/*=NULL*/)
+{
+    const bool fProofOfStake = txCoinStake != nullptr;
+
+    // Create new block
+    std::unique_ptr<CBlockTemplate> pblocktemplate(new (std::nothrow) CBlockTemplate());
+    if (! pblocktemplate.get())
+        return nullptr;
+    CBlock *pblock = &pblocktemplate->block; // pointer for convenience
+
+    // Create coinbase tx
+    CTransaction txCoinBase;
+    txCoinBase.set_vin().resize(1);
+    txCoinBase.set_vin(0).set_prevout().SetNull();
+    txCoinBase.set_vout().resize(1);
+    pblocktemplate->vTxFees.push_back(-1);   // updated at end
+    pblocktemplate->vTxSigOps.push_back(-1); // updated at end
+
+    if (! fProofOfStake) {
+        CReserveKey reservekey(pwallet);
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
+
+        // Add our coinbase tx as first transaction
+        pblock->set_vtx().push_back(txCoinBase);
+    } else {
+        // Coinbase output must be empty for Proof-of-Stake block
+        txCoinBase.set_vout(0).SetEmpty();
+
+        // Syncronize timestamps
+        pblock->set_nTime(txCoinStake->get_nTime());
+        txCoinBase.set_nTime(txCoinStake->get_nTime());
+
+        // Add coinbase and coinstake transactions
+        pblock->set_vtx().push_back(txCoinBase);
+        pblock->set_vtx().push_back(*txCoinStake);
+    }
+
+    // Largest block you're willing to create:
+    unsigned int nBlockMaxSize = map_arg::GetArgUInt("-blockmaxsize", block_params::MAX_BLOCK_SIZE_GEN / 2);
+
+    // Limit to betweeen 1K and MAX_BLOCK_SIZE-1K for sanity:
+    nBlockMaxSize = std::max((unsigned int)1000, std::min((unsigned int)(block_params::MAX_BLOCK_SIZE - 1000), nBlockMaxSize));
+
+    // How much of the block should be dedicated to high-priority transactions,
+    // included regardless of the fees they pay
+    unsigned int nBlockPrioritySize = map_arg::GetArgUInt("-blockprioritysize", 27000);
+    nBlockPrioritySize = std::min(nBlockMaxSize, nBlockPrioritySize);
+
+    // Minimum block size you want to create; block will be filled with free transactions
+    // until there are no more or the block reaches this size:
+    unsigned int nBlockMinSize = map_arg::GetArgUInt("-blockminsize", 0);
+    nBlockMinSize = std::min(nBlockMaxSize, nBlockMinSize);
+
+    // Fee-per-kilobyte amount considered the same as "free"
+    // Be careful setting this: if you set it to zero then
+    // a transaction spammer can cheaply fill blocks using
+    // 1-satoshi-fee transactions. It should be set above the real
+    // cost to you of processing a transaction.
+    int64_t nMinTxFee = block_params::MIN_TX_FEE;
+    if (map_arg::GetMapArgsCount("-mintxfee"))
+        strenc::ParseMoney(map_arg::GetMapArgsString("-mintxfee").c_str(), nMinTxFee);
+
+    CBlockIndex *pindexPrev = block_info::pindexBest;
+    pblock->set_nBits(diff::spacing::GetNextTargetRequired(pindexPrev, fProofOfStake));
+
+    // Collect memory pool transactions into the block
+    int64_t nFees = 0;
+    {
+        LOCK2(block_process::cs_main, CTxMemPool::mempool.get_cs());
+        CBlockIndex *pindexPrev = block_info::pindexBest;
+
+        CTxDB txdb("r");
+
+        // Priority order to process transactions
+        std::list<COrphan> vOrphan; // list memory doesn't move
+        std::map<uint256, std::vector<COrphan *> > mapDependers;
+
+        // This vector will be sorted into a priority queue:
+        std::vector<TxPriority> vecPriority;
+        vecPriority.reserve(CTxMemPool::mempool.get_mapTx().size());
+        for (std::map<uint256, CTransaction>::iterator mi = CTxMemPool::mempool.set_mapTx().begin(); mi != CTxMemPool::mempool.get_mapTx().end(); ++mi)
+        {
+            CTransaction& tx = (*mi).second;
+            if (tx.IsCoinBase() || tx.IsCoinStake() || !tx.IsFinal()) {
+                continue;
+            }
+
+            COrphan *porphan = nullptr;
+            double dPriority = 0;
+            int64_t nTotalIn = 0;
+            bool fMissingInputs = false;
+            for(const CTxIn &txin: tx.get_vin())
+            {
+                // Read prev transaction
+                CTransaction txPrev;
+                CTxIndex txindex;
+                if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex)) {
+                    //
+                    // This should never happen; all transactions in the memory
+                    // pool should connect to either transactions in the chain
+                    // or other transactions in the memory pool.
+                    //
+                    if (! CTxMemPool::mempool.get_mapTx().count(txin.get_prevout().get_hash())) {
+                        logging::LogPrintf("ERROR: CTxMemPool::mempool transaction missing input\n");
+                        if (args_bool::fDebug) {
+                            assert("CTxMemPool::mempool transaction missing input" == 0);
+                        }
+                        fMissingInputs = true;
+                        if (porphan) {
+                            vOrphan.pop_back();
+                        }
+                        break;
+                    }
+
+                    // Has to wait for dependencies
+                    if (! porphan) {
+                        //
+                        // Use list for automatic deletion
+                        //
+                        vOrphan.push_back(COrphan(&tx));
+                        porphan = &vOrphan.back();
+                    }
+                    mapDependers[txin.get_prevout().get_hash()].push_back(porphan);
+                    porphan->setDependsOn.insert(txin.get_prevout().get_hash());
+                    nTotalIn += CTxMemPool::mempool.get_mapTx(txin.get_prevout().get_hash()).get_vout(txin.get_prevout().get_n()).get_nValue();
+                    continue;
+                }
+                int64_t nValueIn = txPrev.get_vout(txin.get_prevout().get_n()).get_nValue();
+                nTotalIn += nValueIn;
+
+                int nConf = txindex.GetDepthInMainChain();
+                dPriority += (double)nValueIn * nConf;
+            }
+            if (fMissingInputs) {
+                continue;
+            }
+
+            // Priority is sum(valuein * age) / txsize
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
+            dPriority /= nTxSize;
+
+            // This is a more accurate fee-per-kilobyte than is used by the client code, because the
+            // client code rounds up the size to the nearest 1K. That's good, because it gives an
+            // incentive to create smaller transactions.
+            double dFeePerKb =  double(nTotalIn-tx.GetValueOut()) / (double(nTxSize)/1000.0);
+
+            if (porphan) {
+                porphan->dPriority = dPriority;
+                porphan->dFeePerKb = dFeePerKb;
+            } else {
+                vecPriority.push_back(TxPriority(dPriority, dFeePerKb, &(*mi).second));
+            }
+        }
+
+        // logging::LogPrintf("miner CreateNewBlock Collect\n");
+
+        //
+        // Collect transactions into block
+        //
+        std::map<uint256, CTxIndex> mapTestPool;
+        uint64_t nBlockSize = 1000;
+        uint64_t nBlockTx = 0;
+        int nBlockSigOps = 100;
+        bool fSortedByFee = (nBlockPrioritySize <= 0);
+
+        TxPriorityCompare comparer(fSortedByFee);
+        std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
+
+        while (! vecPriority.empty())
+        {
+            //
+            // Take highest priority transaction off the priority queue
+            //
+            double dPriority = std::get<0>(vecPriority.front());
+            double dFeePerKb = std::get<1>(vecPriority.front());
+            CTransaction &tx = *(std::get<2>(vecPriority.front()));
+
+            std::pop_heap(vecPriority.begin(), vecPriority.end(), comparer);
+            vecPriority.pop_back();
+
+            //
+            // Size limits
+            //
+            //unsigned int nTxSize = ::GetSerializeSize(tx, SER_NETWORK, version::PROTOCOL_VERSION);
+            unsigned int nTxSize = ::GetSerializeSize(tx);
+            if (nBlockSize + nTxSize >= nBlockMaxSize) {
+                continue;
+            }
+
+            //
+            // Legacy limits on sigOps
+            //
+            unsigned int nTxSigOps = tx.GetLegacySigOpCount();
+            if (nBlockSigOps + nTxSigOps >= block_params::MAX_BLOCK_SIGOPS) {
+                continue;
+            }
+
+            //
+            // Timestamp limit
+            //
+            if (tx.get_nTime() > bitsystem::GetAdjustedTime() || (fProofOfStake && tx.get_nTime() > txCoinStake->get_nTime())) {
+                continue;
+            }
+
+            //
+            // Skip free transactions if we're past the minimum block size
+            //
+            if (fSortedByFee && (dFeePerKb < nMinTxFee) && (nBlockSize + nTxSize >= nBlockMinSize)) {
+                continue;
+            }
+
+            //
+            // Prioritize by fee once past the priority size or we run out of high-priority transactions
+            //
+            if (!fSortedByFee && ((nBlockSize + nTxSize >= nBlockPrioritySize) || (dPriority < util::COIN * 144 / 250))) {
+                fSortedByFee = true;
+                comparer = TxPriorityCompare(fSortedByFee);
+                std::make_heap(vecPriority.begin(), vecPriority.end(), comparer);
+            }
+
+            //
+            // Connecting shouldn't fail due to dependency on other memory pool transactions
+            // because we're already processing them in order of dependency
+            //
+            std::map<uint256, CTxIndex> mapTestPoolTmp(mapTestPool);
+            MapPrevTx mapInputs;
+            bool fInvalid;
+            if (! tx.FetchInputs(txdb, mapTestPoolTmp, false, true, mapInputs, fInvalid)) {
+                continue;
+            }
+
+            // Transaction fee
+            int64_t nTxFees = tx.GetValueIn(mapInputs)-tx.GetValueOut();
+            int64_t nMinFee = tx.GetMinFee(nBlockSize, true, CTransaction::GMF_BLOCK, nTxSize);
+            if (nTxFees < nMinFee) {
+                continue;
+            }
+
+            // Sigops accumulation
+            nTxSigOps += tx.GetP2SHSigOpCount(mapInputs);
+            if (nBlockSigOps + nTxSigOps >= block_params::MAX_BLOCK_SIGOPS) {
+                continue;
+            }
+
+            if (! tx.ConnectInputs(txdb, mapInputs, mapTestPoolTmp, CDiskTxPos(1,1,1), pindexPrev, false, true, true, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS)) {
+                continue;
+            }
+
+            mapTestPoolTmp[tx.GetHash()] = CTxIndex(CDiskTxPos(1,1,1), tx.get_vout().size());
+            std::swap(mapTestPool, mapTestPoolTmp);
+
+            // Added
+            pblock->set_vtx().push_back(tx);
+            nBlockSize += nTxSize;
+            ++nBlockTx;
+            nBlockSigOps += nTxSigOps;
+            nFees += nTxFees;
+
+            if (args_bool::fDebug && map_arg::GetBoolArg("-printpriority")) {
+                logging::LogPrintf("priority %.1f feeperkb %.1f txid %s\n", dPriority, dFeePerKb, tx.GetHash().ToString().c_str());
+            }
+
+            // Add transactions that depend on this one to the priority queue
+            uint256 hash = tx.GetHash();
+            if (mapDependers.count(hash)) {
+                for(COrphan* porphan: mapDependers[hash])
+                {
+                    if (! porphan->setDependsOn.empty()) {
+                        porphan->setDependsOn.erase(hash);
+                        if (porphan->setDependsOn.empty()) {
+                            vecPriority.push_back(TxPriority(porphan->dPriority, porphan->dFeePerKb, porphan->ptx));
+                            std::push_heap(vecPriority.begin(), vecPriority.end(), comparer);
+                        }
+                    }
+                }
+            }
+        }
+        // logging::LogPrintf("miner CreateNewBlock reword\n");
+
+        block_info::nLastBlockTx = nBlockTx;
+        block_info::nLastBlockSize = nBlockSize;
+
+        if (! fProofOfStake) {
+            pblock->set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(pblock->get_nBits(), nFees));
+            if (args_bool::fDebug)
+                logging::LogPrintf("miner::CreateNewBlock(): PoW reward %" PRIu64 "\n", pblock->get_vtx(0).get_vout(0).get_nValue());
+        }
+        if (args_bool::fDebug && map_arg::GetBoolArg("-printpriority"))
+            logging::LogPrintf("miner::CreateNewBlock(): total size %" PRIu64 "\n", nBlockSize);
+
+        // Fill in header
+        pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
+        if (! fProofOfStake) {
+            pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
+            pblock->LastHeight = pindexPrev->get_nHeight();
+            pblock->UpdateTime(pindexPrev);
+        }
+        pblock->set_nNonce(0);
+        //pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
+
+        //CValidationState state;
+        //if (!TestBlockValidity(state, *pblock, pindexPrev, false, false) && !fHasMinerLogged) {
+        //    logging::LogPrintf("CreateNewBlock() : TestBlockValidity failed\n");
+        //    return nullptr;
+        //}
+    }
+
+    return pblocktemplate.release();
+}
+
 void miner::IncrementExtraNonce(CBlock *pblock, CBlockIndex *pindexPrev, unsigned int &nExtraNonce)
 {
     //
