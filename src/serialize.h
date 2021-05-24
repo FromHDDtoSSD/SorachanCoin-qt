@@ -587,6 +587,7 @@ public:
             s.write((char *)string.data(), string.size());
     }
 };
+#define LIMITED_STRING(obj, n) REF(LimitedString<n>(REF(obj)))
 
 template<typename I>
 BigEndian<I> WrapBigEndian(I &n) { return BigEndian<I>(n); }
@@ -1029,7 +1030,7 @@ struct CheckVarIntMode {
 };
 
 template<VarIntMode Mode, typename I>
-inline unsigned int GetSizeOfVarInt(I n) {
+static inline unsigned int GetSizeOfVarInt(I n) {
     CheckVarIntMode<Mode, I>();
     int nRet = 0;
     while(true) {
@@ -1045,7 +1046,7 @@ template<typename I>
 inline void WriteVarInt(CSizeComputer &os, I n);
 
 template<typename Stream, VarIntMode Mode, typename I>
-void WriteVarInt(Stream &os, I n) {
+static inline void WriteVarInt(Stream &os, I n) {
     CheckVarIntMode<Mode, I>();
     unsigned char tmp[(sizeof(n)*8+6)/7];
     int len=0;
@@ -1062,7 +1063,7 @@ void WriteVarInt(Stream &os, I n) {
 }
 
 template<typename Stream, VarIntMode Mode, typename I>
-I ReadVarInt(Stream &is) {
+static inline I ReadVarInt(Stream &is) {
     CheckVarIntMode<Mode, I>();
     I n = 0;
     while(true) {
@@ -1081,7 +1082,7 @@ I ReadVarInt(Stream &is) {
         }
     }
 }
-} // namespace verint
+} // namespace varint
 
 template<varint::VarIntMode Mode, typename I>
 class CVarInt
@@ -1103,7 +1104,12 @@ public:
 };
 
 template<varint::VarIntMode Mode=varint::VarIntMode::DEFAULT, typename I>
-CVarInt<Mode, I> WrapVarInt(I &n) { return CVarInt<Mode, I>{n}; }
+static inline CVarInt<Mode, I> WrapVarUInt(I &n) { return CVarInt<Mode, I>(n); }
+#define VARUINT(obj) REF(WrapVarUInt(REF(obj)))
+
+template<varint::VarIntMode Mode=varint::VarIntMode::NONNEGATIVE_SIGNED, typename I>
+static inline CVarInt<Mode, I> WrapVarInt(I &n) { return CVarInt<Mode, I>(n); }
+#define VARINT(obj) REF(WrapVarInt(REF(obj)))
 
 /**
  * Support for ADD_SERIALIZE_METHODS
