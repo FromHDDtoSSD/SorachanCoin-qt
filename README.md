@@ -9,17 +9,13 @@ SorachanCoin - a hybrid scrypt PoW + PoS based cryptocurrency.
 What is SorachanCoin?
 ===========================
 
-The purpose of this coin is to change  
-the drive failure prediction detection feature(case: S.M.A.R.T.) to "reliable".  
+When using a personal computer, data backup is always a concern. Especially recently, online storage has been charged fee one after another, and we think that many people have returned to the local environment.  
   
-The drive failure prediction and detection function called "S.M.A.R.T." is many years of investigation,  
-therefore We think that it is under the control of something that is into strange thoughts.  
-For example, recently, the tendency is even stronger,  
-and we can not catch notifications of breakdown to regardless of "normal" of status,  
-but actually, just a few changes to the firmware may resume reading.  
+There is "S.M.A.R.T.", the state of the drive seems to decide. However, if you believe in this system, you will almost certainly lose data without being able to back up. This is because this indicator does not denote the correct one.  
   
-We will implement all the basic functions of coin  
-and to develop innovative functions such as failure prediction.  
+We have not find broken indicator for over 17 years. Then, there is nothing to expect and we came to result in that we can not trust "S.M.A.R.T.".  
+  
+Therefore, by utilizing the "inspection" that has no choice but to surely produce results, the mission of this Blockchain is to try to derive the predicted information.  
   
 Official site:  
 https://www.junkhdd.com/  
@@ -46,20 +42,21 @@ How to build?
 ./configure  
 make  
   
-"SorachanCoind" will be generated under /src.
-
+"SorachanCoind" will be generated under ./src  
+  
+Require library: libtool, autoconf, unzip  
+(sudo apt-get install libtool, autoconf, unzip)
 
 BlockExplorer
 ===========================
 
-mainnet:  
+mainnet  
+from PoW[Scrypt]/PoS to PoW[Lyra2REv2]/PoS  
+until 549999 block: Scrypt, after 550000 block: Lyra2REv2  
 https://sora.junkhdd.com:7350/  
-https://www.junkhdd.com:7350/  
-https://de.junkhdd.com:7350/  
-https://us.junkhdd.com:7350/  
-https://au.junkhdd.com:7350/  
-https://sg.junkhdd.com:7350/  
-
-testnet:  
-https://www.junkhdd.com:17350/  
+  
+testnet  
+from PoW[Scrypt]/PoS to PoW[Lyra2REv2]/PoS  
+until 1494999 block: Scrypt, after 1495000 block: Lyra2REv2  
+https://www.night-rescue.com/  
 
