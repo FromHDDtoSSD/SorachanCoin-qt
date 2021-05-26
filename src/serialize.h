@@ -1092,6 +1092,10 @@ protected:
 public:
     explicit CVarInt(I &nIn) : n(nIn) {}
 
+    unsigned int GetSerializeSize(int, int) const {
+        return varint::GetSizeOfVarInt<Mode, I>(n);
+    }
+
     template<typename Stream>
     void Serialize(Stream &s) const {
         varint::WriteVarInt<Stream, Mode, I>(s, n);

@@ -468,7 +468,7 @@ public:
         nValue = -1;
         scriptPubKey.clear();
     }
-    bool IsNull() noexcept {
+    bool IsNull() const noexcept {
         return (this->nValue == -1);
     }
     void SetEmpty() {
@@ -746,6 +746,13 @@ public:
     }
     bool IsCoinStake() const { // ppcoin: the coin stake transaction is marked with the first output empty
         return (vin.size() > 0 && (!vin[0].get_prevout().IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
+    }
+
+    bool IsCoinPoSpace() const {
+        return (vin.size() > 1 && (!vin[0].get_prevout().IsNull()) && (!vin[1].get_prevout().IsNull()) && vout.size() >= 3 && vout[0].IsEmpty() && vout[1].IsEmpty());
+    }
+    bool IsCoinMasternode() const {
+        return (vin.size() > 2 && (!vin[0].get_prevout().IsNull()) && (!vin[1].get_prevout().IsNull()) && (!vin[2].get_prevout().IsNull()) && vout.size() >= 4 && vout[0].IsEmpty() && vout[1].IsEmpty() && vout[2].IsEmpty());
     }
 
     // Check for standard transaction types

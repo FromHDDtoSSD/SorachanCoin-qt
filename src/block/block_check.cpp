@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -8,12 +9,259 @@
 #include <net.h>
 #include <txdb.h>
 #include <util/thread.h>
+#include <script/script.h>
 
 CCheckQueue<CScriptCheck> block_check::thread::scriptcheckqueue(128);
 unsigned int block_check::nStakeMinAge = block_check::mainnet::nStakeMinAge;
 unsigned int block_check::nStakeTargetSpacing = block_check::mainnet::nStakeTargetSpacing;
 unsigned int block_check::nPowTargetSpacing = block_check::mainnet::nPowTargetSpacing;
 unsigned int block_check::nModifierInterval = block_check::mainnet::nModifierInterval;
+
+bool CScriptCompressor::IsToKeyID(CKeyID &hash) const {
+    using namespace ScriptOpcodes;
+    if (script.size() == 25 && script[0] == OP_DUP && script[1] == OP_HASH160 && script[2] == 20 && script[23] == OP_EQUALVERIFY && script[24] == OP_CHECKSIG) {
+        std::memcpy(&hash, &script[3], 20);
+        return true;
+    }
+    return false;
+}
+
+bool CScriptCompressor::IsToScriptID(CScriptID &hash) const {
+    using namespace ScriptOpcodes;
+    if (script.size() == 23 && script[0] == OP_HASH160 && script[1] == 20 && script[22] == OP_EQUAL) {
+        std::memcpy(&hash, &script[2], 20);
+        return true;
+    }
+    return false;
+}
+
+bool CScriptCompressor::IsToPubKey(CPubKey &pubkey) const {
+    using namespace ScriptOpcodes;
+    if (script.size() == 35 && script[0] == 33 && script[34] == OP_CHECKSIG && (script[1] == 0x02 || script[1] == 0x03)) {
+        pubkey.Set(&script[1], &script[34]);
+        return true;
+    }
+    if (script.size() == 67 && script[0] == 65 && script[66] == OP_CHECKSIG && script[1] == 0x04) {
+        pubkey.Set(&script[1], &script[66]);
+        return pubkey.IsFullyValid(); // if not fully valid, a case that would not be compressible
+    }
+    return false;
+}
+
+bool CScriptCompressor::Compress(std::vector<unsigned char> &out) const {
+    CKeyID keyID;
+    if (IsToKeyID(keyID)) {
+        out.resize(21);
+        out[0] = 0x00;
+        std::memcpy(&out[1], &keyID, 20);
+        return true;
+    }
+    CScriptID scriptID;
+    if (IsToScriptID(scriptID)) {
+        out.resize(21);
+        out[0] = 0x01;
+        std::memcpy(&out[1], &scriptID, 20);
+        return true;
+    }
+    CPubKey pubkey;
+    if (IsToPubKey(pubkey)) {
+        out.resize(33);
+        std::memcpy(&out[1], &pubkey[1], 32);
+        if (pubkey[0] == 0x02 || pubkey[0] == 0x03) {
+            out[0] = pubkey[0];
+            return true;
+        } else if (pubkey[0] == 0x04) {
+            out[0] = 0x04 | (pubkey[64] & 0x01);
+            return true;
+        }
+    }
+    return false;
+}
+
+unsigned int CScriptCompressor::GetSpecialSize(unsigned int nSize) const {
+    if (nSize == 0 || nSize == 1)
+        return 20;
+    if (nSize == 2 || nSize == 3 || nSize == 4 || nSize == 5)
+        return 32;
+    return 0;
+}
+
+bool CScriptCompressor::Decompress(unsigned int nSize, const std::vector<unsigned char> &in) {
+    using namespace ScriptOpcodes;
+    switch (nSize) {
+    case 0x00:
+        script.resize(25);
+        script[0] = OP_DUP;
+        script[1] = OP_HASH160;
+        script[2] = 20;
+        std::memcpy(&script[3], &in[0], 20);
+        script[23] = OP_EQUALVERIFY;
+        script[24] = OP_CHECKSIG;
+        return true;
+    case 0x01:
+        script.resize(23);
+        script[0] = OP_HASH160;
+        script[1] = 20;
+        std::memcpy(&script[2], &in[0], 20);
+        script[22] = OP_EQUAL;
+        return true;
+    case 0x02:
+    case 0x03:
+        script.resize(35);
+        script[0] = 33;
+        script[1] = nSize;
+        std::memcpy(&script[2], &in[0], 32);
+        script[34] = OP_CHECKSIG;
+        return true;
+    case 0x04:
+    case 0x05:
+        unsigned char vch[33] = {};
+        vch[0] = nSize - 2;
+        std::memcpy(&vch[1], &in[0], 32);
+        CPubKey pubkey(&vch[0], &vch[33]);
+        if (!pubkey.Decompress())
+            return false;
+        assert(pubkey.size() == 65);
+        script.resize(67);
+        script[0] = 65;
+        std::memcpy(&script[1], pubkey.begin(), 65);
+        script[66] = OP_CHECKSIG;
+        return true;
+    }
+    return false;
+}
+
+// Amount compression:
+// * If the amount is 0, output 0
+// * first, divide the amount (in base units) by the largest power of 10 possible; call the exponent e (e is max 9)
+// * if e<9, the last digit of the resulting number cannot be 0; store it as d, and drop it (divide by 10)
+//   * call the result n
+//   * output 1 + 10*(9*n + d - 1) + e
+// * if e==9, we only know the resulting number is not zero, so output 1 + 10*(n - 1) + 9
+// (this is decodable, as d is in [1-9] and e is in [0-9])
+
+uint64_t CCompressAmount::CompressAmount(uint64_t n)
+{
+    if (n == 0)
+        return 0;
+    int e = 0;
+    while (((n % 10) == 0) && e < 9) {
+        n /= 10;
+        e++;
+    }
+    if (e < 9) {
+        int d = (n % 10);
+        assert(d >= 1 && d <= 9);
+        n /= 10;
+        return 1 + (n * 9 + d - 1) * 10 + e;
+    } else {
+        return 1 + (n - 1) * 10 + 9;
+    }
+}
+
+uint64_t CCompressAmount::DecompressAmount(uint64_t x)
+{
+    // x = 0  OR  x = 1+10*(9*n + d - 1) + e  OR  x = 1+10*(n - 1) + 9
+    if (x == 0)
+        return 0;
+    x--;
+    // x = 10*(9*n + d - 1) + e
+    int e = x % 10;
+    x /= 10;
+    uint64_t n = 0;
+    if (e < 9) {
+        // x = 9*n + d - 1
+        int d = (x % 9) + 1;
+        x /= 9;
+        // x = n
+        n = x * 10 + d;
+    } else {
+        n = x + 1;
+    }
+    while (e) {
+        n *= 10;
+        e--;
+    }
+    return n;
+}
+
+
+
+template <typename T>
+void CCoins_impl<T>::FromTx(const CTransaction_impl<T> &tx, int nHeightIn) {
+    fCoinBase = tx.IsCoinBase();
+    fCoinStake = tx.IsCoinStake();
+    fCoinPoSpace = tx.IsCoinPoSpace();
+    fCoinMasternode = tx.IsCoinMasternode();
+    vout = tx.get_vout();
+    nHeight = nHeightIn;
+    nVersion = tx.get_nVersion();
+    ClearUnspendable();
+}
+
+template <typename T>
+void CCoins_impl<T>::Clear() {
+    fCoinBase = false;
+    fCoinStake = false;
+    fCoinPoSpace = false;
+    fCoinMasternode = false;
+    std::vector<CTxOut_impl<T>>().swap(vout);
+    nHeight = 0;
+    nVersion = 0;
+}
+
+template <typename T>
+void CCoins_impl<T>::Cleanup() {
+    while (vout.size() > 0 && vout.back().IsNull())
+        vout.pop_back();
+    if (vout.empty())
+        std::vector<CTxOut_impl<T>>().swap(vout);
+}
+
+template <typename T>
+void CCoins_impl<T>::ClearUnspendable() {
+    for (CTxOut_impl<T> &txout: vout) {
+        if (txout.get_scriptPubKey().IsUnspendable())
+            txout.SetNull();
+    }
+    Cleanup();
+}
+
+template <typename T>
+bool CCoins_impl<T>::IsPruned() const {
+    for (const CTxOut_impl<T> &out: vout) {
+        if (! out.IsNull())
+            return false;
+    }
+    return true;
+}
+
+/**
+ * calculate number of bytes for the bitmask, and its number of non-zero bytes
+ * each bit in the bitmask represents the availability of one output, but the
+ * availabilities of the first two outputs are encoded separately
+ */
+template <typename T>
+void CCoins_impl<T>::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const
+{
+    unsigned int nLastUsedByte = 0;
+    for (unsigned int b = 0; 2 + b * 8 < vout.size(); b++) {
+        bool fZero = true;
+        for (unsigned int i = 0; i < 8 && 2 + b * 8 + i < vout.size(); i++) {
+            if (!vout[2 + b * 8 + i].IsNull()) {
+                fZero = false;
+                continue;
+            }
+        }
+        if (!fZero) {
+            nLastUsedByte = b + 1;
+            nNonzeroBytes++;
+        }
+    }
+    nBytes += nLastUsedByte;
+}
+
+
 
 template <typename T>
 void block_check::manage<T>::InvalidChainFound(CBlockIndex_impl<T> *pindexNew)
@@ -152,4 +400,5 @@ void block_check::thread::ThreadScriptCheckQuit()
     scriptcheckqueue.Quit();
 }
 
+template class CCoins_impl<uint256>;
 template class block_check::manage<uint256>;

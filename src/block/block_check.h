@@ -8,9 +8,122 @@
 #ifndef BITCOIN_BLOCK_CHECK_H
 #define BITCOIN_BLOCK_CHECK_H
 
-#include <stdint.h>
 #include <util.h>
 #include <block/transaction.h>
+
+/** Compact serializer for scripts.
+ *
+ *  It detects common cases and encodes them much more efficiently.
+ *  3 special cases are defined:
+ *  * Pay to pubkey hash (encoded as 21 bytes)
+ *  * Pay to script hash (encoded as 21 bytes)
+ *  * Pay to pubkey starting with 0x02, 0x03 or 0x04 (encoded as 33 bytes)
+ *
+ *  Other scripts up to 121 bytes require 1 byte + script length. Above
+ *  that, scripts up to 16505 bytes require 2 bytes + script length.
+ */
+class CScriptCompressor
+{
+private:
+    /**
+     * make this static for now (there are only 6 special scripts defined)
+     * this can potentially be extended together with a new nVersion for
+     * transactions, in which case this value becomes dependent on nVersion
+     * and nHeight of the enclosing transaction.
+     */
+    static constexpr unsigned int nSpecialScripts = 6;
+
+    CScript &script;
+
+protected:
+    /**
+     * These check for scripts for which a special case with a shorter encoding is defined.
+     * They are implemented separately from the CScript test, as these test for exact byte
+     * sequence correspondences, and are more strict. For example, IsToPubKey also verifies
+     * whether the public key is valid (as invalid ones cannot be represented in compressed
+     * form).
+     */
+    bool IsToKeyID(CKeyID &hash) const;
+    bool IsToScriptID(CScriptID &hash) const;
+    bool IsToPubKey(CPubKey &pubkey) const;
+
+    bool Compress(std::vector<unsigned char> &out) const;
+    unsigned int GetSpecialSize(unsigned int nSize) const;
+    bool Decompress(unsigned int nSize, const std::vector<unsigned char> &out);
+
+public:
+    CScriptCompressor(CScript &scriptIn) : script(scriptIn) {}
+
+    unsigned int GetSerializeSize(int nType, int nVersion) const {
+        std::vector<unsigned char> compr;
+        if (Compress(compr))
+            return compr.size();
+        unsigned int nSize = script.size() + nSpecialScripts;
+        return script.size() + VARUINT(nSize).GetSerializeSize(nType, nVersion);
+    }
+
+    template <typename Stream>
+    void Serialize(Stream &s, int nType=0, int nVersion=0) const {
+        std::vector<unsigned char> compr;
+        if (Compress(compr)) {
+            //s << CFlatData(compr);
+            s << FLATDATA(compr);
+            return;
+        }
+        unsigned int nSize = script.size() + nSpecialScripts;
+        s << VARUINT(nSize);
+        //s << CFlatData(script);
+        s << FLATDATA(script);
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s, int nType=0, int nVersion=0) {
+        unsigned int nSize = 0;
+        s >> VARUINT(nSize);
+        if (nSize < nSpecialScripts) {
+            std::vector<unsigned char> vch(GetSpecialSize(nSize), 0x00);
+            s >> REF(CFlatData(vch));
+            Decompress(nSize, vch);
+            return;
+        }
+        nSize -= nSpecialScripts;
+        script.resize(nSize);
+        s >> REF(CFlatData(script));
+    }
+};
+
+/** wrapper for CTxOut that provides a more compact serialization */
+class CCompressAmount {
+protected:
+    static uint64_t CompressAmount(uint64_t nAmount);
+    static uint64_t DecompressAmount(uint64_t nAmount);
+};
+
+template <typename T>
+class CTxOutCompressor_impl : protected CCompressAmount
+{
+private:
+    CTxOut_impl<T> &txout;
+
+public:
+    CTxOutCompressor_impl(CTxOut_impl<T> &txoutIn) : txout(txoutIn) {}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action, int nType=0, int nVersion=0) {
+        if (! ser_action.ForRead()) {
+            uint64_t nVal = CompressAmount(txout.get_nValue());
+            READWRITE(VARUINT(nVal));
+        } else {
+            uint64_t nVal = 0;
+            READWRITE(VARUINT(nVal));
+            txout.set_nValue(DecompressAmount(nVal));
+        }
+        CScriptCompressor cscript(REF(txout.get_scriptPubKey()));
+        READWRITE(cscript);
+    }
+};
+using CTxOutCompressor = CTxOutCompressor_impl<uint256>;
 
 /**
 
@@ -66,118 +179,81 @@
  *  - height = 120891
  */
 
-class CCoins
+template <typename T>
+class CCoins_impl
 {
 public:
-    //! whether transaction is a coinbase
-    bool fCoinBase;
-    bool fCoinStake;
-    bool fCoinPoSpace;
-    bool fCoinMasternode;
-
-    //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
-    std::vector<CTxOut> vout;
-
-    //! at which height this transaction was included in the active block chain
-    int nHeight;
-
-    //! version of the CTransaction; accesses to this value should probably check for nHeight as well,
-    //! as new tx version will probably only be introduced at certain heights
-    int nVersion;
-
-    //void FromTx(const CTransaction &tx, int nHeightIn)
-    //{
-    //    fCoinBase = tx.IsCoinBase();
-    //    fCoinStake = tx.IsCoinStake();
-    //    vout = tx.vout;
-    //    nHeight = nHeightIn;
-    //    nVersion = tx.nVersion;
-    //    ClearUnspendable();
-    //}
+    void FromTx(const CTransaction_impl<T> &tx, int nHeightIn);
 
     //! construct a CCoins from a CTransaction, at a given height
-    //CCoins(const CTransaction &tx, int nHeightIn)
-    //{
-    //    FromTx(tx, nHeightIn);
-    //}
-
-    void Clear()
-    {
-        fCoinBase = false;
-        fCoinStake = false;
-        std::vector<CTxOut>().swap(vout);
-        nHeight = 0;
-        nVersion = 0;
+    CCoins_impl(const CTransaction_impl<T> &tx, int nHeightIn) {
+        FromTx(tx, nHeightIn);
     }
+
+    void Clear();
 
     //! empty constructor
-    CCoins() : fCoinBase(false), fCoinStake(false), vout(0), nHeight(0), nVersion(0) {}
+    CCoins_impl() : fCoinBase(false), fCoinStake(false), fCoinPoSpace(false), fCoinMasternode(false), vout(0), nHeight(0), nVersion(0) {}
 
-    //!remove spent outputs at the end of vout
-    void Cleanup()
-    {
-        while (vout.size() > 0 && vout.back().IsNull())
-            vout.pop_back();
-        if (vout.empty())
-            std::vector<CTxOut>().swap(vout);
-    }
+    //! remove spent outputs at the end of vout
+    void Cleanup();
 
-    //void ClearUnspendable()
-    //{
-    //    for (CTxOut& txout: vout) {
-    //        if (txout.scriptPubKey.IsUnspendable())
-    //            txout.SetNull();
-    //    }
-    //    Cleanup();
-    //}
+    //! when OP_RETURN, txout.setNull()
+    void ClearUnspendable();
 
-    void swap(CCoins &to)
-    {
+    void swap(CCoins_impl &to) {
         std::swap(to.fCoinBase, fCoinBase);
         std::swap(to.fCoinStake, fCoinStake);
+        std::swap(to.fCoinPoSpace, fCoinPoSpace);
+        std::swap(to.fCoinMasternode, fCoinMasternode);
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
         std::swap(to.nVersion, nVersion);
     }
 
     //! equality test
-    //friend bool operator==(const CCoins &a, const CCoins &b)
-    //{
+    friend bool operator==(const CCoins_impl &a, const CCoins_impl &b) {
         // Empty CCoins objects are always equal.
-    //    if (a.IsPruned() && b.IsPruned())
-    //        return true;
-    //    return a.fCoinBase == b.fCoinBase &&
-    //           a.fCoinStake == b.fCoinStake &&
-    //           a.nHeight == b.nHeight &&
-    //           a.nVersion == b.nVersion &&
-    //           a.vout == b.vout;
-    //}
-    //friend bool operator!=(const CCoins &a, const CCoins &b)
-    //{
-    //    return !(a == b);
-    //}
+        if (a.IsPruned() && b.IsPruned())
+            return true;
+        return a.fCoinBase == b.fCoinBase &&
+               a.fCoinStake == b.fCoinStake &&
+               a.fCoinPoSpace == b.fCoinPoSpace &&
+               a.fCoinMasternode == b.fCoinMasternode &&
+               a.nHeight == b.nHeight &&
+               a.nVersion == b.nVersion &&
+               a.vout == b.vout;
+    }
+    friend bool operator!=(const CCoins_impl &a, const CCoins_impl &b) {
+        return !(a == b);
+    }
 
     void CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const;
 
-    bool IsCoinBase() const
-    {
+    bool IsCoinBase() const noexcept {
         return fCoinBase;
     }
 
-    bool IsCoinStake() const
-    {
+    bool IsCoinStake() const noexcept {
         return fCoinStake;
     }
 
-    unsigned int GetSerializeSize(int nType=0, int nVersion=0)
-    {
+    bool IsCoinPoSpace() const noexcept {
+        return fCoinPoSpace;
+    }
+
+    bool IsCoinMasternode() const noexcept {
+        return fCoinMasternode;
+    }
+
+    unsigned int GetSerializeSize(int nType=0, int nVersion=0) {
         unsigned int nSize = 0;
         unsigned int nMaskSize = 0, nMaskCode = 0;
         CalcMaskSize(nMaskSize, nMaskCode);
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 8 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0);
+        unsigned int nCode = 8 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0);
         // version
         nSize += ::GetSerializeSize(VARINT(this->nVersion));
         // size of header code
@@ -185,24 +261,23 @@ public:
         // spentness bitmask
         nSize += nMaskSize;
         // txouts themself
-        //for (unsigned int i = 0; i < vout.size(); i++) {
-        //    if (!vout[i].IsNull())
-        //        nSize += ::GetSerializeSize(CTxOutCompressor(REF(vout[i])));
-        //}
+        for (unsigned int i = 0; i < vout.size(); i++) {
+            if (! vout[i].IsNull())
+                nSize += ::GetSerializeSize(CTxOutCompressor(REF(vout[i])));
+        }
         // height
         nSize += ::GetSerializeSize(VARINT(nHeight));
         return nSize;
     }
 
     template <typename Stream>
-    void Serialize(Stream &s, int nType=0, int nVersion=0)
-    {
+    void Serialize(Stream &s, int nType=0, int nVersion=0) {
         unsigned int nMaskSize = 0, nMaskCode = 0;
         CalcMaskSize(nMaskSize, nMaskCode);
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 16 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0);
+        unsigned int nCode = 16 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0);
         // version
         ::Serialize(s, VARINT(this->nVersion));
         // header code
@@ -210,17 +285,17 @@ public:
         // spentness bitmask
         for (unsigned int b = 0; b < nMaskSize; b++) {
             unsigned char chAvail = 0;
-            //for (unsigned int i = 0; i < 8 && 2 + b * 8 + i < vout.size(); i++) {
-            //    if (!vout[2 + b * 8 + i].IsNull())
-            //        chAvail |= (1 << i);
-            //}
+            for (unsigned int i = 0; i < 8 && 2 + b * 8 + i < vout.size(); i++) {
+                if (!vout[2 + b * 8 + i].IsNull())
+                    chAvail |= (1 << i);
+            }
             ::Serialize(s, chAvail);
         }
         // txouts themself
-        //for (unsigned int i = 0; i < vout.size(); i++) {
-        //    if (!vout[i].IsNull())
-        //        ::Serialize(s, CTxOutCompressor(REF(vout[i])));
-        //}
+        for (unsigned int i = 0; i < vout.size(); i++) {
+            if (! vout[i].IsNull())
+                ::Serialize(s, CTxOutCompressor(REF(vout[i])));
+        }
         // coinbase height
         ::Serialize(s, VARINT(nHeight));
     }
@@ -235,6 +310,8 @@ public:
         ::Unserialize(s, VARUINT(nCode));
         fCoinBase = nCode & 1;         //0001 - means coinbase
         fCoinStake = (nCode & 2) != 0; //0010 coinstake
+        fCoinPoSpace = (nCode & 16) != 0; // 10000 coinpospace
+        fCoinMasternode = (nCode & 32) != 0; // 100000 coinmasternode
         std::vector<bool> vAvail(2, false);
         vAvail[0] = (nCode & 4) != 0; // 0100
         vAvail[1] = (nCode & 8) != 0; // 1000
@@ -251,11 +328,11 @@ public:
                 nMaskCode--;
         }
         // txouts themself
-        vout.assign(vAvail.size(), CTxOut());
-        //for (unsigned int i = 0; i < vAvail.size(); i++) {
-        //    if (vAvail[i])
-        //        ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
-        //}
+        vout.assign(vAvail.size(), CTxOut_impl<T>());
+        for (unsigned int i = 0; i < vAvail.size(); i++) {
+            if (vAvail[i])
+                ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
+        }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight));
         Cleanup();
@@ -275,15 +352,26 @@ public:
 
     //! check whether the entire CCoins is spent
     //! note that only !IsPruned() CCoins can be serialized
-    //bool IsPruned() const
-    //{
-    //    for (const CTxOut &out: vout) {
-    //        if (! out.IsNull())
-    //            return false;
-    //    }
-    //    return true;
-    //}
+    bool IsPruned() const;
+
+public:
+    //! whether transaction is a coinbase
+    bool fCoinBase;
+    bool fCoinStake;
+    bool fCoinPoSpace;
+    bool fCoinMasternode;
+
+    //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
+    std::vector<CTxOut_impl<T>> vout;
+
+    //! at which height this transaction was included in the active block chain
+    int nHeight;
+
+    //! version of the CTransaction; accesses to this value should probably check for nHeight as well,
+    //! as new tx version will probably only be introduced at certain heights
+    int nVersion;
 };
+using CCoins = CCoins_impl<uint256>;
 
 
 namespace block_check
