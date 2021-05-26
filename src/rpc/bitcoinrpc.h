@@ -279,40 +279,39 @@ private:
     static std::string strRPCUserColonPass;
     static CCriticalSection cs_THREAD_RPCHANDLER;
 
-    //struct arg_data : public CBitrpcData {
-    struct arg_data {
-        void *parg;
+public:
+    struct err_data {
+    private:
         std::string e;
-        arg_data() {
-            parg = nullptr;
+    public:
+        err_data() {
             e = "RPC Success.";
         }
-        //bool fok;
-        //void ok() noexcept {
-        //    fok = true;
-        //}
         void error(const char *in_e=nullptr) {
-            //fok = false;
+            static CCriticalSection cs_err;
+            LOCK(cs_err);
             if(in_e) e = in_e;
         }
     };
+
+private:
     static unsigned short GetDefaultRPCPort() noexcept;
     static void ThreadRPCServer2(void *parg);
     static void ThreadRPCServer3(void *parg); // ThreadRPCServer => ThreadRPCServer2 => RPCListen => bind:RPCAcceptHandler => ThreadRPCServer3 => exec
 
 #if BOOST_VERSION >= 106600
     template <typename Protocol>
-    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg);
+    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error);
 #else
     template <typename Protocol, typename SocketAcceptorService>
-    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg);
+    static void RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error);
 #endif
 #if BOOST_VERSION >= 106600
     template <typename Protocol>
-    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg);
+    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL);
 #else
     template <typename Protocol, typename SocketAcceptorService>
-    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg);
+    static void RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL);
 #endif
 
     static bool HTTPAuthorized(std::map<std::string, std::string> &mapHeaders);

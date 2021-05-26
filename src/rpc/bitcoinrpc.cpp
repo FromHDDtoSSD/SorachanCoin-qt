@@ -612,35 +612,25 @@ private:
     boost::iostreams::stream<SSLIOStreamDevice<Protocol> > _stream;
 };
 
+static bitrpc::err_data g_rpc_err;
 void bitrpc::ThreadRPCServer(void *parg) {
     // Make this thread recognisable as the RPC listener
     bitthread::RenameThread(strCoinName "-rpclist");
 
-    arg_data darg;
-    //darg.fok = false;
-    darg.parg = parg;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
-    ThreadRPCServer2(&darg);
-    //if(! darg.fok) {
-        net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-        std::string log(darg.e.c_str());
-        log += " : ThreadRPCServer()";
-        logging::LogPrintf(log.c_str());
-    //} else
-        //net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
-
+    ThreadRPCServer2(parg);
+    net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
     logging::LogPrintf("ThreadRPCServer exited\n");
 }
 
 // Sets up I/O resources to accept and handle a new connection.
 #if BOOST_VERSION >= 106900
 template <typename Protocol>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_executor(), context, fUseSSL);
     if (conn == nullptr) {
-        darg->e = "RPCListen memory allocate failure.";
-        darg->fok = false;
+        g_rpc_err.error("RPCListen memory allocate failure.");
         return;
     }
 
@@ -652,17 +642,16 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
             boost::ref(context),
             fUseSSL,
             conn,
-            boost::asio::placeholders::error,
-            darg));
+            boost::asio::placeholders::error
+            ));
 }
 #elif BOOST_VERSION >= 106600
 template <typename Protocol>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
-        darg->e = "RPCListen memory allocate failure.";
-        //darg->fok = false;
+        g_rpc_err.error("RPCListen memory allocate failure.");
         return;
     }
 
@@ -674,17 +663,16 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
             boost::ref(context),
             fUseSSL,
             conn,
-            boost::asio::placeholders::error,
-            darg));
+            boost::asio::placeholders::error
+            ));
 }
 #else
 template <typename Protocol, typename SocketAcceptorService>
-void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, arg_data *darg) {
+void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL) {
     // Accept connection
     AcceptedConnectionImpl<Protocol> *conn = new(std::nothrow) AcceptedConnectionImpl<Protocol>(acceptor->get_io_service(), context, fUseSSL);
     if (conn == nullptr) {
-        darg->e = "RPCListen memory allocate failure.";
-        //darg->fok = false;
+        g_rpc_err.error("RPCListen memory allocate failure.");
         return;
     }
 
@@ -696,29 +684,27 @@ void bitrpc::RPCListen(boost::shared_ptr<boost::asio::basic_socket_acceptor<Prot
             boost::ref(context),
             fUseSSL,
             conn,
-            boost::asio::placeholders::error,
-            darg));
+            boost::asio::placeholders::error
+            ));
 }
 #endif
 
 // Accept and handle incoming connection.
 #if BOOST_VERSION >= 106600
 template <typename Protocol>
-void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) {
+void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error) {
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
 
     // Immediately start accepting new connections, except when we're cancelled or our socket is closed.
     if (error != boost::asio::error::operation_aborted && acceptor->is_open())
-        RPCListen(acceptor, context, fUseSSL, darg);
+        RPCListen(acceptor, context, fUseSSL);
 
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
     if (tcp_conn == nullptr) {
-        darg->e = "RPCAcceptHandler AcceptedConnectionImpl, downcast Error.";
-        //darg->fok = false;
+        g_rpc_err.error("RPCAcceptHandler AcceptedConnectionImpl, downcast Error.");
         return;
     }
 
-    darg->parg = conn;
     if (error) {
         delete conn;
     } else if (tcp_conn && !ClientAllowed(tcp_conn->peer.address())) {
@@ -729,19 +715,17 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         if (! fUseSSL)
             conn->stream() << http::HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
         delete conn;
-    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
+    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, conn)) {
         // start HTTP client thread
         logging::LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
-    //darg->parg = nullptr;
-    //darg->fok = true;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 #else
 template <typename Protocol, typename SocketAcceptorService>
-void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error, arg_data *darg) {
+void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_acceptor<Protocol, SocketAcceptorService> > acceptor, boost::asio::ssl::context &context, const bool fUseSSL, AcceptedConnection *conn, const boost::system::error_code &error) {
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
 
     // Immediately start accepting new connections, except when we're cancelled or our socket is closed.
@@ -750,12 +734,11 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
 
     AcceptedConnectionImpl<boost::asio::ip::tcp> *tcp_conn = dynamic_cast<AcceptedConnectionImpl<boost::asio::ip::tcp>* >(conn);
     if (tcp_conn == nullptr) {
-        darg->e = "RPCAcceptHandler AcceptedConnectionImpl, downcast Error.";
-        //darg->fok = false;
+        g_rpc_err.error("RPCAcceptHandler AcceptedConnectionImpl, downcast Error.");
         return;
     }
 
-    darg->parg = conn;
+    //darg->parg = conn;
     if (error) {
         delete conn;
     } else if (tcp_conn && !ClientAllowed(tcp_conn->peer.address())) {
@@ -766,21 +749,18 @@ void bitrpc::RPCAcceptHandler(boost::shared_ptr<boost::asio::basic_socket_accept
         if (! fUseSSL)
             conn->stream() << http::HTTPReply(HTTP_FORBIDDEN, "", false) << std::flush;
         delete conn;
-    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, darg)) {
+    } else if (! bitthread::NewThread(bitrpc::ThreadRPCServer3, conn)) {
         // start HTTP client thread
         logging::LogPrintf("Failed to create RPC server client thread\n");
         delete conn;
     }
 
-    //darg->parg = nullptr;
-    //darg->fok = true;
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]--;
 }
 #endif
 
 void bitrpc::ThreadRPCServer2(void *parg) {
     logging::LogPrintf("ThreadRPCServer started\n");
-    arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     strRPCUserColonPass = map_arg::GetMapArgsString("-rpcuser") + ":" + map_arg::GetMapArgsString("-rpcpassword");
     if (map_arg::GetMapArgsString("-rpcpassword").empty()) {
@@ -806,7 +786,6 @@ void bitrpc::ThreadRPCServer2(void *parg) {
             base58::manage::EncodeBase58(&rand_pwd[0], &rand_pwd[0] + 32).c_str()),
             _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
         boot::StartShutdown();
-        darg->error();
         return;
     }
 
@@ -872,7 +851,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
         acceptor->set_option(boost::asio::ip::v6_only(loopback), v6_only_error);
         acceptor->bind(endpoint, err); if(err) break;
         acceptor->listen(boost::asio::socket_base::max_connections, err); if(err) break;
-        RPCListen(acceptor, context, fUseSSL, darg);
+        RPCListen(acceptor, context, fUseSSL);
 
         // Cancel outstanding listen-requests for this acceptor when shutting down
         StopRequests.connect(boost::signals2::slot<void()>(static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
@@ -895,7 +874,7 @@ void bitrpc::ThreadRPCServer2(void *parg) {
             acceptor->set_option(boost::asio::ip::tcp::acceptor::reuse_address(true), err); if(err) break;
             acceptor->bind(endpoint, err); if(err) break;
             acceptor->listen(boost::asio::socket_base::max_connections, err); if(err) break;
-            RPCListen(acceptor, context, fUseSSL, darg);
+            RPCListen(acceptor, context, fUseSSL);
 
             // Cancel outstanding listen-requests for this acceptor when shutting down
             StopRequests.connect(boost::signals2::slot<void()>(static_cast<void (boost::asio::ip::tcp::acceptor::*)()>(&boost::asio::ip::tcp::acceptor::close), acceptor.get()).track(acceptor));
@@ -908,7 +887,6 @@ void bitrpc::ThreadRPCServer2(void *parg) {
     if (! fListening) {
         CClientUIInterface::uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
         boot::StartShutdown();
-        darg->error(strerr.c_str());
         return;
     }
 
@@ -922,7 +900,6 @@ void bitrpc::ThreadRPCServer2(void *parg) {
     }
     net_node::vnThreadsRunning[THREAD_RPCLISTENER]++;
     StopRequests();
-    //darg->ok();
 }
 
 bool bitjson::JSONRequest::parse(const json_spirit::Value &valRequest, CBitrpcData &data) {
@@ -1006,7 +983,6 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData
 void bitrpc::ThreadRPCServer3(void *parg) {
     LOCK(cs_accept);
     logging::LogPrintf("ThreadRPCServer3 started\n");
-    arg_data *darg = reinterpret_cast<arg_data *>(parg);
 
     // Make this thread recognisable as the RPC handler
     bitthread::RenameThread(strCoinName "-rpchand");
@@ -1016,12 +992,13 @@ void bitrpc::ThreadRPCServer3(void *parg) {
         ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
     }
 
-    AcceptedConnection *conn = reinterpret_cast<AcceptedConnection *>(darg->parg);
+    AcceptedConnection *conn = reinterpret_cast<AcceptedConnection *>(parg);
     bool fRun = true;
     for (;;) {
         if (args_bool::fShutdown || !fRun) {
             conn->close();
             delete conn;
+            //delete darg;
             {
                 LOCK(cs_THREAD_RPCHANDLER);
                 --net_node::vnThreadsRunning[THREAD_RPCHANDLER];

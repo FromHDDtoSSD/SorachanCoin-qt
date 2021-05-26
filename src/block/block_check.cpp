@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2021 The Sora neko developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -185,8 +186,6 @@ uint64_t CCompressAmount::DecompressAmount(uint64_t x)
     return n;
 }
 
-
-
 template <typename T>
 void CCoins_impl<T>::FromTx(const CTransaction_impl<T> &tx, int nHeightIn) {
     fCoinBase = tx.IsCoinBase();
@@ -234,6 +233,38 @@ bool CCoins_impl<T>::IsPruned() const {
             return false;
     }
     return true;
+}
+
+template <typename T>
+bool CCoins_impl<T>::Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo) {
+    if (out.get_n() >= vout.size())
+        return false;
+    if (vout[out.get_n()].IsNull())
+        return false;
+    undo = CTxInUndo_impl<T>(vout[out.get_n()]);
+    vout[out.get_n()].SetNull();
+    Cleanup();
+    if (vout.size() == 0) {
+        undo.nHeight = nHeight;
+        undo.fCoinBase = fCoinBase;
+        undo.fCoinStake = fCoinStake;
+        undo.fCoinPoSpace = fCoinPoSpace;
+        undo.fCoinMasternode = fCoinMasternode;
+        undo.nVersion = this->nVersion;
+    }
+    return true;
+}
+
+template <typename T>
+bool CCoins_impl<T>::Spend(int nPos) {
+    CTxInUndo_impl<T> undo;
+    COutPoint_impl<T> out(0, nPos);
+    return Spend(out, undo);
+}
+
+template <typename T>
+bool CCoins_impl<T>::IsAvailable(unsigned int nPos) const {
+    return (nPos < vout.size() && !vout[nPos].IsNull() && !vout[nPos].get_scriptPubKey().IsZerocoinMint());
 }
 
 /**

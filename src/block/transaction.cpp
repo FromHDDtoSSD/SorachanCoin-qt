@@ -17,6 +17,42 @@ template <typename T> CTxMemPool_impl<T> CTxMemPool_impl<T>::mempool;
 template <typename T> CBlockIndex_impl<T> *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
 int block_transaction::nCoinbaseMaturity = block_transaction::mainnet::nCoinbaseMaturity;
 
+template <typename T>
+CAmount CTransaction_impl<T>::GetZerocoinMinted() const {
+    //for (const CTxOut txOut: vout) {
+    for (const CTxOut &txOut: vout) {
+        if(! txOut.get_scriptPubKey().IsZerocoinMint())
+            continue;
+        return txOut.get_nValue();
+    }
+    return CAmount(0);
+}
+
+template <typename T>
+CAmount CTransaction_impl<T>::GetZerocoinSpent() const {
+    if(! IsZerocoinSpend())
+        return 0;
+
+    CAmount nValueOut = 0;
+    for (const CTxIn_impl<T> &txin : vin) {
+        if(! txin.get_scriptSig().IsZerocoinSpend())
+            continue;
+        nValueOut += txin.get_nSequence() * CAmountUnit::COIN;
+    }
+
+    return nValueOut;
+}
+
+template <typename T>
+int CTransaction_impl<T>::GetZerocoinMintCount() const {
+    int nCount = 0;
+    for (const CTxOut &out : vout) {
+        if (out.get_scriptPubKey().IsZerocoinMint())
+            nCount++;
+    }
+    return nCount;
+}
+
 /*
 ** collect transaction print
 */

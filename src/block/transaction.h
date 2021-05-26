@@ -24,6 +24,7 @@
 #include <checkqueue.h>
 #include <prevector/prevector.h>
 #include <block/witness.h>
+#include <const/amount.h>
 #include <debug/debug.h>
 
 class CWallet;
@@ -482,6 +483,10 @@ public:
         return hash_basis::SerializeHash(*this);
     }
 
+    bool IsZerocoinMint() const {
+        return !scriptPubKey.empty() && scriptPubKey.IsZerocoinMint();
+    }
+
     friend bool operator==(const CTxOut_impl &a, const CTxOut_impl &b) noexcept {
         return (a.nValue       == b.nValue &&
                 a.scriptPubKey == b.scriptPubKey);
@@ -754,6 +759,23 @@ public:
     bool IsCoinMasternode() const {
         return (vin.size() > 2 && (!vin[0].get_prevout().IsNull()) && (!vin[1].get_prevout().IsNull()) && (!vin[2].get_prevout().IsNull()) && vout.size() >= 4 && vout[0].IsEmpty() && vout[1].IsEmpty() && vout[2].IsEmpty());
     }
+
+    bool IsZerocoinSpend() const {
+        return (vin.size() > 0 && vin[0].get_prevout().IsNull() && vin[0].get_scriptSig()[0] == ScriptOpcodes::OP_ZEROCOINSPEND);
+    }
+    bool IsZerocoinMint() const {
+        for(const CTxOut_impl<T> &txout : vout) {
+            if (txout.get_scriptPubKey().IsZerocoinMint())
+                return true;
+        }
+        return false;
+    }
+    bool ContainsZerocoins() const {
+        return IsZerocoinSpend() || IsZerocoinMint();
+    }
+    CAmount GetZerocoinMinted() const;
+    CAmount GetZerocoinSpent() const;
+    int GetZerocoinMintCount() const;
 
     // Check for standard transaction types
     // @return True if all outputs (scriptPubKeys) use only standard transaction forms

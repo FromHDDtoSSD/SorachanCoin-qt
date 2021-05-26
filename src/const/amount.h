@@ -3,13 +3,9 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-//
-//
 // About CAmount
 // old core: minimum unit, 100 sat (util::COIN)
 // latest core: minimum unit, 1 sat (latest_amount::COIN)
-//
-//
 
 #ifndef BITCOIN_AMOUNT_H
 #define BITCOIN_AMOUNT_H
@@ -20,6 +16,9 @@
 
 /** Amount in satoshis (Can be negative) */
 using CAmount = int64_t;
+namespace CAmountUnit {
+    static constexpr int64_t COIN = util::COIN;
+}
 
 /** Type-safe wrapper class to for fee rates
  * (how much to pay based on transaction size)
@@ -30,14 +29,14 @@ private:
     CAmount nSatoshisPerK; // unit is satoshis-per-1,000-bytes
 public:
     CFeeRate() : nSatoshisPerK(0) {}
-    explicit CFeeRate(const CAmount& _nSatoshisPerK) : nSatoshisPerK(_nSatoshisPerK) {}
-    CFeeRate(const CAmount& nFeePaid, size_t nSize) {
+    explicit CFeeRate(const CAmount &_nSatoshisPerK) : nSatoshisPerK(_nSatoshisPerK) {}
+    CFeeRate(const CAmount &nFeePaid, size_t nSize) {
         if (nSize > 0)
             nSatoshisPerK = nFeePaid * 1000 / nSize;
         else
             nSatoshisPerK = 0;
     }
-    CFeeRate(const CFeeRate& other) { nSatoshisPerK = other.nSatoshisPerK; }
+    CFeeRate(const CFeeRate &other) { nSatoshisPerK = other.nSatoshisPerK; }
 
     CAmount GetFee(size_t nSize) const {               // unit returned is satoshis
         CAmount nFee = nSatoshisPerK * nSize / 1000;
@@ -49,19 +48,18 @@ public:
     }
     CAmount GetFeePerK() const { return GetFee(1000); } // satoshis-per-1000-bytes
 
-    friend bool operator<(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK < b.nSatoshisPerK; }
-    friend bool operator>(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK > b.nSatoshisPerK; }
-    friend bool operator==(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK == b.nSatoshisPerK; }
-    friend bool operator<=(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK <= b.nSatoshisPerK; }
-    friend bool operator>=(const CFeeRate& a, const CFeeRate& b) { return a.nSatoshisPerK >= b.nSatoshisPerK; }
+    friend bool operator<(const CFeeRate &a, const CFeeRate &b) { return a.nSatoshisPerK < b.nSatoshisPerK; }
+    friend bool operator>(const CFeeRate &a, const CFeeRate &b) { return a.nSatoshisPerK > b.nSatoshisPerK; }
+    friend bool operator==(const CFeeRate &a, const CFeeRate &b) { return a.nSatoshisPerK == b.nSatoshisPerK; }
+    friend bool operator<=(const CFeeRate &a, const CFeeRate &b) { return a.nSatoshisPerK <= b.nSatoshisPerK; }
+    friend bool operator>=(const CFeeRate &a, const CFeeRate &b) { return a.nSatoshisPerK >= b.nSatoshisPerK; }
     std::string ToString() const {
-        return tinyformat::format("%d.%08d PIV/kB", nSatoshisPerK / util::COIN, nSatoshisPerK % util::COIN);
+        return tinyformat::format("%d.%08d PIV/kB", nSatoshisPerK / CAmountUnit::COIN, nSatoshisPerK % CAmountUnit::COIN);
     }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion)
-    {
+    inline void SerializationOp(Stream &s, Operation ser_action, int nType=0, int nVersion=0) {
         READWRITE(nSatoshisPerK);
     }
 };

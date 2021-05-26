@@ -2,6 +2,7 @@
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2009-2014 The Bitcoin developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2021 The Sora neko developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -124,6 +125,72 @@ public:
     }
 };
 using CTxOutCompressor = CTxOutCompressor_impl<uint256>;
+
+/** Undo information for a CTxIn
+ *
+ *  Contains the prevout's CTxOut being spent, and if this was the
+ *  last output of the affected transaction, its metadata as well
+ *  (coinbase or not, height, transaction version)
+ */
+template <typename T>
+class CTxInUndo_impl
+{
+public:
+    CTxOut_impl<T> txout;   // the txout data before being spent
+    bool fCoinBase; // if the outpoint was the last unspent: whether it belonged to a coinbase
+    bool fCoinStake;
+    bool fCoinPoSpace;
+    bool fCoinMasternode;
+    unsigned int nHeight; // if the outpoint was the last unspent: its height
+    int nVersion;         // if the outpoint was the last unspent: its version
+
+    CTxInUndo_impl() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0) {}
+    CTxInUndo_impl(const CTxOut_impl<T> &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoSpaceIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoSpace(fCoinPoSpaceIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
+
+    unsigned int GetSerializeSize(int, int) const {
+        return ::GetSerializeSize(VARUINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0))) +
+               (nHeight > 0 ? ::GetSerializeSize(VARINT(this->nVersion)) : 0) +
+               ::GetSerializeSize(CTxOutCompressor(REF(txout)));
+    }
+
+    template <typename Stream>
+    void Serialize(Stream &s, int, int) const {
+        ::Serialize(s, VARINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0)));
+        if (nHeight > 0)
+            ::Serialize(s, VARINT(this->nVersion));
+        ::Serialize(s, CTxOutCompressor(REF(txout)));
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s, int, int) {
+        unsigned int nCode = 0;
+        ::Unserialize(s, VARUINT(nCode));
+        nHeight = nCode >> 2;
+        fCoinBase = nCode & 2;
+        fCoinStake = nCode & 1;
+        fCoinPoSpace = nCode & 16;
+        fCoinMasternode = nCode & 32;
+        if (nHeight > 0)
+            ::Unserialize(s, VARINT(this->nVersion));
+        ::Unserialize(s, REF(CTxOutCompressor(REF(txout))));
+    }
+};
+
+/** Undo information for a CTransaction */
+template <typename T>
+class CTxUndo_impl
+{
+public:
+    // undo information for all txins
+    std::vector<CTxInUndo_impl<T>> vprevout;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action, int, int) {
+        READWRITE(vprevout);
+    }
+};
+using CTxUndo = CTxUndo_impl<uint256>;
 
 /**
 
@@ -331,7 +398,7 @@ public:
         vout.assign(vAvail.size(), CTxOut_impl<T>());
         for (unsigned int i = 0; i < vAvail.size(); i++) {
             if (vAvail[i])
-                ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
+                ::Unserialize(s, REF(CTxOutCompressor_impl<T>(vout[i])));
         }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight));
@@ -339,16 +406,13 @@ public:
     }
 
     //! mark an outpoint spent, and construct undo information
-    //bool Spend(const COutPoint &out, CTxInUndo &undo);
+    bool Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo);
 
     //! mark a vout spent
     bool Spend(int nPos);
 
     //! check whether a particular output is still available
-    //bool IsAvailable(unsigned int nPos) const
-    //{
-    //    return (nPos < vout.size() && !vout[nPos].IsNull() && !vout[nPos].scriptPubKey.IsZerocoinMint());
-    //}
+    bool IsAvailable(unsigned int nPos) const;
 
     //! check whether the entire CCoins is spent
     //! note that only !IsPruned() CCoins can be serialized
