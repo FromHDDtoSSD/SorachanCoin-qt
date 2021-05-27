@@ -11,6 +11,7 @@
 
 #include <util.h>
 #include <block/transaction.h>
+#include <unordered_map>
 
 /** Compact serializer for scripts.
  *
@@ -436,6 +437,101 @@ public:
     int nVersion;
 };
 using CCoins = CCoins_impl<uint256>;
+
+// for std::unordered_map inner HASH
+class CCoinsKeyHasher
+{
+private:
+    uint256b salt;
+
+public:
+    CCoinsKeyHasher();
+
+    /**
+     * This *must* return size_t. With Boost 1.46 on 32-bit systems the
+     * unordered_map will behave unpredictably if the custom hasher returns a
+     * uint64_t, resulting in failures when syncing the chain (#4634).
+     */
+    std::size_t operator()(const uint256b &key) const { // even if std::unordered_map, require std::size_t
+        return key.GetHash(salt);
+    }
+};
+
+template <typename T>
+struct CCoinsCacheEntry_impl {
+    CCoins_impl<T> coins; // The actual cached data.
+    unsigned char flags;
+
+    enum Flags {
+        DIRTY = (1 << 0), // This cache entry is potentially different from the version in the parent view.
+        FRESH = (1 << 1), // The parent view does not have this entry (or it is pruned).
+    };
+
+    CCoinsCacheEntry_impl() : coins(), flags(0) {}
+};
+using CCoinsCacheEntry = CCoinsCacheEntry_impl<uint256>;
+
+using CCoinsMap = std::unordered_map<uint256b, CCoinsCacheEntry, CCoinsKeyHasher>;
+
+struct CCoinsStats {
+    int nHeight;
+    uint256 hashBlock;
+    uint64_t nTransactions;
+    uint64_t nTransactionOutputs;
+    uint64_t nSerializedSize;
+    uint256 hashSerialized;
+    CAmount nTotalAmount;
+
+    CCoinsStats() : nHeight(0), hashBlock(0), nTransactions(0), nTransactionOutputs(0), nSerializedSize(0), hashSerialized(0), nTotalAmount(0) {}
+};
+
+/** Abstract view on the open txout dataset. */
+template <typename T>
+class CCoinsView_impl
+{
+public:
+    //! Retrieve the CCoins (unspent transaction outputs) for a given txid
+    virtual bool GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const {return false;}
+
+    //! Just check whether we have data for a given txid.
+    //! This may (but cannot always) return true for fully spent transactions
+    virtual bool HaveCoins(const uint256 &txid) const {return false;}
+
+    //! Retrieve the block hash whose state this CCoinsView currently represents
+    virtual uint256 GetBestBlock() const {return uint256(0);}
+
+    //! Do a bulk modification (multiple CCoins changes + BestBlock change).
+    //! The passed mapCoins can be modified.
+    virtual bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) {return false;}
+
+    //! Calculate statistics about the unspent transaction output set
+    virtual bool GetStats(CCoinsStats &stats) const = 0;
+
+    //! As we use CCoinsViews polymorphically, have a virtual destructor
+    virtual ~CCoinsView_impl() {}
+};
+
+/** CCoinsView backed by another CCoinsView */
+/*
+template <typename T>
+class CCoinsViewBacked_impl : public CCoinsView_impl<T>
+{
+protected:
+    CCoinsView_impl<T> *base;
+
+public:
+    CCoinsViewBacked_impl(CCoinsView_impl<T> *viewIn);
+    bool GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const;
+    bool HaveCoins(const uint256 &txid) const;
+    uint256 GetBestBlock() const;
+    void SetBackend(CCoinsView_impl<T> &viewIn);
+    bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
+    bool GetStats(CCoinsStats &stats) const;
+};
+*/
+
+
+
 
 
 namespace block_check
