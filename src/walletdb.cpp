@@ -156,7 +156,12 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
     bool fAllAccounts = (strAccount == "*");
 
 #ifdef WALLET_SQL_MODE
-    IDB::DbIterator ite = GetIteCursor(std::string("%acentry%"));
+    CDataStream lKey;
+    if(fAllAccounts)
+        lKey << std::string("acentry");
+    else
+        lKey << std::make_pair(std::string("acentry"), strAccount);
+    IDB::DbIterator ite = GetIteCursor(std::string("%") + std::string(lKey.begin(), lKey.end()) + std::string("%"));
     if (ite.is_error())
         throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
 #else
@@ -164,12 +169,6 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
     if (ite.is_error())
         throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
 #endif
-
-    /*
-    Dbc *pcursor = GetCursor();
-    if (! pcursor)
-        throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : cannot create DB cursor");
-    */
 
     unsigned int fFlags = DB_SET_RANGE;
     for (;;) {
@@ -187,14 +186,15 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
         if (ret == DB_NOTFOUND) {
             break;
         } else if (ret != 0) {
-            //pcursor->close();
             throw std::runtime_error("CWalletDB::ListAccountCreditDebit() : error scanning DB");
         }
 
         std::string strType;
         ssKey >> strType;
+#ifndef WALLET_SQL_MODE
         if (strType != "acentry")
             break;
+#endif
 
         CAccountingEntry acentry;
         ssKey >> acentry.strAccount;
@@ -205,8 +205,6 @@ void CWalletDB::ListAccountCreditDebit(const std::string &strAccount, std::list<
         ssKey >> acentry.nEntryNo;
         entries.push_back(acentry);
     }
-
-    //pcursor->close();
 }
 
 DBErrors CWalletDB::ReorderTransactions(CWallet *pwallet)
