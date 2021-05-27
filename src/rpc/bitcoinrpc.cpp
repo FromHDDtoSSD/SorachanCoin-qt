@@ -30,7 +30,6 @@
 std::map<std::string, const CRPCTable::CRPCCommand *> CRPCTable::mapCommands;
 std::string bitrpc::strRPCUserColonPass;
 CCriticalSection bitrpc::cs_THREAD_RPCHANDLER;
-CCriticalSection bitrpc::cs_accept;
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
 CCriticalSection CRPCTable::cs_getwork;
@@ -981,16 +980,12 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq, CBitrpcData
 }
 
 void bitrpc::ThreadRPCServer3(void *parg) {
-    LOCK(cs_accept);
+    LOCK(cs_THREAD_RPCHANDLER);
     logging::LogPrintf("ThreadRPCServer3 started\n");
 
     // Make this thread recognisable as the RPC handler
     bitthread::RenameThread(strCoinName "-rpchand");
-
-    {
-        LOCK(cs_THREAD_RPCHANDLER);
-        ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-    }
+    ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
 
     AcceptedConnection *conn = reinterpret_cast<AcceptedConnection *>(parg);
     bool fRun = true;
@@ -998,11 +993,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
         if (args_bool::fShutdown || !fRun) {
             conn->close();
             delete conn;
-            //delete darg;
-            {
-                LOCK(cs_THREAD_RPCHANDLER);
-                --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-            }
+            --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
             return;
         }
 
@@ -1099,10 +1090,7 @@ void bitrpc::ThreadRPCServer3(void *parg) {
     } // for(;;)
 
     delete conn;
-    {
-        LOCK(cs_THREAD_RPCHANDLER);
-        --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
-    }
+    --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params, CBitrpcData &data) {

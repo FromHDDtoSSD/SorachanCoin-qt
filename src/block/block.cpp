@@ -722,8 +722,6 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
 template <typename T>
 bool CBlock_impl<T>::AcceptBlock()
 {
-    LOCK(bitrpc::cs_accept);
-
     // Check for duplicate
     T hash = CBlockHeader_impl<T>::GetPoHash();
     if (block_info::mapBlockIndex.count(hash))

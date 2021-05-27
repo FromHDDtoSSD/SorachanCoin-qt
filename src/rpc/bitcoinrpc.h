@@ -327,8 +327,6 @@ private:
     static json_spirit::Object CallRPC(CBitrpcData &data, const std::string &strMethod, const json_spirit::Array &params);
 
 public:
-    static CCriticalSection cs_accept;
-
     static void ThreadRPCServer(void *parg);
     static int CommandLineRPC(int argc, char *argv[]);
 
