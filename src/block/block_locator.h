@@ -24,24 +24,31 @@ using CBlockIndex = CBlockIndex_impl<uint256>;
 template <typename T>
 class CBlockLocator_impl
 {
-private:
     CBlockLocator_impl(const CBlockLocator_impl &)=delete;
     CBlockLocator_impl &operator=(const CBlockLocator_impl &)=delete;
-    CBlockLocator_impl &operator=(const CBlockLocator_impl &&)=delete;
 protected:
-    std::vector<uint256> vHave;
+    std::vector<T> vHave;
 public:
+    CBlockLocator_impl(CBlockLocator_impl &&obj) {
+        *this = std::move(obj);
+    }
+    CBlockLocator_impl &operator=(CBlockLocator_impl &&obj) {
+        this->vHave = std::move(obj.vHave);
+        obj.vHave.clear();
+        return *this;
+    }
+
     CBlockLocator_impl() {}
-    explicit CBlockLocator_impl(const CBlockIndex *pindex) {
+    explicit CBlockLocator_impl(const CBlockIndex_impl<T> *pindex) {
         Set(pindex);
     }
-    explicit CBlockLocator_impl(uint256 hashBlock) {
-        std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
+    explicit CBlockLocator_impl(T hashBlock) {
+        typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
         if (mi != block_info::mapBlockIndex.end()) {
             Set((*mi).second);
         }
     }
-    CBlockLocator_impl(const std::vector<uint256> &vHaveIn) {
+    CBlockLocator_impl(const std::vector<T> &vHaveIn) {
         vHave = vHaveIn;
     }
 
@@ -52,10 +59,10 @@ public:
         return vHave.empty();
     }
 
-    void Set(const CBlockIndex *pindex);
+    void Set(const CBlockIndex_impl<T> *pindex);
     int GetDistanceBack();
-    CBlockIndex *GetBlockIndex();
-    uint256 GetBlockHash();
+    CBlockIndex_impl<T> *GetBlockIndex();
+    T GetBlockHash();
     int GetHeight();
 
     ADD_SERIALIZE_METHODS

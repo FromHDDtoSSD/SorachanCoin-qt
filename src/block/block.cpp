@@ -25,6 +25,57 @@ bool CValidationState::Abort(const std::string &msg) {
     return Error(msg);
 }
 
+/** Turn the lowest '1' bit in the binary representation of a number into a '0'. */
+static int InvertLowestOne(int n) { return n & (n - 1); }
+
+/** Compute what height to jump back to with the CBlockIndex::pskip pointer. */
+static int GetSkipHeight(int height) {
+    if (height < 2)
+        return 0;
+
+    // Determine which height to jump back to. Any number strictly lower than height is acceptable,
+    // but the following expression seems to perform well in simulations (max 110 steps to go back
+    // up to 2**18 blocks).
+    return (height & 1) ? InvertLowestOne(InvertLowestOne(height - 1)) + 1 : InvertLowestOne(height);
+}
+
+template<typename T>
+CBlockIndex_impl<T> *CBlockIndex_impl<T>::GetAncestor(int height) {
+    if (height > nHeight || height < 0)
+        return nullptr;
+
+    CBlockIndex_impl<T> *pindexWalk = this;
+    int heightWalk = nHeight;
+    while (heightWalk > height) {
+        int heightSkip = GetSkipHeight(heightWalk);
+        int heightSkipPrev = GetSkipHeight(heightWalk - 1);
+        if (heightSkip == height ||
+            (heightSkip > height && !(heightSkipPrev < heightSkip - 2 && heightSkipPrev >= height))) {
+            // Only follow pskip if pprev->pskip isn't better than pskip->pprev.
+            pindexWalk = pindexWalk->pskip;
+            heightWalk = heightSkip;
+        } else {
+            pindexWalk = pindexWalk->pprev;
+            heightWalk--;
+        }
+    }
+    return pindexWalk;
+}
+
+template <typename T>
+const CBlockIndex_impl<T> *CBlockIndex_impl<T>::GetAncestor(int height) const {
+    return const_cast<CBlockIndex_impl<T> *>(this)->GetAncestor(height);
+}
+
+template <typename T>
+void CBlockIndex_impl<T>::BuildSkip() {
+    // under development
+    //if (pprev)
+    //    pskip = pprev->GetAncestor(GetSkipHeight(nHeight));
+}
+
+
+
 /**
  * CChain_impl implementation
  */
@@ -38,7 +89,7 @@ void CChain_impl<T>::SetTip(CBlockIndex_impl<T> *pindex)
     vChain.resize(pindex->get_nHeight() + 1);
     while (pindex && vChain[pindex->get_nHeight()] != pindex) {
         vChain[pindex->get_nHeight()] = pindex;
-        pindex = pindex->get_pprev();
+        pindex = pindex->set_pprev();
     }
 }
 
@@ -239,7 +290,7 @@ uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
 }
 
 template <typename T>
-bool CBlock_impl<T>::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
+bool CBlock_impl<T>::DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex)
 {
     // Disconnect in reverse order
     for (int i = Merkle_t::vtx.size() - 1; i >= 0; --i) {
@@ -249,21 +300,21 @@ bool CBlock_impl<T>::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
     // Update block index on disk without changing it in memory.
     // The memory index structure will be changed after the db commits.
     if (pindex->get_pprev()) {
-        CDiskBlockIndex blockindexPrev(pindex->set_pprev());
+        CDiskBlockIndex_impl<T> blockindexPrev(pindex->set_pprev());
         blockindexPrev.set_hashNext(0);
         if (! txdb.WriteBlockIndex(blockindexPrev))
             return logging::error("DisconnectBlock() : WriteBlockIndex failed");
     }
 
     // ppcoin: clean up wallet after disconnecting coinstake
-    for(CTransaction &tx: this->vtx)
+    for(CTransaction_impl<T> &tx: this->vtx)
         wallet_process::manage::SyncWithWallets(tx, this, false, false);
 
     return true;
 }
 
 template <typename T>
-bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=false*/)
+bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck/*=false*/)
 {
     CBlockHeader<T>::LastHeight = pindex->get_nHeight();
 
@@ -301,7 +352,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
     int64_t nValueIn = 0;
     int64_t nValueOut = 0;
     unsigned int nSigOps = 0;
-    for(CTransaction &tx: this->vtx) {
+    for(CTransaction_impl<T> &tx: this->vtx) {
         T hashTx = tx.GetHash();
         if (fEnforceBIP30) {
             CTxIndex txindexOld;
@@ -369,7 +420,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
     // track money supply and mint amount info
     pindex->set_nMint(nValueOut - nValueIn + nFees);
     pindex->set_nMoneySupply((pindex->get_pprev()? pindex->get_pprev()->get_nMoneySupply() : 0) + nValueOut - nValueIn);
-    if (! txdb.WriteBlockIndex(CDiskBlockIndex(pindex)))
+    if (! txdb.WriteBlockIndex(CDiskBlockIndex_impl<T>(pindex)))
         return logging::error("Connect() : WriteBlockIndex for pindex failed");
 
     // fees are not collected by proof-of-stake miners
@@ -387,21 +438,21 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCh
     // Update block index on disk without changing it in memory.
     // The memory index structure will be changed after the db commits.
     if (pindex->get_pprev()) {
-        CDiskBlockIndex blockindexPrev(pindex->set_pprev());
+        CDiskBlockIndex_impl<T> blockindexPrev(pindex->set_pprev());
         blockindexPrev.set_hashNext(pindex->GetBlockHash());
         if (! txdb.WriteBlockIndex(blockindexPrev))
             return logging::error("ConnectBlock() : WriteBlockIndex failed");
     }
 
     // Watch for transactions paying to me
-    for(CTransaction &tx: this->vtx)
+    for(CTransaction_impl<T> &tx: this->vtx)
         wallet_process::manage::SyncWithWallets(tx, this, true);
 
     return true;
 }
 
 template <typename T>
-bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions/*=true*/)
+bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions/*=true*/)
 {
     CBlockHeader<T>::LastHeight = pindex->get_nHeight() - 1;
     if (! fReadTransactions) {
@@ -417,7 +468,7 @@ bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransacti
 }
 
 template <typename T>
-bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
+bool CBlock_impl<T>::SetBestChain(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
 {
     T hash = CBlockHeader_impl<T>::GetPoHash();
     if (! txdb.TxnBegin())
@@ -433,10 +484,10 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             return logging::error("SetBestChain() : SetBestChainInner failed");
     } else {
         // the first block in the new chain that will cause it to become the new best chain
-        CBlockIndex *pindexIntermediate = pindexNew;
+        CBlockIndex_impl<T> *pindexIntermediate = pindexNew;
 
         // list of blocks that need to be connected afterwards
-        std::vector<CBlockIndex *> vpindexSecondary;
+        std::vector<CBlockIndex_impl<T> *> vpindexSecondary;
 
         // block_check::manage::Reorganize is costly in terms of db load, as it works in a single db transaction.
         // Try to limit how much needs to be done inside
@@ -448,14 +499,14 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             logging::LogPrintf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
-        if (! block_check::manage<uint256>::Reorganize(txdb, pindexIntermediate)) {
+        if (! block_check::manage<T>::Reorganize(txdb, pindexIntermediate)) {
             txdb.TxnAbort();
-            block_check::manage<uint256>::InvalidChainFound(pindexNew);
+            block_check::manage<T>::InvalidChainFound(pindexNew);
             return logging::error("SetBestChain() : block_check::manage::Reorganize failed");
         }
 
         // Connect further blocks
-        for (std::vector<CBlockIndex *>::reverse_iterator rit = vpindexSecondary.rbegin(); rit != vpindexSecondary.rend(); ++rit) {
+        for (typename std::vector<CBlockIndex_impl<T> *>::reverse_iterator rit = vpindexSecondary.rbegin(); rit != vpindexSecondary.rend(); ++rit) {
             CBlock_impl<T> block;
             if (! block.ReadFromDisk(*rit)) {
                 logging::LogPrintf("SetBestChain() : ReadFromDisk failed\n");
@@ -475,7 +526,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     // Update best block in wallet (so we can detect restored wallets)
     bool fIsInitialDownload = block_notify<T>::IsInitialBlockDownload();
     if (! fIsInitialDownload) {
-        const CBlockLocator locator(pindexNew);
+        const CBlockLocator_impl<T> locator(pindexNew);
         block_notify<T>::SetBestChain(locator);
     }
 
@@ -498,7 +549,7 @@ bool CBlock_impl<T>::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     // Check the version of the last 100 blocks to see if we need to upgrade:
     if (! fIsInitialDownload) {
         int nUpgraded = 0;
-        const CBlockIndex *pindex = block_info::pindexBest;
+        const CBlockIndex_impl<T> *pindex = block_info::pindexBest;
         for (int i=0; i<100 && pindex!=nullptr; ++i) {
             if (pindex->get_nVersion() > this->get_nVersion())
                 ++nUpgraded;
@@ -530,15 +581,16 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
         return logging::error("AddToBlockIndex() : %s already exists", hash.ToString().substr(0,20).c_str());
 
     // Construct new block index object
-    CBlockIndex *pindexNew = new(std::nothrow) CBlockIndex(nFile, nBlockPos, *this);
+    CBlockIndex_impl<T> *pindexNew = new(std::nothrow) CBlockIndex_impl<T>(nFile, nBlockPos, *this);
     if (! pindexNew)
         return logging::error("AddToBlockIndex() : new CBlockIndex failed");
 
     pindexNew->set_phashBlock(&hash);
-    typename std::map<T, CBlockIndex *>::iterator miPrev = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
+    typename std::map<T, CBlockIndex_impl<T> *>::iterator miPrev = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
     if (miPrev != block_info::mapBlockIndex.end()) {
         pindexNew->set_pprev((*miPrev).second);
         pindexNew->set_nHeight(pindexNew->get_pprev()->get_nHeight() + 1);
+        pindexNew->BuildSkip();
     }
 
     // ppcoin: compute chain trust score
@@ -567,15 +619,15 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
         return logging::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
 
     // Add to block_info::mapBlockIndex
-    typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
+    typename std::map<T, CBlockIndex_impl<T> *>::iterator mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     if (pindexNew->IsProofOfStake())
         block_info::setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
     pindexNew->set_phashBlock(&((*mi).first));
 
     // Write to disk block index
-    CTxDB txdb;
+    CTxDB_impl<T> txdb;
     if (! txdb.TxnBegin()) return false;
-    txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));
+    txdb.WriteBlockIndex(CDiskBlockIndex_impl<T>(pindexNew));
     if (! txdb.TxnCommit()) return false;
 
     LOCK(block_process::cs_main);
@@ -863,7 +915,7 @@ bool CBlock_impl<T>::CheckBlockSignature() const
 
 // Called from inside SetBestChain: attaches a block to the new best chain being built
 template <typename T>
-bool CBlock_impl<T>::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
+bool CBlock_impl<T>::SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
 {
     T hash = CBlockHeader_impl<T>::GetPoHash();
 
@@ -1046,3 +1098,4 @@ template class CBlock_print_impl<uint256>;
 template class CBlockHeader_impl<uint256>;
 template class CBlock_impl<uint256>;
 template class CBlockIndex_impl<uint256>;
+template class CChain_impl<uint256>;

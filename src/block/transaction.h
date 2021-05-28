@@ -709,6 +709,12 @@ public:
     //    return hash_basis::SerializeHash(*this);
     //}
 
+    // Compute priority, given priority of inputs and (optionally) tx size
+    double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
+
+    // Compute modified tx size for priority calculation (optionally given tx size)
+    unsigned int CalculateModifiedSize(unsigned int nTxSize=0) const;
+
     bool IsFinal(int nBlockHeight = 0, int64_t nBlockTime = 0) const {
         // Time based nLockTime implemented in 0.1.6
         if (nLockTime == 0) return true;
@@ -753,7 +759,7 @@ public:
         return (vin.size() > 0 && (!vin[0].get_prevout().IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
 
-    bool IsCoinPoSpace() const {
+    bool IsCoinSpace() const {
         return (vin.size() > 1 && (!vin[0].get_prevout().IsNull()) && (!vin[1].get_prevout().IsNull()) && vout.size() >= 3 && vout[0].IsEmpty() && vout[1].IsEmpty());
     }
     bool IsCoinMasternode() const {

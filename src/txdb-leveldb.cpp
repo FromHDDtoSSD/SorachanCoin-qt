@@ -624,6 +624,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
+
+        // build pskip
+        if(pindexNew->get_pprev())
+            pindexNew->BuildSkip();
     }
 
     debugcs::instance() << "LoadBlockIndex done" << debugcs::endl();
@@ -699,6 +703,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
+
+        // build pskip
+        if(pindexNew->get_pprev())
+            pindexNew->BuildSkip();
     }
 
 #endif

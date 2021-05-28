@@ -15,9 +15,10 @@
 class CNode;
 class CInv;
 
+// T == uint256
 namespace block_process
 {
-    extern CCriticalSection cs_main;                                    // LOCK(block_process::cs_main)
+    extern CCriticalSection cs_main;
     extern std::map<uint256, CBlock *> mapOrphanBlocks;
     extern std::map<uint256, uint256> mapProofOfStake;
     class manage : private no_instance

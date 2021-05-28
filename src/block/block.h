@@ -210,30 +210,30 @@ public:
 using CDiskBlockHeader = CDiskBlockHeader_impl<uint256>;
 
 template <typename T>
-class CBlock_impl : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction>
+class CBlock_impl : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction_impl<T> >
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
 #else
     using vMerkle_t = std::vector<T>;
 #endif
-//private:
     // CBlock_impl(const CBlock_impl &)=delete;
+    // CBlock_impl(CBlock_impl &&)=delete;
     // CBlock_impl &operator=(const CBlock_impl &)=delete;
-    // CBlock_impl &operator=(const CBlock_impl &&)=delete;
+    // CBlock_impl &operator=(CBlock_impl &&)=delete;
 private:
-    using Merkle_t = CMerkleTree<T, CTransaction>;
+    using Merkle_t = CMerkleTree<T, CTransaction_impl<T> >;
     // ppcoin: block signature - signed by one of the coin base txout[N]'s owner
     Script_util::valtype vchBlockSig;
     // Denial-of-service detection:
     mutable int nDoS;
-    bool SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew);
+    bool SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
 public:
-    const std::vector<CTransaction> &get_vtx() const {return Merkle_t::vtx;}
-    const CTransaction &get_vtx(int index) const {return Merkle_t::vtx[index];}
+    const std::vector<CTransaction_impl<T> > &get_vtx() const {return Merkle_t::vtx;}
+    const CTransaction_impl<T> &get_vtx(int index) const {return Merkle_t::vtx[index];}
     const Script_util::valtype &get_vchBlockSig() const {return vchBlockSig;}
-    std::vector<CTransaction> &set_vtx() {return Merkle_t::vtx;}
-    CTransaction &set_vtx(int index) {return Merkle_t::vtx[index];}
+    std::vector<CTransaction_impl<T> > &set_vtx() {return Merkle_t::vtx;}
+    CTransaction_impl<T> &set_vtx(int index) {return Merkle_t::vtx[index];}
     Script_util::valtype &set_vchBlockSig() {return vchBlockSig;}
     bool DoS(int nDoSIn, bool fIn) const {
         nDoS += nDoSIn;
@@ -255,29 +255,42 @@ public:
         return nEntropyBit;
     }
     // ppcoin: two types of block: proof-of-work or proof-of-stake
+    // sora neko: four types of block: proof-of-work, proof-of-stake, proof-of-space or proof-of-masternode
     bool IsProofOfStake() const {
         return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinStake());
     }
-    bool IsProofOfWork() const {
-        return !IsProofOfStake();
+    bool IsProofOfSpace() const {
+        return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinSpace());
     }
-    std::pair<COutPoint, unsigned int> GetProofOfStake() const {
-        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint(), (unsigned int)0);
+    bool IsProofOfMasternode() const {
+        return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinMasternode());
+    }
+    bool IsProofOfWork() const {
+        return !IsProofOfStake() && !IsProofOfSpace() && !IsProofOfMasternode();
+    }
+    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfStake() const {
+        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    }
+    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfSpace() const {
+        return IsProofOfSpace() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    }
+    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfMasternode() const {
+        return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
     }
     // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const {
         int64_t maxTransactionTime = 0;
-        for(const CTransaction &tx: Merkle_t::vtx)
+        for(const CTransaction_impl<T> &tx: Merkle_t::vtx)
             maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.get_nTime());
         return maxTransactionTime;
     }
     bool WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet);
     bool ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions=true);
     void print() const;
-    bool DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex);
-    bool ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck=false);
-    bool ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions=true);
-    bool SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew);
+    bool DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex);
+    bool ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck=false);
+    bool ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions=true);
+    bool SetBestChain(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock();
@@ -325,7 +338,6 @@ using CBlockTemplate = CBlockTemplate_impl<uint256>;
 template <typename T>
 class CBlockIndex_impl : public CBlockHeader<T>
 {
-// private:
     // CBlockIndex_impl(const CBlockIndex_impl &)=delete;
     // CBlockIndex_impl(CBlockIndex_impl &&)=delete;
     // CBlockIndex_impl &operator=(const CBlockIndex_impl &)=delete;
@@ -341,13 +353,27 @@ protected:
     int64_t nMint;
     int64_t nMoneySupply;
     uint64_t nStakeModifier; // hash modifier for proof-of-stake
-    uint32_t nStakeModifierChecksum; // checksum of index; in-memeory only
+    uint64_t nSpaceModifier; // hash modifier for proof-of-space
+    uint64_t nMasternodeModifier; // hash modifier for masternode
+    uint32_t nStakeModifierChecksum; // checksum of index; in-memory only
+    uint32_t nSpaceModifierChecksum; // checksum of index; in-memory only
+    uint32_t nMasternodeModifierChecksum; // checksum of index; in-memory only
     // proof-of-stake specific fields
-    COutPoint prevoutStake;
+    COutPoint_impl<T> prevoutStake;
     uint32_t nStakeTime;
     T hashProofOfStake;
+    // proof-of-space specific fields
+    COutPoint_impl<T> prevoutSpace;
+    uint32_t nSpaceTime;
+    T hashProofOfSpace;
+    // proof-of-masternode specific fields
+    COutPoint_impl<T> prevoutMasternode;
+    uint32_t nMasternodeTime;
+    T hashProofOfMasternode;
     // ppcoin: block index flags
     uint32_t nFlags;
+    // pointer to the index of some further predecessor of this block
+    CBlockIndex_impl<T> *pskip;
 public:
     const T *get_phashBlock() const {return phashBlock;}
     const CBlockIndex_impl<T> *get_pprev() const {return pprev;}
@@ -360,9 +386,14 @@ public:
     int64_t get_nMoneySupply() const {return nMoneySupply;}
     uint64_t get_nStakeModifier() const {return nStakeModifier;}
     uint32_t get_nStakeModifierChecksum() const {return nStakeModifierChecksum;}
-    COutPoint get_prevoutStake() const {return prevoutStake;}
+    uint64_t get_nMasternodeModifier() const {return nMasternodeModifier;}
+    uint32_t get_nMasterModifierChecksum() const {return nMasternodeModifierChecksum;}
+    COutPoint_impl<T> get_prevoutStake() const {return prevoutStake;}
     uint32_t get_nStakeTime() const {return nStakeTime;}
     T get_hashProofOfStake() const {return hashProofOfStake;}
+    COutPoint_impl<T> get_prevoutMasternode() const {return prevoutMasternode;}
+    uint32_t get_nMasternodeTime() const {return nMasternodeTime;}
+    T get_hashProofOfMasternode() const {return hashProofOfMasternode;}
     uint32_t get_nFlags() const {return nFlags;}
     void set_phashBlock(const T *_in) {phashBlock=_in;}
     void set_pprev(CBlockIndex_impl<T> *_in) {pprev=_in;}
@@ -377,21 +408,32 @@ public:
     void set_nMoneySupply(int64_t _in) {nMoneySupply=_in;}
     void set_nStakeModifier(uint64_t _in) {nStakeModifier=_in;}
     void set_nStakeModifierChecksum(uint32_t _in) {nStakeModifierChecksum=_in;}
-    void set_prevoutStake(const COutPoint &_in) {prevoutStake=_in;}
+    void set_nMasternodeModifier(uint64_t _in) {nMasternodeModifier=_in;}
+    void set_nMasternodeModifierChecksum(uint32_t _in) {nMasternodeModifierChecksum=_in;}
+    void set_prevoutStake(const COutPoint_impl<T> &_in) {prevoutStake=_in;}
     void set_nStakeTime(uint32_t _in) {nStakeTime=_in;}
     void set_hashProofOfStake(const T &_in) {hashProofOfStake=_in;}
+    void set_prevoutMasternode(const COutPoint_impl<T> &_in) {prevoutMasternode=_in;}
+    void set_nMasternodeTime(uint32_t _in) {nMasternodeTime=_in;}
+    void set_hashProofOfMasternode(const T &_in) {hashProofOfMasternode=_in;}
     void set_nFlags(uint32_t _in) {nFlags=_in;}
     enum
     {
-        BLOCK_PROOF_OF_STAKE = (1 << 0),        // is proof-of-stake block
-        BLOCK_STAKE_ENTROPY  = (1 << 1),        // entropy bit for stake modifier
-        BLOCK_STAKE_MODIFIER = (1 << 2),        // regenerated stake modifier
+        BLOCK_PROOF_OF_STAKE = (1 << 0),        // v1 is proof-of-stake block
+        BLOCK_STAKE_ENTROPY  = (1 << 1),        // v1 entropy bit for stake modifier
+        BLOCK_STAKE_MODIFIER = (1 << 2),        // v1 regenerated stake modifier
+        BLOCK_PROOF_OF_SPACE = (1 << 8),        // v4 is prrof-of-space block
+        BLOCK_PROOF_OF_MASTERNODE = (1 << 16),  // v3 is masternode block
+        BLOCK_MASTERNODE_ENTROPY  = (1 << 17),  // v3 entropy bit for masternode modifier
+        BLOCK_MASTERNODE_RATIO    = (1 << 18),  // v3 prrof-of-masternode block stake modifier ratio
+        BLOCK_MASTERNODE_MODIFIER = (1 << 19)   // v3 regenerated stake modifier
     };
     CBlockIndex_impl() {
         //CBlockHeader<T>::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
         pnext = nullptr;
+        pskip = nullptr;
         nFile = 0;
         nBlockPos = 0;
         nHeight = 0;
@@ -401,15 +443,26 @@ public:
         nFlags = 0;
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
+        nSpaceModifier = 0;
+        nSpaceModifierChecksum = 0;
+        nMasternodeModifier = 0;
+        nMasternodeModifierChecksum = 0;
         hashProofOfStake = 0;
         prevoutStake.SetNull();
         nStakeTime = 0;
+        hashProofOfSpace = 0;
+        prevoutSpace.SetNull();
+        nSpaceTime = 0;
+        hashProofOfMasternode = 0;
+        prevoutMasternode.SetNull();
+        nMasternodeTime = 0;
     }
     CBlockIndex_impl(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock_impl<T> &block) {
         //CBlockHeader<T>::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
         pnext = nullptr;
+        pskip = nullptr;
         nFile = nFileIn;
         nBlockPos = nBlockPosIn;
         nHeight = 0;
@@ -420,13 +473,31 @@ public:
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
         hashProofOfStake = 0;
+        nSpaceModifier = 0;
+        nSpaceModifierChecksum = 0;
+        hashProofOfSpace = 0;
+        nMasternodeModifier = 0;
+        nMasternodeModifierChecksum = 0;
+        hashProofOfMasternode = 0;
         if (block.IsProofOfStake()) {
             SetProofOfStake();
             prevoutStake = block.get_vtx(1).get_vin(0).get_prevout();
             nStakeTime = block.get_vtx(1).get_nTime();
-        } else {
+        } else if (block.IsProofOfSpace()) {
+            SetProofOfSpace();
+            prevoutSpace = block.get_vtx(2).get_vin(0).get_prevout();
+            nSpaceTime = block.get_vtx(2).get_nTime();
+        } else if (block.IsProofOfMasternode()) {
+            SetProofOfMasternode();
+            prevoutMasternode = block.get_vtx(3).get_vin(0).get_prevout();
+            nMasternodeTime = block.get_vtx(3).get_nTime();
+        } else { // proof-of-work (use coinbase)
             prevoutStake.SetNull();
+            prevoutSpace.SetNull();
+            prevoutMasternode.SetNull();
             nStakeTime = 0;
+            nSpaceTime = 0;
+            nMasternodeTime = 0;
         }
         CBlockHeader<T>::nVersion       = block.get_nVersion();
         CBlockHeader<T>::hashMerkleRoot = block.get_hashMerkleRoot();
@@ -479,7 +550,7 @@ public:
     }
     // Returns true if there are nRequired or more blocks of minVersion or above
     // in the last nToCheck blocks, starting at pstart and going backwards.
-    static bool IsSuperMajority(int minVersion, const CBlockIndex *pstart, unsigned int nRequired, unsigned int nToCheck) {
+    static bool IsSuperMajority(int minVersion, const CBlockIndex_impl<T> *pstart, unsigned int nRequired, unsigned int nToCheck) {
         unsigned int nFound = 0;
         for (unsigned int i=0; i<nToCheck && nFound<nRequired && pstart!=nullptr; ++i) {
             if (pstart->nVersion >= minVersion) ++nFound;
@@ -488,13 +559,25 @@ public:
         return (nFound>=nRequired);
     }
     bool IsProofOfWork() const {
-        return !IsProofOfStake();
+        return !IsProofOfStake() && !IsProofOfSpace() && !IsProofOfMasternode();
     }
     bool IsProofOfStake() const {
         return (nFlags & BLOCK_PROOF_OF_STAKE);
     }
+    bool IsProofOfSpace() const {
+        return (nFlags & BLOCK_PROOF_OF_SPACE);
+    }
+    bool IsProofOfMasternode() const {
+        return (nFlags & BLOCK_PROOF_OF_MASTERNODE);
+    }
     void SetProofOfStake() {
         nFlags |= BLOCK_PROOF_OF_STAKE;
+    }
+    void SetProofOfSpace() {
+        nFlags |= BLOCK_PROOF_OF_SPACE;
+    }
+    void SetProofOfMasternode() {
+        nFlags |= BLOCK_PROOF_OF_MASTERNODE;
     }
     unsigned int GetStakeEntropyBit() const {
         return ((nFlags & BLOCK_STAKE_ENTROPY) >> 1);
@@ -504,6 +587,14 @@ public:
         nFlags |= (nEntropyBit? BLOCK_STAKE_ENTROPY : 0);
         return true;
     }
+    unsigned int GetMasternodeEntropyBit() const {
+        return ((nFlags & BLOCK_MASTERNODE_ENTROPY) >> 1);
+    }
+    bool SetMasternodeEntropyBit(unsigned int nEntropyBit) {
+        if (nEntropyBit > 1) return false;
+        nFlags |= (nEntropyBit? BLOCK_MASTERNODE_ENTROPY : 0);
+        return true;
+    }
     bool GeneratedStakeModifier() const {
         return (nFlags & BLOCK_STAKE_MODIFIER) != 0;
     }
@@ -511,6 +602,17 @@ public:
         nStakeModifier = nModifier;
         if (fGeneratedStakeModifier) nFlags |= BLOCK_STAKE_MODIFIER;
     }
+    bool GeneratedMasternodeModifier() const {
+        return (nFlags & BLOCK_MASTERNODE_MODIFIER) != 0;
+    }
+    void SetMasternodeModifier(uint64_t nModifier, bool fGeneratedMasternodeModifier) {
+        nMasternodeModifier = nModifier;
+        if (fGeneratedMasternodeModifier) nFlags |= BLOCK_MASTERNODE_MODIFIER;
+    }
+
+    CBlockIndex_impl<T> *GetAncestor(int height);
+    const CBlockIndex_impl<T> *GetAncestor(int height) const;
+    void BuildSkip();
     std::string ToString() const;
     void print() const {
         logging::LogPrintf("%s\n", ToString().c_str());
@@ -522,64 +624,67 @@ using CBlockIndex = CBlockIndex_impl<uint256>;
 template <typename T>
 class CChain_impl
 {
-private:
-    std::vector<CBlockIndex_impl<T> *> vChain;
-
+    CChain_impl(const CChain_impl &)=delete;
+    CChain_impl &operator=(const CChain_impl &)=delete;
+    CChain_impl(CChain_impl &&)=delete;
+    CChain_impl &operator=(CChain_impl &&)=delete;
 public:
+    CChain_impl() {}
+
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Genesis() const
-    {
+    CBlockIndex_impl<T> *Genesis() const {
         return vChain.size() > 0 ? vChain[0] : nullptr;
     }
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Tip(bool fProofOfStake = false) const
-    {
+    CBlockIndex_impl<T> *Tip(bool fProofOfStake=false, bool fProofOfSpace=false, bool fProofOfMasternode=false) const {
         if (vChain.size() < 1)
             return nullptr;
 
         CBlockIndex_impl<T> *pindex = vChain[vChain.size() - 1];
-
         if (fProofOfStake) {
             while (pindex && pindex->get_pprev() && !pindex->IsProofOfStake())
-                pindex = pindex->get_pprev();
+                pindex = pindex->set_pprev();
+        }
+        if (fProofOfSpace) {
+            while (pindex && pindex->get_pprev() && !pindex->IsProofOfSpace())
+                pindex = pindex->set_pprev();
+        }
+        if (fProofOfMasternode) {
+            while (pindex && pindex->get_pprev() && !pindex->IsProofOfMasternode())
+                pindex = pindex->set_pprev();
         }
         return pindex;
     }
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
-    CBlockIndex_impl<T> *operator[](int nHeight) const
-    {
+    CBlockIndex_impl<T> *operator[](int nHeight) const {
         if (nHeight < 0 || nHeight >= (int)vChain.size())
             return nullptr;
         return vChain[nHeight];
     }
 
     /** Compare two chains efficiently. */
-    friend bool operator==(const CChain_impl &a, const CChain_impl &b)
-    {
+    friend bool operator==(const CChain_impl &a, const CChain_impl &b) {
         return a.vChain.size() == b.vChain.size() &&
                a.vChain[a.vChain.size() - 1] == b.vChain[b.vChain.size() - 1];
     }
 
     /** Efficiently check whether a block is present in this chain. */
-    bool Contains(const CBlockIndex_impl<T> *pindex) const
-    {
+    bool Contains(const CBlockIndex_impl<T> *pindex) const {
         return (*this)[pindex->get_nHeight()] == pindex;
     }
 
     /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
-    CBlockIndex_impl<T> *Next(const CBlockIndex_impl<T> *pindex) const
-    {
+    CBlockIndex_impl<T> *Next(const CBlockIndex_impl<T> *pindex) const {
         if (Contains(pindex))
-            return (*this)[pindex->nHeight + 1];
+            return (*this)[pindex->get_nHeight() + 1];
         else
             return nullptr;
     }
 
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
-    int Height() const
-    {
+    int Height() const {
         return vChain.size() - 1;
     }
 
@@ -591,6 +696,9 @@ public:
 
     /** Find the last common block between this chain and a block index entry. */
     const CBlockIndex_impl<T> *FindFork(const CBlockIndex_impl<T> *pindex) const;
+
+private:
+    std::vector<CBlockIndex_impl<T> *> vChain;
 };
 using CChain = CChain_impl<uint256>;
 

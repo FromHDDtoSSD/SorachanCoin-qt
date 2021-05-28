@@ -8,7 +8,7 @@
 #include <block/block.h>
 
 template <typename T>
-void CBlockLocator_impl<T>::Set(const CBlockIndex *pindex) {
+void CBlockLocator_impl<T>::Set(const CBlockIndex_impl<T> *pindex) {
     vHave.clear();
     int nStep = 1;
     while (pindex) {
@@ -28,10 +28,10 @@ int CBlockLocator_impl<T>::GetDistanceBack() {
     // Retrace how far back it was in the sender's branch
     int nDistance = 0;
     int nStep = 1;
-    for(const uint256 &hash: this->vHave) {
-        std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
+    for(const T &hash: this->vHave) {
+        typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
         if (mi != block_info::mapBlockIndex.end()) {
-            CBlockIndex *pindex = (*mi).second;
+            CBlockIndex_impl<T> *pindex = (*mi).second;
             if (pindex->IsInMainChain()) return nDistance;
         }
 
@@ -43,12 +43,12 @@ int CBlockLocator_impl<T>::GetDistanceBack() {
 }
 
 template <typename T>
-CBlockIndex *CBlockLocator_impl<T>::GetBlockIndex() {
+CBlockIndex_impl<T> *CBlockLocator_impl<T>::GetBlockIndex() {
     // Find the first block the caller has in the main chain
-    for(const uint256 &hash: this->vHave) {
-        std::map<uint256, CBlockIndex*>::iterator mi = block_info::mapBlockIndex.find(hash);
+    for(const T &hash: this->vHave) {
+        typename std::map<T, CBlockIndex*>::iterator mi = block_info::mapBlockIndex.find(hash);
         if (mi != block_info::mapBlockIndex.end()) {
-            CBlockIndex *pindex = (*mi).second;
+            CBlockIndex_impl<T> *pindex = (*mi).second;
             if (pindex->IsInMainChain()) return pindex;
         }
     }
@@ -56,12 +56,12 @@ CBlockIndex *CBlockLocator_impl<T>::GetBlockIndex() {
 }
 
 template <typename T>
-uint256 CBlockLocator_impl<T>::GetBlockHash() {
+T CBlockLocator_impl<T>::GetBlockHash() {
     // Find the first block the caller has in the main chain
-    for(const uint256 &hash: this->vHave) {
-        std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
+    for(const T &hash: this->vHave) {
+        typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hash);
         if (mi != block_info::mapBlockIndex.end()) {
-            CBlockIndex *pindex = (*mi).second;
+            CBlockIndex_impl<T> *pindex = (*mi).second;
             if (pindex->IsInMainChain()) return hash;
         }
     }
@@ -70,7 +70,7 @@ uint256 CBlockLocator_impl<T>::GetBlockHash() {
 
 template <typename T>
 int CBlockLocator_impl<T>::GetHeight() {
-    CBlockIndex *pindex = GetBlockIndex();
+    CBlockIndex_impl<T> *pindex = GetBlockIndex();
     if (! pindex) return 0;
     return pindex->get_nHeight();
 }
