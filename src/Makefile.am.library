@@ -33,6 +33,8 @@ SorachanCoind_SOURCES = \
  block/block_info.cpp \
  block/block_locator.cpp \
  block/block_process.cpp \
+ block/block_keyhasher.cpp \
+ block/block_chain.cpp \
  block/cscript.cpp \
  block/transaction.cpp \
  block/witness.cpp \

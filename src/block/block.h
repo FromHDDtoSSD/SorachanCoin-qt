@@ -374,6 +374,13 @@ protected:
     uint32_t nFlags;
     // pointer to the index of some further predecessor of this block
     CBlockIndex_impl<T> *pskip;
+    // (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
+    uint256 nChainWork;
+    // (memory only) Sequential id assigned to distinguish order in which blocks are received.
+    uint32_t nSequenceId;
+    //! (memory only) Number of transactions in the chain up to and including this block.
+    //! This value will be non-zero only if and only if transactions for this block and all its parents are available.
+    uint64_t nChainTx;
 public:
     const T *get_phashBlock() const {return phashBlock;}
     const CBlockIndex_impl<T> *get_pprev() const {return pprev;}
@@ -441,6 +448,9 @@ public:
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
+        nChainWork = 0;
+        nSequenceId = 0;
+        nChainTx = 0;
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
         nSpaceModifier = 0;
@@ -470,6 +480,9 @@ public:
         nMint = 0;
         nMoneySupply = 0;
         nFlags = 0;
+        nChainWork = 0;
+        nSequenceId = 0;
+        nChainTx = 0;
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
         hashProofOfStake = 0;
@@ -620,87 +633,28 @@ public:
 };
 using CBlockIndex = CBlockIndex_impl<uint256>;
 
-/** An in-memory indexed chain of blocks. */
 template <typename T>
-class CChain_impl
-{
-    CChain_impl(const CChain_impl &)=delete;
-    CChain_impl &operator=(const CChain_impl &)=delete;
-    CChain_impl(CChain_impl &&)=delete;
-    CChain_impl &operator=(CChain_impl &&)=delete;
-public:
-    CChain_impl() {}
+struct CBlockIndexWorkComparator_impl {
+    bool operator()(CBlockIndex_impl<T> *pa, CBlockIndex_impl<T> *pb) const
+    {
+        // First sort by most total work, ...
+        if (pa->nChainWork > pb->nChainWork) return false;
+        if (pa->nChainWork < pb->nChainWork) return true;
 
-    /** Returns the index entry for the genesis block of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Genesis() const {
-        return vChain.size() > 0 ? vChain[0] : nullptr;
+        // ... then by earliest time received, ...
+        if (pa->nSequenceId < pb->nSequenceId) return false;
+        if (pa->nSequenceId > pb->nSequenceId) return true;
+
+        // Use pointer address as tie breaker (should only happen with blocks
+        // loaded from disk, as those all have id 0).
+        if (pa < pb) return false;
+        if (pa > pb) return true;
+
+        // Identical blocks.
+        return false;
     }
-
-    /** Returns the index entry for the tip of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Tip(bool fProofOfStake=false, bool fProofOfSpace=false, bool fProofOfMasternode=false) const {
-        if (vChain.size() < 1)
-            return nullptr;
-
-        CBlockIndex_impl<T> *pindex = vChain[vChain.size() - 1];
-        if (fProofOfStake) {
-            while (pindex && pindex->get_pprev() && !pindex->IsProofOfStake())
-                pindex = pindex->set_pprev();
-        }
-        if (fProofOfSpace) {
-            while (pindex && pindex->get_pprev() && !pindex->IsProofOfSpace())
-                pindex = pindex->set_pprev();
-        }
-        if (fProofOfMasternode) {
-            while (pindex && pindex->get_pprev() && !pindex->IsProofOfMasternode())
-                pindex = pindex->set_pprev();
-        }
-        return pindex;
-    }
-
-    /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
-    CBlockIndex_impl<T> *operator[](int nHeight) const {
-        if (nHeight < 0 || nHeight >= (int)vChain.size())
-            return nullptr;
-        return vChain[nHeight];
-    }
-
-    /** Compare two chains efficiently. */
-    friend bool operator==(const CChain_impl &a, const CChain_impl &b) {
-        return a.vChain.size() == b.vChain.size() &&
-               a.vChain[a.vChain.size() - 1] == b.vChain[b.vChain.size() - 1];
-    }
-
-    /** Efficiently check whether a block is present in this chain. */
-    bool Contains(const CBlockIndex_impl<T> *pindex) const {
-        return (*this)[pindex->get_nHeight()] == pindex;
-    }
-
-    /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
-    CBlockIndex_impl<T> *Next(const CBlockIndex_impl<T> *pindex) const {
-        if (Contains(pindex))
-            return (*this)[pindex->get_nHeight() + 1];
-        else
-            return nullptr;
-    }
-
-    /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
-    int Height() const {
-        return vChain.size() - 1;
-    }
-
-    /** Set/initialize a chain with a given tip. */
-    void SetTip(CBlockIndex_impl<T> *pindex);
-
-    /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
-    CBlockLocator_impl<T> GetLocator(const CBlockIndex_impl<T> *pindex = nullptr) const;
-
-    /** Find the last common block between this chain and a block index entry. */
-    const CBlockIndex_impl<T> *FindFork(const CBlockIndex_impl<T> *pindex) const;
-
-private:
-    std::vector<CBlockIndex_impl<T> *> vChain;
 };
-using CChain = CChain_impl<uint256>;
+using CBlockIndexWorkComparator = CBlockIndexWorkComparator_impl<uint256>;
 
 //
 // Used to marshal pointers into hashes for db storage.

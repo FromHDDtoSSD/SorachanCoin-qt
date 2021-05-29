@@ -1236,7 +1236,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     if (map_arg::GetMapArgsCount("-printblock")) {
         std::string strMatch = map_arg::GetMapArgsString("-printblock");
         int nFound = 0;
-        for (std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.begin(); mi != block_info::mapBlockIndex.end(); ++mi)
+        for (auto mi = block_info::mapBlockIndex.begin(); mi != block_info::mapBlockIndex.end(); ++mi)
         {
             uint256 hash = (*mi).first;
             if (::strncmp(hash.ToString().c_str(), strMatch.c_str(), strMatch.size()) == 0) {

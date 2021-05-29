@@ -95,7 +95,7 @@ int CTxIndex::GetDepthInMainChain() const noexcept
     }
 
     // Find the block in the index
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(block.GetPoHash());
+    auto mi = block_info::mapBlockIndex.find(block.GetPoHash());
     if (mi == block_info::mapBlockIndex.end()) {
         return 0;
     }
@@ -388,7 +388,7 @@ private:
         //
         // block headers
         //
-        std::map<uint256, CBlockIndex *>::iterator it1 = block_info::mapBlockIndex.begin();
+        auto it1 = block_info::mapBlockIndex.begin();
         for (; it1 != block_info::mapBlockIndex.end(); it1++)
         {
             delete (*it1).second;

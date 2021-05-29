@@ -80,63 +80,6 @@ void CBlockIndex_impl<T>::BuildSkip() {
 
 
 
-/**
- * CChain_impl implementation
- */
-template <typename T>
-void CChain_impl<T>::SetTip(CBlockIndex_impl<T> *pindex)
-{
-    if (pindex == nullptr) {
-        vChain.clear();
-        return;
-    }
-    vChain.resize(pindex->get_nHeight() + 1);
-    while (pindex && vChain[pindex->get_nHeight()] != pindex) {
-        vChain[pindex->get_nHeight()] = pindex;
-        pindex = pindex->set_pprev();
-    }
-}
-
-template <typename T>
-CBlockLocator_impl<T> CChain_impl<T>::GetLocator(const CBlockIndex_impl<T> *pindex) const
-{
-    int nStep = 1;
-    std::vector<T> vHave;
-    vHave.reserve(32);
-
-    if (! pindex)
-        pindex = Tip();
-    while (pindex) {
-        vHave.push_back(pindex->GetBlockHash());
-        // Stop when we have added the genesis block.
-        if (pindex->get_nHeight() == 0)
-            break;
-        // Exponentially larger steps back, plus the genesis block.
-        int nHeight = std::max(pindex->get_nHeight() - nStep, 0);
-        if (Contains(pindex)) {
-            // Use O(1) CChain index if possible.
-            pindex = (*this)[nHeight];
-        } else {
-            // Otherwise, use O(log n) skiplist.
-            pindex = pindex->GetAncestor(nHeight);
-        }
-        if (vHave.size() > 10)
-            nStep *= 2;
-    }
-
-    return CBlockLocator_impl<T>(vHave);
-}
-
-template <typename T>
-const CBlockIndex_impl<T> *CChain_impl<T>::FindFork(const CBlockIndex_impl<T> *pindex) const
-{
-    if (pindex->get_nHeight() > Height())
-        pindex = pindex->GetAncestor(Height());
-    while (pindex && !Contains(pindex))
-        pindex = pindex->get_pprev();
-    return pindex;
-}
-
 /*
 ** collect Block Print
 */
@@ -175,7 +118,7 @@ template <typename T>
 void CBlock_print_impl<T>::PrintBlockTree() {
     // pre-compute tree structure
     std::map<CBlockIndex *, vBlockIndex_t> mapNext;
-    for (std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.begin(); mi != block_info::mapBlockIndex.end(); ++mi) {
+    for (BlockMap::iterator mi = block_info::mapBlockIndex.begin(); mi != block_info::mapBlockIndex.end(); ++mi) {
         CBlockIndex *pindex = (*mi).second;
         mapNext[pindex->set_pprev()].push_back(pindex);
         // test
@@ -590,7 +533,7 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
         return logging::error("AddToBlockIndex() : new CBlockIndex failed");
 
     pindexNew->set_phashBlock(&hash);
-    typename std::map<T, CBlockIndex_impl<T> *>::iterator miPrev = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
+    auto miPrev = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
     if (miPrev != block_info::mapBlockIndex.end()) {
         pindexNew->set_pprev((*miPrev).second);
         pindexNew->set_nHeight(pindexNew->get_pprev()->get_nHeight() + 1);
@@ -623,7 +566,7 @@ bool CBlock_impl<T>::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
         return logging::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
 
     // Add to block_info::mapBlockIndex
-    typename std::map<T, CBlockIndex_impl<T> *>::iterator mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
+    auto mi = block_info::mapBlockIndex.insert(std::make_pair(hash, pindexNew)).first;
     if (pindexNew->IsProofOfStake())
         block_info::setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
     pindexNew->set_phashBlock(&((*mi).first));
@@ -708,7 +651,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
             CBlockIndex_impl<T> *pindexPrev = nullptr;
             int nHeight = 0;
             if (CBlockHeader_impl<T>::GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
-                typename std::map<uint256, CBlockIndex_impl<T> *>::iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
+                auto mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
                 pindexPrev = (*mi).second;
                 if (mi != block_info::mapBlockIndex.end()) {
                     if (pindexPrev != nullptr) {
@@ -784,7 +727,7 @@ bool CBlock_impl<T>::AcceptBlock()
         return logging::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
 
     // Get prev block index
-    typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
+    auto mi = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
     if (mi == block_info::mapBlockIndex.end())
         return DoS(10, logging::error("CBlock::AcceptBlock() : prev block not found"));
 
@@ -1102,4 +1045,3 @@ template class CBlock_print_impl<uint256>;
 template class CBlockHeader_impl<uint256>;
 template class CBlock_impl<uint256>;
 template class CBlockIndex_impl<uint256>;
-template class CChain_impl<uint256>;

@@ -524,12 +524,12 @@ class CmapBlockIndex final {
 };
 
 template <typename HASH>
-static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash, std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex) {
+static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash, std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex) {
     if (hash == 0)
         return nullptr;
 
     // Return existing
-    typename std::map<HASH, CBlockIndex_impl<HASH> *>::iterator mi = mapBlockIndex.find(hash);
+    auto mi = mapBlockIndex.find(hash);
     if (mi != mapBlockIndex.end())
         return (*mi).second;
 
@@ -546,7 +546,7 @@ static CBlockIndex_impl<HASH> *InsertBlockIndex(const HASH &hash, std::map<HASH,
 
 template <typename HASH>
 bool CTxDB_impl<HASH>::LoadBlockIndex(
-        std::map<HASH, CBlockIndex_impl<HASH> *> &mapBlockIndex,
+        std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex,
         std::set<std::pair<COutPoint_impl<HASH>, unsigned int>> &setStakeSeen,
         CBlockIndex_impl<HASH> *&pindexGenesisBlock,
         HASH &hashBestChain,

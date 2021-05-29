@@ -817,7 +817,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
     CBlockIndex *pindexPrev = nullptr;
     int nHeight = 0;
     if (pblock->GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
-        std::map<uint256, CBlockIndex_impl<uint256> *>::iterator mi = block_info::mapBlockIndex.find(pblock->get_hashPrevBlock());
+        auto mi = block_info::mapBlockIndex.find(pblock->get_hashPrevBlock());
         pindexPrev = (*mi).second;
         nHeight = pindexPrev->get_nHeight()+1;
     }

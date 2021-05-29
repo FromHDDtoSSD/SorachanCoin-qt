@@ -276,7 +276,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
                 logging::LogPrintf("received getdata for: %s\n", inv.ToString().c_str());
             if (inv.get_type() == _CINV_MSG_TYPE::MSG_BLOCK) {
                 // Send block from disk
-                std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(inv.get_hash());
+                auto mi = block_info::mapBlockIndex.find(inv.get_hash());
                 if (mi != block_info::mapBlockIndex.end()) {
                     CBlock block;
                     block.ReadFromDisk((*mi).second);
@@ -371,7 +371,7 @@ bool block_process::manage::ProcessMessage(CNode *pfrom, std::string strCommand,
         CBlockIndex *pindex = nullptr;
         if (locator.IsNull()) {
             // If locator is null, return the hashStop block
-            std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashStop);
+            auto mi = block_info::mapBlockIndex.find(hashStop);
             if (mi == block_info::mapBlockIndex.end())
                 return true;
             pindex = (*mi).second;

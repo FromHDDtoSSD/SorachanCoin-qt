@@ -168,7 +168,7 @@ void TransactionRecord::updateStatus(const CWalletTx &wtx)
     // Find the block the tx is in
     //
     CBlockIndex *pindex = nullptr;
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(wtx.hashBlock);
+    auto mi = block_info::mapBlockIndex.find(wtx.hashBlock);
     if (mi != block_info::mapBlockIndex.end()) {
         pindex = (*mi).second;
     }

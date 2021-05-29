@@ -44,7 +44,7 @@ int CMerkleTx::SetMerkleBranch(const CBlock *pblock/*=nullptr*/)
     }
 
     // Is the tx in a block that's in the main chain
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
+    auto mi = block_info::mapBlockIndex.find(hashBlock);
     if (mi == block_info::mapBlockIndex.end())
         return 0;
 
@@ -61,7 +61,7 @@ int CMerkleTx::GetDepthInMainChain(CBlockIndex *&pindexRet) const
         return 0;
 
     // Find the block it claims to be in
-    std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
+    auto mi = block_info::mapBlockIndex.find(hashBlock);
     if (mi == block_info::mapBlockIndex.end())
         return 0;
 

@@ -13,6 +13,7 @@
 #include <unordered_map>
 #include <uint256.h>
 #include <version.h>
+#include <block/block_chain.h>
 #include <block/block_keyhasher.h>
 
 template <typename T> class CBlockIndex_impl;
@@ -28,7 +29,8 @@ namespace block_info
 {
     extern CScript COINBASE_FLAGS;
 
-    extern std::map<uint256, CBlockIndex_impl<uint256> *> mapBlockIndex;
+    extern CChain_impl<uint256> chainActive;
+    extern BlockMap mapBlockIndex;
     extern std::set<std::pair<COutPoint_impl<uint256>, unsigned int>> setStakeSeen;
     extern CBlockIndex_impl<uint256> *pindexGenesisBlock;// = nullptr;
 

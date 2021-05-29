@@ -1524,7 +1524,7 @@ json_spirit::Value CRPCTable::gettransaction(const json_spirit::Array &params, C
                 entry.push_back(json_spirit::Pair("confirmations", 0));
             else {
                 entry.push_back(json_spirit::Pair("blockhash", hashBlock.GetHex()));
-                std::map<uint256, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
+                auto mi = block_info::mapBlockIndex.find(hashBlock);
                 if (mi != block_info::mapBlockIndex.end() && (*mi).second) {
                     CBlockIndex* pindex = (*mi).second;
                     if (pindex->IsInMainChain())

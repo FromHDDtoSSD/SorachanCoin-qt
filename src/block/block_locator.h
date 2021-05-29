@@ -43,7 +43,7 @@ public:
         Set(pindex);
     }
     explicit CBlockLocator_impl(T hashBlock) {
-        typename std::map<T, CBlockIndex *>::iterator mi = block_info::mapBlockIndex.find(hashBlock);
+        auto mi = block_info::mapBlockIndex.find(hashBlock);
         if (mi != block_info::mapBlockIndex.end()) {
             Set((*mi).second);
         }

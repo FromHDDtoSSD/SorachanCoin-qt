@@ -15,7 +15,7 @@ private:
     uint256b salt;
 
 public:
-    CCoinsKeyHasher(); // block_check.cpp
+    CCoinsKeyHasher();
 
     /**
      * This *must* return size_t. With Boost 1.46 on 32-bit systems the

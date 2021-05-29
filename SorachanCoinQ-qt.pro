@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.13.10
+VERSION = 3.14.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -24,14 +24,14 @@ message(Qt version: $$[QT_VERSION])
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
 
 #
 # GUI_MODE
 # 0: CUI
 # 1: QT GUI
 #
-GUI_MODE=0
+GUI_MODE=1
 
 #
 # Proof Of Masternode (src/masternode)
@@ -39,7 +39,7 @@ GUI_MODE=0
 # 1: Enable
 # Note that it must require HardFork.
 #
-PROOF_OF_MASTERNODE=0
+USE_PROOF_OF_MASTERNODE=0
 
 #
 # WHEN STARTUP, DEBUG_ALGO_BENCHMARK_TEST
@@ -369,7 +369,17 @@ contains(USE_AUTOCHECKPOINTS, 1) {
     message(Using Autocheckpoints)
     DEFINES += USE_AUTOCHECKPOINTS
 } else {
-    message(Using Autocheckpoints)
+    message(Without Autocheckpoints)
+}
+
+#
+# Masternode
+#
+contains(USE_PROOF_OF_MASTERNODE, 1) {
+    message(Using PROOF_OF_MASTERNODE)
+    DEFINES += USE_PROOF_OF_MASTERNODE
+} else {
+    message(Without USE_PROOF_OF_MASTERNODE)
 }
 
 #
@@ -683,6 +693,7 @@ HEADERS += \
     src/block/block_check.h \
     src/block/blockdata_db.h \
     src/block/block_keyhasher.h \
+    src/block/block_chain.h \
     src/prime/autocheckpoint.h \
     src/merkle/merkle_tx.h \
     src/merkle/merkle_tree.h \
@@ -731,6 +742,9 @@ HEADERS += \
     src/consensus/params.h \
     src/policy/policy.h \
     src/policy/feerate.h \
+    src/masternode/masternode.h \
+    src/masternode/masternode_sync.h \
+    src/masternode/masternode_config.h \
     src/noexcept/throw.hpp \
     src/noexcept/try.hpp \
     src/noexcept/noexcept_detail/ceh.hpp \
@@ -848,6 +862,8 @@ SOURCES += \
     src/block/block_locator.cpp \
     src/block/block_alert.cpp \
     src/block/block_check.cpp \
+    src/block/block_keyhasher.cpp \
+    src/block/block_chain.cpp \
     src/prime/autocheckpoint.cpp \
     src/merkle/merkle_tx.cpp \
     src/merkle/merkle_tree.cpp \
@@ -881,6 +897,9 @@ SOURCES += \
     src/bip32/hdwalletutil.cpp \
     src/script/lscript.cpp \
     src/script/standard.cpp \
+    src/masternode/masternode.cpp \
+    src/masternode/masternode_sync.cpp \
+    src/masternode/masternode_config.cpp \
     src/noexcept/noexcept_detail/eh.cpp \
     src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp \
@@ -948,6 +967,7 @@ QMAKE_EXTRA_COMPILERS += TSQM
 # "Other files" to show in Qt Creator
 #
 OTHER_FILES += doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
+OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite
 
 #
 # windows: indicate define

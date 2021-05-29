@@ -287,16 +287,18 @@ public:
 template <typename T>
 class CTxMemPool_impl
 {
-private:
-    CTxMemPool_impl() {}
     CTxMemPool_impl(const CTxMemPool_impl &)=delete;
     CTxMemPool_impl(CTxMemPool_impl &&)=delete;
     CTxMemPool_impl &operator=(const CTxMemPool_impl &)=delete;
     CTxMemPool_impl &operator=(CTxMemPool_impl &&)=delete;
-
+private:
+    CTxMemPool_impl() {
+        nTransactionsUpdated = 0;
+    }
     mutable CCriticalSection cs;
     mutable std::map<T, CTransaction_impl<T> > mapTx; // mutable: operator []
     std::map<COutPoint_impl<T>, CInPoint_impl<T> > mapNextTx;
+    unsigned int nTransactionsUpdated;
 public:
     static CTxMemPool_impl mempool;
     CCriticalSection &get_cs() const noexcept {return cs;}
@@ -321,6 +323,15 @@ public:
     }
     CTransaction_impl<T> &lookup(T hash) {
         return mapTx[hash];
+    }
+
+    unsigned int GetTransactionsUpdated() const {
+        LOCK(cs);
+        return nTransactionsUpdated;
+    }
+    void AddTransactionsUpdated(unsigned int n) {
+        LOCK(cs);
+        nTransactionsUpdated += n;
     }
 };
 using CTxMemPool = CTxMemPool_impl<uint256>;

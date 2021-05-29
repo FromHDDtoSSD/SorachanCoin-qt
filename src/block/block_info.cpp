@@ -9,7 +9,8 @@
 
 // T == uint256
 CScript block_info::COINBASE_FLAGS;
-std::map<uint256, CBlockIndex_impl<uint256> *> block_info::mapBlockIndex;
+CChain_impl<uint256> block_info::chainActive;
+BlockMap block_info::mapBlockIndex;
 std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > block_info::setStakeSeen;
 CBlockIndex_impl<uint256> *block_info::pindexGenesisBlock = nullptr;
 int64_t block_info::nTimeBestReceived = 0;

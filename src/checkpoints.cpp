@@ -98,13 +98,49 @@ CBlockIndex *Checkpoints::manage::GetLastCheckpoint(const std::map<uint256, CBlo
     BOOST_REVERSE_FOREACH(const MapCheckpoints::value_type &i, checkpoints)
     {
         const uint256 &hash = i.second;
-        std::map<uint256, CBlockIndex *>::const_iterator t = mapBlockIndex.find(hash);
+        auto t = mapBlockIndex.find(hash);
         if (t != mapBlockIndex.end()) {
             return t->second;
         }
     }
     return nullptr;
 }
+
+//! Guess how far we are in the verification process at the given block index
+/*
+template <typename T>
+double Checkpoints::GuessVerificationProgress(CBlockIndex_impl<T> *pindex, bool fSigchecks)
+{
+    if (pindex == nullptr)
+        return 0.0;
+
+    int64_t nNow = ::time(nullptr);
+
+    double fSigcheckVerificationFactor = fSigchecks ? SIGCHECK_VERIFICATION_FACTOR : 1.0;
+    double fWorkBefore = 0.0; // Amount of work done before pindex
+    double fWorkAfter = 0.0;  // Amount of work left after pindex (estimated)
+    // Work is defined as: 1.0 per transaction before the last checkpoint, and
+    // fSigcheckVerificationFactor per transaction after.
+
+    const CCheckpointData& data = Params().Checkpoints();
+
+    if (pindex->nChainTx <= data.nTransactionsLastCheckpoint) {
+        double nCheapBefore = pindex->nChainTx;
+        double nCheapAfter = data.nTransactionsLastCheckpoint - pindex->nChainTx;
+        double nExpensiveAfter = (nNow - data.nTimeLastCheckpoint) / 86400.0 * data.fTransactionsPerDay;
+        fWorkBefore = nCheapBefore;
+        fWorkAfter = nCheapAfter + nExpensiveAfter * fSigcheckVerificationFactor;
+    } else {
+        double nCheapBefore = data.nTransactionsLastCheckpoint;
+        double nExpensiveBefore = pindex->nChainTx - data.nTransactionsLastCheckpoint;
+        double nExpensiveAfter = (nNow - pindex->GetBlockTime()) / 86400.0 * data.fTransactionsPerDay;
+        fWorkBefore = nCheapBefore + nExpensiveBefore * fSigcheckVerificationFactor;
+        fWorkAfter = nExpensiveAfter * fSigcheckVerificationFactor;
+    }
+
+    return fWorkBefore / (fWorkBefore + fWorkAfter);
+}
+*/
 
 // ppcoin: get last synchronized checkpoint
 CBlockIndex *Checkpoints::manage::GetLastSyncCheckpoint() {

@@ -11,7 +11,6 @@
 #include <txdb.h>
 #include <util/thread.h>
 #include <script/script.h>
-#include <random/random.h>
 
 CCheckQueue<CScriptCheck> block_check::thread::scriptcheckqueue(128);
 unsigned int block_check::nStakeMinAge = block_check::mainnet::nStakeMinAge;
@@ -292,8 +291,6 @@ void CCoins_impl<T>::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBy
     }
     nBytes += nLastUsedByte;
 }
-
-CCoinsKeyHasher::CCoinsKeyHasher() : salt(latest_crypto::random::GetRandHash()) {}
 
 template <typename T>
 CCoinsViewBacked_impl<T>::CCoinsViewBacked_impl(CCoinsView_impl<T> *viewIn) : base(viewIn) {}
