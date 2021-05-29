@@ -34,6 +34,14 @@ RELEASE=0
 GUI_MODE=0
 
 #
+# Proof Of Masternode (src/masternode)
+# 0: Disable
+# 1: Enable
+# Note that it must require HardFork.
+#
+PROOF_OF_MASTERNODE=0
+
+#
 # WHEN STARTUP, DEBUG_ALGO_BENCHMARK_TEST
 # 0: Disable
 # 1: Enable (when RELEASE==0)
@@ -674,6 +682,7 @@ HEADERS += \
     src/block/block_alert.h \
     src/block/block_check.h \
     src/block/blockdata_db.h \
+    src/block/block_keyhasher.h \
     src/prime/autocheckpoint.h \
     src/merkle/merkle_tx.h \
     src/merkle/merkle_tree.h \

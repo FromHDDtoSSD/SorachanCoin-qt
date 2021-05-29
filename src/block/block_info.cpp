@@ -7,6 +7,7 @@
 #include <block/block_info.h>
 #include <block/transaction.h>
 
+// T == uint256
 CScript block_info::COINBASE_FLAGS;
 std::map<uint256, CBlockIndex_impl<uint256> *> block_info::mapBlockIndex;
 std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > block_info::setStakeSeen;

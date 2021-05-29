@@ -70,8 +70,12 @@ const CBlockIndex_impl<T> *CBlockIndex_impl<T>::GetAncestor(int height) const {
 template <typename T>
 void CBlockIndex_impl<T>::BuildSkip() {
     // under development
-    //if (pprev)
-    //    pskip = pprev->GetAncestor(GetSkipHeight(nHeight));
+    //if (pprev) {
+    //    int height = GetSkipHeight(nHeight);
+    //    debugcs::instance() << "CBlockIndex BuildSkip nHeight: " << nHeight << " Ancestor height: " << height;
+    //    pskip = pprev->GetAncestor(height);
+    //    debugcs::instance() << " pskip NULL: " << (pskip? 1: 0) << debugcs::endl();
+    //}
 }
 
 

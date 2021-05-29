@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2021 The Sora neko developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -9,15 +10,20 @@
 
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <uint256.h>
 #include <version.h>
+#include <block/block_keyhasher.h>
 
 template <typename T> class CBlockIndex_impl;
 template <typename T> class COutPoint_impl;
 class CWallet;
 class CScript;
 
-// mainchain
+using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
+using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> *, CCoinsKeyHasher>;
+
+// T == uint256
 namespace block_info
 {
     extern CScript COINBASE_FLAGS;

@@ -11,6 +11,7 @@
 
 #include <util.h>
 #include <block/transaction.h>
+#include <block/block_keyhasher.h>
 #include <unordered_map>
 
 /** Compact serializer for scripts.
@@ -437,25 +438,6 @@ public:
     int nVersion;
 };
 using CCoins = CCoins_impl<uint256>;
-
-// for std::unordered_map inner HASH
-class CCoinsKeyHasher
-{
-private:
-    uint256b salt;
-
-public:
-    CCoinsKeyHasher();
-
-    /**
-     * This *must* return size_t. With Boost 1.46 on 32-bit systems the
-     * unordered_map will behave unpredictably if the custom hasher returns a
-     * uint64_t, resulting in failures when syncing the chain (#4634).
-     */
-    std::size_t operator()(const uint256b &key) const { // even if std::unordered_map, require std::size_t
-        return key.GetHash(salt);
-    }
-};
 
 template <typename T>
 struct CCoinsCacheEntry_impl {
