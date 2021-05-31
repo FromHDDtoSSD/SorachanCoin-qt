@@ -813,16 +813,18 @@ void miner::FormatHashBuffers(CBlock* pblock, char* pmidstate, char *pdata, char
 
 bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey)
 {
-    //uint256 hashBlock = pblock->GetHash();
-    CBlockIndex *pindexPrev = nullptr;
+    uint256 hashBlock = pblock->GetPoHash();
+    //CBlockIndex *pindexPrev = nullptr;
+    /*
     int nHeight = 0;
     if (pblock->GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
         auto mi = block_info::mapBlockIndex.find(pblock->get_hashPrevBlock());
         pindexPrev = (*mi).second;
         nHeight = pindexPrev->get_nHeight()+1;
     }
+    */
 
-    uint256 hashBlock = pblock->GetPoHash(nHeight);
+    //uint256 hashBlock = pblock->GetPoHash(nHeight);
     uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 
     if(! pblock->IsProofOfWork()) {

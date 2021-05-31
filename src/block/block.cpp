@@ -109,8 +109,9 @@ std::string CBlockIndex_impl<T>::ToString() const {
 template<typename T>
 std::string CDiskBlockIndex_impl<T>::ToString() const {
     std::string str = "CDiskBlockIndex(";
-    str += CBlockIndex::ToString();
-    str += tfm::format("\n                hashBlock=%s, hashPrev=%s, hashNext=%s)", GetBlockHash().ToString().c_str(), this->hashPrev.ToString().c_str(), this->hashNext.ToString().c_str());
+    str += tfm::format("  nHeight=%d nBlockPos=%d  )", CBlockIndex_impl<T>::nHeight, CBlockIndex_impl<T>::nBlockPos);
+    //str += CBlockIndex::ToString();
+    //str += tfm::format("\n                hashBlock=%s, hashPrev=%s, hashNext=%s)", GetBlockHash().ToString().c_str(), this->hashPrev.ToString().c_str(), this->hashNext.ToString().c_str());
     return str;
 }
 
@@ -225,6 +226,7 @@ uint256 CBlockHeader_impl<T>::GetPoHash() const {
         return bitscrypt::scrypt_blockhash((const char *)this, block_info::mapBlockIndex[CBlockHeader<T>::get_hashPrevBlock()]);
 }
 
+/*
 template <typename T>
 uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
     uint256 hash;
@@ -235,6 +237,7 @@ uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
         hash = GetPoHash();
     return hash;
 }
+*/
 
 template <typename T>
 bool CBlock_impl<T>::DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex)
@@ -645,8 +648,9 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         nSigOps += Merkle_t::vtx[1].GetLegacySigOpCount();
     } else {
         // Check proof of work matches claimed amount
-        //if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
-        //    return DoS(50, logging::error("CheckBlock() : proof of work failed"));
+        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
+            return DoS(50, logging::error("CheckBlock() : proof of work failed"));
+        /*
         {
             CBlockIndex_impl<T> *pindexPrev = nullptr;
             int nHeight = 0;
@@ -663,6 +667,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
                 }
             }
         }
+        */
 
         // Check timestamp
         if (CBlockHeader_impl<T>::GetBlockTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
@@ -931,17 +936,19 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
         return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
     // Check the header
-    //if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
-    //    return logging::error("CBlock::ReadFromDisk() : errors in block header");
-    //return true;
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
+        return logging::error("CBlock::ReadFromDisk() : errors in block header");
+    return true;
+    /*
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
+    */
 
     /*
     if(! CBlockDataDB().Read(*this, nFile, nBlockPos))
         return logging::error("CBlockDataDB deserialize or I/O error");
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetHash(), CBlockHeader<T>::nBits))
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
     */
@@ -950,12 +957,14 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
 template <typename T>
 void CBlock_impl<T>::print() const {
     logging::LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
-        //CBlockHeader_impl<T>::GetHash().ToString().c_str(),
-        CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
+        CBlockHeader_impl<T>::GetPoHash().ToString().c_str(),
+        //CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
         CBlockHeader<T>::nVersion,
         CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
         CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),
-        CBlockHeader<T>::nTime, CBlockHeader<T>::nBits, CBlockHeader<T>::nNonce,
+        CBlockHeader<T>::nTime,
+        CBlockHeader<T>::nBits,
+        CBlockHeader<T>::nNonce,
         Merkle_t::vtx.size(),
         util::HexStr(vchBlockSig.begin(), vchBlockSig.end()).c_str());
     for (unsigned int i=0; i<this->vtx.size(); ++i) {
@@ -1045,3 +1054,4 @@ template class CBlock_print_impl<uint256>;
 template class CBlockHeader_impl<uint256>;
 template class CBlock_impl<uint256>;
 template class CBlockIndex_impl<uint256>;
+template class CDiskBlockIndex_impl<uint256>;

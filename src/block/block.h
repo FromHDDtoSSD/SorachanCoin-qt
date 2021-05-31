@@ -159,7 +159,7 @@ public:
         return (CBlockHeader<T>::nBits == 0);
     }
     uint256 GetPoHash() const;
-    uint256 GetPoHash(int height) const;
+    //uint256 GetPoHash(int height) const;
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader<T>::nTime;
     }
@@ -662,10 +662,10 @@ using CBlockIndexWorkComparator = CBlockIndexWorkComparator_impl<uint256>;
 template <typename T>
 class CDiskBlockIndex_impl final : public CBlockIndex_impl<T>
 {
-private:
     CDiskBlockIndex_impl(const CDiskBlockIndex_impl &)=delete;
     CDiskBlockIndex_impl &operator=(const CDiskBlockIndex_impl &)=delete;
-    CDiskBlockIndex_impl &operator=(const CDiskBlockIndex_impl &&)=delete;
+    CDiskBlockIndex_impl &operator=(CDiskBlockIndex_impl &&)=delete;
+private:
     mutable T blockHash;
     T hashPrev;
     T hashNext;

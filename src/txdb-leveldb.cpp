@@ -624,10 +624,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
-
-        // build pskip
-        if(pindexNew->get_pprev())
-            pindexNew->BuildSkip();
     }
 
     debugcs::instance() << "LoadBlockIndex done" << debugcs::endl();
@@ -703,10 +699,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (pindexNew->IsProofOfStake()) {
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
         }
-
-        // build pskip
-        if(pindexNew->get_pprev())
-            pindexNew->BuildSkip();
     }
 
 #endif
@@ -716,15 +708,15 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     }
 
     // Calculate nChainTrust
-    std::vector<std::pair<int, CBlockIndex *> > vSortedByHeight;
+    std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
-    for(const std::pair<HASH, CBlockIndex *>&item: mapBlockIndex) {
+    for(const auto &item: mapBlockIndex) {
         CBlockIndex *pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
 
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
-    for(const std::pair<int, CBlockIndex *>&item: vSortedByHeight) {
+    for(const auto &item: vSortedByHeight) {
         CBlockIndex *pindex = item.second;
         pindex->set_nChainTrust((pindex->get_pprev() ? pindex->get_pprev()->get_nChainTrust() : 0) + pindex->GetBlockTrust());
 
@@ -733,6 +725,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (!bitkernel<HASH>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum())) {
             return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindex->get_nHeight(), pindex->get_nStakeModifier());
         }
+
+        // build pskip
+        if(pindex->get_pprev())
+            pindex->BuildSkip();
     }
 
     //
@@ -745,6 +741,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not loaded");
     }
+    //::fprintf(stdout, "hashBestChain: %s\n", hashBestChain.ToString().c_str());
 
     if (! mapBlockIndex.count(hashBestChain)) {
         return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not found in the block index");
