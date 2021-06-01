@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The SorachanCoin Developers
+// Copyright (c) 2018-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,12 +7,11 @@
 #if defined(QT_GUI) && defined(WIN32)
 
 #include <winapi/common.h>
-#include <winapi/drivewin.h>
-#include <winapi/sectorwin.h>
+#include <winapi/sectorwin.h> // Proof of Benchmark
 
-#define IDS_APP_TITLE                        L"[SORA Network] Drive(HDD/SSD/RAID) Benckmark - on the Blockchain"
-#define IDS_APP_WINDOWCLASSNAME              L"prediction-system-window-benchmark"
-#define IDS_APP_COPYRIGHT                    L"Copyright (c) 2021 The SorachanCoin Developers."
+#define IDS_APP_TITLE                        L"[SORA Network] Drive(HDD/SSD/RAID) Proof of Benchmark Miner - on the Blockchain"
+#define IDS_APP_WINDOWCLASSNAME              L"proof-of-benchmark"
+#define IDS_APP_COPYRIGHT                    L"Copyright (c) 2018 - 2021 The Sora neko Developers."
 #define IDS_MESSAGEBOX_OK                    L"OK"
 #define IDS_MESSAGEBOX_ERROR                 L"Error"
 #define IDS_MESSAGEBOX_QUESTION              L"Question"
@@ -47,28 +46,29 @@
 #define IDS_BENCHMARK_RAND_MIX               L"Mix"
 #define IDS_BENCHMARK_RAND_MT19937           L"mt19937"
 #define IDS_BENCHMARK_RAND_XORSHIFT          L"Xorshift"
-#define IDS_BENCHMARK_RAND_OPENSSL           L"Bitcoin"
+#define IDS_BENCHMARK_RAND_OPENSSL           L"OpenSSL"
+#define IDS_BENCHMARK_RAND_POBENCH           L"PoBench"
 #define IDS_BENCHMARK_ON                     L"ON"
 #define IDS_BENCHMARK_OFF                    L"OFF"
 #define IDS_RAND_LOW                         L"Rand Strength:Low"
 #define IDS_RAND_MID                         L"Rand Strength:Mid"
 #define IDS_RAND_HIGH                        L"Rand Strength:High"
-#define IDS_BENCHMARK_START                  L"Are you sure about that start benchmark?"
-#define IDS_BENCHMARK_STOP                   L"Are you sure about that stop benchmark?"
+#define IDS_BENCHMARK_START                  L"Are you sure start PoBench?"
+#define IDS_BENCHMARK_STOP                   L"Are you sure stop PoBench?"
 #define IDS_BENCHMARK_INFO                   L"[DRIVE Information]\n\n"
 #define IDS_BENCHMARK_OK                     L"Is it OK?"
 #define IDS_BENCHMARK_COMPLETED              L"Completed "
-#define IDS_BENCHMARK_DOING                  L"Benchmarking ... "
+#define IDS_BENCHMARK_DOING                  L"PoBench plot generating... "
 #define IDS_BENCHMARK_RESULT                 L"Result: "
 #define IDS_BENCHMARK_WAITING                L"Waiting ... "
 #define IDS_BENCHMARK_GENERATING             L"Generating ... "
-#define IDS_BENCHMARK_RESULT_ERROR           L"Benchmark failed with the drive error or a memory allocation failure."
-#define IDS_BENCHMARK_NO_CLOSE               L"Can not close while benchmark is running."
-#define IDS_LANG_NO_CLOSE                    L"Can not change language while benchmark is running."
-#define IDS_BENCH_LOGSET_NO_CLOSE            L"Can not set a logs while benchmark is running."
-#define IDS_BENCH_START_NO_CLOSE             L"Already, The benchmark has been started."
-#define IDS_ERROR_BENCHMARK_START            L"Benchmark starting was failure.\n"
-#define IDS_ERROR_BENCHMARK_FAILURE          L"Benchmark starting was failure.\n(out of memory)"
+#define IDS_BENCHMARK_RESULT_ERROR           L"PoBench failed with the drive error or a memory allocation failure."
+#define IDS_BENCHMARK_NO_CLOSE               L"Can not close while PoBench is running."
+#define IDS_LANG_NO_CLOSE                    L"Can not change language while PoBench is running."
+#define IDS_BENCH_LOGSET_NO_CLOSE            L"Can not set a logs while PoBench is running."
+#define IDS_BENCH_START_NO_CLOSE             L"Already, PoBench has been started."
+#define IDS_ERROR_BENCHMARK_START            L"PoBench starting was failure.\n"
+#define IDS_ERROR_BENCHMARK_FAILURE          L"PoBench starting was failure.\n(out of memory)"
 
 constexpr INT_PTR IDC_BUTTON_START    = 1000;
 constexpr INT_PTR IDC_BUTTON_STOP     = 1001;
@@ -82,6 +82,7 @@ constexpr int RAND_SELECT_MIX         = 0;
 constexpr int RAND_SELECT_MT19937     = 1;
 constexpr int RAND_SELECT_XORSHIFT    = 2;
 constexpr int RAND_SELECT_OPENSSL     = 3;
+constexpr int RAND_SELECT_POBENCH     = 4;
 constexpr int BENCH_SELECT_ON         = 0;
 constexpr int BENCH_SELECT_OFF        = 1;
 constexpr int RAND_STRENGTH_LOW       = 0;
@@ -101,6 +102,8 @@ constexpr int FONT_CHEIGHT            = 16;
 #define PROGRESS_ID(X)                ((INT_PTR)X)
 #define BENCH_ONOFF_ID(X)             ((INT_PTR)X + 1500)
 #define WM_SET_PROGRESS               (WM_APP + 0)
+
+static_assert(THREAD_MAX % sector_randbuffer::RAND_GENE_MAX==0, "THREAD_MAX invalid");
 
 #endif
 #endif // SORACHANCOIN_WINGUIMAIN_H

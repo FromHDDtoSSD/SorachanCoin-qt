@@ -404,14 +404,17 @@
         <item>
          <widget class="QCommandLinkButton" name="BenchmarkCommandLinkButton">
           <property name="text">
-           <string>[SORA Network] Drive Benchmark feature</string>
+           <string>[SORA Network] Proof of Benchmark Miner</string>
           </property>
          </widget>
         </item>
         <item>
          <widget class="QCommandLinkButton" name="DriveVerifyCommandLinkButton">
+          <property name="enabled">
+           <bool>false</bool>
+          </property>
           <property name="text">
-           <string>[SORA Network] Drive Verify sector feature</string>
+           <string>[SORA Network] Drive status information Open</string>
           </property>
          </widget>
         </item>

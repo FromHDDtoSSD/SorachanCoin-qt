@@ -1,24 +1,12 @@
 // Copyright (c) 2018-2021 The SorachanCoin Developers
+// Copyright (c) 2018-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #if defined(QT_GUI) && defined(WIN32)
 
-// prediction system
-// windows GUI (win32API and nativeAPI)
-
 #include <winapi/winguimain.h>
 #include <sync/lsync.h>
-
-/////////////////////////////////////////////////////////////////////////
-// Bitcoin API
-/////////////////////////////////////////////////////////////////////////
-
-
-
-/////////////////////////////////////////////////////////////////////////
-// prediction system LOG (char)
-/////////////////////////////////////////////////////////////////////////
 
 namespace {
 class logw final : protected drive_util
@@ -120,13 +108,7 @@ public:
         stream.clear(std::ostringstream::goodbit);
     }
 };
-} // namespace
 
-/////////////////////////////////////////////////////////////////////////
-// STRUCTURE, LOGIC
-/////////////////////////////////////////////////////////////////////////
-
-namespace {
 typedef struct _progress_info
 {
     HWND hProgress;
@@ -306,8 +288,10 @@ private:
             rand_type = IDS_BENCHMARK_RAND_MT19937;
         } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_XORSHIFT) {
             rand_type = IDS_BENCHMARK_RAND_XORSHIFT;
-        } else {
+        } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_OPENSSL) {
             rand_type = IDS_BENCHMARK_RAND_OPENSSL;
+        } else {
+            rand_type = IDS_BENCHMARK_RAND_POBENCH;
         }
         for(;;)
         {
@@ -568,15 +552,19 @@ public:
                     if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_STANDARD)) { return false; }
                 } else if(i % algo_num == 1) {
                     if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_XORSHIFT)) { return false; }
-                } else {
+                } else if(i % algo_num == 2) {
                     if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_OPENSSL)) { return false; }
+                } else {
+                    if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_POBENCH)) { return false; }
                 }
             } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_MT19937) {
                 if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_STANDARD)) { return false; }
             } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_XORSHIFT) {
                 if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_XORSHIFT)) { return false; }
-            } else {
+            } else if((int)::SendMessageW(pci->pbench_onoff[0], CB_GETCURSEL, 0L, 0L) == RAND_SELECT_OPENSSL) {
                 if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_OPENSSL)) { return false; }
+            } else {
+                if(!randbuf[i].settype(sector_randbuffer::RAND_GENE_POBENCH)) { return false; }
             }
 
             randbuf[i].setgenecount(gene_count);
@@ -665,26 +653,13 @@ typedef struct _win_userdata
     logw *plog;
 } win_userdata;
 
-} // namespace
-
-/////////////////////////////////////////////////////////////////////////
-// OPERATOR
-/////////////////////////////////////////////////////////////////////////
-
-namespace {
 RECT &operator+=(RECT &rc, const int &d)
 {
     rc.top += d;
     rc.bottom += d;
     return rc;
 }
-} // namespace
 
-/////////////////////////////////////////////////////////////////////////
-// FUNCTION
-/////////////////////////////////////////////////////////////////////////
-
-namespace {
 namespace ProgressString
 {
     static CCriticalSection cs;
@@ -713,12 +688,12 @@ namespace ProgressString
     }
 }
 
-static void SetCtrlMenu(HWND hWnd, DWORD idr) {
+void SetCtrlMenu(HWND hWnd, DWORD idr) {
     HMENU hMenu = ::LoadMenu(::GetModuleHandle(nullptr), MAKEINTRESOURCEW(idr));
     ::SetMenu(hWnd, hMenu);
 }
 
-static void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
+void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hStartButton, TRUE);
     ::EnableWindow(pci->hStopButton, FALSE);
     ::EnableWindow(pci->hComboDisk, TRUE);
@@ -729,7 +704,7 @@ static void SetCtrlWait(HWND hWnd, const ctrl_info *pci) {
         ::EnableWindow(pci->pbench_onoff[i], TRUE);
 }
 
-static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
+void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
     ::EnableWindow(pci->hStartButton, FALSE);
     ::EnableWindow(pci->hStopButton, TRUE);
     ::EnableWindow(pci->hComboDisk, FALSE);
@@ -741,10 +716,9 @@ static void SetCtrlBenchmark(HWND hWnd, const ctrl_info *pci) {
 }
 } // namespace
 
-/////////////////////////////////////////////////////////////////////////
+//
 // CALLBACK
-/////////////////////////////////////////////////////////////////////////
-
+//
 static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
 {
     win_userdata *pwu = reinterpret_cast<win_userdata *>(::GetWindowLongPtrW(hWnd, GWLP_USERDATA));
@@ -842,13 +816,6 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
                 pwu->pbi->all_stop();
             }
             break;
-        //case IDM_BENCH_LOG:
-        //    if(! pwu->pbi->all_signal()) {
-        //        ::MessageBoxW(hWnd, IDS_BENCH_LOGSET_NO_CLOSE, IDS_MESSAGEBOX_INFO, MB_OK | MB_ICONINFORMATION);
-        //        break;
-        //    }
-        //    pwu->plog->setdir();
-        //    break;
         default:
             break;
         }
@@ -898,9 +865,6 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
     return ret;
 }
 
-//
-// extern init.h : called, modeless dialog window
-//
 predsystem::result predsystem::CreateBenchmark() noexcept
 {
     result ret;
@@ -1197,6 +1161,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_MT19937);
                 ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_XORSHIFT);
                 ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_OPENSSL);
+                ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_RAND_POBENCH);
             } else {
                 ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_ON);
                 ::SendMessageW(bench_onoff[i], CB_ADDSTRING, 0L, (LPARAM)IDS_BENCHMARK_OFF);
@@ -1225,7 +1190,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
             ::TranslateMessage(&msg);
             ::DispatchMessageW(&msg);
         }
-    } while(0); // no loop
+    } while(false); // no loop (auto restart)
 
     ret.window_ret = winmain_ret;
     unregister_wc();

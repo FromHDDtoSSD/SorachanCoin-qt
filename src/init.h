@@ -10,10 +10,7 @@
 #include <wallet.h>
 
 //
-// SorachanCoin About Init
-//
-// Note: A drive Benchmark require to unload the blockchain and
-// switch from Qt to the native API due to maximize execution speed.
+// Sora neko About Init
 //
 // CUI (daemon SorachanCoind):
 // AppInit -> AppInit2 (Force Server-mode)

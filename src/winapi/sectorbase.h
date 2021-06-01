@@ -1,4 +1,5 @@
 // Copyright (c) 2019-2021 The SorachanCoin Developers
+// Copyright (c) 2019-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -17,12 +18,11 @@ constexpr int RAND_GENE_MAX_DEFAULT = 30;
 
 class rand_base
 {
-private:
     rand_base(const rand_base &)=delete;
     rand_base &operator=(const rand_base &)=delete;
     rand_base(rand_base &&)=delete;
     rand_base &operator=(rand_base &&)=delete;
-
+private:
     std::vector<uint64_t> buf;
     cla_thread<rand_base> thread;
     rand_base *obj;
@@ -79,13 +79,12 @@ public:
 
 class rand_standard final : public rand_base
 {
-private:
     rand_standard(const rand_standard &)=delete;
     rand_standard &operator=(const rand_standard &)=delete;
     rand_standard(rand_standard &&)=delete;
     rand_standard &operator=(rand_standard &&)=delete;
+private:
     randrangebuffer<rand_standard, uint64_t> randrange;
-
     boost::random::mt19937 gen;
     boost::random::uniform_real_distribution<> urd;
 
@@ -125,13 +124,12 @@ public:
 
 class rand_xorshift final : public rand_base
 {
-private:
     rand_xorshift(const rand_xorshift &)=delete;
     rand_xorshift &operator=(const rand_xorshift &)=delete;
     rand_xorshift(rand_xorshift &&)=delete;
     rand_xorshift &operator=(rand_xorshift &&)=delete;
+private:
     randrangebuffer<rand_xorshift, uint64_t> randrange;
-
     unsigned long x, y, z, w;
     RAND_INTEGER ri;
     unsigned long xor128() {
@@ -179,7 +177,7 @@ public:
         z = crypt >>= crypt;
         w = crypt >>= crypt;
         std::memset(&ri, 0x00, sizeof(RAND_INTEGER));
-        debugcs::instance() << L"[xorshift Seed]" << x << y << z << w << debugcs::endl();
+        //debugcs::instance() << L"[xorshift Seed]" << x << y << z << w << debugcs::endl();
     }
     bool create() final override {
         return this->start(this);
@@ -188,12 +186,11 @@ public:
 
 class rand_openssl final : public rand_base
 {
-private:
     rand_openssl(const rand_openssl &)=delete;
     rand_openssl &operator=(const rand_openssl &)=delete;
     rand_openssl(rand_openssl &&)=delete;
     rand_openssl &operator=(rand_openssl &&)=delete;
-
+private:
     uint64_t r_func(int) final override {
         mcrypto<uint64_t> crypt;
         uint64_t rr = crypt >>= crypt;
@@ -213,9 +210,31 @@ public:
     }
 };
 
+class rand_pobench final : public rand_base
+{
+    rand_pobench(const rand_pobench &)=delete;
+    rand_pobench &operator=(const rand_pobench &)=delete;
+    rand_pobench(rand_pobench &&)=delete;
+    rand_pobench &operator=(rand_pobench &&)=delete;
+private:
+    uint64_t r_func(int) final override { // generate plot information.
+        return 0;
+    }
+public:
+    rand_pobench() {}
+    ~rand_pobench() {}
+
+    //
+    // Method
+    //
+    void srand() final override {}
+    bool create() final override {
+        return this->start(this);
+    }
+};
+
 class sector_base
 {
-private:
     sector_base(const sector_base &)=delete;
     sector_base &operator=(const sector_base &)=delete;
     sector_base(sector_base &&)=delete;
@@ -237,18 +256,18 @@ public:
 
 class sector_randbuffer final : public sector_base
 {
-private:
     sector_randbuffer(const sector_randbuffer &)=delete;
     sector_randbuffer &operator=(const sector_randbuffer &)=delete;
     sector_randbuffer(sector_randbuffer &&)=delete;
     sector_randbuffer &operator=(sector_randbuffer &&)=delete;
-
+private:
     rand_base *target;
 public:
     enum RAND_TYPE {
         RAND_GENE_STANDARD = 0,
         RAND_GENE_XORSHIFT,
         RAND_GENE_OPENSSL,
+        RAND_GENE_POBENCH,
         RAND_GENE_MAX,
     };
 
@@ -271,6 +290,9 @@ public:
             break;
         case RAND_GENE_OPENSSL:
             target = new(std::nothrow) rand_openssl;
+            break;
+        case RAND_GENE_POBENCH:
+            target = new(std::nothrow) rand_pobench;
             break;
         default:
             return false;
@@ -331,12 +353,11 @@ public:
 
 class sector_io final : public sector_base
 {
-private:
     sector_io(const sector_io &)=delete;
     sector_io &operator=(const sector_io &)=delete;
     sector_io(sector_io &&)=delete;
     sector_io &operator=(sector_io &&)=delete;
-
+private:
     static constexpr DWORD SECTORS_SIZE_SEQ = 100 * 1024 * 1024;
     static constexpr DWORD SECTORS_SIZE_8192KB = 8192 * 1024;
     static constexpr DWORD SECTORS_SIZE_512KB = 512 * 1024;
