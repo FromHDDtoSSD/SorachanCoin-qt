@@ -36,7 +36,7 @@ public:
     CBlockIndex_impl<T> *Genesis() const;
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Tip(bool fProofOfStake=false, bool fProofOfSpace=false, bool fProofOfMasternode=false) const;
+    CBlockIndex_impl<T> *Tip(bool fProofOfStake=false, bool fProofOfBench=false, bool fProofOfMasternode=false) const;
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
     CBlockIndex_impl<T> *operator[](int nHeight) const;

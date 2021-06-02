@@ -770,7 +770,7 @@ public:
         return (vin.size() > 0 && (!vin[0].get_prevout().IsNull()) && vout.size() >= 2 && vout[0].IsEmpty());
     }
 
-    bool IsCoinSpace() const {
+    bool IsCoinBench() const {
         return (vin.size() > 1 && (!vin[0].get_prevout().IsNull()) && (!vin[1].get_prevout().IsNull()) && vout.size() >= 3 && vout[0].IsEmpty() && vout[1].IsEmpty());
     }
     bool IsCoinMasternode() const {

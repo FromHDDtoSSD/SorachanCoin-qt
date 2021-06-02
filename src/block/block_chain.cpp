@@ -19,7 +19,7 @@ CBlockIndex_impl<T> *CChain_impl<T>::Genesis() const {
 }
 
 template <typename T>
-CBlockIndex_impl<T> *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fProofOfSpace/*=false*/, bool fProofOfMasternode/*=false*/) const {
+CBlockIndex_impl<T> *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fProofOfBench/*=false*/, bool fProofOfMasternode/*=false*/) const {
     if (vChain.size() < 1)
         return nullptr;
 
@@ -28,8 +28,8 @@ CBlockIndex_impl<T> *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fPro
         while (pindex && pindex->get_pprev() && !pindex->IsProofOfStake())
             pindex = pindex->set_pprev();
     }
-    if (fProofOfSpace) {
-        while (pindex && pindex->get_pprev() && !pindex->IsProofOfSpace())
+    if (fProofOfBench) {
+        while (pindex && pindex->get_pprev() && !pindex->IsProofOfBench())
             pindex = pindex->set_pprev();
     }
     if (fProofOfMasternode) {

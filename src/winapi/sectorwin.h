@@ -15,6 +15,17 @@ constexpr std::size_t PLOT_SIZE = 4096;
 constexpr std::size_t POB_SECTOR_SIZE = SECTOR_SIZE_DEFAULT;
 using plot_t = int64_t;
 
+/*
+ADD_SERIALIZE_METHODS
+template <typename Stream, typename Operation>
+inline void SerializationOp(Stream& s, Operation ser_action) {
+    READWRITE(lp);
+    READWRITE(rp);
+    READWRITE(lv);
+    READWRITE(rv);
+}
+*/
+
 #pragma pack(push, 1)
 struct ScriptFlat {
     unsigned char script[POB_SECTOR_SIZE];

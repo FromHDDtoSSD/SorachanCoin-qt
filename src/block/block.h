@@ -4,6 +4,7 @@
 // Copyright (c) 2014-2015 Vertcoin Developers
 // Copyright (c) 2018 The Merge developers
 // Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2021 The Sora neko developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -259,20 +260,20 @@ public:
     bool IsProofOfStake() const {
         return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinStake());
     }
-    bool IsProofOfSpace() const {
-        return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinSpace());
+    bool IsProofOfBench() const {
+        return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinBench());
     }
     bool IsProofOfMasternode() const {
         return (Merkle_t::vtx.size() > 1 && Merkle_t::vtx[1].IsCoinMasternode());
     }
     bool IsProofOfWork() const {
-        return !IsProofOfStake() && !IsProofOfSpace() && !IsProofOfMasternode();
+        return !IsProofOfStake() && !IsProofOfBench() && !IsProofOfMasternode();
     }
     std::pair<COutPoint_impl<T>, unsigned int> GetProofOfStake() const {
         return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
     }
-    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfSpace() const {
-        return IsProofOfSpace() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfBench() const {
+        return IsProofOfBench() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
     }
     std::pair<COutPoint_impl<T>, unsigned int> GetProofOfMasternode() const {
         return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
@@ -353,19 +354,19 @@ protected:
     int64_t nMint;
     int64_t nMoneySupply;
     uint64_t nStakeModifier; // hash modifier for proof-of-stake
-    uint64_t nSpaceModifier; // hash modifier for proof-of-space
+    uint64_t nBenchModifier; // hash modifier for proof-of-bench
     uint64_t nMasternodeModifier; // hash modifier for masternode
     uint32_t nStakeModifierChecksum; // checksum of index; in-memory only
-    uint32_t nSpaceModifierChecksum; // checksum of index; in-memory only
+    uint32_t nBenchModifierChecksum; // checksum of index; in-memory only
     uint32_t nMasternodeModifierChecksum; // checksum of index; in-memory only
     // proof-of-stake specific fields
     COutPoint_impl<T> prevoutStake;
     uint32_t nStakeTime;
     T hashProofOfStake;
-    // proof-of-space specific fields
-    COutPoint_impl<T> prevoutSpace;
-    uint32_t nSpaceTime;
-    T hashProofOfSpace;
+    // proof-of-bench specific fields
+    COutPoint_impl<T> prevoutBench;
+    uint32_t nBenchTime;
+    T hashProofOfBench;
     // proof-of-masternode specific fields
     COutPoint_impl<T> prevoutMasternode;
     uint32_t nMasternodeTime;
@@ -429,7 +430,7 @@ public:
         BLOCK_PROOF_OF_STAKE = (1 << 0),        // v1 is proof-of-stake block
         BLOCK_STAKE_ENTROPY  = (1 << 1),        // v1 entropy bit for stake modifier
         BLOCK_STAKE_MODIFIER = (1 << 2),        // v1 regenerated stake modifier
-        BLOCK_PROOF_OF_SPACE = (1 << 8),        // v4 is prrof-of-space block
+        BLOCK_PROOF_OF_BENCH = (1 << 8),        // v4 is prrof-of-bench block
         BLOCK_PROOF_OF_MASTERNODE = (1 << 16),  // v3 is masternode block
         BLOCK_MASTERNODE_ENTROPY  = (1 << 17),  // v3 entropy bit for masternode modifier
         BLOCK_MASTERNODE_RATIO    = (1 << 18),  // v3 prrof-of-masternode block stake modifier ratio
@@ -453,16 +454,16 @@ public:
         nChainTx = 0;
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
-        nSpaceModifier = 0;
-        nSpaceModifierChecksum = 0;
+        nBenchModifier = 0;
+        nBenchModifierChecksum = 0;
         nMasternodeModifier = 0;
         nMasternodeModifierChecksum = 0;
         hashProofOfStake = 0;
         prevoutStake.SetNull();
         nStakeTime = 0;
-        hashProofOfSpace = 0;
-        prevoutSpace.SetNull();
-        nSpaceTime = 0;
+        hashProofOfBench = 0;
+        prevoutBench.SetNull();
+        nBenchTime = 0;
         hashProofOfMasternode = 0;
         prevoutMasternode.SetNull();
         nMasternodeTime = 0;
@@ -486,9 +487,9 @@ public:
         nStakeModifier = 0;
         nStakeModifierChecksum = 0;
         hashProofOfStake = 0;
-        nSpaceModifier = 0;
-        nSpaceModifierChecksum = 0;
-        hashProofOfSpace = 0;
+        nBenchModifier = 0;
+        nBenchModifierChecksum = 0;
+        hashProofOfBench = 0;
         nMasternodeModifier = 0;
         nMasternodeModifierChecksum = 0;
         hashProofOfMasternode = 0;
@@ -496,20 +497,20 @@ public:
             SetProofOfStake();
             prevoutStake = block.get_vtx(1).get_vin(0).get_prevout();
             nStakeTime = block.get_vtx(1).get_nTime();
-        } else if (block.IsProofOfSpace()) {
-            SetProofOfSpace();
-            prevoutSpace = block.get_vtx(2).get_vin(0).get_prevout();
-            nSpaceTime = block.get_vtx(2).get_nTime();
+        } else if (block.IsProofOfBench()) {
+            SetProofOfBench();
+            prevoutBench = block.get_vtx(2).get_vin(0).get_prevout();
+            nBenchTime = block.get_vtx(2).get_nTime();
         } else if (block.IsProofOfMasternode()) {
             SetProofOfMasternode();
             prevoutMasternode = block.get_vtx(3).get_vin(0).get_prevout();
             nMasternodeTime = block.get_vtx(3).get_nTime();
         } else { // proof-of-work (use coinbase)
             prevoutStake.SetNull();
-            prevoutSpace.SetNull();
+            prevoutBench.SetNull();
             prevoutMasternode.SetNull();
             nStakeTime = 0;
-            nSpaceTime = 0;
+            nBenchTime = 0;
             nMasternodeTime = 0;
         }
         CBlockHeader<T>::nVersion       = block.get_nVersion();
@@ -572,13 +573,13 @@ public:
         return (nFound>=nRequired);
     }
     bool IsProofOfWork() const {
-        return !IsProofOfStake() && !IsProofOfSpace() && !IsProofOfMasternode();
+        return !IsProofOfStake() && !IsProofOfBench() && !IsProofOfMasternode();
     }
     bool IsProofOfStake() const {
         return (nFlags & BLOCK_PROOF_OF_STAKE);
     }
-    bool IsProofOfSpace() const {
-        return (nFlags & BLOCK_PROOF_OF_SPACE);
+    bool IsProofOfBench() const {
+        return (nFlags & BLOCK_PROOF_OF_BENCH);
     }
     bool IsProofOfMasternode() const {
         return (nFlags & BLOCK_PROOF_OF_MASTERNODE);
@@ -586,8 +587,8 @@ public:
     void SetProofOfStake() {
         nFlags |= BLOCK_PROOF_OF_STAKE;
     }
-    void SetProofOfSpace() {
-        nFlags |= BLOCK_PROOF_OF_SPACE;
+    void SetProofOfBench() {
+        nFlags |= BLOCK_PROOF_OF_BENCH;
     }
     void SetProofOfMasternode() {
         nFlags |= BLOCK_PROOF_OF_MASTERNODE;

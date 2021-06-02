@@ -141,16 +141,16 @@ public:
     CTxOut_impl<T> txout;   // the txout data before being spent
     bool fCoinBase; // if the outpoint was the last unspent: whether it belonged to a coinbase
     bool fCoinStake;
-    bool fCoinPoSpace;
+    bool fCoinPoBench;
     bool fCoinMasternode;
     unsigned int nHeight; // if the outpoint was the last unspent: its height
     int nVersion;         // if the outpoint was the last unspent: its version
 
     CTxInUndo_impl() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0) {}
-    CTxInUndo_impl(const CTxOut_impl<T> &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoSpaceIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoSpace(fCoinPoSpaceIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
+    CTxInUndo_impl(const CTxOut_impl<T> &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoBenchIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoBench(fCoinPoBenchIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
 
     unsigned int GetSerializeSize(int, int) const {
-        return ::GetSerializeSize(VARUINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0))) +
+        return ::GetSerializeSize(VARUINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0) + (fCoinPoBench ? 16 : 0) + (fCoinMasternode ? 32 : 0))) +
                (nHeight > 0 ? ::GetSerializeSize(VARINT(this->nVersion)) : 0) +
                ::GetSerializeSize(CTxOutCompressor(REF(txout)));
     }
@@ -170,7 +170,7 @@ public:
         nHeight = nCode >> 2;
         fCoinBase = nCode & 2;
         fCoinStake = nCode & 1;
-        fCoinPoSpace = nCode & 16;
+        fCoinPoBench = nCode & 16;
         fCoinMasternode = nCode & 32;
         if (nHeight > 0)
             ::Unserialize(s, VARINT(this->nVersion));
@@ -262,7 +262,7 @@ public:
     void Clear();
 
     //! empty constructor
-    CCoins_impl() : fCoinBase(false), fCoinStake(false), fCoinPoSpace(false), fCoinMasternode(false), vout(0), nHeight(0), nVersion(0) {}
+    CCoins_impl() : fCoinBase(false), fCoinStake(false), fCoinPoBench(false), fCoinMasternode(false), vout(0), nHeight(0), nVersion(0) {}
 
     //! remove spent outputs at the end of vout
     void Cleanup();
@@ -273,7 +273,7 @@ public:
     void swap(CCoins_impl &to) {
         std::swap(to.fCoinBase, fCoinBase);
         std::swap(to.fCoinStake, fCoinStake);
-        std::swap(to.fCoinPoSpace, fCoinPoSpace);
+        std::swap(to.fCoinPoBench, fCoinPoBench);
         std::swap(to.fCoinMasternode, fCoinMasternode);
         to.vout.swap(vout);
         std::swap(to.nHeight, nHeight);
@@ -287,7 +287,7 @@ public:
             return true;
         return a.fCoinBase == b.fCoinBase &&
                a.fCoinStake == b.fCoinStake &&
-               a.fCoinPoSpace == b.fCoinPoSpace &&
+               a.fCoinPoBench == b.fCoinPoBench &&
                a.fCoinMasternode == b.fCoinMasternode &&
                a.nHeight == b.nHeight &&
                a.nVersion == b.nVersion &&
@@ -307,8 +307,8 @@ public:
         return fCoinStake;
     }
 
-    bool IsCoinPoSpace() const noexcept {
-        return fCoinPoSpace;
+    bool IsCoinPoBench() const noexcept {
+        return fCoinPoBench;
     }
 
     bool IsCoinMasternode() const noexcept {
@@ -322,7 +322,7 @@ public:
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 8 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0);
+        unsigned int nCode = 8 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoBench ? 16 : 0) + (fCoinMasternode ? 32 : 0);
         // version
         nSize += ::GetSerializeSize(VARINT(this->nVersion));
         // size of header code
@@ -346,7 +346,7 @@ public:
         bool fFirst = vout.size() > 0 && !vout[0].IsNull();
         bool fSecond = vout.size() > 1 && !vout[1].IsNull();
         assert(fFirst || fSecond || nMaskCode);
-        unsigned int nCode = 16 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoSpace ? 16 : 0) + (fCoinMasternode ? 32 : 0);
+        unsigned int nCode = 16 * (nMaskCode - (fFirst || fSecond ? 0 : 1)) + (fCoinBase ? 1 : 0) + (fCoinStake ? 2 : 0) + (fFirst ? 4 : 0) + (fSecond ? 8 : 0) + (fCoinPoBench ? 16 : 0) + (fCoinMasternode ? 32 : 0);
         // version
         ::Serialize(s, VARINT(this->nVersion));
         // header code
@@ -379,7 +379,7 @@ public:
         ::Unserialize(s, VARUINT(nCode));
         fCoinBase = nCode & 1;         //0001 - means coinbase
         fCoinStake = (nCode & 2) != 0; //0010 coinstake
-        fCoinPoSpace = (nCode & 16) != 0; // 10000 coinpospace
+        fCoinPoBench = (nCode & 16) != 0; // 10000 coinpospace
         fCoinMasternode = (nCode & 32) != 0; // 100000 coinmasternode
         std::vector<bool> vAvail(2, false);
         vAvail[0] = (nCode & 4) != 0; // 0100
@@ -424,7 +424,7 @@ public:
     //! whether transaction is a coinbase
     bool fCoinBase;
     bool fCoinStake;
-    bool fCoinPoSpace;
+    bool fCoinPoBench;
     bool fCoinMasternode;
 
     //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped

@@ -190,7 +190,7 @@ template <typename T>
 void CCoins_impl<T>::FromTx(const CTransaction_impl<T> &tx, int nHeightIn) {
     fCoinBase = tx.IsCoinBase();
     fCoinStake = tx.IsCoinStake();
-    fCoinPoSpace = tx.IsCoinSpace();
+    fCoinPoBench = tx.IsCoinBench();
     fCoinMasternode = tx.IsCoinMasternode();
     vout = tx.get_vout();
     nHeight = nHeightIn;
@@ -202,7 +202,7 @@ template <typename T>
 void CCoins_impl<T>::Clear() {
     fCoinBase = false;
     fCoinStake = false;
-    fCoinPoSpace = false;
+    fCoinPoBench = false;
     fCoinMasternode = false;
     std::vector<CTxOut_impl<T>>().swap(vout);
     nHeight = 0;
@@ -248,7 +248,7 @@ bool CCoins_impl<T>::Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo
         undo.nHeight = nHeight;
         undo.fCoinBase = fCoinBase;
         undo.fCoinStake = fCoinStake;
-        undo.fCoinPoSpace = fCoinPoSpace;
+        undo.fCoinPoBench = fCoinPoBench;
         undo.fCoinMasternode = fCoinMasternode;
         undo.nVersion = this->nVersion;
     }
@@ -498,7 +498,7 @@ bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction_impl<T> &tx) const
 template <typename T>
 double CCoinsViewCache_impl<T>::GetPriority(const CTransaction_impl<T> &tx, int nHeight) const
 {
-    if (tx.IsCoinBase() || tx.IsCoinStake() || tx.IsCoinSpace() || tx.IsCoinMasternode())
+    if (tx.IsCoinBase() || tx.IsCoinStake() || tx.IsCoinBench() || tx.IsCoinMasternode())
         return 0.0;
     double dResult = 0.0;
     for (const CTxIn_impl<T> &txin:  tx.get_vin()) {
