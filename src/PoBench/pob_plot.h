@@ -7,11 +7,10 @@
 #define POB_PLOT_H
 
 #include <uint256.h>
-#include <winapi/drivewin.h>
-#include <winapi/sectorbase.h>
+//#include <winapi/sectorbase.h>
 
 constexpr std::size_t PLOT_SIZE = 4096;
-constexpr std::size_t POB_SECTOR_SIZE = SECTOR_SIZE_DEFAULT;
+constexpr std::size_t POB_SECTOR_SIZE = 512;
 using plot_t = int64_t;
 
 /*

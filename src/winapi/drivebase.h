@@ -8,8 +8,10 @@
 #ifndef SORACHAIN_DRIVEBASE_H
 #define SORACHAIN_DRIVEBASE_H
 
-#include <windows.h>
-#include <winioctl.h>
+#ifdef WIN32
+# include <windows.h>
+# include <winioctl.h>
+#endif
 #include <new>
 #include <string>
 #include <sstream>
