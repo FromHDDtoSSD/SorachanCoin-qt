@@ -423,8 +423,10 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
-            pblock->LastHeight = pindexPrev->get_nHeight();
+            pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->UpdateTime(pindexPrev);
+        } else {
+            pblock->set_LastHeight(pindexPrev->get_nHeight());
         }
         pblock->set_nNonce(0);
     }
@@ -728,8 +730,10 @@ CBlockTemplate *miner::CreateNewBlock2(CWallet *pwallet, CTransaction *txCoinSta
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
-            pblock->LastHeight = pindexPrev->get_nHeight();
+            pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->UpdateTime(pindexPrev);
+        } else {
+            pblock->set_LastHeight(pindexPrev->get_nHeight());
         }
         pblock->set_nNonce(0);
         //pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);

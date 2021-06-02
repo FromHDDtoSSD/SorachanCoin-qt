@@ -217,10 +217,21 @@ bool block_notify<T>::IsInitialBlockDownload()
 }
 
 template <typename T>
+void CBlockHeader<T>::set_LastHeight(int32_t _in) {
+    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    if(_in + 1 >= sw_height) {
+        CBlockHeader<T>::LastHeight = _in;
+        CBlockHeader<T>::nVersion = CURRENT_VERSION_Lyra2REV2;
+    } else {
+        CBlockHeader<T>::LastHeight = _in;
+        CBlockHeader<T>::nVersion = CURRENT_VERSION;
+    }
+}
+
+template <typename T>
 T CBlockHeader_impl<T>::GetPoHash() const {
-    // Note: Be careful, if the std::map references a non-existent element, it will be added as null.
-    const auto &mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
-    if(mi==block_info::mapBlockIndex.end()) {
+    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    if(CBlockHeader<T>::get_LastHeight() + 1 >= sw_height) {
         T hash;
         lyra2re2_hash((const char *)this, BEGIN(hash));
         return hash;
@@ -266,7 +277,7 @@ bool CBlock_impl<T>::DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *p
 template <typename T>
 bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck/*=false*/)
 {
-    CBlockHeader<T>::LastHeight = pindex->get_nHeight();
+    CBlockHeader<T>::set_LastHeight(pindex->get_nHeight());
 
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))
@@ -404,7 +415,7 @@ bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pind
 template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions/*=true*/)
 {
-    CBlockHeader<T>::LastHeight = pindex->get_nHeight() - 1;
+    CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
     if (! fReadTransactions) {
         *this = pindex->GetBlockHeader();
         return true;
@@ -738,7 +749,7 @@ bool CBlock_impl<T>::AcceptBlock()
 
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
-    CBlockHeader<T>::LastHeight = pindexPrev->get_nHeight();
+    CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
     ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
 
     // Check proof-of-work or proof-of-stake
@@ -933,7 +944,7 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
     */
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1), CBlockHeader<T>::nBits))
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::get_LastHeight()+1), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
 }
@@ -942,7 +953,7 @@ template <typename T>
 void CBlock_impl<T>::print() const {
     logging::LogPrintf("CBlock(hash1=%s, hash2=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         CBlockHeader_impl<T>::GetPoHash().ToString().c_str(),
-        CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
+        CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::get_LastHeight()+1).ToString().c_str(),
         CBlockHeader<T>::nVersion,
         CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
         CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),
@@ -1035,6 +1046,7 @@ T CBlockIndex_impl<T>::GetBlockTrust() const
 }
 
 template class CBlock_print_impl<uint256>;
+template class CBlockHeader<uint256>;
 template class CBlockHeader_impl<uint256>;
 template class CBlock_impl<uint256>;
 template class CBlockIndex_impl<uint256>;

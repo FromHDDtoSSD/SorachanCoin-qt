@@ -104,7 +104,7 @@ template <typename T>
 class CBlockHeader {
 protected:
     static constexpr int CURRENT_VERSION = 6;
-    //static constexpr int CURRENT_VERSION = 7;
+    static constexpr int CURRENT_VERSION_Lyra2REV2 = 7;
 #pragma pack(push, 1)
     // header
     int32_t nVersion;
@@ -114,8 +114,8 @@ protected:
     uint32_t nBits;
     uint32_t nNonce;
 #pragma pack(pop)
-public:
-    int32_t LastHeight;
+private:
+    int32_t LastHeight; // get nHeight from CBlockHeader<T> (LastBlock+1==nHeight)
 public:
     CBlockHeader() {SetNull();}
     void SetNull() {
@@ -142,6 +142,9 @@ public:
     void set_nNonce(uint32_t _in) {nNonce=_in;}
     uint32_t &set_nNonce() {return nNonce;}
 
+    void set_LastHeight(int32_t _in);
+    int32_t get_LastHeight() const {return LastHeight;}
+
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
@@ -166,7 +169,7 @@ public:
     }
     void UpdateTime(const CBlockIndex_impl<T> *pindexPrev) {
         CBlockHeader<T>::nTime = std::max(GetBlockTime(), bitsystem::GetAdjustedTime());
-        CBlockHeader<T>::LastHeight = pindexPrev->get_nHeight();
+        CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
     }
 };
 template <typename T>
