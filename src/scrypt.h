@@ -25,7 +25,7 @@ private:
     static uint65536 scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad);
     static uint256 scrypt_salted_multiround_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen, const unsigned int nRounds);
 public:
-    static uint256 scrypt_blockhash(const void *input, const CBlockIndex_impl<uint256> *pindexPrev);
+    static uint256 scrypt_blockhash(const void *input);
     static uint65536 scrypt_blockhash_65536(const void *input);
 };
 

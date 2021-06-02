@@ -217,19 +217,20 @@ bool block_notify<T>::IsInitialBlockDownload()
 }
 
 template <typename T>
-uint256 CBlockHeader_impl<T>::GetPoHash() const {
+T CBlockHeader_impl<T>::GetPoHash() const {
     // Note: Be careful, if the std::map references a non-existent element, it will be added as null.
     const auto &mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
-    if(mi==block_info::mapBlockIndex.end())
-        return bitscrypt::scrypt_blockhash((const char *)this, nullptr);
-    else
-        return bitscrypt::scrypt_blockhash((const char *)this, block_info::mapBlockIndex[CBlockHeader<T>::get_hashPrevBlock()]);
+    if(mi==block_info::mapBlockIndex.end()) {
+        T hash;
+        lyra2re2_hash((const char *)this, BEGIN(hash));
+        return hash;
+    } else
+        return bitscrypt::scrypt_blockhash((const char *)this);
 }
 
-/*
 template <typename T>
-uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
-    uint256 hash;
+T CBlockHeader_impl<T>::GetPoHash(int height) const {
+    T hash;
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(height >= sw_height)
         lyra2re2_hash((const char *)this, BEGIN(hash));
@@ -237,7 +238,6 @@ uint256 CBlockHeader_impl<T>::GetPoHash(int height) const {
         hash = GetPoHash();
     return hash;
 }
-*/
 
 template <typename T>
 bool CBlock_impl<T>::DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex)

@@ -35,8 +35,6 @@
 #include <crypto/sha512.h>
 #include <crypto/blake2.h>
 #include <crypto/qhash65536.h>
-
-#include <Lyra2RE/Lyra2RE.h>
 #include <block/block.h>
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
@@ -209,22 +207,10 @@ uint256 bitscrypt::scrypt_salted_multiround_hash(const void *input, size_t input
     return resultHash;
 }
 
-uint256 bitscrypt::scrypt_blockhash(const void *input, const CBlockIndex_impl<uint256> *pindexPrev)
+uint256 bitscrypt::scrypt_blockhash(const void *input)
 {
-    if(pindexPrev==nullptr) {
-        unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
-        return scrypt_nosalt(input, 80, scratchpad);
-    }
-
-    uint256 hash;
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(pindexPrev->get_nHeight()+1 >= sw_height)
-        lyra2re2_hash((const char *)input, BEGIN(hash));
-    else {
-        unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
-        hash = scrypt_nosalt(input, 80, scratchpad);
-    }
-    return hash;
+    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
+    return scrypt_nosalt(input, 80, scratchpad);
 }
 
 uint65536 bitscrypt::scrypt_blockhash_65536(const void *input)

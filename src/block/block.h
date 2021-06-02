@@ -159,8 +159,8 @@ public:
     bool IsNull() const {
         return (CBlockHeader<T>::nBits == 0);
     }
-    uint256 GetPoHash() const;
-    //uint256 GetPoHash(int height) const;
+    T GetPoHash() const;
+    T GetPoHash(int height) const;
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader<T>::nTime;
     }
