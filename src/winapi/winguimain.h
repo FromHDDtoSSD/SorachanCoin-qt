@@ -7,7 +7,7 @@
 #if defined(QT_GUI) && defined(WIN32)
 
 #include <winapi/common.h>
-#include <winapi/sectorwin.h> // Proof of Benchmark
+#include <PoBench/pob_plot.h>
 
 #define IDS_APP_TITLE                        L"[SORA Network] Drive(HDD/SSD/RAID) Proof of Benchmark Miner - on the Blockchain"
 #define IDS_APP_WINDOWCLASSNAME              L"proof-of-benchmark"

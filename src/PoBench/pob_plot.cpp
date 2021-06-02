@@ -4,7 +4,5 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 // Proof of Benchmark [PoBench] Miner logic
 
-#ifndef SECTORWIN_H
-#define SECTORWIN_H
+#include <PoBench/pob_plot.h>
 
-#endif

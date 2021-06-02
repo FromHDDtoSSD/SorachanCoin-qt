@@ -10,14 +10,6 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 # Qt informations
 #
 message(Qt version: $$[QT_VERSION])
-#message(Qt is installed in $$[QT_INSTALL_PREFIX])
-#message(Documentation: $$[QT_INSTALL_DOCS])
-#message(Header files: $$[QT_INSTALL_HEADERS])
-#message(Libraries: $$[QT_INSTALL_LIBS])
-#message(Binary files (executables): $$[QT_INSTALL_BINS])
-#message(Plugins: $$[QT_INSTALL_PLUGINS])
-#message(Data files: $$[QT_INSTALL_DATA])
-#message(Translation files: $$[QT_INSTALL_TRANSLATIONS])
 
 #
 # RELEASE
@@ -767,6 +759,9 @@ HEADERS += \
     src/libstr/cmstring.h \
     src/libstr/cmscript.h \
     src/libstr/movestream.h \
+    src/PoBench/pob_challenge.h \
+    src/PoBench/pob_proof.h \
+    src/PoBench/pob_plot.h \
     src/Lyra2RE/Lyra2.h \
     src/Lyra2RE/Lyra2RE.h \
     src/Lyra2RE/Sponge.h \
@@ -912,6 +907,9 @@ SOURCES += \
     src/util/thread.cpp \
     src/util/exception.cpp \
     src/libstr/cmstring.cpp \
+    src/PoBench/pob_challenge.cpp \
+    src/PoBench/pob_proof.cpp \
+    src/PoBench/pob_plot.cpp \
     src/Lyra2RE/Lyra2.c \
     src/Lyra2RE/Lyra2RE.c \
     src/Lyra2RE/Sponge.c \

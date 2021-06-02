@@ -99,6 +99,9 @@ SorachanCoind_SOURCES = \
  util/system.cpp \
  util/time.cpp \
  util/thread.cpp \
+ PoBench/pob_challenge.cpp \
+ PoBench/pob_proof.cpp \
+ PoBench/pob_plot.cpp \
  Lyra2RE/Lyra2.c \
  Lyra2RE/Lyra2RE.c \
  Lyra2RE/Sponge.c \
