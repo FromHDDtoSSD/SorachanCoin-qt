@@ -567,7 +567,8 @@ public:
     static bool IsSuperMajority(int minVersion, const CBlockIndex_impl<T> *pstart, unsigned int nRequired, unsigned int nToCheck) {
         unsigned int nFound = 0;
         for (unsigned int i=0; i<nToCheck && nFound<nRequired && pstart!=nullptr; ++i) {
-            if (pstart->nVersion >= minVersion) ++nFound;
+            if (pstart->nVersion >= minVersion)
+                ++nFound;
             pstart = pstart->pprev;
         }
         return (nFound>=nRequired);

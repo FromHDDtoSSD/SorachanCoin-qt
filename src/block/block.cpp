@@ -910,14 +910,6 @@ bool CBlock_impl<T>::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPos
     if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
         iofs::FileCommit(fileout);
     return true;
-
-    /*
-    if(! CBlockDataDB().Write(*this, nFileRet, nBlockPosRet))
-        return logging::error("CBlock::WriteToDisk() : CBlockDataDB write failed");
-    if (!block_notify<T>::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
-        CSqliteDBEnv::get_instance().Flush(CSqliteDBEnv::getname_mainchain());
-    return true;
-    */
 }
 
 template <typename T>
@@ -936,29 +928,21 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
         return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
     // Check the header
+    /*
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
-    /*
+    */
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
-    */
-
-    /*
-    if(! CBlockDataDB().Read(*this, nFile, nBlockPos))
-        return logging::error("CBlockDataDB deserialize or I/O error");
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
-        return logging::error("CBlock::ReadFromDisk() : errors in block header");
-    return true;
-    */
 }
 
 template <typename T>
 void CBlock_impl<T>::print() const {
-    logging::LogPrintf("CBlock(hash=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
+    logging::LogPrintf("CBlock(hash1=%s, hash2=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         CBlockHeader_impl<T>::GetPoHash().ToString().c_str(),
-        //CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
+        CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::LastHeight+1).ToString().c_str(),
         CBlockHeader<T>::nVersion,
         CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
         CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),
