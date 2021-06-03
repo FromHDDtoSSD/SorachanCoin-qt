@@ -237,9 +237,11 @@ T CBlockHeader_impl<T>::GetPoHash() const {
             return bitscrypt::scrypt_blockhash((const char *)this);
         BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
         //debugcs::instance() << "prevBlock hash: " << CBlockHeader<T>::get_hashPrevBlock().ToString().c_str() << debugcs::endl();
-        assert(mi!=block_info::mapBlockIndex.end());
-        CBlockIndex_impl<T> *pindexPrev = (*mi).second;
-        CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
+        if(mi!=block_info::mapBlockIndex.end()) {
+            CBlockIndex_impl<T> *pindexPrev = (*mi).second;
+            CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
+        } else
+            return bitscrypt::scrypt_blockhash((const char *)this);
     }
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(CBlockHeader<T>::get_LastHeight() + 1 >= sw_height) {
