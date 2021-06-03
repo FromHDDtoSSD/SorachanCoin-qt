@@ -7,22 +7,12 @@
 #define POB_PLOT_H
 
 #include <uint256.h>
-//#include <winapi/sectorbase.h>
+#include <serialize.h>
+#include <winapi/sectorbase.h>
 
 constexpr std::size_t PLOT_SIZE = 4096;
 constexpr std::size_t POB_SECTOR_SIZE = 512;
 using plot_t = int64_t;
-
-/*
-ADD_SERIALIZE_METHODS
-template <typename Stream, typename Operation>
-inline void SerializationOp(Stream& s, Operation ser_action) {
-    READWRITE(lp);
-    READWRITE(rp);
-    READWRITE(lv);
-    READWRITE(rv);
-}
-*/
 
 #pragma pack(push, 1)
 struct ScriptFlat {
@@ -43,13 +33,24 @@ struct PoBench_Plot {
 #pragma pack(pop)
 static_assert(sizeof(PoBench_Plot)==PLOT_SIZE, "[PoBench] invalid plot_size");
 
-class PoBench_Plot_helper
+//
+// Plot R/W
+//
+class PoBench_Plot_Writer
 {
+    PoBench_Plot_Writer(const PoBench_Plot_Writer &)=delete;
+    PoBench_Plot_Writer(PoBench_Plot_Writer &&)=delete;
+    PoBench_Plot_Writer &operator=(const PoBench_Plot_Writer &)=delete;
+    PoBench_Plot_Writer &operator=(PoBench_Plot_Writer &&)=delete;
 public:
-    explicit PoBench_Plot_helper(PoBench_Plot &obj) : plot(obj) {}
+    PoBench_Plot_Writer() {}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action) {}
 
 private:
-    PoBench_Plot &plot;
+
 };
 
 #endif

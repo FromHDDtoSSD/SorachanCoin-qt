@@ -9,7 +9,6 @@
 #ifndef SORACHANCOIN_SECTORBASE_H
 #define SORACHANCOIN_SECTORBASE_H
 
-#include <new>
 #include <winapi/drivebase.h>
 #include <boost/random.hpp>
 

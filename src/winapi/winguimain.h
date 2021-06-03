@@ -1,3 +1,4 @@
+// Copyright (c) 2018-2021 The SorachanCoin Developers
 // Copyright (c) 2018-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
@@ -7,7 +8,6 @@
 #if defined(QT_GUI) && defined(WIN32)
 
 #include <winapi/common.h>
-#include <PoBench/pob_plot.h>
 
 #define IDS_APP_TITLE                        L"[SORA Network] Drive(HDD/SSD/RAID) Proof of Benchmark Miner - on the Blockchain"
 #define IDS_APP_WINDOWCLASSNAME              L"proof-of-benchmark"
@@ -91,7 +91,7 @@ constexpr int RAND_STRENGTH_HIGH      = 2;
 
 constexpr int THREAD_TIMER_INTERVAL   = 500;
 constexpr int DISK_MAX                = 128;
-constexpr int THREAD_MAX              = 192; // THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
+constexpr int POB_THREAD_MAX          = 192; // POB_THREAD_MAX % sector_randbuffer::RAND_GENE_MAX == 0
 constexpr int WINDOW_WIDTH            = 700;
 constexpr int WINDOW_HEIGHT           = 550;
 constexpr int PROGRESS_NUM            = 9;
@@ -102,8 +102,6 @@ constexpr int FONT_CHEIGHT            = 16;
 #define PROGRESS_ID(X)                ((INT_PTR)X)
 #define BENCH_ONOFF_ID(X)             ((INT_PTR)X + 1500)
 #define WM_SET_PROGRESS               (WM_APP + 0)
-
-static_assert(THREAD_MAX % sector_randbuffer::RAND_GENE_MAX==0, "THREAD_MAX invalid");
 
 #endif
 #endif // SORACHANCOIN_WINGUIMAIN_H

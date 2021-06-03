@@ -7,4 +7,7 @@
 #ifndef SECTORWIN_H
 #define SECTORWIN_H
 
+#include <winapi/sectorbase.h>
+
+
 #endif

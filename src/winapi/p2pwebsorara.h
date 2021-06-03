@@ -5,6 +5,8 @@
 #ifndef SORACHANCOIN_SORARA_H
 #define SORACHANCOIN_SORARA_H
 
+#include <windows.h>
+#include <winapi/winguimain.h>
 #include <winapi/common.h>
 #include <QWidget>
 

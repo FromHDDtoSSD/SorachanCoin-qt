@@ -6,7 +6,6 @@
 #ifdef QT_GUI
 #include <winapi/drivebase.h>
 #include <file_operate/fs.h>
-#include <libstr/cmstring.h>
 #ifndef WIN32
 # include <unistd.h>
 # include <sys/types.h>

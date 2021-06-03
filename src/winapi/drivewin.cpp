@@ -3,8 +3,3 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <winapi/drivewin.h>
-
-double cputime::operator()() {
-    (void)::QueryPerformanceCounter(&qc);
-    return (double)qc.QuadPart / (double)qf.QuadPart;
-}

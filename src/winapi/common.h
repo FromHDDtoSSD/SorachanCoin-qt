@@ -1,25 +1,24 @@
 // Copyright (c) 2018-2021 The SorachanCoin Developers
+// Copyright (c) 2018-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef SORACHANCOIN_WINAPI_COMMON_H
-#define SORACHANCOIN_WINAPI_COMMON_H
+#ifndef SORACHANCOIN_COMMON_H
+#define SORACHANCOIN_COMMON_H
+#ifdef WIN32
 
-#include <windows.h>
-#include <commctrl.h>
+// winguimain.cpp and miniwindow.cpp WindowsAPI
+
 #include <string>
 #include <sstream>
 #include <time.h>
 #include <shlobj.h>
 #include <util/logging.h>
-#include <libstr/cmstring.h>
 
-#ifdef WIN32
-# define IDS_ERROR_CREATEWINDOW               L"To Process failed in CreateWindowEx."
-# define IDS_ERROR_CLASSREGISTER              L"To Process failed in RegisterClassEx."
-# define IDS_ERROR_FONT                       L"To Create fonts were failure."
-
-# define TRANS_STRING(str)                    (_(str)).c_str()
+#define IDS_ERROR_CREATEWINDOW               "To Process failed in CreateWindowEx.\n"
+#define IDS_ERROR_CLASSREGISTER              "To Process failed in RegisterClassEx.\n"
+#define IDS_ERROR_FONT                       "To Create fonts were failure.\n"
+#define TRANS_STRING(str)    (_(str)).c_str()
 
 class font
 {
@@ -34,7 +33,7 @@ private:
     font(int cHeight) {
         hFont = ::CreateFontW(cHeight, 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_TT_ONLY_PRECIS, CLIP_DEFAULT_PRECIS, DEFAULT_QUALITY, VARIABLE_PITCH | FF_DONTCARE, nullptr);
         if(! hFont)
-            throw std::runtime_error(CMString(IDS_ERROR_FONT));
+            throw std::runtime_error(IDS_ERROR_FONT);
     }
     ~font() {
         if(hFont) {
@@ -64,15 +63,8 @@ public:
         return *this;
     }
 };
-#endif
 
-//
-// Prediction System
-// Note: At first, Win32 supported
-// Note: load independent the MessageLoop below.
-//
 namespace predsystem {
-
     enum ret_code {
         success = 0,
         error_createwindow,
@@ -95,7 +87,7 @@ namespace predsystem {
     extern result CreateBenchmark() noexcept;
     extern bool CreateMiniwindow(bool *restart) noexcept;
     extern bool CreateSorara() noexcept;
-
 } // namespace predsystem
 
 #endif
+#endif // SORACHANCOIN_COMMON_H

@@ -2,6 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <windows.h>
 #include <winapi/miniwindow.h>
 #include <wallet.h>
 #include <walletdb.h>
@@ -352,7 +353,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
     wh.lpszMenuName = nullptr;
     wh.lpszClassName = IDS_MINIW_HIDECLASSNAME;
     if(! ::RegisterClassEx(&wh)) {
-        logging::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
+        logging::LogPrintf(IDS_ERROR_CLASSREGISTER);
         return err();
     }
 
@@ -369,7 +370,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = IDS_MINIW_WINDOWCLASSNAME;
     if(! ::RegisterClassEx(&wc)) {
-        logging::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
+        logging::LogPrintf(IDS_ERROR_CLASSREGISTER);
         return err();
     }
 
@@ -394,7 +395,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
             nullptr
         );
         if(! hHide) {
-            logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+            logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
             return err();
         }
         HWND hWnd = ::CreateWindowExW(
@@ -412,7 +413,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
             nullptr
         );
         if(! hWnd) {
-            logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+            logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
             return err();
         }
 
@@ -432,7 +433,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
                 nullptr
             );
             if(! hButton) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
             ::ShowWindow(hButton, SW_SHOW);
@@ -456,7 +457,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
                 nullptr
             );
             if(! hButton) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
             ::ShowWindow(hButton, SW_SHOW);
@@ -479,7 +480,7 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
                 nullptr
             );
             if(! hWallet) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
             ::ShowWindow(hWallet, SW_SHOW);

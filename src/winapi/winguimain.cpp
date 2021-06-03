@@ -5,7 +5,9 @@
 
 #if defined(QT_GUI) && defined(WIN32)
 
+#include <windows.h>
 #include <winapi/winguimain.h>
+#include <winapi/sectorwin.h>
 #include <sync/lsync.h>
 
 namespace {
@@ -107,6 +109,25 @@ public:
         stream.str("");
         stream.clear(std::ostringstream::goodbit);
     }
+};
+
+class cputime
+{
+    cputime(const cputime &)=delete;
+    cputime &operator=(const cputime &)=delete;
+    cputime(cputime &&)=delete;
+    cputime &operator=(cputime &&)=delete;
+public:
+    cputime() {
+        (void)::QueryPerformanceFrequency(&qf);
+    }
+    ~cputime() {}
+    double operator()() {
+        (void)::QueryPerformanceCounter(&qc);
+        return (double)qc.QuadPart / (double)qf.QuadPart;
+    }
+private:
+    LARGE_INTEGER qf, qc;
 };
 
 typedef struct _progress_info
@@ -902,7 +923,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
     wc.lpszMenuName = nullptr;
     wc.lpszClassName = IDS_APP_WINDOWCLASSNAME;
     if(! ::RegisterClassEx(&wc)) {
-        logging::LogPrintf(CMString(IDS_ERROR_CLASSREGISTER)+L"\n");
+        logging::LogPrintf(IDS_ERROR_CLASSREGISTER);
         return err();
     }
 
@@ -928,7 +949,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
             nullptr
         );
         if(!hWnd) {
-            logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+            logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
             return err();
         }
 
@@ -949,7 +970,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hButton) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
             ci.hStartButton = hButton;
@@ -971,7 +992,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hButton) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
             ci.hStopButton = hButton;
@@ -993,7 +1014,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hCombo) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
@@ -1029,11 +1050,11 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hCombo) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
-            for(int i = 0, k = 0; i < THREAD_MAX; ++i)
+            for(int i = 0, k = 0; i < POB_THREAD_MAX; ++i)
             {
                 if(i % sector_randbuffer::RAND_GENE_MAX == 0) {
                     std::wostringstream stream;
@@ -1062,7 +1083,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hCombo) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
@@ -1090,7 +1111,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!hCombo) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
@@ -1124,7 +1145,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!proginfo[i].hProgress) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
@@ -1152,7 +1173,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 nullptr
             );
             if(!bench_onoff[i]) {
-                logging::LogPrintf(CMString(IDS_ERROR_CREATEWINDOW)+L"\n");
+                logging::LogPrintf(IDS_ERROR_CREATEWINDOW);
                 return err();
             }
 
