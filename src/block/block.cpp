@@ -240,7 +240,8 @@ T CBlockHeader_impl<T>::GetPoHash() const {
 }
 
 template <typename T>
-T CBlockHeader_impl<T>::GetPoHash(int height) const {
+T CBlockHeader_impl<T>::GetPoHash(int32_t height) const {
+    assert(height!=-1);
     T hash;
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(height >= sw_height)
@@ -277,7 +278,7 @@ bool CBlock_impl<T>::DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *p
 template <typename T>
 bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck/*=false*/)
 {
-    CBlockHeader<T>::set_LastHeight(pindex->get_nHeight());
+    CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
 
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))

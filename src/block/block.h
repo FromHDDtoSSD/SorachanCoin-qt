@@ -117,7 +117,7 @@ protected:
 private:
     int32_t LastHeight; // get nHeight from CBlockHeader<T> (LastBlock+1==nHeight)
 public:
-    CBlockHeader() {SetNull();}
+    CBlockHeader() : LastHeight(-1) {SetNull();}
     void SetNull() {
         nVersion = CBlockHeader<T>::CURRENT_VERSION;
         hashPrevBlock = 0;
@@ -125,7 +125,6 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
-        LastHeight = 0;
     }
     int32_t get_nVersion() const {return nVersion;}
     const T &get_hashPrevBlock() const {return hashPrevBlock;}
@@ -163,7 +162,7 @@ public:
         return (CBlockHeader<T>::nBits == 0);
     }
     T GetPoHash() const;
-    T GetPoHash(int height) const;
+    T GetPoHash(int32_t height) const;
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader<T>::nTime;
     }
