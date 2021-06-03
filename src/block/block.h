@@ -107,7 +107,7 @@ protected:
     static constexpr int CURRENT_VERSION_Lyra2REV2 = 7;
 #pragma pack(push, 1)
     // header
-    int32_t nVersion;
+    mutable int32_t nVersion;
     T hashPrevBlock;
     T hashMerkleRoot;
     uint32_t nTime;
@@ -115,7 +115,7 @@ protected:
     uint32_t nNonce;
 #pragma pack(pop)
 private:
-    int32_t LastHeight; // get nHeight from CBlockHeader<T> (LastBlock+1==nHeight)
+    mutable int32_t LastHeight; // get nHeight from CBlockHeader<T> (LastBlock+1==nHeight)
 public:
     CBlockHeader() : LastHeight(-1) {SetNull();}
     void SetNull() {
@@ -141,7 +141,7 @@ public:
     void set_nNonce(uint32_t _in) {nNonce=_in;}
     uint32_t &set_nNonce() {return nNonce;}
 
-    void set_LastHeight(int32_t _in);
+    void set_LastHeight(int32_t _in) const;
     int32_t get_LastHeight() const {return LastHeight;}
 
     ADD_SERIALIZE_METHODS

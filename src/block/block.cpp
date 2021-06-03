@@ -217,7 +217,7 @@ bool block_notify<T>::IsInitialBlockDownload()
 }
 
 template <typename T>
-void CBlockHeader<T>::set_LastHeight(int32_t _in) {
+void CBlockHeader<T>::set_LastHeight(int32_t _in) const {
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(_in + 1 >= sw_height) {
         CBlockHeader<T>::LastHeight = _in;
@@ -230,6 +230,14 @@ void CBlockHeader<T>::set_LastHeight(int32_t _in) {
 
 template <typename T>
 T CBlockHeader_impl<T>::GetPoHash() const {
+    //assert(CBlockHeader<T>::get_LastHeight()!=-1);
+    //debugcs::instance() << "LastHeight: " << CBlockHeader<T>::get_LastHeight() << debugcs::endl();
+    if(CBlockHeader<T>::get_LastHeight()==-1) {
+        BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
+        assert(mi!=block_info::mapBlockIndex.end());
+        CBlockIndex_impl<T> *pindexPrev = (*mi).second;
+        CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
+    }
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(CBlockHeader<T>::get_LastHeight() + 1 >= sw_height) {
         T hash;

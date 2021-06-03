@@ -16,7 +16,7 @@ message(Qt version: $$[QT_VERSION])
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=1
+RELEASE=0
 
 #
 # GUI_MODE

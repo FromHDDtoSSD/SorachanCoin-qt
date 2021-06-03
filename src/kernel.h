@@ -29,11 +29,22 @@ private:
     static constexpr unsigned int nModifierSwitchTime  = timestamps::GENESIS_TIME_STAMP;
     static constexpr unsigned int nModifierTestSwitchTime = timestamps::GENESIS_TIME_STAMP;
 
+    // Get the last stake modifier and its generation time from a given block
     static bool GetLastStakeModifier(const CBlockIndex_impl<T> *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime);
+
+    // Get selection interval section (in seconds)
     static int64_t GetStakeModifierSelectionIntervalSection(int nSection);
+
+    // Get stake modifier selection interval (in seconds)
     static int64_t GetStakeModifierSelectionInterval();
+
+    // select a block from the candidate blocks in vSortedByTimestamp, excluding
+    // already selected blocks in vSelectedBlocks, and with timestamp up to
+    // nSelectionIntervalStop.
     static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex_impl<T> *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex_impl<T> **pindexSelected);
 
+    // The stake modifier used to hash for a stake kernel is chosen as the stake
+    // modifier about a selection interval later than the coin generating the kernel
     static bool GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake);
 
     // Check whether stake kernel meets hash target

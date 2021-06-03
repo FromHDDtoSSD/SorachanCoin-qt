@@ -46,7 +46,6 @@ bool bitkernel<T>::IsFixedModifierInterval(unsigned int nTimeBlock) {
     return (nTimeBlock >= (args_bool::fTestNet? nModifierTestSwitchTime : nModifierSwitchTime));
 }
 
-// Get the last stake modifier and its generation time from a given block
 template <typename T>
 bool bitkernel<T>::GetLastStakeModifier(const CBlockIndex_impl<T> *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime)
 {
@@ -68,7 +67,6 @@ bool bitkernel<T>::GetLastStakeModifier(const CBlockIndex_impl<T> *pindex, uint6
     return true;
 }
 
-// Get selection interval section (in seconds)
 template <typename T>
 int64_t bitkernel<T>::GetStakeModifierSelectionIntervalSection(int nSection)
 {
@@ -76,7 +74,6 @@ int64_t bitkernel<T>::GetStakeModifierSelectionIntervalSection(int nSection)
     return (block_check::nModifierInterval * 63 / (63 + ((63 - nSection) * (MODIFIER_INTERVAL_RATIO - 1))));
 }
 
-// Get stake modifier selection interval (in seconds)
 template <typename T>
 int64_t bitkernel<T>::GetStakeModifierSelectionInterval()
 {
@@ -88,11 +85,6 @@ int64_t bitkernel<T>::GetStakeModifierSelectionInterval()
     return nSelectionInterval;
 }
 
-//
-// select a block from the candidate blocks in vSortedByTimestamp, excluding
-// already selected blocks in vSelectedBlocks, and with timestamp up to
-// nSelectionIntervalStop.
-//
 template <typename T>
 bool bitkernel<T>::SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex_impl<T> *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex_impl<T> **pindexSelected)
 {
@@ -293,10 +285,6 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex_impl<T> *pindexCur
     return true;
 }
 
-//
-// The stake modifier used to hash for a stake kernel is chosen as the stake
-// modifier about a selection interval later than the coin generating the kernel
-//
 template <typename T>
 bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake)
 {
@@ -387,7 +375,6 @@ bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock_impl<T> &bl
     T hashBlockFrom = blockFrom.GetPoHash();
 
     CBigNum bnCoinDayWeight = CBigNum(nValueIn) * GetWeight((int64_t)txPrev.get_nTime(), (int64_t)nTimeTx) / util::COIN / util::nOneDay;
-    //targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint256();
     targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint<T>();
 
     // Calculate hash
@@ -395,12 +382,11 @@ bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock_impl<T> &bl
     uint64_t nStakeModifier = 0;
     int nStakeModifierHeight = 0;
     int64_t nStakeModifierTime = 0;
-
     if (! GetKernelStakeModifier(hashBlockFrom, nStakeModifier, nStakeModifierHeight, nStakeModifierTime, fPrintProofOfStake)) {
         return false;
     }
-    ss << nStakeModifier;
 
+    ss << nStakeModifier;
     ss << nTimeBlockFrom << nTxPrevOffset << txPrev.get_nTime() << prevout.get_n() << nTimeTx;
     hashProofOfStake = hash_basis::Hash(ss.begin(), ss.end());
     if (fPrintProofOfStake) {
@@ -490,34 +476,31 @@ bool bitkernel<T>::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint
 template <typename T>
 bool bitkernel<T>::CheckProofOfStake(const CTransaction_impl<T> &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake)
 {
-    if (! tx.IsCoinStake()) {
+    if (! tx.IsCoinStake())
         return logging::error("bitkernel::CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());
-    }
 
     // Kernel (input 0) must match the stake hash target per coin age (nBits)
-    const CTxIn& txin = tx.get_vin(0);
+    const CTxIn &txin = tx.get_vin(0);
 
     // First try finding the previous transaction in database
     CTxDB txdb("r");
     CTransaction txPrev;
     CTxIndex txindex;
-    if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex)) {
+    if (! txPrev.ReadFromDisk(txdb, txin.get_prevout(), txindex))
         return tx.DoS(1, logging::error("bitkernel::CheckProofOfStake() : INFO: read txPrev failed"));  // previous transaction not in main chain, may occur during initial download
-    }
 
     // Verify signature
-    if (! block_check::manage<T>::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0)) {
+    if (! block_check::manage<T>::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0))
         return tx.DoS(100, logging::error("bitkernel::CheckProofOfStake() : block_check::manage::VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
-    }
 
     // Read block header
     CBlock block;
-    if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false)) {
+    if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false))
         return args_bool::fDebug? logging::error("bitkernel::CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
-    }
-    if (! bitkernel<T>::CheckStakeKernelHash(nBits, block, txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos(), txPrev, txin.get_prevout(), tx.get_nTime(), hashProofOfStake, targetProofOfStake, args_bool::fDebug)) {
+
+    // check
+    if (! bitkernel<T>::CheckStakeKernelHash(nBits, block, txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos(), txPrev, txin.get_prevout(), tx.get_nTime(), hashProofOfStake, targetProofOfStake, args_bool::fDebug))
         return tx.DoS(1, logging::error("bitkernel::CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
-    }
 
     return true;
 }
