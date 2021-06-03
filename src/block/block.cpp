@@ -738,11 +738,6 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
 template <typename T>
 bool CBlock_impl<T>::AcceptBlock()
 {
-    // Check for duplicate
-    T hash = CBlockHeader_impl<T>::GetPoHash();
-    if (block_info::mapBlockIndex.count(hash))
-        return logging::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
-
     // Get prev block index
     auto mi = block_info::mapBlockIndex.find(CBlockHeader<T>::hashPrevBlock);
     if (mi == block_info::mapBlockIndex.end())
@@ -752,6 +747,11 @@ bool CBlock_impl<T>::AcceptBlock()
     int nHeight = pindexPrev->get_nHeight() + 1;
     CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
     ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
+
+    // Check for duplicate
+    T hash = CBlockHeader_impl<T>::GetPoHash();
+    if (block_info::mapBlockIndex.count(hash))
+        return logging::error("CBlock::AcceptBlock() : block already in block_info::mapBlockIndex");
 
     // Check proof-of-work or proof-of-stake
     if (CBlockHeader<T>::nBits != diff::spacing::GetNextTargetRequired(pindexPrev, IsProofOfStake()))
