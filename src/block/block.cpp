@@ -663,16 +663,13 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         //if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
         //    return DoS(50, logging::error("CheckBlock() : proof of work failed"));
         {
-            CBlockIndex_impl<T> *pindexPrev = nullptr;
-            int nHeight = 0;
             if (CBlockHeader_impl<T>::GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
-                auto mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
-                pindexPrev = (*mi).second;
+                BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
                 if (mi != block_info::mapBlockIndex.end()) {
+                    CBlockIndex_impl<T> *pindexPrev = (*mi).second;
                     if (pindexPrev != nullptr) {
-                        nHeight = pindexPrev->get_nHeight()+1;
                         // Check proof of work matches claimed amount
-                        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(nHeight), CBlockHeader_impl<T>::get_nBits()))
+                        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(pindexPrev->get_nHeight()+1), CBlockHeader_impl<T>::get_nBits()))
                             return DoS(50, logging::error("CheckBlock() : proof of work failed"));
                     }
                 }
