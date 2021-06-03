@@ -167,7 +167,7 @@ void drive_handle::close() {
 
 bool drive_cmd::cmddrivename() {
 #ifdef WIN32
-    std::vector<BYTE> vchData;
+    std::vector<unsigned char> vchData;
     vchData.resize(CMD_BUFFER_SIZE, 0x00);
 
     STORAGE_PROPERTY_QUERY sPQ;
@@ -193,7 +193,7 @@ bool drive_cmd::cmddrivename() {
         std::vector<char> vchProduct;
         vchProduct.resize(pDesc->ProductRevisionOffset - pDesc->ProductIdOffset + 1, '\0'); // Note: +1 is \0 terminate in string.
         for(size_t i=0; i < vchProduct.size() - 1; ++i) {
-            BYTE ch = *((BYTE *)pDesc + pDesc->ProductIdOffset + i);
+            unsigned char ch = *((unsigned char *)pDesc + pDesc->ProductIdOffset + i);
             *(&vchProduct.at(0) + i) = ch;
         }
 
@@ -370,8 +370,8 @@ void drive_stream::alloc(size_t size) const {
 }
 
 void drive_stream::allocrand(size_t size) const {
-    mcrypto<BYTE> crypt;
-    BYTE value = crypt >>= crypt;
+    mcrypto<unsigned char> crypt;
+    unsigned char value = crypt >>= crypt;
     if(getbuffersize() == 0) {
         buffer.resize(size, value);
     } else {
@@ -512,11 +512,11 @@ double drive_base::getspeed(double ti) const {
     return (double)gettotalsize() / ti;
 }
 
-const std::vector<BYTE> *drive_base::getbufferread() const { // Read => getbuffer
+const std::vector<unsigned char> *drive_base::getbufferread() const { // Read => getbuffer
     return getbuffer_lock();
 }
 
-std::vector<BYTE> *drive_base::setbufferwrite() { // setbuffer => buffered => Write
+std::vector<unsigned char> *drive_base::setbufferwrite() { // setbuffer => buffered => Write
     return getbuffer_lock();
 }
 
@@ -583,7 +583,7 @@ bool drive_datawritefull::_rwfunc(sector_t begin, sector_t end, const bool &exit
     if(! writesectors(begin, end, exit_flag)) {
         return false;
     } else {
-        const std::vector<BYTE> *p = getbufferread();
+        const std::vector<unsigned char> *p = getbufferread();
         LARGE_INTEGER li;
         li.QuadPart = p->size() - padding;
         return (::SetFilePointerEx(gethandle(), li, nullptr, FILE_BEGIN) && ::SetEndOfFile(gethandle())) ? true: false;
@@ -592,7 +592,7 @@ bool drive_datawritefull::_rwfunc(sector_t begin, sector_t end, const bool &exit
     if(! writesectors(begin, end, exit_flag)) {
         return false;
     } else {
-        const std::vector<BYTE> *p = getbufferread();
+        const std::vector<unsigned char> *p = getbufferread();
         off_t li = p->size() - padding;
         return (::ftruncate(gethandle(), li)==0 && ::lseek(gethandle(), li, SEEK_SET)!=-1) ? true: false;
     }

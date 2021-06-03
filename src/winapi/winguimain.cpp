@@ -25,7 +25,7 @@ private:
 
     bool setbufferwrite() const {
         if(stream.str().size() == 0) { return false; }
-        std::vector<BYTE> *pbuf = wobj.setbufferwrite();
+        std::vector<unsigned char> *pbuf = wobj.setbufferwrite();
         if(! pbuf) { return false; }
         std::string str = stream.str();
         pbuf->resize(str.size(), 0x00);
@@ -181,7 +181,7 @@ private:
             double ave = 0.0;
             for(int i = 0; i < thread_num; ++i)
             {
-                ave += ((sector_base *)(((BYTE *)base + objsize * i)))->getprog();
+                ave += ((sector_base *)(((unsigned char *)base + objsize * i)))->getprog();
             }
             ave /= thread_num;
             ave *= 100;
@@ -190,7 +190,7 @@ private:
             bool all_signal = true;
             for(int i = 0; i < thread_num; ++i)
             {
-                if(!((sector_base *)(((BYTE *)base + objsize * i)))->signal()) {
+                if(!((sector_base *)(((unsigned char *)base + objsize * i)))->signal()) {
                     all_signal = false;
                     break;
                 }
@@ -537,7 +537,7 @@ public:
         }
         driveinf->waitclose();
 
-        const std::vector<BYTE> *pbuf = driveinf->getbufferread();
+        const std::vector<unsigned char> *pbuf = driveinf->getbufferread();
         if(!pbuf) {
             return false;
         }
@@ -545,7 +545,7 @@ public:
             return false;
         }
 
-        for(std::vector<BYTE>::const_iterator ite = pbuf->begin(); ite != pbuf->end(); ++ite)
+        for(std::vector<unsigned char>::const_iterator ite = pbuf->begin(); ite != pbuf->end(); ++ite)
         {
             if(*ite != 0x00) {
                 return false;

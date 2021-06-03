@@ -341,8 +341,8 @@ private:
     typedef struct _STORAGE_DEVICE_DESCRIPTOR {
         uint32_t         Version;
         uint32_t         Size;
-        BYTE             DeviceType;
-        BYTE             DeviceTypeModifier;
+        unsigned char    DeviceType;
+        unsigned char    DeviceTypeModifier;
         BOOLEAN          RemovableMedia;
         BOOLEAN          CommandQueueing;
         uint32_t         VendorIdOffset;
@@ -351,7 +351,7 @@ private:
         uint32_t         SerialNumberOffset;
         STORAGE_BUS_TYPE BusType;
         uint32_t         RawPropertiesLength;
-        BYTE             RawDeviceProperties[1];
+        unsigned char    RawDeviceProperties[1];
     } STORAGE_DEVICE_DESCRIPTOR, *PSTORAGE_DEVICE_DESCRIPTOR; // https://docs.microsoft.com/en-us/windows/desktop/api/winioctl/ns-winioctl-_storage_device_descriptor
 # pragma pack(pop)
 
@@ -389,23 +389,23 @@ private:
     drive_stream(drive_stream &&)=delete;
     drive_stream &operator=(drive_stream &&)=delete;
 
-    mutable std::vector<BYTE> buffer;
+    mutable std::vector<unsigned char> buffer;
     mutable int64_t total_size;
     size_t getbuffersize() const {
         return buffer.size();
     }
-    BYTE *getbuffer() const {
+    unsigned char *getbuffer() const {
         return &buffer.at(0);
     }
-    const BYTE *const_getbuffer() const {
+    const unsigned char *const_getbuffer() const {
         return &buffer.at(0);
     }
 
 protected:
-    std::vector<BYTE> *getbuffer_lock() {
+    std::vector<unsigned char> *getbuffer_lock() {
         return getlock() ? &buffer: nullptr;
     }
-    const std::vector<BYTE> *getbuffer_lock() const {
+    const std::vector<unsigned char> *getbuffer_lock() const {
         return getlock() ? &buffer: nullptr;
     }
 
@@ -503,8 +503,8 @@ public:
     bool checkdriveletter() const;
     std::wstring getdriveinfo(int) const;
     double getspeed(double ti) const;
-    const std::vector<BYTE> *getbufferread() const; // Read => getbuffer
-    std::vector<BYTE> *setbufferwrite(); // setbuffer => buffered => Write
+    const std::vector<unsigned char> *getbufferread() const; // Read => getbuffer
+    std::vector<unsigned char> *setbufferwrite(); // setbuffer => buffered => Write
 
     virtual double getprog() const = 0;
     virtual void setaccpoint(sector_t _begin = 0, sector_t _end = 0) = 0;
@@ -831,7 +831,7 @@ public:
         path = _path;
     }
     void setaddr() {
-        std::vector<BYTE> *p = setbufferwrite();
+        std::vector<unsigned char> *p = setbufferwrite();
         if(p->size() == 0) {return;}
 
         const size_t writestepsize = getstep() * getsectorsize();

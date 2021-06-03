@@ -8,7 +8,9 @@
 
 #include <uint256.h>
 #include <serialize.h>
-#include <winapi/sectorbase.h>
+#ifdef WIN32
+# include <winapi/sectorbase.h>
+#endif
 
 constexpr std::size_t PLOT_SIZE = 4096;
 constexpr std::size_t POB_SECTOR_SIZE = 512;
