@@ -233,7 +233,10 @@ T CBlockHeader_impl<T>::GetPoHash() const {
     //assert(CBlockHeader<T>::get_LastHeight()!=-1);
     //debugcs::instance() << "LastHeight: " << CBlockHeader<T>::get_LastHeight() << debugcs::endl();
     if(CBlockHeader<T>::get_LastHeight()==-1) {
+        if(CBlockHeader<T>::get_hashPrevBlock()==0)
+            return bitscrypt::scrypt_blockhash((const char *)this);
         BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
+        //debugcs::instance() << "prevBlock hash: " << CBlockHeader<T>::get_hashPrevBlock().ToString().c_str() << debugcs::endl();
         assert(mi!=block_info::mapBlockIndex.end());
         CBlockIndex_impl<T> *pindexPrev = (*mi).second;
         CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
