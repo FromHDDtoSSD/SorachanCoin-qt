@@ -472,7 +472,7 @@ int lutil::ScheduleBatchPriority() {
 bool lutil::wchartochar(const wchar_t *source, std::string &dest) noexcept {
     int nLength = ::WideCharToMultiByte(CP_UTF8, 0, source, -1, nullptr, 0, nullptr, nullptr);
     if (nLength == 0) {
-        DWORD dwError = ::GetLastError();
+        uint32_t dwError = ::GetLastError();
         if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER) {
             return false;
         } else {

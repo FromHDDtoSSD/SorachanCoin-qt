@@ -286,7 +286,7 @@ private:
     drive_cmd(drive_cmd &&)=delete;
     drive_cmd &operator=(drive_cmd &&)=delete;
 
-    DWORD sector_size;
+    uint32_t sector_size;
     sector_t total_sectors;
     std::wstring drive_vendor;
     std::wstring drive_name;
@@ -339,18 +339,18 @@ private:
 
 # pragma pack(push, 1)
     typedef struct _STORAGE_DEVICE_DESCRIPTOR {
-        DWORD            Version;
-        DWORD            Size;
+        uint32_t         Version;
+        uint32_t         Size;
         BYTE             DeviceType;
         BYTE             DeviceTypeModifier;
         BOOLEAN          RemovableMedia;
         BOOLEAN          CommandQueueing;
-        DWORD            VendorIdOffset;
-        DWORD            ProductIdOffset;
-        DWORD            ProductRevisionOffset;
-        DWORD            SerialNumberOffset;
+        uint32_t         VendorIdOffset;
+        uint32_t         ProductIdOffset;
+        uint32_t         ProductRevisionOffset;
+        uint32_t         SerialNumberOffset;
         STORAGE_BUS_TYPE BusType;
-        DWORD            RawPropertiesLength;
+        uint32_t         RawPropertiesLength;
         BYTE             RawDeviceProperties[1];
     } STORAGE_DEVICE_DESCRIPTOR, *PSTORAGE_DEVICE_DESCRIPTOR; // https://docs.microsoft.com/en-us/windows/desktop/api/winioctl/ns-winioctl-_storage_device_descriptor
 # pragma pack(pop)
@@ -362,7 +362,7 @@ private:
 protected:
     bool getparam();
     void setparam(const drive_cmd *instanced);
-    DWORD getsectorsize() const;
+    uint32_t getsectorsize() const;
     sector_t gettotalsectors() const;
     std::vector<char> getdriveletter() const;
     char getdriveletter(int n) const;
@@ -410,8 +410,8 @@ protected:
     }
 
 protected:
-    bool readfile(sector_t offset, DWORD _size = 0) const;
-    bool writefile(sector_t offset, DWORD _size = 0) const;
+    bool readfile(sector_t offset, uint32_t _size = 0) const;
+    bool writefile(sector_t offset, uint32_t _size = 0) const;
 
 protected:
     drive_stream(int drive_target) : drive_cmd(drive_target) {bufclear();}
@@ -437,7 +437,7 @@ private:
     drive_base &operator=(drive_base &&)=delete;
 
     cla_thread<drive_base> thread;
-    DWORD sectors_step;
+    uint32_t sectors_step;
     bool failure;
     drive_base *obj;
 
@@ -491,13 +491,13 @@ public:
     bool signal() const {return thread.signal();}
     bool getfailure() const {return failure;}
     void clearfailure() {failure = false;}
-    void setstep(DWORD sectors_size) { // Note: size
+    void setstep(uint32_t sectors_size) { // Note: size
         if(0 < sectors_size) {
             sectors_step = sectors_size / getsectorsize();
             if(sectors_step == 0) { sectors_step = 1; }
         }
     }
-    DWORD getstep() const {return sectors_step;}
+    uint32_t getstep() const {return sectors_step;}
 
     std::wstring getdriveinfo() const;
     bool checkdriveletter() const;

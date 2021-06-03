@@ -133,7 +133,7 @@ private:
 typedef struct _progress_info
 {
     HWND hProgress;
-    WORD id;
+    uint16_t id;
     WNDPROC wndproc;
 } progress_info;
 
@@ -527,7 +527,7 @@ public:
         if(!driveinf) { return false; }
         if(driveinf->checkdriveletter()) { return false; }
 
-        const DWORD size = 8192; // 16 sectors (or 2 sectors)
+        const uint32_t size = 8192; // 16 sectors (or 2 sectors)
         std::vector<sector_t> sectors_addr;
         sectors_addr.push_back(0);
         driveinf->setstep(size);
@@ -686,14 +686,14 @@ namespace ProgressString
     static CCriticalSection cs;
     static std::wstring str[PROGRESS_NUM];
 
-    inline std::wstring GetString(WORD id)
+    inline std::wstring GetString(uint16_t id)
     {
         LOCK(cs);
         std::wostringstream stream;
         stream << str[id];
         return stream.str();
     }
-    inline void SetString(WORD id, LPCWSTR message, int percent)
+    inline void SetString(uint16_t id, LPCWSTR message, int percent)
     {
         LOCK(cs);
         std::wostringstream stream;
@@ -709,7 +709,7 @@ namespace ProgressString
     }
 }
 
-void SetCtrlMenu(HWND hWnd, DWORD idr) {
+void SetCtrlMenu(HWND hWnd, uint32_t idr) {
     HMENU hMenu = ::LoadMenu(::GetModuleHandle(nullptr), MAKEINTRESOURCEW(idr));
     ::SetMenu(hWnd, hMenu);
 }
@@ -1149,7 +1149,7 @@ predsystem::result predsystem::CreateBenchmark() noexcept
                 return err();
             }
 
-            proginfo[i].id = (WORD)PROGRESS_ID(i);
+            proginfo[i].id = (uint16_t)PROGRESS_ID(i);
             proginfo[i].wndproc = (WNDPROC)::GetWindowLongPtrW(proginfo[i].hProgress, GWLP_WNDPROC);
             ::SetWindowLongPtrW(proginfo[i].hProgress, GWLP_USERDATA, (LONG_PTR)&proginfo[i]);
             ::SetWindowLongPtrW(proginfo[i].hProgress, GWLP_WNDPROC, (LONG_PTR)ProgressProc);

@@ -17,7 +17,7 @@ sync drive_handle::cs;
 bool drive_util::chartowchar(const char *source, std::wstring &dest) const {
     int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
     if (cchWideChar == 0)    {
-        DWORD dwError = ::GetLastError();
+        uint32_t dwError = ::GetLastError();
         if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION) {
             return false;
         } else {
@@ -32,7 +32,7 @@ bool drive_util::chartowchar(const char *source, std::wstring &dest) const {
 bool drive_util::wchartochar(LPCWSTR source, std::string &dest) const {
     int nLength = ::WideCharToMultiByte(CP_ACP, 0, source, -1, nullptr, 0, nullptr, nullptr);
     if (nLength == 0) {
-        DWORD dwError = ::GetLastError();
+        uint32_t dwError = ::GetLastError();
         if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER) {
             return false;
         } else {
@@ -47,7 +47,7 @@ bool drive_util::wchartochar(LPCWSTR source, std::string &dest) const {
 bool drive_handle::createdir(LPCWSTR path) const {
 #ifdef WIN32
     if(! ::CreateDirectoryW(path, nullptr)) {
-        DWORD error = ::GetLastError();
+        uint32_t error = ::GetLastError();
         debugcs::instance() << "[CREATE DIR]" << error;
         return (error == ERROR_ALREADY_EXISTS) ? true: false;
     } else {
@@ -67,7 +67,7 @@ bool drive_handle::openread(bool _lock /*= false*/) {
     close();
     std::wostringstream stream;
     stream << L"\\\\.\\PHYSICALDRIVE" << nDrive;
-    DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
+    uint32_t lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
     lock = _lock;
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
     return hDrive != INVALID_HANDLE_VALUE;
@@ -88,7 +88,7 @@ bool drive_handle::openwrite(bool _lock /*= false*/) {
     close();
     std::wostringstream stream;
     stream << L"\\\\.\\PHYSICALDRIVE" << nDrive;
-    DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
+    uint32_t lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_NO_BUFFERING;
     lock = _lock;
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_EXISTING, lock_flag, nullptr );
     debugcs::instance() << "[openwrite GetLastError]" << ::GetLastError();
@@ -120,7 +120,7 @@ bool drive_handle::openwritefile(char letter, LPCWSTR path, bool _lock /*= false
         tempfile = true;
     }
 #ifdef WIN32
-    DWORD lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_WRITE_THROUGH; // Note: FILE_FLAG_NO_BUFFERING(sector) => FILE_FLAG_WRITE_THROUGH(file)
+    uint32_t lock_flag = _lock ? FILE_ATTRIBUTE_NORMAL: FILE_FLAG_WRITE_THROUGH; // Note: FILE_FLAG_NO_BUFFERING(sector) => FILE_FLAG_WRITE_THROUGH(file)
     lock = _lock;
     hDrive = ::CreateFileW( stream.str().c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, nullptr, OPEN_ALWAYS, lock_flag, nullptr );
     return hDrive != INVALID_HANDLE_VALUE;
@@ -176,7 +176,7 @@ bool drive_cmd::cmddrivename() {
     sPQ.AdditionalParameters[0] = 0x00;
     DWORD dwRet = 0;
     for(int i=0; i < CMD_SEND_LIMIT; ++i) {
-        if(! ::DeviceIoControl(gethandle(), IOCTL_STORAGE_QUERY_PROPERTY, &sPQ, sizeof(STORAGE_PROPERTY_QUERY), &vchData.at(0), (DWORD)vchData.size(), &dwRet, nullptr)) {
+        if(! ::DeviceIoControl(gethandle(), IOCTL_STORAGE_QUERY_PROPERTY, &sPQ, sizeof(STORAGE_PROPERTY_QUERY), &vchData.at(0), (uint32_t)vchData.size(), &dwRet, nullptr)) {
             return false;
         }
         if(dwRet == vchData.size()) {
@@ -296,7 +296,7 @@ void drive_cmd::setparam(const drive_cmd *instanced) {
     }
 }
 
-DWORD drive_cmd::getsectorsize() const {
+uint32_t drive_cmd::getsectorsize() const {
     return sector_size;
 }
 
@@ -325,12 +325,12 @@ const std::wstring &drive_cmd::getdrivename() const {
     return drive_name;
 }
 
-bool drive_stream::readfile(sector_t offset, DWORD _size /*= 0*/) const {
+bool drive_stream::readfile(sector_t offset, uint32_t _size /*= 0*/) const {
 #ifdef WIN32
     LARGE_INTEGER lisec;
     DWORD dwSize;
     lisec.QuadPart = offset;
-    DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
+    uint32_t size = (_size == 0) ? (uint32_t)getbuffersize(): _size;
     if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
         return false;
     }
@@ -345,12 +345,12 @@ bool drive_stream::readfile(sector_t offset, DWORD _size /*= 0*/) const {
 #endif
 }
 
-bool drive_stream::writefile(sector_t offset, DWORD _size /*= 0*/) const {
+bool drive_stream::writefile(sector_t offset, uint32_t _size /*= 0*/) const {
 #ifdef WIN32
     LARGE_INTEGER lisec;
     DWORD dwSize;
     lisec.QuadPart = offset;
-    DWORD size = (_size == 0) ? (DWORD)getbuffersize(): _size;
+    uint32_t size = (_size == 0) ? (uint32_t)getbuffersize(): _size;
     if (! ::SetFilePointerEx(gethandle(), lisec, nullptr, FILE_BEGIN ))    {
         return false;
     }
@@ -492,7 +492,7 @@ std::wstring drive_base::getdriveinfo() const {
     for(std::vector<char>::const_iterator ite = vcl.begin(); ite != vcl.end(); ++ite)
         letter << *ite << L":\\ ";
 
-    DWORD capacity = (DWORD)(gettotalsectors() * getsectorsize() / 1024 / 1024 / 1024);
+    uint32_t capacity = (uint32_t)(gettotalsectors() * getsectorsize() / 1024 / 1024 / 1024);
     std::wostringstream stream;
     stream << getdrivevendor().c_str() << L"\n" << getdrivename().c_str() << L"\n" << L"Capacity: " << capacity << L" GB" << L"\n" << letter.str().c_str();
     return stream.str();

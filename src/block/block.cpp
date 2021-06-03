@@ -660,8 +660,6 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
         nSigOps += Merkle_t::vtx[1].GetLegacySigOpCount();
     } else {
         // Check proof of work matches claimed amount
-        //if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
-        //    return DoS(50, logging::error("CheckBlock() : proof of work failed"));
         {
             if (CBlockHeader_impl<T>::GetPoHash() != get_hashGenesisBlock(args_bool::fTestNet)) {
                 BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());

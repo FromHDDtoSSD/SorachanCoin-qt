@@ -43,9 +43,6 @@
 # ifndef WORD
   using WORD = uint16_t;
 # endif
-# ifndef DWORD
-  using DWORD = uint32_t;
-# endif
 # ifndef UINT_PTR
   using UINT_PTR = uintptr_t;
 # endif
@@ -192,7 +189,7 @@ public:
         }
     }
     static void chartowchar(const char *source, std::wstring &dest) { // std::wstring UTF8 copy (all UTF8)
-        DWORD dwLen=0;
+        uint32_t dwLen=0;
         utf8toucpy(nullptr, source, &dwLen); // with '\0'
         dest.resize(dwLen, L'\0');
         utf8toucpy(&dest.at(0), source, &dwLen);
@@ -200,7 +197,7 @@ public:
 #ifdef CMSTRING_WIN32API
         int cchWideChar = ::MultiByteToWideChar(CP_ACP, 0, source, -1, nullptr, 0);
         if (cchWideChar == 0) {
-            DWORD dwError = ::GetLastError();
+            uint32_t dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION)
                 throw string_error("CMString chartowchar: ERROR Buffer");
             else {dest = L""; return;}
@@ -218,7 +215,7 @@ public:
 #endif
         */
     }
-    static void utoutf8cpy(char *cStr, LPCWSTR lpStr, DWORD *pdwLength) {
+    static void utoutf8cpy(char *cStr, LPCWSTR lpStr, uint32_t *pdwLength) {
         if (lpStr[0]==L'\0') {
             *pdwLength = 0;
             if (cStr!=nullptr) cStr[0] = '\0';
@@ -226,9 +223,9 @@ public:
         }
 #ifdef CMSTRING_WIN32API
         int nLength = ::WideCharToMultiByte(CP_UTF8, 0, lpStr, -1, nullptr, 0, nullptr, nullptr);
-        *pdwLength = (DWORD)nLength;
+        *pdwLength = (uint32_t)nLength;
         if (nLength==0) {
-            DWORD dwError = ::GetLastError();
+            uint32_t dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER)
                 throw string_error("CMString utoutf8cpy: ERROR WideCharToMultiByte");
         }
@@ -250,7 +247,7 @@ public:
             throw string_error("CMString utoutf8cpy: ERROR wcstombs");
 #endif
     }
-    static void utf8toucpy(wchar_t *lpStr, const char *cStrOrg, DWORD *pdwLength) {
+    static void utf8toucpy(wchar_t *lpStr, const char *cStrOrg, uint32_t *pdwLength) {
         if (cStrOrg[0]=='\0') {
             *pdwLength = 0;
             if (lpStr!=nullptr) lpStr[0]=L'\0';
@@ -258,9 +255,9 @@ public:
         }
 #ifdef CMSTRING_WIN32API
         int cchWideChar = ::MultiByteToWideChar(CP_UTF8, 0, cStrOrg, -1, nullptr, 0);
-        *pdwLength = (DWORD)cchWideChar;
+        *pdwLength = (uint32_t)cchWideChar;
         if (cchWideChar==0) {
-            DWORD dwError = ::GetLastError();
+            uint32_t dwError = ::GetLastError();
             if (dwError == ERROR_INSUFFICIENT_BUFFER || dwError == ERROR_INVALID_FLAGS || dwError == ERROR_INVALID_PARAMETER || dwError == ERROR_NO_UNICODE_TRANSLATION)
                 throw string_error("CMString utf8toucpy: ERROR MultiByteToWideChar");
         }
@@ -642,7 +639,7 @@ public:
         if (m_lpBuf==nullptr) return "";
         else {
             if(m_cBuf) delete [] m_cBuf;
-            DWORD dwLen;
+            uint32_t dwLen;
             utoutf8cpy(nullptr, m_lpBuf, &dwLen);
             m_cBuf = new(std::nothrow) char[dwLen];
             if(! m_cBuf)
@@ -659,7 +656,7 @@ public:
 
     void set_str(const char *utf8) {
         if (utf8==nullptr) return;
-        DWORD dwLength = 0;
+        uint32_t dwLength = 0;
         utf8toucpy(nullptr, utf8, &dwLength);
         std::unique_ptr<wchar_t []> str(new(std::nothrow) WCHAR[dwLength]);
         if(! str.get())

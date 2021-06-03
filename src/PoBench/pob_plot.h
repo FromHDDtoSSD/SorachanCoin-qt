@@ -8,7 +8,7 @@
 
 #include <uint256.h>
 #include <serialize.h>
-//#include <winapi/sectorbase.h>
+#include <winapi/sectorbase.h>
 
 constexpr std::size_t PLOT_SIZE = 4096;
 constexpr std::size_t POB_SECTOR_SIZE = 512;
@@ -34,7 +34,7 @@ struct PoBench_Plot {
 static_assert(sizeof(PoBench_Plot)==PLOT_SIZE, "[PoBench] invalid plot_size");
 
 //
-// Plot R/W
+// Plot Writer
 //
 class PoBench_Plot_Writer
 {

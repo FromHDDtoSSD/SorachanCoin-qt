@@ -356,10 +356,10 @@ class sector_io final : public sector_base
     sector_io(sector_io &&)=delete;
     sector_io &operator=(sector_io &&)=delete;
 private:
-    static constexpr DWORD SECTORS_SIZE_SEQ = 100 * 1024 * 1024;
-    static constexpr DWORD SECTORS_SIZE_8192KB = 8192 * 1024;
-    static constexpr DWORD SECTORS_SIZE_512KB = 512 * 1024;
-    static constexpr DWORD SECTORS_SIZE_4KB = 4 * 1024;
+    static constexpr uint32_t SECTORS_SIZE_SEQ = 100 * 1024 * 1024;
+    static constexpr uint32_t SECTORS_SIZE_8192KB = 8192 * 1024;
+    static constexpr uint32_t SECTORS_SIZE_512KB = 512 * 1024;
+    static constexpr uint32_t SECTORS_SIZE_4KB = 4 * 1024;
 
     drive_base *drive;
 public:
@@ -392,7 +392,7 @@ public:
 
     bool settype(ACC_TYPE type, int drive_target, const drive_base *instanced = nullptr) {
         destroy();
-        DWORD sectors_size = 0;
+        uint32_t sectors_size = 0;
         switch (type)
         {
         case ACC_TYPE_SEQ_READ:
@@ -443,7 +443,7 @@ public:
     }
     bool settype_file(ACC_TYPE type, int drive_target, const drive_base *instanced = nullptr) {
         destroy();
-        DWORD sectors_size = 0;
+        uint32_t sectors_size = 0;
         switch (type)
         {
         case ACC_TYPE_SEQ_WRITE:
