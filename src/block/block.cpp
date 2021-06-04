@@ -217,9 +217,9 @@ bool block_notify<T>::IsInitialBlockDownload()
 }
 
 template <typename T>
-void CBlockHeader<T>::set_LastHeight(int32_t _in) const {
+void CBlockHeader<T>::set_LastHeight(int32_t _in) const { // _in is indexPrev
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(_in + 1 >= sw_height) {
+    if(_in + 1 >= sw_height) { // _in + 1 is myself
         CBlockHeader<T>::LastHeight = _in;
         CBlockHeader<T>::nVersion = CURRENT_VERSION_Lyra2REV2;
     } else {
@@ -229,22 +229,21 @@ void CBlockHeader<T>::set_LastHeight(int32_t _in) const {
 }
 
 template <typename T>
-T CBlockHeader_impl<T>::GetPoHash() const {
-    //assert(CBlockHeader<T>::get_LastHeight()!=-1);
-    //debugcs::instance() << "LastHeight: " << CBlockHeader<T>::get_LastHeight() << debugcs::endl();
-    if(CBlockHeader<T>::get_LastHeight()==-1) {
-        if(CBlockHeader<T>::get_hashPrevBlock()==0)
-            return bitscrypt::scrypt_blockhash((const char *)this);
-        BlockMap::const_iterator mi = block_info::mapBlockIndex.find(CBlockHeader<T>::get_hashPrevBlock());
-        //debugcs::instance() << "prevBlock hash: " << CBlockHeader<T>::get_hashPrevBlock().ToString().c_str() << debugcs::endl();
-        if(mi!=block_info::mapBlockIndex.end()) {
-            CBlockIndex_impl<T> *pindexPrev = (*mi).second;
-            CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
-        } else
-            return bitscrypt::scrypt_blockhash((const char *)this);
-    }
+void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in is indexPrev
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(CBlockHeader<T>::get_LastHeight() + 1 >= sw_height) {
+    if(_in + 1 >= sw_height) {
+        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in+1),
+                                                             std::make_tuple(_in+1, LYRA2REV2_POW_TYPE, BLOCK_HASH_MODIFIER<T>()))); // myself
+        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in),
+                                                             std::make_tuple(_in, LYRA2REV2_POW_TYPE, BLOCK_HASH_MODIFIER<T>()))); // prev
+    }
+}
+
+template <typename T>
+T CBlockHeader_impl<T>::GetPoHash() const {
+    //const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    BlockHeight::const_iterator mi = block_info::mapBlockLyraHeight.find(CBlockHeader_impl<T>::get_hashPrevBlock());
+    if(mi!=block_info::mapBlockLyraHeight.end()) {
         T hash;
         lyra2re2_hash((const char *)this, BEGIN(hash));
         return hash;
@@ -260,7 +259,7 @@ T CBlockHeader_impl<T>::GetPoHash(int32_t height) const {
     if(height >= sw_height)
         lyra2re2_hash((const char *)this, BEGIN(hash));
     else
-        hash = GetPoHash();
+        hash = bitscrypt::scrypt_blockhash((const char *)this);
     return hash;
 }
 
@@ -292,6 +291,7 @@ template <typename T>
 bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck/*=false*/)
 {
     CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1);
 
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))
@@ -430,6 +430,7 @@ template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions/*=true*/)
 {
     CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1);
     if (! fReadTransactions) {
         *this = pindex->GetBlockHeader();
         return true;
@@ -752,6 +753,7 @@ bool CBlock_impl<T>::AcceptBlock()
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
     CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindexPrev->get_nHeight());
     ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
 
     // Check for duplicate

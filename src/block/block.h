@@ -161,6 +161,7 @@ public:
     bool IsNull() const {
         return (CBlockHeader<T>::nBits == 0);
     }
+    void set_Last_LyraHeight_hash(int32_t _in) const;
     T GetPoHash() const;
     T GetPoHash(int32_t height) const;
     int64_t GetBlockTime() const {
@@ -171,6 +172,7 @@ public:
         CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
     }
 };
+
 template <typename T>
 class CDiskBlockHeader_impl : public CBlockHeader_impl<T> {
     CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;

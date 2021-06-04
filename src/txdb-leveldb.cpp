@@ -612,21 +612,18 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
 
         // Watch for genesis block
-        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
+        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet))
             pindexGenesisBlock = pindexNew;
-        }
 
-        if (! pindexNew->CheckIndex()) {
+        if (! pindexNew->CheckIndex())
             return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
-        }
 
         // ppcoin: build setStakeSeen
-        if (pindexNew->IsProofOfStake()) {
+        if (pindexNew->IsProofOfStake())
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
-        }
     }
 
-    debugcs::instance() << "LoadBlockIndex done" << debugcs::endl();
+    //debugcs::instance() << "LoadBlockIndex done" << debugcs::endl();
 
     // debug
     // checking mapBlockIndex
@@ -642,9 +639,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 #else
 
     // Seek to start key.
-    if(! this->seek(std::string("blockindex"), HASH(0))) {
+    if(! this->seek(std::string("blockindex"), HASH(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
-    }
 
     // Now read each entry.
     for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
@@ -656,9 +652,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
-        if (args_bool::fRequestShutdown || strType != "blockindex") {
+        if (args_bool::fRequestShutdown || strType != "blockindex")
             break;
-        }
 
         CDiskBlockIndex_impl<HASH> diskindex;
         ::Unserialize(ssValue, diskindex);
@@ -687,25 +682,21 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
 
         // Watch for genesis block
-        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet)) {
+        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet))
             pindexGenesisBlock = pindexNew;
-        }
 
-        if (! pindexNew->CheckIndex()) {
+        if (! pindexNew->CheckIndex())
             return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
-        }
 
         // ppcoin: build setStakeSeen
-        if (pindexNew->IsProofOfStake()) {
+        if (pindexNew->IsProofOfStake())
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
-        }
     }
 
 #endif
 
-    if (args_bool::fRequestShutdown) {
+    if (args_bool::fRequestShutdown)
         return true;
-    }
 
     // Calculate nChainTrust
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
@@ -722,40 +713,40 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         // calculate stake modifier checksum
         pindex->set_nStakeModifierChecksum(bitkernel<HASH>::GetStakeModifierChecksum(pindex));
-        if (!bitkernel<HASH>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum())) {
-            return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindex->get_nHeight(), pindex->get_nStakeModifier());
-        }
+        if (! bitkernel<HASH>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum()))
+            return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64,
+                                  pindex->get_nHeight(),
+                                  pindex->get_nStakeModifier());
 
         // build pskip
         if(pindex->get_pprev())
             pindex->BuildSkip();
     }
 
-    //
     // Load hashBestChain pointer to end of best chain
-    //
     if (! ReadHashBestChain(hashBestChain)) {
-        if (pindexGenesisBlock == nullptr) {
+        if (pindexGenesisBlock == nullptr)
             return true;
-        }
-
         return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not loaded");
     }
     //::fprintf(stdout, "hashBestChain: %s\n", hashBestChain.ToString().c_str());
 
-    if (! mapBlockIndex.count(hashBestChain)) {
+    if (! mapBlockIndex.count(hashBestChain))
         return logging::error("CTxDB::LoadBlockIndex() : hashBestChain not found in the block index");
-    }
+
     pindexBest = mapBlockIndex[hashBestChain];
     nBestHeight = pindexBest->get_nHeight();
     nBestChainTrust = pindexBest->get_nChainTrust();
-
-    logging::LogPrintf("LoadBlockIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n", hashBestChain.ToString().substr(0, 20).c_str(), nBestHeight, CBigNum(nBestChainTrust).ToString().c_str(), util::DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
+    logging::LogPrintf("LoadBlockIndex(): hashBestChain=%s  height=%d  trust=%s  date=%s\n",
+                       hashBestChain.ToString().substr(0, 20).c_str(),
+                       nBestHeight,
+                       CBigNum(nBestChainTrust).ToString().c_str(),
+                       util::DateTimeStrFormat("%x %H:%M:%S", pindexBest->GetBlockTime()).c_str());
 
     // load hashSyncCheckpoint
-    if (! ReadSyncCheckpoint(Checkpoints::manage::getHashSyncCheckpoint())) {
+    if (! ReadSyncCheckpoint(Checkpoints::manage::getHashSyncCheckpoint()))
         return logging::error("CTxDB::LoadBlockIndex() : hashSyncCheckpoint not loaded");
-    }
+
     logging::LogPrintf("LoadBlockIndex(): synchronized checkpoint %s\n", Checkpoints::manage::getHashSyncCheckpoint().ToString().c_str());
 
     // Load bnBestInvalidTrust, OK if it doesn't exist

@@ -24,6 +24,34 @@ class CScript;
 using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
 using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> *, CCoinsKeyHasher>;
 
+// hash type: Block hash algo. (other: Scrypt)
+enum BLOCK_HASH_TYPE {
+    SCRYPT_POW_TYPE,     // ASIC
+    LYRA2REV2_POW_TYPE,  // GPU
+    YESPOWER_POW_TYPE,   // CPU
+    SCRYPT_POS_TYPE,     // Stake
+    SCRYPT_POBENCH_TYPE, // SSD: Sora neko
+    SCRYPT_POSPACE_TYPE  // HDD: Chia
+};
+template <typename T>
+class BLOCK_HASH_MODIFIER {
+    T prevHash;
+    double workModifier;
+    uint32_t workChecksum;
+public:
+    BLOCK_HASH_MODIFIER() {
+        prevHash = 0;
+        workModifier = 1.0;
+        workChecksum = 0;
+    }
+};
+
+// insert: Scrypt(Last), Lyra(Switch), Lyra, Lyra ...
+using BH_TYPE = std::tuple<int, BLOCK_HASH_TYPE, BLOCK_HASH_MODIFIER<uint256> >;
+using BlockHeight = std::unordered_map<uint256, BH_TYPE, CCoinsKeyHasher>;
+using BH_TYPE65536 = std::tuple<int, BLOCK_HASH_TYPE, BLOCK_HASH_MODIFIER<uint65536> >;
+using BlockHeight65536 = std::unordered_map<uint65536, BH_TYPE65536, CCoinsKeyHasher>;
+
 // T == uint256
 namespace block_info
 {
@@ -31,7 +59,8 @@ namespace block_info
 
     extern CChain_impl<uint256> chainActive;
     extern BlockMap mapBlockIndex;
-    extern std::set<std::pair<COutPoint_impl<uint256>, unsigned int>> setStakeSeen;
+    extern BlockHeight mapBlockLyraHeight;
+    extern std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > setStakeSeen;
     extern CBlockIndex_impl<uint256> *pindexGenesisBlock;// = nullptr;
 
     const std::string strMessageMagic = strCoinName " Signed Message:\n";

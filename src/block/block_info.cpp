@@ -11,6 +11,7 @@
 CScript block_info::COINBASE_FLAGS;
 CChain_impl<uint256> block_info::chainActive;
 BlockMap block_info::mapBlockIndex;
+BlockHeight block_info::mapBlockLyraHeight;
 std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > block_info::setStakeSeen;
 CBlockIndex_impl<uint256> *block_info::pindexGenesisBlock = nullptr;
 int64_t block_info::nTimeBestReceived = 0;
