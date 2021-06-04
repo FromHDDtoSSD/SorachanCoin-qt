@@ -329,6 +329,11 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
+template <typename HASH>
+bool CTxDB_impl<HASH>::WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &data) {
+    return Write(std::make_pair(std::string("blockhashtype"), height), data); // overwrite: true
+}
+
 // like block_info::mapBlockIndex
 // must be singleton model
 template <typename HASH>
@@ -691,6 +696,31 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         // ppcoin: build setStakeSeen
         if (pindexNew->IsProofOfStake())
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
+    }
+
+    // Seek to start blockhashtype.
+    if(! this->seek(std::string("blockhashtype"), int(0)))
+        return logging::error("LoadBlockIndex() Error: memory allocate failure.");
+
+    // Now read each entry.
+    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
+    {
+        // Unpack keys and values.
+        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
+        std::string strType;
+        ::Unserialize(ssKey, strType);
+
+        // Did we reach the end of the data to read?
+        if (args_bool::fRequestShutdown || strType != "blockhashtype")
+            break;
+
+        int height;
+        ::Unserialize(ssKey, height);
+        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
+        ::Unserialize(ssValue, data);
+
+        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
     }
 
 #endif

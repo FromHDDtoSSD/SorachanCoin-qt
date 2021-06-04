@@ -126,6 +126,8 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
+    bool WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &data);
+
     bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex,
                         std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,
                         CBlockIndex_impl<HASH> *&pindexGenesisBlock,

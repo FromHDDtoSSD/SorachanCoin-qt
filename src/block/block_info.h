@@ -15,6 +15,7 @@
 #include <version.h>
 #include <block/block_chain.h>
 #include <block/block_keyhasher.h>
+#include <serialize.h>
 
 template <typename T> class CBlockIndex_impl;
 template <typename T> class COutPoint_impl;
@@ -26,30 +27,42 @@ using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> 
 
 // hash type: Block hash algo. (other: Scrypt)
 enum BLOCK_HASH_TYPE {
-    SCRYPT_POW_TYPE,     // ASIC
-    LYRA2REV2_POW_TYPE,  // GPU
-    YESPOWER_POW_TYPE,   // CPU
-    SCRYPT_POS_TYPE,     // Stake
-    SCRYPT_POBENCH_TYPE, // SSD: Sora neko
-    SCRYPT_POSPACE_TYPE  // HDD: Chia
+    SCRYPT_POW_TYPE,        // ASIC
+    LYRA2REV2_POW_TYPE,     // GPU
+    YESPOWER_POW_TYPE,      // CPU
+    SCRYPT_POS_TYPE,        // Stake
+    SCRYPT_MASTERNODE_TYPE, // Masternode
+    SCRYPT_POBENCH_TYPE,    // SSD: Sora neko
+    SCRYPT_POSPACE_TYPE     // HDD: Chia
 };
 template <typename T>
 class BLOCK_HASH_MODIFIER {
+    int type;
     T prevHash;
     double workModifier;
     uint32_t workChecksum;
 public:
     BLOCK_HASH_MODIFIER() {
+        type = LYRA2REV2_POW_TYPE;
         prevHash = 0;
         workModifier = 1.0;
         workChecksum = 0;
     }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(type);
+        READWRITE(prevHash);
+        READWRITE(workModifier);
+        READWRITE(workChecksum);
+    }
 };
 
 // insert: Scrypt(Last), Lyra(Switch), Lyra, Lyra ...
-using BH_TYPE = std::tuple<int, BLOCK_HASH_TYPE, BLOCK_HASH_MODIFIER<uint256> >;
+using BH_TYPE = std::pair<int, BLOCK_HASH_MODIFIER<uint256> >;
 using BlockHeight = std::unordered_map<uint256, BH_TYPE, CCoinsKeyHasher>;
-using BH_TYPE65536 = std::tuple<int, BLOCK_HASH_TYPE, BLOCK_HASH_MODIFIER<uint65536> >;
+using BH_TYPE65536 = std::pair<int, BLOCK_HASH_MODIFIER<uint65536> >;
 using BlockHeight65536 = std::unordered_map<uint65536, BH_TYPE65536, CCoinsKeyHasher>;
 
 // T == uint256

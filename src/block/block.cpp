@@ -232,10 +232,15 @@ template <typename T>
 void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in is indexPrev
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(_in + 1 >= sw_height) {
-        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in+1),
-                                                             std::make_tuple(_in+1, LYRA2REV2_POW_TYPE, BLOCK_HASH_MODIFIER<T>()))); // myself
-        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in),
-                                                             std::make_tuple(_in, LYRA2REV2_POW_TYPE, BLOCK_HASH_MODIFIER<T>()))); // prev
+        auto data1 = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
+        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in+1), data1)); // myself
+        auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
+        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in), data2)); // prev
+        CTxDB_impl<T> txdb;
+        bool ret1 = txdb.Write(_in+1, data1);
+        bool ret2 = txdb.Write(_in, data2);
+        if(!(ret1 && ret2))
+            throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
     }
 }
 
