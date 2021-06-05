@@ -673,6 +673,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
 #else
 
+    //debugcs::instance() << "LoadBlockIndex() begin 1" << debugcs::endl();
+
     // Seek to start blockhashtype.
     if(! this->seek(std::string("blockhashtype"), int(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
@@ -687,7 +689,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
-        //debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
+        debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
         if (args_bool::fRequestShutdown || strType != "blockhashtype")
             break;
 
@@ -700,6 +702,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
     }
+
+    //debugcs::instance() << "LoadBlockIndex() begin 2" << debugcs::endl();
 
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), HASH(0)))
@@ -760,6 +764,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
     if (args_bool::fRequestShutdown)
         return true;
+
+    //debugcs::instance() << "LoadBlockIndex() begin 3" << debugcs::endl();
 
     // Calculate nChainTrust
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;

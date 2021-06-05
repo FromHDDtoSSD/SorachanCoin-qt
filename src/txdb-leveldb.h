@@ -96,9 +96,9 @@ public:
     CTxDB_impl(const char *pszMode = "r+");
     ~CTxDB_impl();
 
-    bool TxnBegin() {return this->TxnBegin();}
-    bool TxnCommit() {return this->TxnCommit();}
-    bool TxnAbort() {return this->TxnAbort();}
+    bool TxnBegin() {return CTxDBHybrid::TxnBegin();}
+    bool TxnCommit() {return CTxDBHybrid::TxnCommit();}
+    bool TxnAbort() {return CTxDBHybrid::TxnAbort();}
 
     void init_blockindex(const char *pszMode, bool fRemoveOld = false);
 
