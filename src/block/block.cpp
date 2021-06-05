@@ -69,13 +69,12 @@ const CBlockIndex_impl<T> *CBlockIndex_impl<T>::GetAncestor(int height) const {
 
 template <typename T>
 void CBlockIndex_impl<T>::BuildSkip() {
-    // under development
-    //if (pprev) {
-    //    int height = GetSkipHeight(nHeight);
-    //    debugcs::instance() << "CBlockIndex BuildSkip nHeight: " << nHeight << " Ancestor height: " << height;
-    //    pskip = pprev->GetAncestor(height);
-    //    debugcs::instance() << " pskip NULL: " << (pskip? 1: 0) << debugcs::endl();
-    //}
+    if (pprev) {
+        int height = GetSkipHeight(nHeight);
+        //debugcs::instance() << "CBlockIndex BuildSkip nHeight: " << nHeight << " Ancestor height: " << height;
+        pskip = pprev->GetAncestor(height);
+        //debugcs::instance() << " pskip not NULL: " << (pskip? 1: 0) << debugcs::endl();
+    }
 }
 
 
@@ -233,28 +232,19 @@ void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in 
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(_in + 1 >= sw_height) {
         auto data1 = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
-        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in+1), data1)); // myself
+        auto hash1 = GetPoHash(_in+1);
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash1, data1)); // myself
         auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
-        block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in), data2)); // prev
+        auto hash2 = GetPoHash(_in);
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash2, data2)); // prev
         CTxDB_impl<T> txdb;
-        bool ret1 = txdb.WriteBlockHashType(_in+1, data1);
-        bool ret2 = txdb.WriteBlockHashType(_in, data2);
+        bool ret1 = txdb.WriteBlockHashType(hash1, data1);
+        bool ret2 = txdb.WriteBlockHashType(hash2, data2);
         if(!(ret1 && ret2))
             throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
     } else { // debug (no write to DB)
-        //
         // do nothing (no write)
-        //
         //debugcs::instance() << "debug set_Last_LyraHeight_hash: " << _in + 1 << debugcs::endl();
-        /*
-        CTxDB_impl<T> txdb;
-        auto data1 = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
-        bool ret1 = txdb.WriteBlockHashType(_in+1, data1);
-        auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
-        bool ret2 = txdb.Write(_in, data2); // error OK
-        if(!(ret1 && ret2))
-            throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
-        */
     }
 }
 
@@ -263,6 +253,7 @@ T CBlockHeader_impl<T>::GetPoHash() const {
     //const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     BlockHeight::const_iterator mi = block_info::mapBlockLyraHeight.find(CBlockHeader_impl<T>::get_hashPrevBlock());
     if(mi!=block_info::mapBlockLyraHeight.end()) {
+        debugcs::instance() << "Lyra HASH height: " << (*mi).second.first << debugcs::endl();
         T hash;
         lyra2re2_hash((const char *)this, BEGIN(hash));
         return hash;

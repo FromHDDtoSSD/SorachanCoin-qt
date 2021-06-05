@@ -330,8 +330,8 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &modifier) {
-    return Write(std::make_pair(std::string("blockhashtype"), height), modifier); // overwrite: true
+bool CTxDB_impl<HASH>::WriteBlockHashType(HASH hash, const std::pair<int, BLOCK_HASH_MODIFIER<HASH> > &modifier) {
+    return Write(std::make_pair(std::string("blockhashtype"), hash), modifier); // overwrite: true
 }
 
 // like block_info::mapBlockIndex
@@ -591,14 +591,14 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
         ssKey.ignore();
 
-        int height;
-        ::Unserialize(ssKey, height);
-        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
+        HASH hash;
+        ::Unserialize(ssKey, hash);
+        std::pair<int, BLOCK_HASH_MODIFIER<HASH> > data;
         ::Unserialize(ssValue, data);
 
-        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
 
-        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
+        debugcs::instance() << "LoadBlockIndex height: " << data.first << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     // Seek to start key.
@@ -673,10 +673,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
 #else
 
-    //debugcs::instance() << "LoadBlockIndex() begin 1" << debugcs::endl();
+    //debugcs::instance() << "LoadBlockIndex() begin blockhashtype" << debugcs::endl();
 
     // Seek to start blockhashtype.
-    if(! this->seek(std::string("blockhashtype"), int(0)))
+    if(! this->seek(std::string("blockhashtype"), HASH(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
 
     // Now read each blockhashtype.
@@ -689,21 +689,20 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
-        debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
         if (args_bool::fRequestShutdown || strType != "blockhashtype")
             break;
 
-        int height;
-        ::Unserialize(ssKey, height);
-        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
+        HASH hash;
+        ::Unserialize(ssKey, hash);
+        std::pair<int, BLOCK_HASH_MODIFIER<HASH> > data;
         ::Unserialize(ssValue, data);
 
-        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
 
-        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
+        debugcs::instance() << "LoadBlockIndex height: " << data.first << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
-    //debugcs::instance() << "LoadBlockIndex() begin 2" << debugcs::endl();
+    //debugcs::instance() << "LoadBlockIndex() begin blockindex" << debugcs::endl();
 
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), HASH(0)))
@@ -765,7 +764,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     if (args_bool::fRequestShutdown)
         return true;
 
-    //debugcs::instance() << "LoadBlockIndex() begin 3" << debugcs::endl();
+    //debugcs::instance() << "LoadBlockIndex() begin chain build" << debugcs::endl();
 
     // Calculate nChainTrust
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
