@@ -571,6 +571,36 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
 #ifdef BLK_SQL_MODE
 
+    // Seek to start blockhashtype.
+    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockhashtype%"));
+
+    // Now read each blockhashtype.
+    int ret;
+    std::vector<char> vchValue;
+    CDBStream ssValue(&vchValue, 10000);
+    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid(), ssValue))!=DB_NOTFOUND)
+    {
+        if(ret>0)
+            return logging::error("LoadBlockIndex() : sql read failure");
+
+        // Unpack values.
+        if (args_bool::fRequestShutdown)
+            break;
+
+        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
+        ssKey.ignore();
+
+        int height;
+        ::Unserialize(ssKey, height);
+        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
+        ::Unserialize(ssValue, data);
+
+        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
+
+        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
+    }
+
     // Seek to start key.
     IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
 
@@ -643,6 +673,34 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
 #else
 
+    // Seek to start blockhashtype.
+    if(! this->seek(std::string("blockhashtype"), int(0)))
+        return logging::error("LoadBlockIndex() Error: memory allocate failure.");
+
+    // Now read each blockhashtype.
+    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
+    {
+        // Unpack keys and values.
+        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
+        std::string strType;
+        ::Unserialize(ssKey, strType);
+
+        // Did we reach the end of the data to read?
+        //debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
+        if (args_bool::fRequestShutdown || strType != "blockhashtype")
+            break;
+
+        int height;
+        ::Unserialize(ssKey, height);
+        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
+        ::Unserialize(ssValue, data);
+
+        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
+
+        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
+    }
+
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), HASH(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
@@ -696,34 +754,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         // ppcoin: build setStakeSeen
         if (pindexNew->IsProofOfStake())
             setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
-    }
-
-    // Seek to start blockhashtype.
-    if(! this->seek(std::string("blockhashtype"), int(0)))
-        return logging::error("LoadBlockIndex() Error: memory allocate failure.");
-
-    // Now read each entry.
-    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
-    {
-        // Unpack keys and values.
-        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
-        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
-        std::string strType;
-        ::Unserialize(ssKey, strType);
-
-        // Did we reach the end of the data to read?
-        //debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
-        if (args_bool::fRequestShutdown || strType != "blockhashtype")
-            break;
-
-        int height;
-        ::Unserialize(ssKey, height);
-        std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > data;
-        ::Unserialize(ssValue, data);
-
-        block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
-
-        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
     }
 
 #endif
