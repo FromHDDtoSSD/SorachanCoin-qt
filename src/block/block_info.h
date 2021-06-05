@@ -25,29 +25,38 @@ class CScript;
 using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
 using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> *, CCoinsKeyHasher>;
 
-// hash type: Block hash algo. (other: Scrypt)
+// BLOCK_HASH_MODIFIER genesis block hash
+const std::string block_hash_modifier_genesis = "Certain exchange in Hong Kong stole a Dogecoin that one of the SorachanCoin(Sora neko) developers own. We are currently under negotiation a return coins.";
+
+// hash type: Block hash algo.
 enum BLOCK_HASH_TYPE {
-    SCRYPT_POW_TYPE,        // ASIC
-    LYRA2REV2_POW_TYPE,     // GPU
-    YESPOWER_POW_TYPE,      // CPU
-    SCRYPT_POS_TYPE,        // Stake
-    SCRYPT_MASTERNODE_TYPE, // Masternode
-    SCRYPT_POBENCH_TYPE,    // SSD: Sora neko
-    SCRYPT_POSPACE_TYPE     // HDD: Chia
+    SCRYPT_POW_TYPE,           // ASIC
+    LYRA2REV2_POW_TYPE,        // GPU
+    YESPOWER_POW_TYPE,         // CPU
+    LYRA2REV2_POS_TYPE,        // Stake
+    LYRA2REV2_MASTERNODE_TYPE, // Masternode
+    LYRA2REV2_POBENCH_TYPE,    // SSD: Sora neko
+    LYRA2REV2_POSPACE_TYPE     // HDD: Chia
 };
 template <typename T>
-class BLOCK_HASH_MODIFIER {
+struct BLOCK_HASH_MODIFIER {
+#pragma pack(push, 1)
     int type;
-    T prevHash;
-    double workModifier;
+    T prevHash; // 0: unconfirmed(valid), hash value: confirmed(valid)
+    uint64_t workModifier;
     uint32_t workChecksum;
-public:
+    unsigned char pad[80-sizeof(int)-sizeof(T)-sizeof(uint64_t)-sizeof(uint32_t)]; // note: when T == uint256, 80 bytes
+#pragma pack(pop)
     BLOCK_HASH_MODIFIER() {
+        static_assert(sizeof(int)+sizeof(T)+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(pad)==80, "BLOCK_HASH_MODOFIER invalid size.");
         type = LYRA2REV2_POW_TYPE;
         prevHash = 0;
-        workModifier = 1.0;
+        workModifier = 1;
         workChecksum = 0;
+        std::memset(pad, 0x00, sizeof(pad));
     }
+
+    T GetBlockModifierHash(uint32_t _in) const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>

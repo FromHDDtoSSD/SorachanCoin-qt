@@ -231,15 +231,17 @@ template <typename T>
 void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in is indexPrev
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(_in + 1 >= sw_height) {
-        auto data1 = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
-        auto hash1 = GetPoHash(_in+1);
-        block_info::mapBlockLyraHeight.insert(std::make_pair(hash1, data1)); // myself
-        auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
-        auto hash2 = GetPoHash(_in);
-        block_info::mapBlockLyraHeight.insert(std::make_pair(hash2, data2)); // prev
+        auto data_prev = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
+        auto hash_prev = GetPoHash(_in);
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash_prev, data_prev)); // prev
+
+        auto data_current = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
+        auto hash_current = GetPoHash(_in+1);
+        block_info::mapBlockLyraHeight.insert(std::make_pair(hash_current, data_current)); // current
+
         CTxDB_impl<T> txdb;
-        bool ret1 = txdb.WriteBlockHashType(hash1, data1);
-        bool ret2 = txdb.WriteBlockHashType(hash2, data2);
+        bool ret1 = txdb.WriteBlockHashType(hash_prev, data_prev);
+        bool ret2 = txdb.WriteBlockHashType(hash_current, data_current);
         if(!(ret1 && ret2))
             throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
     } else { // debug (no write to DB)
