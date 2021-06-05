@@ -14,7 +14,8 @@
 
 static constexpr int lowerBlockHeight = 440000; // mainnet and testnet
 #ifdef DEBUG
-# define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
+//# define CP_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl()
+# define CP_DEBUG_CS(str)
 #else
 # define CP_DEBUG_CS(str)
 #endif

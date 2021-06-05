@@ -330,8 +330,8 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &data) {
-    return Write(std::make_pair(std::string("blockhashtype"), height), data); // overwrite: true
+bool CTxDB_impl<HASH>::WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &modifier) {
+    return Write(std::make_pair(std::string("blockhashtype"), height), modifier); // overwrite: true
 }
 
 // like block_info::mapBlockIndex
@@ -712,6 +712,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssKey, strType);
 
         // Did we reach the end of the data to read?
+        //debugcs::instance() << "LoadBlockIndex begin type: " << strType.c_str() << debugcs::endl();
         if (args_bool::fRequestShutdown || strType != "blockhashtype")
             break;
 
@@ -721,6 +722,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssValue, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(data.first, std::make_pair(height, data.second)));
+
+        debugcs::instance() << "LoadBlockIndex height: " << height << " hash: " << data.first.ToString().c_str() << debugcs::endl();
     }
 
 #endif

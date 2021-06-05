@@ -86,7 +86,7 @@ private:
 };
 
 template <typename HASH>
-class CTxDB_impl final : public CTxDBHybrid
+class CTxDB_impl final : protected CTxDBHybrid // should use protected: hide Write() method.
 {
     CTxDB_impl(const CTxDB_impl &)=delete;
     CTxDB_impl(CTxDB_impl &&)=delete;
@@ -95,6 +95,10 @@ class CTxDB_impl final : public CTxDBHybrid
 public:
     CTxDB_impl(const char *pszMode = "r+");
     ~CTxDB_impl();
+
+    bool TxnBegin() {return this->TxnBegin();}
+    bool TxnCommit() {return this->TxnCommit();}
+    bool TxnAbort() {return this->TxnAbort();}
 
     void init_blockindex(const char *pszMode, bool fRemoveOld = false);
 
@@ -126,7 +130,7 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-    bool WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &data);
+    bool WriteBlockHashType(int height, const std::pair<HASH, BLOCK_HASH_MODIFIER<HASH> > &modifier);
 
     bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex,
                         std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,

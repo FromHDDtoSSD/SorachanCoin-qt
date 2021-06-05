@@ -237,10 +237,24 @@ void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in 
         auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
         block_info::mapBlockLyraHeight.insert(std::make_pair(GetPoHash(_in), data2)); // prev
         CTxDB_impl<T> txdb;
-        bool ret1 = txdb.Write(_in+1, data1);
-        bool ret2 = txdb.Write(_in, data2);
+        bool ret1 = txdb.WriteBlockHashType(_in+1, data1);
+        bool ret2 = txdb.WriteBlockHashType(_in, data2);
         if(!(ret1 && ret2))
             throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
+    } else { // debug (no write to DB)
+        //
+        // do nothing (no write)
+        //
+        //debugcs::instance() << "debug set_Last_LyraHeight_hash: " << _in + 1 << debugcs::endl();
+        /*
+        CTxDB_impl<T> txdb;
+        auto data1 = std::make_pair(_in+1, BLOCK_HASH_MODIFIER<T>());
+        bool ret1 = txdb.WriteBlockHashType(_in+1, data1);
+        auto data2 = std::make_pair(_in, BLOCK_HASH_MODIFIER<T>());
+        bool ret2 = txdb.Write(_in, data2); // error OK
+        if(!(ret1 && ret2))
+            throw std::runtime_error("BLOCK_HASH_MODIFIER DB write ERROR.");
+        */
     }
 }
 
@@ -1065,3 +1079,4 @@ template class CBlockHeader_impl<uint256>;
 template class CBlock_impl<uint256>;
 template class CBlockIndex_impl<uint256>;
 template class CDiskBlockIndex_impl<uint256>;
+template class block_notify<uint256>;
