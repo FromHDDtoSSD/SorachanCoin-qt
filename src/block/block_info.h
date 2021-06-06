@@ -16,21 +16,75 @@
 #include <block/block_chain.h>
 #include <block/block_keyhasher.h>
 #include <serialize.h>
+#include <script/script.h>
 
 template <typename T> class CBlockIndex_impl;
 template <typename T> class COutPoint_impl;
 class CWallet;
-class CScript;
 
 using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
 using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> *, CCoinsKeyHasher>;
 
-// BLOCK_HASH_MODIFIER genesis block hash
-const std::string block_hash_modifier_genesis = "Certain exchange in Hong Kong stole a Dogecoin that one of the SorachanCoin(Sora neko) developers own. We are currently under negotiation a return coins.";
+/*
+ * BLOCK_HASH_MODIFIER (SORA)
+ * It is a mechanism that enables different hashes algorithm on the same Blockchain.
+ *
+ * - About instance:
+ * - nHeight
+ * SWITCH_LYRE2RE_BLOCK - 2 (LastBlock, No BLOCK_HASH_MODIFIER)
+ * SWITCH_LYRE2RE_BLOCK - 1 (Genesis, BLOCK_HASH_MODIFIER, ONLY Scrypt)
+ * SWITCH_LYRE2RE_BLOCK     (begin, BLOCK_HASH_MODIFIER)
+ *
+ * - About diff:
+ * - workModifier low diff (reward)
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) = 4 (12 min) 0
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.05) CPU(0.05) GPU(1) = 5.1 (21 min) -1.9
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.05) CPU(0.05) GPU(1) ASIC(2.9) = 8 (24 min) 0
+ * - workModifier high diff (reward)
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) = 4 (12 min) 0
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.005) CPU(0.005) GPU(1) = 5.01 (21 min) -1.99
+ *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.05) CPU(0.05) GPU(1) ASIC(2.99) = 8 (24 min) 0
+ */
+
+template <typename T>
+struct BLOCK_HASH_MODIFIER_MUTABLE {
+#pragma pack(push, 1)
+    int32_t nVersion;
+    int32_t type;
+    int32_t nFlags;
+    int32_t nHeight;
+    T prevHash;
+    uint64_t workModifier;
+    uint32_t workChecksum;
+    unsigned char padding[80-sizeof(int32_t)*4-sizeof(T)-sizeof(uint64_t)-sizeof(uint32_t)]; // note: when T == uint256, 80 bytes
+#pragma pack(pop)
+    BLOCK_HASH_MODIFIER_MUTABLE() {
+        static_assert(sizeof(int32_t)*4+sizeof(T)+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(padding)==80, "BLOCK_HASH_MODOFIER invalid size.");
+    }
+};
+
+// BLOCK_HASH_MODIFIER genesis block
+namespace block_hash_modifier_genesis {
+    const std::string szStr           = "Certain Exchange in Hong Kong stole a Dogecoin that is owned one of the SorachanCoin(Sora neko) developers. "
+                                        "We are currently under negotiation. Please back a Dogecoin.";
+    constexpr int32_t nVersion        = 1;
+    constexpr int32_t type            = 1;
+    constexpr int32_t nFlags          = 1;
+    constexpr int32_t nHeight         = -1;
+    constexpr uint64_t workModifier   = 0;
+    constexpr uint32_t workChecksum   = 0;
+
+    extern BLOCK_HASH_MODIFIER_MUTABLE<uint256> create_block_hash_modifier_genesis();
+}
+
+// BLOCK_HASH_MODIFIER info
+namespace block_hash_modifier_info {
+    extern unsigned char gpchMessageStart[4]; // = { 0xfe, 0xf8, 0xf5, 0xf1 }
+}
 
 // hash type: Block hash algo.
 enum BLOCK_HASH_TYPE {
-    SCRYPT_POW_TYPE,           // ASIC
+    SCRYPT_POW_TYPE = 1,       // ASIC
     LYRA2REV2_POW_TYPE,        // GPU
     YESPOWER_POW_TYPE,         // CPU
     LYRA2REV2_POS_TYPE,        // Stake
@@ -38,40 +92,91 @@ enum BLOCK_HASH_TYPE {
     LYRA2REV2_POBENCH_TYPE,    // SSD: Sora neko
     LYRA2REV2_POSPACE_TYPE     // HDD: Chia
 };
+
+// block hash type flags
+enum BLOCK_HASH_FLAG {
+    BH_INVALID = (1 << 0),
+    BH_NORMAL = (1 << 1),
+    BH_MOD_DIFF = (1 << 2),
+};
+
 template <typename T>
-struct BLOCK_HASH_MODIFIER {
-#pragma pack(push, 1)
-    int type;
-    T prevHash; // 0: unconfirmed(valid), hash value: confirmed(valid)
-    uint64_t workModifier;
-    uint32_t workChecksum;
-    unsigned char pad[80-sizeof(int)-sizeof(T)-sizeof(uint64_t)-sizeof(uint32_t)]; // note: when T == uint256, 80 bytes
-#pragma pack(pop)
+class BLOCK_HASH_MODIFIER : protected BLOCK_HASH_MODIFIER_MUTABLE<T> {
+    //BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER &)=delete;
+    //BLOCK_HASH_MODIFIER &operator=(const BLOCK_HASH_MODIFIER &)=delete;
+    //BLOCK_HASH_MODIFIER(BLOCK_HASH_MODIFIER &&)=delete;
+    //BLOCK_HASH_MODIFIER &operator=(BLOCK_HASH_MODIFIER &&)=delete;
+    static constexpr int32_t BLOCK_HASH_MODIFIER_VERSION = 1;
+public:
+    int32_t get_nVersion() const {return this->nVersion;}
+    int32_t get_type() const {return this->type;}
+    int32_t get_nFlags() const {return this->nFlags;}
+    int32_t get_nHeight() const {return this->nHeight;}
+    const T &get_prevHash() const {return this->prevHash;}
+    uint64_t get_workModifier() const {return this->workModifier;}
+    uint32_t get_workChecksum() const {return this->workChecksum;}
+
+    void set_nVersion(int32_t _v) {this->nVersion = _v;}
+    void set_type(int32_t _v) {this->type = _v;}
+    void set_nFlags(int32_t _v) {this->nFlags = _v;}
+    void set_nHeight(int32_t _v) {this->nHeight = _v;}
+    void set_prevHash(const T &_v) {this->prevHash = _v;}
+    void set_workModifier(uint64_t _v) {this->workModifier = _v;}
+    void set_workChecksum(uint32_t _v) {this->workChecksum = _v;}
+
     BLOCK_HASH_MODIFIER() {
-        static_assert(sizeof(int)+sizeof(T)+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(pad)==80, "BLOCK_HASH_MODOFIER invalid size.");
-        type = LYRA2REV2_POW_TYPE;
-        prevHash = 0;
-        workModifier = 1;
-        workChecksum = 0;
-        std::memset(pad, 0x00, sizeof(pad));
+        SetNull();
     }
 
-    T GetBlockModifierHash(uint32_t _in) const;
+    BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER_MUTABLE<T> &obj) {
+        this->nVersion = obj.nVersion;
+        this->type = obj.type;
+        this->nFlags = obj.nFlags;
+        this->nHeight = obj.nHeight;
+        this->prevHash = obj.prevHash;
+        this->workModifier = obj.workModifier;
+        this->workChecksum = obj.workChecksum;
+        std::memcpy(this->padding, obj.padding, sizeof(this->padding));
+    }
+
+    explicit BLOCK_HASH_MODIFIER(int32_t height) {
+        SetNull();
+        this->nHeight = height;
+    }
+
+    void SetNull() {
+        this->nVersion = BLOCK_HASH_MODIFIER<T>::BLOCK_HASH_MODIFIER_VERSION;
+        this->type = LYRA2REV2_POW_TYPE;
+        this->nFlags = BH_NORMAL;
+        this->nHeight = -1;
+        this->prevHash = 0;
+        this->workModifier = 1;
+        this->workChecksum = 0;
+        std::memset(this->padding, 0x00, sizeof(this->padding));
+    }
+
+    bool IsValid() const {
+        return !(this->nFlags & BH_INVALID);
+    }
+
+    T GetBlockModifierHash(int32_t height) const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(type);
-        READWRITE(prevHash);
-        READWRITE(workModifier);
-        READWRITE(workChecksum);
+        READWRITE(this->nVersion);
+        READWRITE(this->type);
+        READWRITE(this->nFlags);
+        READWRITE(this->nHeight);
+        READWRITE(this->prevHash);
+        READWRITE(this->workModifier);
+        READWRITE(this->workChecksum);
     }
 };
 
-// insert: Scrypt(Last), Lyra(Switch), Lyra, Lyra ...
-using BH_TYPE = std::pair<int, BLOCK_HASH_MODIFIER<uint256> >;
+using BH_TYPE = BLOCK_HASH_MODIFIER<uint256>;
 using BlockHeight = std::unordered_map<uint256, BH_TYPE, CCoinsKeyHasher>;
-using BH_TYPE65536 = std::pair<int, BLOCK_HASH_MODIFIER<uint65536> >;
+using BH_TYPE65536 = BLOCK_HASH_MODIFIER<uint65536>;
 using BlockHeight65536 = std::unordered_map<uint65536, BH_TYPE65536, CCoinsKeyHasher>;
 
 // T == uint256

@@ -330,7 +330,7 @@ bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime
 }
 
 template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBlockHashType(HASH hash, const std::pair<int, BLOCK_HASH_MODIFIER<HASH> > &modifier) {
+bool CTxDB_impl<HASH>::WriteBlockHashType(HASH hash, const BLOCK_HASH_MODIFIER<HASH> &modifier) {
     return Write(std::make_pair(std::string("blockhashtype"), hash), modifier); // overwrite: true
 }
 
@@ -593,12 +593,11 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         HASH hash;
         ::Unserialize(ssKey, hash);
-        std::pair<int, BLOCK_HASH_MODIFIER<HASH> > data;
+        BLOCK_HASH_MODIFIER<HASH> data;
         ::Unserialize(ssValue, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-
-        debugcs::instance() << "LoadBlockIndex height: " << data.first << " hash: " << hash.ToString().c_str() << debugcs::endl();
+        debugcs::instance() << "LoadBlockIndex height: " << data.nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     // Seek to start key.
@@ -694,12 +693,11 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
         HASH hash;
         ::Unserialize(ssKey, hash);
-        std::pair<int, BLOCK_HASH_MODIFIER<HASH> > data;
+        BLOCK_HASH_MODIFIER<HASH> data;
         ::Unserialize(ssValue, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-
-        debugcs::instance() << "LoadBlockIndex height: " << data.first << " hash: " << hash.ToString().c_str() << debugcs::endl();
+        debugcs::instance() << "LoadBlockIndex height: " << data.get_nHeight() << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     //debugcs::instance() << "LoadBlockIndex() begin blockindex" << debugcs::endl();

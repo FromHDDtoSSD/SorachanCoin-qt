@@ -32,15 +32,34 @@ int64_t block_info::nMinimumInputValue = block_params::MIN_TXOUT_AMOUNT;
 int block_info::nScriptCheckThreads = 0;
 unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
 
+// BLOCK_HASH_MODOFIER
+unsigned char block_hash_modifier_info::gpchMessageStart[4] = { 0xfe, 0xf8, 0xf5, 0xf1 };
+
+BLOCK_HASH_MODIFIER_MUTABLE<uint256> block_hash_modifier_genesis::create_block_hash_modifier_genesis() {
+    BLOCK_HASH_MODIFIER_MUTABLE<uint256> bhm;
+    bhm.nVersion = block_hash_modifier_genesis::nVersion;
+    bhm.type = block_hash_modifier_genesis::type;
+    bhm.nFlags = block_hash_modifier_genesis::nFlags;
+    bhm.nHeight = block_hash_modifier_genesis::nHeight;
+    bhm.prevHash = hash_basis::Hash(block_hash_modifier_genesis::szStr.begin(), block_hash_modifier_genesis::szStr.end());
+    bhm.workModifier = block_hash_modifier_genesis::workModifier;
+    bhm.workChecksum = block_hash_modifier_genesis::workChecksum;
+    std::memset(bhm.padding, 0x00, sizeof(bhm.padding));
+    return bhm;
+}
+
 template <typename T>
-T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash(uint32_t _in) const { // _in is indexPrev
+T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash(int32_t height) const {
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(_in + 1 >= sw_height) {
+    if(height >= sw_height) {
         T hash;
         lyra2re2_hash((const char *)this, BEGIN(hash));
         return hash;
     } else {
-        return hash_basis::Hash(block_hash_modifier_genesis.begin(), block_hash_modifier_genesis.end());
+        BLOCK_HASH_MODIFIER_MUTABLE<T> bhm = block_hash_modifier_genesis::create_block_hash_modifier_genesis();
+        T hash;
+        lyra2re2_hash((const char *)&bhm, BEGIN(hash));
+        return hash;
     }
 }
 

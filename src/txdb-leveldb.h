@@ -130,7 +130,7 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-    bool WriteBlockHashType(HASH hash, const std::pair<int, BLOCK_HASH_MODIFIER<HASH> > &modifier);
+    bool WriteBlockHashType(HASH hash, const BLOCK_HASH_MODIFIER<HASH> &modifier);
 
     bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex,
                         std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,
