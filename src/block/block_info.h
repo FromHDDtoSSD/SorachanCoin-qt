@@ -48,32 +48,45 @@ using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> 
 
 template <typename T>
 struct BLOCK_HASH_MODIFIER_MUTABLE {
+    static constexpr int32_t BLOCK_HASH_MODIFIER_VERSION = 1;
 #pragma pack(push, 1)
     int32_t nVersion;
+    T prevHash;
     int32_t type;
     int32_t nFlags;
     int32_t nHeight;
-    T prevHash;
-    uint64_t workModifier;
+    uint32_t workModifierL;
+    uint32_t workModifierH;
     uint32_t workChecksum;
-    unsigned char padding[80-sizeof(int32_t)*4-sizeof(T)-sizeof(uint64_t)-sizeof(uint32_t)]; // note: when T == uint256, 80 bytes
+    uint32_t nTime;
+    int32_t unused1;
+    int32_t unused2;
+    int32_t unused3;
+    int32_t unused4;
 #pragma pack(pop)
     BLOCK_HASH_MODIFIER_MUTABLE() {
-        static_assert(sizeof(int32_t)*4+sizeof(T)+sizeof(uint64_t)+sizeof(uint32_t)+sizeof(padding)==80, "BLOCK_HASH_MODOFIER invalid size.");
+        static_assert(sizeof(*this)==80, "BLOCK_HASH_MODIFIER_MUTABLE invalid size.");
     }
 };
 
 // BLOCK_HASH_MODIFIER genesis block
 namespace block_hash_modifier_genesis {
-    const std::string szStr           = "Certain Exchange in Hong Kong stole a Dogecoin that is owned one of the SorachanCoin(Sora neko) developers. "
-                                        "We are currently under negotiation. Please back a Dogecoin.";
+    const std::string szStr           = "Certain Exchange in Hong Kong stole a Dogecoin that is owned by one of the SorachanCoin(Sora neko) developers. "
+                                        "We are currently under negotiation. Please back a Dogecoin. "
+                                        "[junkhdd.com and iuec.co.jp] Data Recovery in JAPAN project.";
     constexpr int32_t nVersion        = 1;
     constexpr int32_t type            = 1;
     constexpr int32_t nFlags          = 1;
-    constexpr int32_t nHeight         = -1;
-    constexpr uint64_t workModifier   = 0;
+    //constexpr int32_t nHeight       = -1; // args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET-1: SWITCH_LYRE2RE_BLOCK-1;
+    constexpr uint32_t workModifierLH = 0;
     constexpr uint32_t workChecksum   = 0;
 
+    constexpr uint32_t mainnet_timestamp = 0;
+    constexpr uint32_t testnet_timestamp = 1623044072; // 07-Jun 2021 14:34:32
+
+    // uint256
+    const uint256 mainnet_genesic_hash = uint256("0");
+    const uint256 testnet_genesis_hash = uint256("0x7cc52e194af3c88de879a5d27e157d71f4e359da84937f2382edeba27230ed1b");
     extern BLOCK_HASH_MODIFIER_MUTABLE<uint256> create_block_hash_modifier_genesis();
 }
 
@@ -90,7 +103,8 @@ enum BLOCK_HASH_TYPE {
     LYRA2REV2_POS_TYPE,        // Stake
     LYRA2REV2_MASTERNODE_TYPE, // Masternode
     LYRA2REV2_POBENCH_TYPE,    // SSD: Sora neko
-    LYRA2REV2_POSPACE_TYPE     // HDD: Chia
+    LYRA2REV2_POSPACE_TYPE,    // HDD: Chia
+    LYRA2REV2_POPREDICT_TYPE   // drive failure prediction: SoraChan
 };
 
 // block hash type flags
@@ -106,23 +120,26 @@ class BLOCK_HASH_MODIFIER : protected BLOCK_HASH_MODIFIER_MUTABLE<T> {
     //BLOCK_HASH_MODIFIER &operator=(const BLOCK_HASH_MODIFIER &)=delete;
     //BLOCK_HASH_MODIFIER(BLOCK_HASH_MODIFIER &&)=delete;
     //BLOCK_HASH_MODIFIER &operator=(BLOCK_HASH_MODIFIER &&)=delete;
-    static constexpr int32_t BLOCK_HASH_MODIFIER_VERSION = 1;
 public:
     int32_t get_nVersion() const {return this->nVersion;}
+    const T &get_prevHash() const {return this->prevHash;}
     int32_t get_type() const {return this->type;}
     int32_t get_nFlags() const {return this->nFlags;}
     int32_t get_nHeight() const {return this->nHeight;}
-    const T &get_prevHash() const {return this->prevHash;}
-    uint64_t get_workModifier() const {return this->workModifier;}
+    uint32_t get_workModifierL() const {return this->workModifierL;}
+    uint32_t get_workModifierH() const {return this->workModifierH;}
     uint32_t get_workChecksum() const {return this->workChecksum;}
+    uint32_t get_nTime() const {return this->nTime;}
 
     void set_nVersion(int32_t _v) {this->nVersion = _v;}
+    void set_prevHash(const T &_v) {this->prevHash = _v;}
     void set_type(int32_t _v) {this->type = _v;}
     void set_nFlags(int32_t _v) {this->nFlags = _v;}
     void set_nHeight(int32_t _v) {this->nHeight = _v;}
-    void set_prevHash(const T &_v) {this->prevHash = _v;}
-    void set_workModifier(uint64_t _v) {this->workModifier = _v;}
+    void set_workModifierL(uint32_t _v) {this->workModifierL = _v;}
+    void set_workModifierH(uint32_t _v) {this->workModifierH = _v;}
     void set_workChecksum(uint32_t _v) {this->workChecksum = _v;}
+    void set_nTime(uint32_t _v) {this->nTime = _v;}
 
     BLOCK_HASH_MODIFIER() {
         SetNull();
@@ -130,47 +147,78 @@ public:
 
     BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER_MUTABLE<T> &obj) {
         this->nVersion = obj.nVersion;
+        this->prevHash = obj.prevHash;
         this->type = obj.type;
         this->nFlags = obj.nFlags;
         this->nHeight = obj.nHeight;
-        this->prevHash = obj.prevHash;
-        this->workModifier = obj.workModifier;
+        this->workModifierL = obj.workModifierL;
+        this->workModifierH = obj.workModifierH;
         this->workChecksum = obj.workChecksum;
-        std::memcpy(this->padding, obj.padding, sizeof(this->padding));
+        this->nTime = obj.nTime;
+        this->unused1 = obj.unused1;
+        this->unused2 = obj.unused2;
+        this->unused3 = obj.unused3;
+        this->unused4 = obj.unused4;
     }
 
-    explicit BLOCK_HASH_MODIFIER(int32_t height) {
+    explicit BLOCK_HASH_MODIFIER(int32_t height, uint32_t tim) {
         SetNull();
         this->nHeight = height;
+        this->nTime = tim;
     }
 
     void SetNull() {
-        this->nVersion = BLOCK_HASH_MODIFIER<T>::BLOCK_HASH_MODIFIER_VERSION;
+        this->nVersion = BLOCK_HASH_MODIFIER_MUTABLE<T>::BLOCK_HASH_MODIFIER_VERSION;
+        this->prevHash = 0;
         this->type = LYRA2REV2_POW_TYPE;
         this->nFlags = BH_NORMAL;
         this->nHeight = -1;
-        this->prevHash = 0;
-        this->workModifier = 1;
+        this->workModifierL = 1;
+        this->workModifierH = 0;
         this->workChecksum = 0;
-        std::memset(this->padding, 0x00, sizeof(this->padding));
+        this->nTime = 0;
+        this->unused1 = 0;
+        this->unused2 = 0;
+        this->unused3 = 0;
+        this->unused4 = 0;
     }
 
     bool IsValid() const {
         return !(this->nFlags & BH_INVALID);
     }
 
-    T GetBlockModifierHash(int32_t height) const;
+    std::string ToString() const {
+        return tfm::format("BLOCK_HASH_MODIFIER nVersion=%d, prevHash=%s, type=%d, nFlags=%d, nHeight=%d, workModifierL=%d, workModifierH=%d, workChecksum=%d, nTime=%d",
+                           this->nVersion,
+                           this->prevHash.ToString().c_str(),
+                           this->type,
+                           this->nFlags,
+                           this->nHeight,
+                           this->workModifierL,
+                           this->workModifierH,
+                           this->workChecksum,
+                           this->nTime);
+    }
+
+    T GetBlockModifierHash() const;
+    //T GetBlockModifierHash(int32_t height) const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         READWRITE(this->nVersion);
+        READWRITE(this->prevHash);
         READWRITE(this->type);
         READWRITE(this->nFlags);
         READWRITE(this->nHeight);
-        READWRITE(this->prevHash);
-        READWRITE(this->workModifier);
+        READWRITE(this->workModifierL);
+        READWRITE(this->workModifierH);
         READWRITE(this->workChecksum);
+        READWRITE(this->nTime);
+        READWRITE(this->unused1);
+        READWRITE(this->unused2);
+        READWRITE(this->unused3);
+        READWRITE(this->unused4);
     }
 };
 
