@@ -95,6 +95,16 @@ namespace block_hash_modifier_info {
     extern unsigned char gpchMessageStart[4]; // = { 0xfe, 0xf8, 0xf5, 0xf1 }
 }
 
+// BLOCK HASH functions
+namespace block_hash_func {
+    extern uint256 GetPoW_Scrypt(const char *data);
+    extern uint256 GetPoW_Lyra2REV2(const char *data);
+    extern uint256 GetPoW_Lyra2RE(const char *data);
+    extern uint256 GetPoW_SHA256D(const char *data);
+    extern uint256 GetPoW_SHA512D(const char *data);
+    extern uint256 GetPoW_Blake2S(const char *data);
+}
+
 // hash type: Block hash algo.
 enum BLOCK_HASH_TYPE {
     SCRYPT_POW_TYPE = 1,       // ASIC
@@ -104,7 +114,11 @@ enum BLOCK_HASH_TYPE {
     LYRA2REV2_MASTERNODE_TYPE, // Masternode
     LYRA2REV2_POBENCH_TYPE,    // SSD: Sora neko
     LYRA2REV2_POSPACE_TYPE,    // HDD: Chia
-    LYRA2REV2_POPREDICT_TYPE   // drive failure prediction: SoraChan
+    LYRA2REV2_POPREDICT_TYPE,  // drive failure prediction: SoraChan
+    SHA256D_POW_TYPE,          // ASIC
+    SHA512D_POW_TYPE,          // ASIC
+    BLAKE2S_POW_TYPE,          // ASIC
+    LYRA2RE_POW_TYPE,          // GPU
 };
 
 // block hash type flags

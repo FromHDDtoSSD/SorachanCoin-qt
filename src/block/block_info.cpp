@@ -8,6 +8,9 @@
 #include <block/block_info.h>
 #include <block/transaction.h>
 #include <Lyra2RE/Lyra2RE.h>
+#include <crypto/sha256.h>
+#include <crypto/sha512.h>
+#include <crypto/blake2.h>
 
 // T == uint256
 CScript block_info::COINBASE_FLAGS;
@@ -58,6 +61,49 @@ T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash() const {
     T hash;
     lyra2re2_hash((const char *)this, BEGIN(hash));
     logging::LogPrintf("BLOCK_HASH_MODIFIER::GetBlockModifierHash hash:%s info:%s\n", hash.ToString().c_str(), this->ToString().c_str());
+    return hash;
+}
+
+//
+// PoW [uint256] HASH Algorithm
+// "const char *data" size is 80 bytes.
+//
+uint256 block_hash_func::GetPoW_Scrypt(const char *data) {
+    return bitscrypt::scrypt_blockhash(data);
+}
+
+uint256 block_hash_func::GetPoW_Lyra2REV2(const char *data) {
+    uint256 hash;
+    lyra2re2_hash(data, BEGIN(hash));
+    return hash;
+}
+
+uint256 block_hash_func::GetPoW_Lyra2RE(const char *data) {
+    uint256 hash;
+    lyra2re_hash(data, BEGIN(hash));
+    return hash;
+}
+
+uint256 block_hash_func::GetPoW_SHA256D(const char *data) {
+    uint256 hash;
+    latest_crypto::CSHA256().Write((const unsigned char *)data, 80).Finalize((unsigned char *)BEGIN(hash));
+    uint256 hashD;
+    latest_crypto::CSHA256().Write((const unsigned char *)BEGIN(hash), sizeof(uint256)).Finalize((unsigned char *)BEGIN(hashD));
+    return hashD;
+}
+
+uint256 block_hash_func::GetPoW_SHA512D(const char *data) {
+    uint512 hash;
+    latest_crypto::CSHA512().Write((const unsigned char *)data, 80).Finalize((unsigned char *)BEGIN(hash));
+    uint512 hashD;
+    latest_crypto::CSHA512().Write((const unsigned char *)BEGIN(hash), sizeof(uint512)).Finalize((unsigned char *)BEGIN(hashD));
+    CBigNum bn(bignum_vector(hashD.begin(), hashD.end()));
+    return bn.getuint256();
+}
+
+uint256 block_hash_func::GetPoW_Blake2S(const char *data) {
+    uint256 hash;
+    latest_crypto::CBLAKE2().Write((const unsigned char *)data, 80).Finalize((unsigned char *)BEGIN(hash));
     return hash;
 }
 

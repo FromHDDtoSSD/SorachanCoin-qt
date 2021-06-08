@@ -277,11 +277,34 @@ T CBlockHeader_impl<T>::GetPoHash() const {
     BlockHeight::const_iterator mi = block_info::mapBlockLyraHeight.find(CBlockHeader_impl<T>::get_hashPrevBlock());
     if(mi!=block_info::mapBlockLyraHeight.end()) {
         //debugcs::instance() << "Lyra HASH height: " << (*mi).second.get_nHeight() << debugcs::endl();
-        T hash;
-        lyra2re2_hash((const char *)this, BEGIN(hash));
-        return hash;
+        if((*mi).second.get_type()==LYRA2REV2_POW_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2REV2_POS_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2REV2_MASTERNODE_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2REV2_POBENCH_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2REV2_POSPACE_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2REV2_POPREDICT_TYPE) {
+            return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+        } else if ((*mi).second.get_type()==SCRYPT_POW_TYPE) {
+            return block_hash_func::GetPoW_Scrypt((const char *)this);
+        } else if ((*mi).second.get_type()==SHA256D_POW_TYPE) {
+            return block_hash_func::GetPoW_SHA256D((const char *)this);
+        } else if ((*mi).second.get_type()==SHA512D_POW_TYPE) {
+            return block_hash_func::GetPoW_SHA512D((const char *)this);
+        } else if ((*mi).second.get_type()==BLAKE2S_POW_TYPE) {
+            return block_hash_func::GetPoW_Blake2S((const char *)this);
+        } else if ((*mi).second.get_type()==LYRA2RE_POW_TYPE) {
+            return block_hash_func::GetPoW_Lyra2RE((const char *)this);
+        } else {
+            throw std::runtime_error("CBlockHeader_impl<T>::GetPoHash() No support HASH Algorithm.");
+            return uint256(0);
+        }
     } else
-        return bitscrypt::scrypt_blockhash((const char *)this);
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
 }
 
 template <typename T>
