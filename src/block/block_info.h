@@ -132,6 +132,8 @@ enum BLOCK_HASH_FLAG {
 namespace block_hash_helper {
     extern int32_t create_proof_nonce_zero(bool pos, bool masternode, bool pobench, bool pospace=false, bool popredict=false);
     extern bool is_proof(int type, int32_t nonce_zero_value);
+
+    //constexpr int32_t PoW_nonce_zero = 0;
 }
 
 template <typename T>
