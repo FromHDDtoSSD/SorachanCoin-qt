@@ -10,6 +10,7 @@
 #include <block/block_check.h>
 #include <timestamps.h>
 #include <util/strencodings.h>
+#include <block/block_info.h>
 
 CBigNum diff::bnProofOfWorkLimit = diff::mainnet::bnProofOfWorkLimit;
 
@@ -67,6 +68,80 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
         return logging::error("diff::check::CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
+}
+
+// BLOCK_HASH_MOFIFIER: check block type
+// Note: since there are blocks other than PoW, it is exactly check.
+bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl<uint256> &header, int &type) // height is current
+{
+    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
+    if(height < sw_height) {
+        type = SCRYPT_POW_TYPE;
+        return CheckProofOfWork(header.GetPoHash(height), header.get_nBits());
+    }
+
+    // other than PoW check
+    if(block_hash_helper::is_proof(LYRA2REV2_POS_TYPE, nonce_zero_value)) {
+        type = LYRA2REV2_POS_TYPE;
+        return true;
+    }
+    if(block_hash_helper::is_proof(LYRA2REV2_MASTERNODE_TYPE, nonce_zero_value)) {
+        type = LYRA2REV2_MASTERNODE_TYPE;
+        return true;
+    }
+    if(block_hash_helper::is_proof(LYRA2REV2_POBENCH_TYPE, nonce_zero_value)) {
+        type = LYRA2REV2_POBENCH_TYPE;
+        return true;
+    }
+    if(block_hash_helper::is_proof(LYRA2REV2_POSPACE_TYPE, nonce_zero_value)) {
+        type = LYRA2REV2_POSPACE_TYPE;
+        return true;
+    }
+    if(block_hash_helper::is_proof(LYRA2REV2_POPREDICT_TYPE, nonce_zero_value)) {
+        type = LYRA2REV2_POPREDICT_TYPE;
+        return true;
+    }
+
+    auto hash_check = [](uint256 hash, const CBigNum &bn) {
+        if(hash > bn.getuint256())
+            return logging::error("diff::check::CheckProofOfWork2() : hash doesn't match nBits");
+        else
+            return true;
+    };
+
+    CBigNum bnTarget;
+    bnTarget.SetCompact(header.get_nBits());
+
+    // Check range
+    if (bnTarget <= 0 || bnTarget > diff::bnProofOfWorkLimit)
+        return logging::error("diff::check::CheckProofOfWork2() : nBits below minimum work");
+
+    // Check hash type
+    type = LYRA2REV2_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_Lyra2REV2((const char *)&header), bnTarget))
+        return true;
+
+    type = SCRYPT_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_Scrypt((const char *)&header), bnTarget))
+        return true;
+
+    type = BLAKE2S_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_Blake2S((const char *)&header), bnTarget))
+        return true;
+
+    type = SHA256D_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_SHA256D((const char *)&header), bnTarget))
+        return true;
+
+    type = LYRA2RE_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_Lyra2RE((const char *)&header), bnTarget))
+        return true;
+
+    type = SHA512D_POW_TYPE;
+    if(hash_check(block_hash_func::GetPoW_SHA512D((const char *)&header), bnTarget))
+        return true;
+
+    return false;
 }
 
 // miner's coin base reward based on nBits

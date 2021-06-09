@@ -13,6 +13,8 @@
 template<typename T> class CBlockIndex_impl;
 using CBlockIndex = CBlockIndex_impl<uint256>;
 
+template<typename T> class CBlockHeader_impl;
+
 // PoW / PoS difficulty
 namespace diff
 {
@@ -44,7 +46,8 @@ namespace diff
     class check : private no_instance
     {
     public:
-        static bool CheckProofOfWork(uint256 hash, unsigned int nBits);
+        static bool CheckProofOfWork(uint256 hash, unsigned int nBits); // old_chain(v1,v2,v3) Scrypt only
+        static bool CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl<uint256> &header, int &type); // new_chain(after v4)
     };
 
     //  miner's coin reward based on nBits

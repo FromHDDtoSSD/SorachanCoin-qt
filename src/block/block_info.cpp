@@ -56,6 +56,20 @@ BLOCK_HASH_MODIFIER_MUTABLE<uint256> block_hash_modifier_genesis::create_block_h
     return bhm;
 }
 
+// block hash flags
+int32_t block_hash_helper::create_proof_nonce_zero(bool pos, bool masternode, bool pobench, bool pospace, bool popredict) {
+    assert((int)pos+(int)masternode+(int)pobench+(int)pospace+(int)popredict<=1);
+    return ( ((uint32_t)pos << 4) |
+             ((uint32_t)masternode << 5) |
+             ((uint32_t)pobench << 6) |
+             ((uint32_t)pospace << 7) |
+             ((uint32_t)popredict << 8) );
+}
+
+bool block_hash_helper::is_proof(int type, int32_t nonce_zero_value) {
+    return (bool)((int32_t)type == nonce_zero_value);
+}
+
 template <typename T>
 T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash() const {
     T hash;

@@ -35,7 +35,7 @@ using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> 
  * SWITCH_LYRE2RE_BLOCK - 1 (Genesis, BLOCK_HASH_MODIFIER, ONLY Scrypt)
  * SWITCH_LYRE2RE_BLOCK     (begin, BLOCK_HASH_MODIFIER)
  *
- * - About diff:
+ * - [1] About diff:
  * - workModifier low diff (reward)
  *     ASIC(1) ASIC(1) GPU(1) GPU(1) = 4 (12 min) 0
  *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.05) CPU(0.05) GPU(1) = 5.1 (21 min) -1.9
@@ -128,6 +128,12 @@ enum BLOCK_HASH_FLAG {
     BH_MOD_DIFF = (1 << 2),
 };
 
+// block hash flags
+namespace block_hash_helper {
+    extern int32_t create_proof_nonce_zero(bool pos, bool masternode, bool pobench, bool pospace=false, bool popredict=false);
+    extern bool is_proof(int type, int32_t nonce_zero_value);
+}
+
 template <typename T>
 class BLOCK_HASH_MODIFIER : protected BLOCK_HASH_MODIFIER_MUTABLE<T> {
     //BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER &)=delete;
@@ -175,8 +181,9 @@ public:
         this->unused4 = obj.unused4;
     }
 
-    explicit BLOCK_HASH_MODIFIER(int32_t height, uint32_t tim) {
+    explicit BLOCK_HASH_MODIFIER(int32_t height, uint32_t tim, int type) {
         SetNull();
+        this->type = type;
         this->nHeight = height;
         this->nTime = tim;
     }

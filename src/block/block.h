@@ -161,7 +161,7 @@ public:
     bool IsNull() const {
         return (CBlockHeader<T>::nBits == 0);
     }
-    void set_Last_LyraHeight_hash(int32_t _in) const;
+    void set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const;
     T GetPoHash() const;
     T GetPoHash(int32_t height) const;
     int64_t GetBlockTime() const {

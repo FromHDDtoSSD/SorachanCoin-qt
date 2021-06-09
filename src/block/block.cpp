@@ -19,6 +19,7 @@
 #include <block/blockdata_db.h>
 #include <rpc/bitcoinrpc.h> // cs_accept
 #include <Lyra2RE/Lyra2RE.h>
+#include <miner/diff.h>
 
 bool CValidationState::Abort(const std::string &msg) {
     boot::AbortNode(msg);
@@ -228,7 +229,11 @@ void CBlockHeader<T>::set_LastHeight(int32_t _in) const { // _in is indexPrev
 }
 
 template <typename T>
-void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in is indexPrev
+void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const { // _in is indexPrev
+    int type;
+    if(! diff::check::CheckProofOfWork2(_in+1, nonce_zero_proof, *this, type))
+        return; // do nothing (no confirm block)
+
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     static std::map<int32_t, T> mapPrevHash;
     static CCriticalSection cs_height;
@@ -250,7 +255,7 @@ void CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in) const { // _in 
             logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d hash:%s\n", _in, modifier_gene.GetBlockModifierHash().ToString().c_str());
         }
 
-        BLOCK_HASH_MODIFIER<T> modifier_current = BLOCK_HASH_MODIFIER<T>(_in+1, this->get_nTime());
+        BLOCK_HASH_MODIFIER<T> modifier_current = BLOCK_HASH_MODIFIER<T>(_in+1, this->get_nTime(), type);
         auto mi2 = mapPrevHash.find(_in);
         if(mi2==mapPrevHash.end()) {
             debugcs::instance() << "[bug] set_Last invalid nHeight: " << _in+1 << debugcs::endl();
@@ -308,7 +313,7 @@ T CBlockHeader_impl<T>::GetPoHash() const {
 }
 
 template <typename T>
-T CBlockHeader_impl<T>::GetPoHash(int32_t height) const {
+T CBlockHeader_impl<T>::GetPoHash(int32_t height) const { // height is current
     assert(height!=-1);
     T hash;
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
@@ -347,7 +352,9 @@ template <typename T>
 bool CBlock_impl<T>::ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck/*=false*/)
 {
     CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
-    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1);
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1,
+                                                   block_hash_helper::create_proof_nonce_zero(
+                                                       pindex->IsProofOfStake(), pindex->IsProofOfMasternode(), pindex->IsProofOfBench()));
 
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))
@@ -486,7 +493,9 @@ template <typename T>
 bool CBlock_impl<T>::ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions/*=true*/)
 {
     CBlockHeader<T>::set_LastHeight(pindex->get_nHeight() - 1);
-    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1);
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1,
+                                                   block_hash_helper::create_proof_nonce_zero(
+                                                       pindex->IsProofOfStake(), pindex->IsProofOfMasternode(), pindex->IsProofOfBench()));
     if (! fReadTransactions) {
         *this = pindex->GetBlockHeader();
         return true;
@@ -809,7 +818,7 @@ bool CBlock_impl<T>::AcceptBlock()
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
     CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
-    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindexPrev->get_nHeight());
+    CBlockHeader_impl<T>::set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::create_proof_nonce_zero(IsProofOfStake(), IsProofOfMasternode(), IsProofOfBench()));
     ACCEPT_DEBUG_CS("CBlock_impl::AcceptBlock nHeight: ", nHeight);
 
     // Check for duplicate
@@ -1004,11 +1013,6 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
         return logging::error("%s() : deserialize or I/O error", BOOST_CURRENT_FUNCTION);
     }
     // Check the header
-    /*
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(), CBlockHeader<T>::nBits))
-        return logging::error("CBlock::ReadFromDisk() : errors in block header");
-    return true;
-    */
     if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(CBlockHeader<T>::get_LastHeight()+1), CBlockHeader<T>::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
     return true;
