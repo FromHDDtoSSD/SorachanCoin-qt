@@ -58,16 +58,26 @@ BLOCK_HASH_MODIFIER_MUTABLE<uint256> block_hash_modifier_genesis::create_block_h
 
 // block hash flags
 int32_t block_hash_helper::create_proof_nonce_zero(bool pos, bool masternode, bool pobench, bool pospace, bool popredict) {
-    assert((int)pos+(int)masternode+(int)pobench+(int)pospace+(int)popredict<=1);
-    return ( ((uint32_t)pos << 4) |
-             ((uint32_t)masternode << 5) |
-             ((uint32_t)pobench << 6) |
-             ((uint32_t)pospace << 7) |
-             ((uint32_t)popredict << 8) );
+    return ( ((pos?1:0) << 4) |
+             ((masternode?1:0) << 5) |
+             ((pobench?1:0) << 6) |
+             ((pospace?1:0) << 7) |
+             ((popredict?1:0) << 8) );
 }
 
 bool block_hash_helper::is_proof(int type, int32_t nonce_zero_value) {
-    return (bool)((int32_t)type == nonce_zero_value);
+    if(type==LYRA2REV2_POS_TYPE)
+        return (bool)(nonce_zero_value & (1 << 4));
+    if(type==LYRA2REV2_MASTERNODE_TYPE)
+        return (bool)(nonce_zero_value & (1 << 5));
+    if(type==LYRA2REV2_POBENCH_TYPE)
+        return (bool)(nonce_zero_value & (1 << 6));
+    if(type==LYRA2REV2_POSPACE_TYPE)
+        return (bool)(nonce_zero_value & (1 << 7));
+    if(type==LYRA2REV2_POPREDICT_TYPE)
+        return (bool)(nonce_zero_value & (1 << 8));
+
+    return false;
 }
 
 template <typename T>
