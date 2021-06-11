@@ -16,6 +16,7 @@
 #include <block/block_locator.h>
 #include <merkle/merkle_tree.h>
 #include <const/amount.h>
+#include <prevector/prevector.h>
 
 #ifndef SWITCH_LYRE2RE_BLOCK
 # define SWITCH_LYRE2RE_BLOCK (720000) // hardfork: to Lyra2REv2
@@ -155,6 +156,7 @@ public:
         READWRITE(this->nNonce);
     }
 };
+
 template <typename T>
 class CBlockHeader_impl : public CBlockHeader<T> {
 private:
@@ -175,49 +177,15 @@ public:
     }
 };
 
+//
+// blk000 ... dat files.
+// CBlockHeader + MerkleTree + Transactions, block data.
+// About R/W: ReadFromDisk or WriteToDisk. (pos: CBlockIndex)
+//
+//template <typename Stream, typename Operation>
+//extern void ReadWriteLastHeight(Stream &s, const Operation &ser_action); // CBlockHeader::LastHeight R/W ReadFromDisk and WriteToDisk
 template <typename T>
-class CDiskBlockHeader_impl : public CBlockHeader_impl<T> {
-    CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;
-    CDiskBlockHeader_impl(CDiskBlockHeader_impl &&)=delete;
-    CDiskBlockHeader_impl &operator=(const CDiskBlockHeader_impl &)=delete;
-    CDiskBlockHeader_impl &operator=(CDiskBlockHeader_impl &&)=delete;
-private:
-    mutable T blockHash;
-    T hashPrev;
-    T hashNext;
-public:
-    CDiskBlockHeader_impl() {
-        blockHash = 0;
-        hashPrev = 0;
-        hashNext = 0;
-    }
-
-    const T &get_hashPrev() const {return hashPrev;}
-    const T &get_hashNext() const {return hashNext;}
-    void set_hashPrev(const T &_in) {hashPrev=_in;}
-    void set_hashNext(const T &_in) {hashNext=_in;}
-
-    ADD_SERIALIZE_METHODS
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        int nVersion = 0;
-        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
-        READWRITE(this->hashNext);
-
-        // block header
-        READWRITE(this->nVersion);  // CBlockHeader this nVersion
-        READWRITE(this->hashPrev);
-        READWRITE(this->hashMerkleRoot);
-        READWRITE(this->nTime);
-        READWRITE(this->nBits);
-        READWRITE(this->nNonce);
-        READWRITE(this->blockHash);
-    }
-};
-using CDiskBlockHeader = CDiskBlockHeader_impl<uint256>;
-
-template <typename T>
-class CBlock_impl : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction_impl<T> >
+class CBlock_impl final : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction_impl<T> >
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
@@ -325,6 +293,8 @@ public:
             const_cast<CBlock_impl<T> *>(this)->vtx.clear();
             const_cast<CBlock_impl<T> *>(this)->vchBlockSig.clear();
         }
+
+        //ReadWriteLastHeight(s, ser_action);
     }
 };
 using CBlock = CBlock_impl<uint256>;
@@ -667,8 +637,51 @@ struct CBlockIndexWorkComparator_impl {
 using CBlockIndexWorkComparator = CBlockIndexWorkComparator_impl<uint256>;
 
 //
-// Used to marshal pointers into hashes for db storage.
+// Used to marshal pointers into hashes for db storage. (unused CDiskBlockHeader_impl)
+// from DB to CDiskBlockIndex, from CDiskBlockIndex to CBlockIndex.
 //
+template <typename T>
+class CDiskBlockHeader_impl final : public CBlockHeader_impl<T>
+{
+    CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;
+    CDiskBlockHeader_impl(CDiskBlockHeader_impl &&)=delete;
+    CDiskBlockHeader_impl &operator=(const CDiskBlockHeader_impl &)=delete;
+    CDiskBlockHeader_impl &operator=(CDiskBlockHeader_impl &&)=delete;
+private:
+    mutable T blockHash;
+    T hashPrev;
+    T hashNext;
+public:
+    CDiskBlockHeader_impl() {
+        blockHash = 0;
+        hashPrev = 0;
+        hashNext = 0;
+    }
+
+    const T &get_hashPrev() const {return hashPrev;}
+    const T &get_hashNext() const {return hashNext;}
+    void set_hashPrev(const T &_in) {hashPrev=_in;}
+    void set_hashNext(const T &_in) {hashNext=_in;}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
+        READWRITE(this->hashNext);
+
+        // block header
+        READWRITE(this->nVersion);  // CBlockHeader this nVersion
+        READWRITE(this->hashPrev);
+        READWRITE(this->hashMerkleRoot);
+        READWRITE(this->nTime);
+        READWRITE(this->nBits);
+        READWRITE(this->nNonce);
+        READWRITE(this->blockHash);
+    }
+};
+//using CDiskBlockHeader = CDiskBlockHeader_impl<uint256>;
+
 template <typename T>
 class CDiskBlockIndex_impl final : public CBlockIndex_impl<T>
 {
@@ -703,6 +716,7 @@ public:
         block.set_nTime(CBlockIndex_impl<T>::nTime);
         block.set_nBits(CBlockIndex_impl<T>::nBits);
         block.set_nNonce(CBlockIndex_impl<T>::nNonce);
+        block.set_LastHeight(this->get_nHeight()-1);
         blockHash = block.GetPoHash();
         return blockHash;
     }

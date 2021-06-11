@@ -672,8 +672,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
 #else
 
-    //debugcs::instance() << "LoadBlockIndex() begin blockhashtype" << debugcs::endl();
-
     // Seek to start blockhashtype.
     if(! this->seek(std::string("blockhashtype"), HASH(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
@@ -699,8 +697,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
         debugcs::instance() << "LoadBlockIndex height: " << data.get_nHeight() << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
-
-    //debugcs::instance() << "LoadBlockIndex() begin blockindex" << debugcs::endl();
 
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), HASH(0)))
@@ -762,8 +758,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     if (args_bool::fRequestShutdown)
         return true;
 
-    //debugcs::instance() << "LoadBlockIndex() begin chain build" << debugcs::endl();
-
     // Calculate nChainTrust
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
@@ -775,6 +769,17 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
     for(const auto &item: vSortedByHeight) {
         CBlockIndex *pindex = item.second;
+
+        // build pskip
+        if(pindex->get_pprev())
+            pindex->BuildSkip();
+
+        // build LastHeight
+        if(pindex->get_pprev())
+            pindex->set_LastHeight(pindex->get_nHeight()-1);
+    }
+    for(const auto &item: vSortedByHeight) {
+        CBlockIndex *pindex = item.second;
         pindex->set_nChainTrust((pindex->get_pprev() ? pindex->get_pprev()->get_nChainTrust() : 0) + pindex->GetBlockTrust());
 
         // calculate stake modifier checksum
@@ -783,10 +788,6 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
             return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64,
                                   pindex->get_nHeight(),
                                   pindex->get_nStakeModifier());
-
-        // build pskip
-        if(pindex->get_pprev())
-            pindex->BuildSkip();
     }
 
     // Load hashBestChain pointer to end of best chain

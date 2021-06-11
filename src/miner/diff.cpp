@@ -65,7 +65,7 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
 
     // Check proof of work matches claimed amount
     if (hash > bnTarget.getuint256())
-        return logging::error("diff::check::CheckProofOfWork() : hash doesn't match nBits");
+        return false; // logging::error("diff::check::CheckProofOfWork() : hash doesn't match nBits");
 
     return true;
 }
@@ -76,7 +76,7 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
 {
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(height < sw_height) {
-        type = SCRYPT_POW_TYPE;
+        type = HASH_TYPE_NONE;
         return CheckProofOfWork(header.GetPoHash(height, HASH_TYPE_NONE), header.get_nBits());
     }
 
@@ -104,7 +104,7 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
 
     auto hash_check = [](uint256 hash, const CBigNum &bn) {
         if(hash > bn.getuint256())
-            return logging::error("diff::check::CheckProofOfWork2() : hash doesn't match nBits");
+            return false; // logging::error("diff::check::CheckProofOfWork2() : hash doesn't match nBits");
         else
             return true;
     };
