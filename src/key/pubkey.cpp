@@ -851,6 +851,32 @@ void CPubKey::ecmult::secp256k1_fe_verify(const secp256k1_fe *a) noexcept {
     }
     VERIFY_CHECK(r == 1);
 }
+void CPubKey::ecmult::secp256k1_fe_signed_verify(const secp256k1_fe_signed *a) noexcept {
+    const int32_t *d = a->n;
+    int m = a->normalized ? 1 : 2 * a->magnitude, r = 1;
+    r &= (d[0] <= 0x3FFFFFFL * m);
+    r &= (d[1] <= 0x3FFFFFFL * m);
+    r &= (d[2] <= 0x3FFFFFFL * m);
+    r &= (d[3] <= 0x3FFFFFFL * m);
+    r &= (d[4] <= 0x3FFFFFFL * m);
+    r &= (d[5] <= 0x3FFFFFFL * m);
+    r &= (d[6] <= 0x3FFFFFFL * m);
+    r &= (d[7] <= 0x3FFFFFFL * m);
+    r &= (d[8] <= 0x3FFFFFFL * m);
+    r &= (d[9] <= 0x03FFFFFL * m);
+    r &= (a->magnitude >= 0);
+    r &= (a->magnitude <= 32);
+    if (a->normalized) {
+        r &= (a->magnitude <= 1);
+        if (r && (d[9] == 0x03FFFFFL)) {
+            int32_t mid = d[8] & d[7] & d[6] & d[5] & d[4] & d[3] & d[2];
+            if (mid == 0x3FFFFFFL) {
+                r &= ((d[1] + 0x40L + ((d[0] + 0x3D1L) >> 26)) <= 0x3FFFFFFL);
+            }
+        }
+    }
+    VERIFY_CHECK(r == 1);
+}
 #endif
 
 int CPubKey::ecmult::secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a) noexcept {
@@ -871,6 +897,28 @@ int CPubKey::ecmult::secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char 
     r->magnitude = 1;
     r->normalized = 1;
     secp256k1_fe_verify(r);
+#endif
+    return 1;
+}
+
+int CPubKey::ecmult::secp256k1_fe_signed_set_be32(secp256k1_fe_signed *r, const unsigned char *a) noexcept {
+    r->n[0] = (int32_t)a[31] | ((uint32_t)a[30] << 8) | ((uint32_t)a[29] << 16) | ((uint32_t)(a[28] & 0x3) << 24);
+    r->n[1] = (int32_t)((a[28] >> 2) & 0x3f) | ((uint32_t)a[27] << 6) | ((uint32_t)a[26] << 14) | ((uint32_t)(a[25] & 0xf) << 22);
+    r->n[2] = (int32_t)((a[25] >> 4) & 0xf) | ((uint32_t)a[24] << 4) | ((uint32_t)a[23] << 12) | ((uint32_t)(a[22] & 0x3f) << 20);
+    r->n[3] = (int32_t)((a[22] >> 6) & 0x3) | ((uint32_t)a[21] << 2) | ((uint32_t)a[20] << 10) | ((uint32_t)a[19] << 18);
+    r->n[4] = (int32_t)a[18] | ((uint32_t)a[17] << 8) | ((uint32_t)a[16] << 16) | ((uint32_t)(a[15] & 0x3) << 24);
+    r->n[5] = (int32_t)((a[15] >> 2) & 0x3f) | ((uint32_t)a[14] << 6) | ((uint32_t)a[13] << 14) | ((uint32_t)(a[12] & 0xf) << 22);
+    r->n[6] = (int32_t)((a[12] >> 4) & 0xf) | ((uint32_t)a[11] << 4) | ((uint32_t)a[10] << 12) | ((uint32_t)(a[9] & 0x3f) << 20);
+    r->n[7] = (int32_t)((a[9] >> 6) & 0x3) | ((uint32_t)a[8] << 2) | ((uint32_t)a[7] << 10) | ((uint32_t)a[6] << 18);
+    r->n[8] = (int32_t)a[5] | ((uint32_t)a[4] << 8) | ((uint32_t)a[3] << 16) | ((uint32_t)(a[2] & 0x3) << 24);
+    r->n[9] = (int32_t)((a[2] >> 2) & 0x3f) | ((uint32_t)a[1] << 6) | ((uint32_t)a[0] << 14);
+
+    if (r->n[9] == 0x3FFFFFL && (r->n[8] & r->n[7] & r->n[6] & r->n[5] & r->n[4] & r->n[3] & r->n[2]) == 0x3FFFFFFL && (r->n[1] + 0x40L + ((r->n[0] + 0x3D1L) >> 26)) > 0x3FFFFFFL)
+        return 0;
+#ifdef VERIFY
+    r->magnitude = 1;
+    r->normalized = 1;
+    secp256k1_fe_signed_verify(r);
 #endif
     return 1;
 }
@@ -3523,6 +3571,27 @@ int CPubKey::secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsi
         return 0;
 }
 
+/*
+int CPubKey::secp256k1_eckey_pubkey_parse_signed(ecmult::secp256k1_ge_signed *elem, const unsigned char *pub, size_t size) noexcept {
+    if (size == 33 && (pub[0] == SECP256K1_TAG_PUBKEY_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_ODD)) {
+        ecmult::secp256k1_fe_signed x;
+        return ecmult::secp256k1_fe_set_be32(&x, pub+1) && ecmult::secp256k1_ge_set_xo_var(elem, &x, pub[0] == SECP256K1_TAG_PUBKEY_ODD);
+    } else if (size == 65 && (pub[0] == 0x04 || pub[0] == 0x06 || pub[0] == 0x07)) {
+        ecmult::secp256k1_fe_signed x, y;
+        if (!ecmult::secp256k1_fe_set_be32(&x, pub+1) || !ecmult::secp256k1_fe_set_be32(&y, pub+33))
+            return 0;
+
+        ecmult::secp256k1_ge_set_xy(elem, &x, &y);
+        if ((pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD) &&
+            ecmult::secp256k1_fe_is_odd(&y) != (pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD)) {
+            return 0;
+        }
+        return ecmult::secp256k1_ge_is_valid_var(elem);
+    } else
+        return 0;
+}
+*/
+
 void CPubKey::ecmult::secp256k1_ge_clear(secp256k1_ge *r) noexcept {
     r->infinity = 0;
     secp256k1_fe_clear(&r->x);
@@ -3543,6 +3612,23 @@ int CPubKey::secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned 
     ecmult::secp256k1_ge_clear(&Q);
     return 1;
 }
+
+/*
+int CPubKey::secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) noexcept {
+    ecmult::secp256k1_ge Q;
+
+    //VERIFY_CHECK(ctx != nullptr);
+    ARG_CHECK(pubkey != nullptr);
+    std::memset(pubkey, 0, sizeof(*pubkey));
+    ARG_CHECK(input != nullptr);
+    if (! secp256k1_eckey_pubkey_parse(&Q, input, inputlen))
+        return 0;
+
+    secp256k1_pubkey_save(pubkey, &Q);
+    ecmult::secp256k1_ge_clear(&Q);
+    return 1;
+}
+*/
 
 bool CPubKey::Decompress() noexcept {
     if (! IsValid())

@@ -157,13 +157,15 @@ public:
 };
 template <typename T>
 class CBlockHeader_impl : public CBlockHeader<T> {
+private:
+    T GetHash(int type) const;
 public:
     bool IsNull() const {
         return (CBlockHeader<T>::nBits == 0);
     }
-    void set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const;
-    T GetPoHash() const;
-    T GetPoHash(int32_t height) const;
+    int set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const; // return: BLOCK_HASH_TYPE
+    //T GetPoHash() const;
+    T GetPoHash(int32_t height, int type) const;
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader<T>::nTime;
     }
@@ -251,12 +253,14 @@ public:
         vchBlockSig.clear();
         nDoS = 0;
     }
+    T GetPoHash() const;
+
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const {
         // Take last bit of block hash as entropy bit
-        unsigned int nEntropyBit = ((CBlockHeader_impl<T>::GetPoHash().Get64()) & 1llu);
+        unsigned int nEntropyBit = ((GetPoHash().Get64()) & 1llu);
         if (args_bool::fDebug && map_arg::GetBoolArg("-printstakemodifier"))
-            logging::LogPrintf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", CBlockHeader_impl<T>::GetPoHash().ToString().c_str(), nEntropyBit);
+            logging::LogPrintf("GetStakeEntropyBit: hashBlock=%s nEntropyBit=%u\n", GetPoHash().ToString().c_str(), nEntropyBit);
         return nEntropyBit;
     }
     // ppcoin: two types of block: proof-of-work or proof-of-stake

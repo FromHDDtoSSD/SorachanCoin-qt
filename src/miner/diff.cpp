@@ -77,7 +77,7 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(height < sw_height) {
         type = SCRYPT_POW_TYPE;
-        return CheckProofOfWork(header.GetPoHash(height), header.get_nBits());
+        return CheckProofOfWork(header.GetPoHash(height, HASH_TYPE_NONE), header.get_nBits());
     }
 
     // other than PoW check

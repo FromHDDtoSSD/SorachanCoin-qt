@@ -107,6 +107,7 @@ namespace block_hash_func {
 
 // hash type: Block hash algo.
 enum BLOCK_HASH_TYPE {
+    HASH_TYPE_NONE = 0,        // force Scrypt
     SCRYPT_POW_TYPE = 1,       // ASIC
     LYRA2REV2_POW_TYPE,        // GPU
     YESPOWER_POW_TYPE,         // CPU
@@ -133,7 +134,7 @@ namespace block_hash_helper {
     extern int32_t create_proof_nonce_zero(bool pos, bool masternode, bool pobench, bool pospace=false, bool popredict=false);
     extern bool is_proof(int type, int32_t nonce_zero_value);
 
-    //constexpr int32_t PoW_nonce_zero = 0;
+    constexpr int32_t PoW_nonce_zero = 0;
 }
 
 template <typename T>
