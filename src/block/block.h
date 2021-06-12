@@ -175,6 +175,15 @@ public:
         CBlockHeader<T>::nTime = std::max(GetBlockTime(), bitsystem::GetAdjustedTime());
         CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
     }
+    std::string ToString() const {
+        return tfm::format("CBlockHeader_impl<T>: nVersion=%d hashPrevBlock=%s hashMerkleRoot=%s nTime=%d nBits=%d nNonce=%d",
+                           CBlockHeader<T>::nVersion,
+                           CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
+                           CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),
+                           CBlockHeader<T>::nTime,
+                           CBlockHeader<T>::nBits,
+                           CBlockHeader<T>::nNonce);
+    }
 };
 
 //

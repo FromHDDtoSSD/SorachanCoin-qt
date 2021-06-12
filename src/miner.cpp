@@ -838,6 +838,7 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey) 
     }
     */
 
+    pblock->set_LastHeight(pblock->get_LastHeight()); // set BlockVersion
     uint256 hashBlock = pblock->GetPoHash();
     uint256 hashTarget = CBigNum().SetCompact(pblock->get_nBits()).getuint256();
 

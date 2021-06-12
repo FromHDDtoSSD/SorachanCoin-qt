@@ -231,7 +231,7 @@ void CBlockHeader<T>::set_LastHeight(int32_t _in) const { // _in is indexPrev
 template <typename T>
 int CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const { // _in is indexPrev
     int type = HASH_TYPE_NONE;
-    if(! diff::check::CheckProofOfWork2(_in+1, nonce_zero_proof, *this, type))
+    if(! diff::check::CheckProofOfWork2(_in+1, nonce_zero_proof, *(static_cast<const CBlockHeader_impl<T> *>(this)), type))
         return type; // do nothing (no confirm block)
 
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
@@ -1074,10 +1074,11 @@ bool CBlock_impl<T>::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bo
     } else {
         const BLOCK_HASH_MODIFIER<T> &prevModifier = (*mi).second;
         CBlockHeader<T>::set_LastHeight(prevModifier.get_nHeight());
-        debugcs::instance() << "CBlock_impl<T>::ReadFromDisk height: " << prevModifier.get_nHeight() << debugcs::endl();
-        type = this->set_Last_LyraHeight_hash(CBlockHeader<T>::get_LastHeight()+1,
+        //debugcs::instance() << "CBlock_impl<T>::ReadFromDisk prevHeight: " << prevModifier.get_nHeight() << debugcs::endl();
+        type = this->set_Last_LyraHeight_hash(CBlockHeader<T>::get_LastHeight(),
                                               block_hash_helper::create_proof_nonce_zero(
                                               IsProofOfStake(), IsProofOfMasternode(), IsProofOfBench()));
+        //debugcs::instance() << "CBlock_impl<T>::ReadFromDisk type: " << type << debugcs::endl();
     }
 
     // Check the header

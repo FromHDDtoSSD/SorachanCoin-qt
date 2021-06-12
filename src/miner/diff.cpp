@@ -141,6 +141,10 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
     if(hash_check(block_hash_func::GetPoW_SHA512D((const char *)&header), bnTarget))
         return true;
 
+    debugcs::instance() << "CheckProofOfWork2 Error header: " << header.ToString().c_str() << debugcs::endl();
+    //debugcs::instance() << "HASH Scrypt: " << block_hash_func::GetPoW_Scrypt((const char *)&header).ToString().c_str() << debugcs::endl();
+    //debugcs::instance() << "HASH Lyra2REv2: " << block_hash_func::GetPoW_Lyra2REV2((const char *)&header).ToString().c_str() << debugcs::endl();
+    type = HASH_TYPE_NONE;
     return false;
 }
 
