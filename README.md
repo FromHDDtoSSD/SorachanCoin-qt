@@ -47,16 +47,15 @@ make
 Require library: libtool, autoconf, unzip  
 (sudo apt-get install libtool, autoconf, unzip)
 
-BlockExplorer
-===========================
-
-mainnet  
-from PoW[Scrypt]/PoS to PoW[Lyra2REv2]/PoS  
-until 549999 block: Scrypt, after 550000 block: Lyra2REv2  
-https://sora.junkhdd.com:7350/  
-  
-testnet  
-from PoW[Scrypt]/PoS to PoW[Lyra2REv2]/PoS  
-until 1494999 block: Scrypt, after 1495000 block: Lyra2REv2  
-https://www.night-rescue.com/  
-
+BlockExplorer<br>
+===========================<br>
+<br>
+mainnet<br>
+from PoW[Scrypt]/PoS to PoW[Available hash algorithm: Scrypt, Lyra2REv2, Lyra2RE, SHA256D, Blake2s]/PoS<br>
+switch block: 720000 (jul-2022)<br>
+https://sora.junkhdd.com:7350/<br>
+<br>
+testnet<br>
+from PoW[Scrypt]/PoS to PoW[Available hash algorithm: Scrypt, Lyra2REv2, Lyra2RE, SHA256D, Blake2s]/PoS<br>
+switch block: 1495000 (jun-2021)<br>
+https://www.night-rescue.com/<br>

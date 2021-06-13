@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2021 The Sora neko developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,14 +9,17 @@
 
 #include <prevector/prevector.h>
 #include <limits>
-#include <stdexcept>
-#include <bignum.h> // check_script_num
+#include <uint256.h>
 
-class scriptnum_error : public std::runtime_error
-{
-public:
-    explicit scriptnum_error(const std::string &str) : std::runtime_error(str) {}
-};
+// Sora neko  ^   ^
+// CNekoNum  ( >.< )
+//            [   ]
+
+//
+// CBigNum: for OpenSSL (memory: heap, digit: infinite)
+// CScriptNum: for Bitcoin Script (memory: stack, digit: 2^64)
+// CNekoNum: for a Cat (memory: stack, digit: 2^2040)
+//
 
 class CScriptNum
 {
@@ -34,39 +38,13 @@ using script_vector = prevector<PREVECTOR_N, unsigned char>;
 using script_vector = std::vector<unsigned char>;
 #endif
 
-    explicit CScriptNum(const int64_t& n)
-    {
+    explicit CScriptNum(const int64_t &n) {
         m_value = n;
     }
 
     static constexpr size_t nDefaultMaxNumSize = 4;
-
     explicit CScriptNum(const script_vector &vch, bool fRequireMinimal,
-                        const size_t nMaxNumSize = nDefaultMaxNumSize)
-    {
-        if (vch.size() > nMaxNumSize) {
-            throw scriptnum_error("script number overflow");
-        }
-        if (fRequireMinimal && vch.size() > 0) {
-            // Check that the number is encoded with the minimum possible
-            // number of bytes.
-            //
-            // If the most-significant-byte - excluding the sign bit - is zero
-            // then we're not minimal. Note how this test also rejects the
-            // negative-zero encoding, 0x80.
-            if ((vch.back() & 0x7f) == 0) {
-                // One exception: if there's more than one byte and the most
-                // significant bit of the second-most-significant-byte is set
-                // it would conflict with the sign bit. An example of this case
-                // is +-255, which encode to 0xff00 and 0xff80 respectively.
-                // (big-endian).
-                if (vch.size() <= 1 || (vch[vch.size() - 2] & 0x80) == 0) {
-                    throw scriptnum_error("non-minimally encoded script number");
-                }
-            }
-        }
-        m_value = set_vch(vch);
-    }
+                        const size_t nMaxNumSize = nDefaultMaxNumSize);
 
     inline bool operator==(const int64_t& rhs) const    { return m_value == rhs; }
     inline bool operator!=(const int64_t& rhs) const    { return m_value != rhs; }
@@ -95,120 +73,124 @@ using script_vector = std::vector<unsigned char>;
 
     inline CScriptNum& operator&=( const CScriptNum& rhs)       { return operator&=(rhs.m_value);  }
 
-    inline CScriptNum operator-()                         const
-    {
+    inline CScriptNum operator-()                         const {
         assert(m_value != std::numeric_limits<int64_t>::min());
         return CScriptNum(-m_value);
     }
 
-    inline CScriptNum& operator=( const int64_t& rhs)
-    {
+    inline CScriptNum& operator=( const int64_t& rhs) {
         m_value = rhs;
         return *this;
     }
 
-    inline CScriptNum& operator+=( const int64_t& rhs)
-    {
+    inline CScriptNum& operator+=( const int64_t& rhs) {
         assert(rhs == 0 || (rhs > 0 && m_value <= std::numeric_limits<int64_t>::max() - rhs) ||
                            (rhs < 0 && m_value >= std::numeric_limits<int64_t>::min() - rhs));
         m_value += rhs;
         return *this;
     }
 
-    inline CScriptNum& operator-=( const int64_t& rhs)
-    {
+    inline CScriptNum& operator-=( const int64_t& rhs) {
         assert(rhs == 0 || (rhs > 0 && m_value >= std::numeric_limits<int64_t>::min() + rhs) ||
                            (rhs < 0 && m_value <= std::numeric_limits<int64_t>::max() + rhs));
         m_value -= rhs;
         return *this;
     }
 
-    inline CScriptNum& operator&=( const int64_t& rhs)
-    {
+    inline CScriptNum& operator&=( const int64_t& rhs) {
         m_value &= rhs;
         return *this;
     }
 
-    int getint() const
-    {
-        if (m_value > std::numeric_limits<int>::max())
-            return std::numeric_limits<int>::max();
-        else if (m_value < std::numeric_limits<int>::min())
-            return std::numeric_limits<int>::min();
-        return m_value;
-    }
+    // CScriptNum Method
+    int getint() const;
+    int64_t getint64() const;
+    script_vector getvch() const;
 
-    int64_t getint64() const {
-        return m_value;
-    }
-
-    script_vector getvch() const
-    {
-        return serialize(m_value);
-    }
-
-    static script_vector serialize(const int64_t& value)
-    {
-        if(value == 0)
-            return script_vector();
-
-        script_vector result;
-        const bool neg = value < 0;
-        uint64_t absvalue = neg ? -value : value;
-
-        while(absvalue)
-        {
-            result.push_back(absvalue & 0xff);
-            absvalue >>= 8;
-        }
-
-//    - If the most significant byte is >= 0x80 and the value is positive, push a
-//    new zero-byte to make the significant byte < 0x80 again.
-
-//    - If the most significant byte is >= 0x80 and the value is negative, push a
-//    new 0x80 byte that will be popped off when converting to an integral.
-
-//    - If the most significant byte is < 0x80 and the value is negative, add
-//    0x80 to it, since it will be subtracted and interpreted as a negative when
-//    converting to an integral.
-
-        if (result.back() & 0x80)
-            result.push_back(neg ? 0x80 : 0);
-        else if (neg)
-            result.back() |= 0x80;
-
-        return result;
-    }
+    // script.h
+    static script_vector serialize(const int64_t &value);
+    static int64_t unserialize(const script_vector &vch);
 
 private:
-    static int64_t set_vch(const script_vector &vch)
-    {
-      if (vch.empty())
-          return 0;
-
-      int64_t result = 0;
-      for (size_t i = 0; i != vch.size(); ++i)
-          result |= static_cast<int64_t>(vch[i]) << 8*i;
-
-      // If the input vector's most significant byte is 0x80, remove it from
-      // the result's msb and return a negative.
-      if (vch.back() & 0x80)
-          return -((int64_t)(result & ~(0x80ULL << (8 * (vch.size() - 1)))));
-
-      return result;
-    }
-
     int64_t m_value;
 };
 
-namespace check_scriptnum {
-    inline void Check_fromBignumToScriptnum(const CBigNum &bignum, const CScriptNum &scriptnum, bool check=false) {
-        if(check) {
-            assert(bignum.getuint32()==scriptnum.getint());
-            assert(bignum.getuint64()==scriptnum.getint64());
-            assert(bignum.getvch()==scriptnum.getvch());
-        }
+// CNekoNum: BIGNUM struct
+struct BIGNUM_NEKONABE {
+    constexpr static size_t size = 4 + sizeof(uint256)*8 - 1; // 4 bytes + 255 bytes
+    uint8_t d[size];
+    bool overflow;
+    int64_t numModifier;
+    BIGNUM_NEKONABE() {
+        SetNull();
     }
-} // namespace check_script_num
+    void SetNull() {
+        std::memset(d, 0x00, sizeof(d));
+        overflow=false;
+        numModifier=0;
+    }
+    void set_int32(const int32_t &n) {
+        std::memset(d, 0x00, sizeof(d));
+        for(int i=3; i >= 0; --i)
+            d[size-i-1] = ((n>>i*8)&0xff);
+    }
+    void set_int64(const int64_t &n) {
+        std::memset(d, 0x00, sizeof(d));
+        for(int i=7; i >= 0; --i)
+            d[size-i-1] = ((n>>i*8)&0xff);
+    }
+    int32_t get_int32() const {
+        return ( ((int32_t)(d[size-4])<<24)|((int32_t)(d[size-3])<<16)|((int32_t)(d[size-2])<<8)|(int32_t)(d[size-1]) );
+    }
+    int64_t get_int64() const {
+        return ( ((int64_t)(d[size-8])<<56)|((int64_t)(d[size-7])<<48)|((int64_t)(d[size-6])<<40)|((int64_t)(d[size-5])<<32)|
+                 ((int64_t)(d[size-4])<<24)|((int64_t)(d[size-3])<<16)|((int64_t)(d[size-2])<<8)|(int64_t)(d[size-1]) );
+    }
+    bool is_equal(const BIGNUM_NEKONABE &neko) const {
+        return std::memcmp(this->d, neko.d, sizeof(d)) == 0;
+    }
+    bool is_lt(const BIGNUM_NEKONABE &neko) const {
+        return std::memcmp(this->d, neko.d, sizeof(d)) < 0;
+    }
+    bool is_elt(const BIGNUM_NEKONABE &neko) const {
+        return std::memcmp(this->d, neko.d, sizeof(d)) <= 0;
+    }
+};
+
+class CNekoNum : public BIGNUM_NEKONABE
+{
+public:
+    CNekoNum() noexcept {
+        SetNull();
+    }
+
+    explicit CNekoNum(const int64_t &n) noexcept {
+        SetNull();
+        set_int64(n);
+    }
+
+    inline bool operator==(const int64_t& rhs) const noexcept  { return get_int64() == rhs; }
+    inline bool operator!=(const int64_t& rhs) const noexcept  { return get_int64() != rhs; }
+    inline bool operator<=(const int64_t& rhs) const noexcept  { return get_int64() <= rhs; }
+    inline bool operator< (const int64_t& rhs) const noexcept  { return get_int64() <  rhs; }
+    inline bool operator>=(const int64_t& rhs) const noexcept  { return get_int64() >= rhs; }
+    inline bool operator> (const int64_t& rhs) const noexcept  { return get_int64() >  rhs; }
+
+    inline bool operator==(const CNekoNum& rhs) const noexcept { return is_equal(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator!=(const CNekoNum& rhs) const noexcept { return !operator==(rhs); }
+    inline bool operator<=(const CNekoNum& rhs) const noexcept { return is_elt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator< (const CNekoNum& rhs) const noexcept { return is_lt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator>=(const CNekoNum& rhs) const noexcept { return !operator<(rhs); }
+    inline bool operator> (const CNekoNum& rhs) const noexcept { return !operator<=(rhs); }
+
+    // CNekoNum method
+    int getint() const;
+    uint32_t getuint32() const;
+    int64_t getint64() const;
+    uint64_t getuint64() const;
+    uint256 getuint256() const;
+    CNekoNum &SetCompact(uint32_t nCompact);
+    uint32_t GetCompact() const;
+};
 
 #endif

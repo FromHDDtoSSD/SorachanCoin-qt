@@ -86,6 +86,7 @@ SorachanCoind_SOURCES = \
  script/script_error.cpp \
  script/sign.cpp \
  script/standard.cpp \
+ script/scriptnum.cpp \
  sync/lsync.cpp \
  sync/sync.cpp \
  util/arginit.cpp \

@@ -892,6 +892,7 @@ SOURCES += \
     src/bip32/hdwalletutil.cpp \
     src/script/lscript.cpp \
     src/script/standard.cpp \
+    src/script/scriptnum.cpp \
     src/masternode/masternode.cpp \
     src/masternode/masternode_sync.cpp \
     src/masternode/masternode_config.cpp \
