@@ -597,7 +597,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssValue, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-        debugcs::instance() << "LoadBlockIndex height: " << data.nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
+        //debugcs::instance() << "LoadBlockIndex height: " << data.nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     // Seek to start key.
@@ -695,7 +695,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         ::Unserialize(ssValue, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-        debugcs::instance() << "LoadBlockIndex height: " << data.get_nHeight() << " hash: " << hash.ToString().c_str() << debugcs::endl();
+        //debugcs::instance() << "LoadBlockIndex height: " << data.get_nHeight() << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     // Seek to start key.

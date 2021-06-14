@@ -424,13 +424,12 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(pblock->IsProofOfStake(), pblock->IsProofOfMasternode(), pblock->IsProofOfBench()));
+            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
         } else {
             pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(pblock->IsProofOfStake(), pblock->IsProofOfMasternode(), pblock->IsProofOfBench()));
+                                             block_hash_helper::create_proof_nonce_zero(true, false, false)); // IsProofOfStake, IsProofOfMasterNode, IsProofOfBench is unavaivable.
         }
         pblock->set_nNonce(0);
     }
@@ -735,13 +734,12 @@ CBlockTemplate *miner::CreateNewBlock2(CWallet *pwallet, CTransaction *txCoinSta
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(pblock->IsProofOfStake(), pblock->IsProofOfMasternode(), pblock->IsProofOfBench()));
+            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
         } else {
             pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(pblock->IsProofOfStake(), pblock->IsProofOfMasternode(), pblock->IsProofOfBench()));
+                                             block_hash_helper::create_proof_nonce_zero(true, false, false)); // IsProofOfStake, IsProofOfMasterNode, IsProofOfBench is unavaivable.
         }
         pblock->set_nNonce(0);
         //pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
