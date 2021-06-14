@@ -191,8 +191,6 @@ public:
 // CBlockHeader + MerkleTree + Transactions, block data.
 // About R/W: ReadFromDisk or WriteToDisk. (pos: CBlockIndex)
 //
-//template <typename Stream, typename Operation>
-//extern void ReadWriteLastHeight(Stream &s, const Operation &ser_action); // CBlockHeader::LastHeight R/W ReadFromDisk and WriteToDisk
 template <typename T>
 class CBlock_impl final : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction_impl<T> >
 {
@@ -331,7 +329,7 @@ class CBlockIndex_impl : public CBlockHeader<T>
     // CBlockIndex_impl &operator=(const CBlockIndex_impl &)=delete;
     // CBlockIndex_impl &operator=(CBlockIndex_impl &&)=delete;
 protected:
-    const T *phashBlock; // CBlock_impl<T>::AddToBlockIndex
+    const T *phashBlock; // mapBlockIndex hash pointer
     CBlockIndex_impl<T> *pprev;
     CBlockIndex_impl<T> *pnext;
     uint32_t nFile;
@@ -715,20 +713,7 @@ public:
         hashPrev = (CBlockIndex_impl<T>::pprev ? CBlockIndex_impl<T>::pprev->GetBlockHash() : 0);
         hashNext = (CBlockIndex_impl<T>::pnext ? CBlockIndex_impl<T>::pnext->GetBlockHash() : 0);
     }
-    T GetBlockHash() const {
-        if (args_bool::fUseFastIndex && (CBlockIndex_impl<T>::nTime < bitsystem::GetAdjustedTime() - util::nOneDay) && this->blockHash != 0)
-            return blockHash;
-        CBlock_impl<T> block;
-        block.set_nVersion(CBlockIndex_impl<T>::nVersion);
-        block.set_hashPrevBlock(hashPrev);
-        block.set_hashMerkleRoot(CBlockIndex_impl<T>::hashMerkleRoot);
-        block.set_nTime(CBlockIndex_impl<T>::nTime);
-        block.set_nBits(CBlockIndex_impl<T>::nBits);
-        block.set_nNonce(CBlockIndex_impl<T>::nNonce);
-        block.set_LastHeight(this->get_nHeight()-1);
-        blockHash = block.GetPoHash();
-        return blockHash;
-    }
+    T GetBlockHash() const;
     std::string ToString() const;
     void print() const {
         logging::LogPrintf("%s\n", ToString().c_str());
