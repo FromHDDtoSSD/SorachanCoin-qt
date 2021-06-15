@@ -17,6 +17,7 @@
 #include <block/block_keyhasher.h>
 #include <serialize.h>
 #include <script/script.h>
+#include <checkpoints/checkpoints_type.h>
 
 template <typename T> class CBlockIndex_impl;
 template <typename T> class COutPoint_impl;
@@ -88,6 +89,15 @@ namespace block_hash_modifier_genesis {
     const uint256 mainnet_genesic_hash = uint256("0");
     const uint256 testnet_genesis_hash = uint256("0x7cc52e194af3c88de879a5d27e157d71f4e359da84937f2382edeba27230ed1b");
     extern BLOCK_HASH_MODIFIER_MUTABLE<uint256> create_block_hash_modifier_genesis();
+}
+
+// BLOCK_HASH_MODIFIER_checkpoints
+namespace block_hash_modifier_checkpoints {
+    extern const MapCheckpoints mapCheckpoints;
+    extern const MapCheckpoints mapCheckpointsTestnet;
+    extern const LastCheckpointTime CheckpointLastTime;
+    extern const LastCheckpointTime CheckpointLastTimeTestnet;
+    extern bool CheckHardened(int nHeight, const uint256 &hash);
 }
 
 // BLOCK_HASH_MODIFIER info

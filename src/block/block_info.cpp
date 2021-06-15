@@ -35,9 +35,39 @@ int64_t block_info::nMinimumInputValue = block_params::MIN_TXOUT_AMOUNT;
 int block_info::nScriptCheckThreads = 0;
 unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
 
-// BLOCK_HASH_MODOFIER
+// block_hash_modifier checkpoints and modifierChecksum
+const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpoints = {
+    //{SWITCH_LYRE2RE_BLOCK-1, block_hash_modifier_genesis::mainnet_genesic_hash},
+};
+
+const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpointsTestnet = {
+    {SWITCH_LYRE2RE_BLOCK_TESTNET-1, block_hash_modifier_genesis::testnet_genesis_hash},
+    {1495598, uint256("0xed1cad7ddc3b2669fd7c831821788637608398b14d926295c32a2756ca586895")},
+    {1495691, uint256("0xf2384f660025e38baaea2da22042e78684d027507985042eca41a69e1f0ee1b0")},
+    {1504189, uint256("0x8b3311ff92b98a4b1b9b10665ae805e1981222709de2379fd7c8f1bc0976a871")},
+    {1505196, uint256("0x28c09621aaeaee9d8dec5a73b64da837707ef9b4e6ba452ea352663d9e9502c0")},
+};
+
+const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTime = 0;
+const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTimeTestnet = 1623730485;
+
+bool block_hash_modifier_checkpoints::CheckHardened(int nHeight, const uint256 &hash) { // nHeight is current
+    if(args_bool::fDebug)
+        debugcs::instance() << "block_hash_modifier checkpoint nHeight: " << nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
+    MapCheckpoints::const_iterator mi = args_bool::fTestNet ?
+            block_hash_modifier_checkpoints::mapCheckpointsTestnet.find(nHeight):
+            block_hash_modifier_checkpoints::mapCheckpoints.find(nHeight);
+    if(mi==block_hash_modifier_checkpoints::mapCheckpoints.end())
+        return true;
+    if((*mi).second==hash)
+        return true;
+    return false;
+}
+
+// block_hash_modofier message
 unsigned char block_hash_modifier_info::gpchMessageStart[4] = { 0xfe, 0xf8, 0xf5, 0xf1 };
 
+// block_hash_modifier genesis
 BLOCK_HASH_MODIFIER_MUTABLE<uint256> block_hash_modifier_genesis::create_block_hash_modifier_genesis() {
     BLOCK_HASH_MODIFIER_MUTABLE<uint256> bhm;
     bhm.nVersion = block_hash_modifier_genesis::nVersion;
@@ -84,7 +114,8 @@ template <typename T>
 T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash() const {
     T hash;
     lyra2re2_hash((const char *)this, BEGIN(hash));
-    logging::LogPrintf("BLOCK_HASH_MODIFIER::GetBlockModifierHash hash:%s info:%s\n", hash.ToString().c_str(), this->ToString().c_str());
+    if(args_bool::fDebug)
+        logging::LogPrintf("BLOCK_HASH_MODIFIER::GetBlockModifierHash hash:%s info:%s\n", hash.ToString().c_str(), this->ToString().c_str());
     return hash;
 }
 

@@ -114,7 +114,7 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
 
     // Check range
     if (bnTarget <= 0 || bnTarget > diff::bnProofOfWorkLimit)
-        return logging::error("diff::check::CheckProofOfWork2() : nBits below minimum work");
+        return false; // logging::error("diff::check::CheckProofOfWork2() : nBits below minimum work");
 
     // Check hash type
     type = LYRA2REV2_POW_TYPE;

@@ -9,6 +9,7 @@
 #include <serialize.h>
 #include <util.h>
 #include <net.h>
+#include <checkpoints/checkpoints_type.h>
 #ifdef WIN32
 # undef STRICT
 # undef PERMISSIVE
@@ -162,9 +163,6 @@ public:
 
 // Block-chain checkpoints are compiled-in sanity checks.
 // They are updated every release or three.
-using MapCheckpoints = std::map<int, uint256>;
-using ListBannedBlocks = std::list<uint256>;
-using LastCheckpointTime = unsigned int;
 namespace Checkpoints
 {
     enum CPMode

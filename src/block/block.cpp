@@ -250,12 +250,14 @@ int CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_ze
             BLOCK_HASH_MODIFIER<T> modifier_gene = block_hash_modifier_genesis::create_block_hash_modifier_genesis(); // Genesis block
             mapPrevHash.insert(std::make_pair(_in, modifier_gene.GetBlockModifierHash())); // Genesis hash
             T hash_prev = GetPoHash(_in, type);
+            if(! block_hash_modifier_checkpoints::CheckHardened(modifier_gene.get_nHeight(), modifier_gene.GetBlockModifierHash()))
+                throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
             block_info::mapBlockLyraHeight.insert(std::make_pair(hash_prev, modifier_gene));
             if(! CTxDB_impl<T>().WriteBlockHashType(hash_prev, modifier_gene))
                 throw std::runtime_error("BLOCK_HASH_MODIFIER prev DB write ERROR.");
             if(args_bool::fDebug) {
                 logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d info:%s\n", _in, modifier_gene.ToString().c_str());
-                logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d hash:%s\n", _in, modifier_gene.GetBlockModifierHash().ToString().c_str());
+                //logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d hash:%s\n", _in, modifier_gene.GetBlockModifierHash().ToString().c_str());
             }
 
             // for CBlock
@@ -290,6 +292,8 @@ int CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_ze
         modifier_current.set_prevHash(prevHash);
         mapPrevHash.insert(std::make_pair(_in+1, modifier_current.GetBlockModifierHash()));
         T hash_current = GetPoHash(_in+1, type);
+        if(! block_hash_modifier_checkpoints::CheckHardened(modifier_current.get_nHeight(), modifier_current.GetBlockModifierHash()))
+            throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash_current, modifier_current)); // current
 
         if(! CTxDB_impl<T>().WriteBlockHashType(hash_current, modifier_current))

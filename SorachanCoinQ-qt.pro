@@ -759,6 +759,7 @@ HEADERS += \
     src/libstr/cmstring.h \
     src/libstr/cmscript.h \
     src/libstr/movestream.h \
+    src/checkpoints/checkpoints_type.h \
     src/PoBench/pob_challenge.h \
     src/PoBench/pob_proof.h \
     src/PoBench/pob_plot.h \
