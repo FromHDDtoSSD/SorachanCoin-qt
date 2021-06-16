@@ -292,7 +292,7 @@ int CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_ze
         modifier_current.set_prevHash(prevHash);
         mapPrevHash.insert(std::make_pair(_in+1, modifier_current.GetBlockModifierHash()));
         T hash_current = GetPoHash(_in+1, type);
-        if(! block_hash_modifier_checkpoints::CheckHardened(modifier_current.get_nHeight(), modifier_current.GetBlockModifierHash()))
+        if(! block_hash_modifier_checkpoints::CheckHardened(modifier_current.get_nHeight(), modifier_current.GetBlockModifierHash(), modifier_current.ToString()))
             throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash_current, modifier_current)); // current
 

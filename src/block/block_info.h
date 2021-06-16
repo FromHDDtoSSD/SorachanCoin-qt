@@ -97,7 +97,7 @@ namespace block_hash_modifier_checkpoints {
     extern const MapCheckpoints mapCheckpointsTestnet;
     extern const LastCheckpointTime CheckpointLastTime;
     extern const LastCheckpointTime CheckpointLastTimeTestnet;
-    extern bool CheckHardened(int nHeight, const uint256 &hash);
+    extern bool CheckHardened(int nHeight, const uint256 &hash, const std::string ToString="");
 }
 
 // BLOCK_HASH_MODIFIER info

@@ -524,8 +524,8 @@ uint32_t bitkernel<T>::GetStakeModifierChecksum(const CBlockIndex_impl<T> *pinde
     hashChecksum >>= (256 - 32);
 
     uint32_t ret = static_cast<uint32_t>(hashChecksum.Get64());
-    if(args_bool::fDebug)
-        logging::LogPrintf("StakeModifierChecksum: nHeight_%d checksum_%x\n", pindex->get_nHeight(), ret);
+    //if(args_bool::fDebug)
+    //    logging::LogPrintf("StakeModifierChecksum: nHeight_%d checksum_%x\n", pindex->get_nHeight(), ret);
     return ret;
 }
 
