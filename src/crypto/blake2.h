@@ -7,6 +7,7 @@
 #define CRYPTO_BLAKE2_H
 
 #include <cstdint>
+#include <stddef.h>
 
 #if defined(_MSC_VER)
 #define BLAKE2_PACKED(x) __pragma(pack(push, 1)) x __pragma(pack(pop))
