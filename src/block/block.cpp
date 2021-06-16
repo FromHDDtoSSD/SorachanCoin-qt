@@ -270,22 +270,23 @@ int CBlockHeader_impl<T>::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_ze
 
         BLOCK_HASH_MODIFIER<T> modifier_current = BLOCK_HASH_MODIFIER<T>(_in+1, this->get_nTime(), type);
         auto mi2 = mapPrevHash.find(_in);
-        T prevHash;
+        T prevHash("0");
         if(mi2==mapPrevHash.end()) {
-            BlockHeight::const_iterator mi3 = block_info::mapBlockLyraHeight.find(GetPoHash(_in, type));
-            if(mi3==block_info::mapBlockLyraHeight.end()) {
-                logging::LogPrintf("[bug] set_Last _in:%d\n", _in);
-                for(auto ite: mapPrevHash) {
-                    logging::LogPrintf("[bug] set_Last mapPrevHash height:%d hash:%s\n", ite.first, ite.second.ToString().c_str());
+            for(const auto &ite: block_info::mapBlockLyraHeight) {
+                if(ite.second.get_nHeight()==_in) {
+                    prevHash = ite.second.GetBlockModifierHash();
+                    break;
                 }
-                for(auto ite: block_info::mapBlockLyraHeight) {
-                    logging::LogPrintf("[bug] set_Last block_info::mapBlockLyraHeight ToString:%s\n", ite.second.ToString().c_str());
-                }
-                debugcs::instance() << "[bug] set_Last invalid nHeight: " << _in+1 << debugcs::endl();
-                assert(!"[bug] mi3==mapPrevHash.end()");
-                throw std::runtime_error("[bug] mi3==mapPrevHash.end()");
             }
-            prevHash = (*mi3).second.GetBlockModifierHash();
+            if(prevHash==T("0")) {
+                //for(auto ite: mapPrevHash)
+                //    logging::LogPrintf("set_Last mapPrevHash height:%d hash:%s\n", ite.first, ite.second.ToString().c_str());
+                //for(auto ite: block_info::mapBlockLyraHeight)
+                //    logging::LogPrintf("set_Last block_info::mapBlockLyraHeight ToString:%s\n", ite.second.ToString().c_str());
+                debugcs::instance() << "set_Last invalid nHeight: " << _in+1 << debugcs::endl();
+                assert(!"prevHash==T(\"0\")");
+                throw std::runtime_error("prevHash==T(\"0\")");
+            }
         } else
             prevHash = (*mi2).second;
         debugcs::instance() << "set_Last current HASH: " << prevHash.ToString().c_str() << debugcs::endl();
@@ -334,7 +335,7 @@ T CBlockHeader_impl<T>::GetHash(int type) const { // private
         return block_hash_func::GetPoW_Lyra2RE((const char *)this);
     } else {
         throw std::runtime_error("CBlockHeader_impl<T>::GetHash(int type) No support HASH Algorithm.");
-        return uint256(0);
+        return ~uint256("0");
     }
 }
 
@@ -360,8 +361,8 @@ T CDiskBlockIndex_impl<T>::GetBlockHash() const {
 // GetPoHash(height, type): CBlockHeader_impl
 template <typename T>
 T CBlock_impl<T>::GetPoHash() const {
-    if(this->get_LastHeight()==-1)
-        return block_hash_func::GetPoW_Scrypt((const char *)(static_cast<const CBlockHeader_impl<T> *>(this)));
+    //if(this->get_LastHeight()==-1)
+    //    return block_hash_func::GetPoW_Scrypt((const char *)(static_cast<const CBlockHeader_impl<T> *>(this)));
 
     if(args_bool::fDebug)
         debugcs::instance() << "CBlock_impl<T>::GetPoHash() testnet: " << (int)args_bool::fTestNet << " LastHeight: " << this->get_LastHeight() << debugcs::endl();
@@ -817,7 +818,7 @@ bool CBlock_impl<T>::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*
                         // Check proof of work matches claimed amount
                         int type = HASH_TYPE_NONE;
                         if(fCheckPOW) {
-                            type = this->set_Last_LyraHeight_hash(pindexPrev->get_nHeight()+1, block_hash_helper::PoW_nonce_zero);
+                            type = this->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
                         }
                         if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl<T>::GetPoHash(pindexPrev->get_nHeight()+1, type), CBlockHeader_impl<T>::get_nBits()))
                             return DoS(50, logging::error("CheckBlock() : proof of work failed"));

@@ -42,14 +42,10 @@ const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpoints = {
 
 const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpointsTestnet = {
     {SWITCH_LYRE2RE_BLOCK_TESTNET-1, block_hash_modifier_genesis::testnet_genesis_hash},
-    //{1495598, uint256("0xed1cad7ddc3b2669fd7c831821788637608398b14d926295c32a2756ca586895")},
-    {1496951, uint256("0x366356549b9f59bb9a70f5af0a8bcd0e7160ac875aea51c79f705cc5e06920bb")},
-    {1504189, uint256("0x8b3311ff92b98a4b1b9b10665ae805e1981222709de2379fd7c8f1bc0976a871")},
-    {1505196, uint256("0x28c09621aaeaee9d8dec5a73b64da837707ef9b4e6ba452ea352663d9e9502c0")},
 };
 
 const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTime = 0;
-const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTimeTestnet = 1623730485;
+const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTimeTestnet = 0;
 
 bool block_hash_modifier_checkpoints::CheckHardened(int nHeight, const uint256 &hash, const std::string ToString/*=""*/) { // nHeight is current
     if(args_bool::fDebug)
