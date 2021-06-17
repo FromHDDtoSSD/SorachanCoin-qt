@@ -58,11 +58,11 @@ namespace block_transaction
     class manage_impl : private no_instance
     {
     private:
-        static CBlockIndex_impl<T> *pblockindexFBBHLast;
+        static CBlockIndex *pblockindexFBBHLast;
     public:
         static void setnull_pblockindexFBBHLast() { pblockindexFBBHLast = nullptr; } // New Block
         static bool GetTransaction(const T &hash, CTransaction_impl<T> &tx, T &hashBlock);
-        static CBlockIndex_impl<T> *FindBlockByHeight(int nHeight);
+        static CBlockIndex *FindBlockByHeight(int nHeight);
         static bool MoneyRange(int64_t nValue) noexcept {
             return (nValue >= 0 && nValue <= block_params::MAX_MONEY);
         }
@@ -879,7 +879,7 @@ public:
         @param[in] pvChecks    NULL If pvChecks is not NULL, script checks are pushed onto it instead of being performed inline.
         @return Returns true if all checks succeed
      */
-    bool ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex_impl<T> *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks=true, unsigned int flags=Script_param::STRICT_FLAGS, std::vector<CScriptCheck> *pvChecks = nullptr);
+    bool ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks=true, unsigned int flags=Script_param::STRICT_FLAGS, std::vector<CScriptCheck> *pvChecks = nullptr);
 
     bool ClientConnectInputs();
     bool CheckTransaction() const;

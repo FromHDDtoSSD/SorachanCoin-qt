@@ -428,7 +428,7 @@ void TransactionView::showDetails()
     if(! transactionView->selectionModel()) {
         return;
     }
-    if(block_notify<uint256>::IsInitialBlockDownload()) {
+    if(block_notify::IsInitialBlockDownload()) {
         return;
     }
 

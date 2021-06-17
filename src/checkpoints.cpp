@@ -109,7 +109,7 @@ CBlockIndex *Checkpoints::manage::GetLastCheckpoint(const std::map<uint256, CBlo
 //! Guess how far we are in the verification process at the given block index
 /*
 template <typename T>
-double Checkpoints::GuessVerificationProgress(CBlockIndex_impl<T> *pindex, bool fSigchecks)
+double Checkpoints::GuessVerificationProgress(CBlockIndex *pindex, bool fSigchecks)
 {
     if (pindex == nullptr)
         return 0.0;

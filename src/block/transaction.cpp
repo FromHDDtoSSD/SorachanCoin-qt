@@ -14,7 +14,7 @@
 #include <block/blockdata_db.h>
 
 template <typename T> CTxMemPool_impl<T> CTxMemPool_impl<T>::mempool;
-template <typename T> CBlockIndex_impl<T> *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
+template <typename T> CBlockIndex *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
 int block_transaction::nCoinbaseMaturity = block_transaction::mainnet::nCoinbaseMaturity;
 
 template <typename T>
@@ -182,7 +182,7 @@ bool block_transaction::manage_impl<T>::GetTransaction(const T &hash, CTransacti
 }
 
 template <typename T>
-CBlockIndex_impl<T> *block_transaction::manage_impl<T>::FindBlockByHeight(int nHeight)
+CBlockIndex *block_transaction::manage_impl<T>::FindBlockByHeight(int nHeight)
 {
     CBlockIndex *pblockindex;
     if (nHeight < block_info::nBestHeight / 2)
@@ -779,7 +779,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
 }
 
 template <typename T>
-bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex_impl<T> *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks/*=true*/, unsigned int flags/*=Script_param::STRICT_FLAGS*/, std::vector<CScriptCheck> *pvChecks/*=NULL*/)
+bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks/*=true*/, unsigned int flags/*=Script_param::STRICT_FLAGS*/, std::vector<CScriptCheck> *pvChecks/*=NULL*/)
 {
     // Take over previous transactions' spent pointers
     // fBlock is true when this is called from AcceptBlock when a new best-block is added to the blockchain
@@ -1010,7 +1010,7 @@ bool CTransaction_impl<T>::GetCoinAge(CTxDB &txdb, uint64_t &nCoinAge) const
             return false;  // Transaction timestamp violation
 
         // Read block header
-        CBlock_impl<T> block;
+        CBlock block;
         if (! block.ReadFromDisk(txindex.get_pos().get_nFile(), txindex.get_pos().get_nBlockPos(), false))
             return false; // unable to read block of previous transaction
         if (block.GetBlockTime() + block_check::nStakeMinAge > nTime)

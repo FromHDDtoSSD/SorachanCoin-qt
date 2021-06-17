@@ -172,7 +172,7 @@ json_spirit::Value CRPCTable::getblockchaininfo(const json_spirit::Array &params
     const CBlockIndex *block = block_info::mapBlockIndex[block_info::hashBestChain];
     obj.push_back(json_spirit::Pair("mediantime", block->GetMedianTimePast()));
     obj.push_back(json_spirit::Pair("verificationprogress", (double)1.0)); // under development
-    obj.push_back(json_spirit::Pair("initialblockdownload", block_notify<uint256>::IsInitialBlockDownload()));
+    obj.push_back(json_spirit::Pair("initialblockdownload", block_notify::IsInitialBlockDownload()));
 
     obj.push_back(json_spirit::Pair("chainwork", block_info::nBestChainTrust.ToString()));
     obj.push_back(json_spirit::Pair("size_on_disk", 0)); // under development

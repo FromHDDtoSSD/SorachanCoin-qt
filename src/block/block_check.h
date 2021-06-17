@@ -652,9 +652,9 @@ namespace block_check
     class manage : private no_instance
     {
     public:
-        static void InvalidChainFound(CBlockIndex_impl<T> *pindexNew);
+        static void InvalidChainFound(CBlockIndex *pindexNew);
         static bool VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
-        static bool Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
+        static bool Reorganize(CTxDB_impl<T> &txdb, CBlockIndex *pindexNew);
 
         static int64_t PastDrift(int64_t nTime) {    // up to 2 hours from the past
             return nTime - 2 * util::nOneHour;

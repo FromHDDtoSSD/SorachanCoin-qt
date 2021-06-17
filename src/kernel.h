@@ -30,7 +30,7 @@ private:
     static constexpr unsigned int nModifierTestSwitchTime = timestamps::GENESIS_TIME_STAMP;
 
     // Get the last stake modifier and its generation time from a given block
-    static bool GetLastStakeModifier(const CBlockIndex_impl<T> *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime);
+    static bool GetLastStakeModifier(const CBlockIndex *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime);
 
     // Get selection interval section (in seconds)
     static int64_t GetStakeModifierSelectionIntervalSection(int nSection);
@@ -41,7 +41,7 @@ private:
     // select a block from the candidate blocks in vSortedByTimestamp, excluding
     // already selected blocks in vSelectedBlocks, and with timestamp up to
     // nSelectionIntervalStop.
-    static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex_impl<T> *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex_impl<T> **pindexSelected);
+    static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
 
     // The stake modifier used to hash for a stake kernel is chosen as the stake
     // modifier about a selection interval later than the coin generating the kernel
@@ -49,7 +49,7 @@ private:
 
     // Check whether stake kernel meets hash target
     // Sets hashProofOfStake on success return
-    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock_impl<T> &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint_impl<T> &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake=false);
+    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint_impl<T> &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake=false);
 
 public:
     static const MapModifierCheckpoints &getMapStakeModifierCheckpoints() {return bitkernel<T>::mapStakeModifierCheckpoints;}
@@ -64,7 +64,7 @@ public:
     static bool IsFixedModifierInterval(unsigned int nTimeBlock);
 
     // Compute the hash modifier for proof-of-stake
-    static bool ComputeNextStakeModifier(const CBlockIndex_impl<T> *pindexCurrent, uint64_t &nStakeModifier, bool &fGeneratedStakeModifier);
+    static bool ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, uint64_t &nStakeModifier, bool &fGeneratedStakeModifier);
 
     // The stake modifier used to hash for a stake kernel is chosen as the stake
     // modifier about a selection interval later than the coin generating the kernel
@@ -78,7 +78,7 @@ public:
     static bool CheckProofOfStake(const CTransaction_impl<T> &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake);
 
     // Get stake modifier checksum
-    static uint32_t GetStakeModifierChecksum(const CBlockIndex_impl<T> *pindex);
+    static uint32_t GetStakeModifierChecksum(const CBlockIndex *pindex);
 
     // Check stake modifier hard checkpoints
     static bool CheckStakeModifierCheckpoints(int nHeight, uint32_t nStakeModifierChecksum);

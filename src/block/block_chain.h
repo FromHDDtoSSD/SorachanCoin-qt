@@ -9,12 +9,10 @@
 #ifndef BLOCK_CHAIN_H
 #define BLOCK_CHAIN_H
 
-template <typename T>
-class CBlockIndex_impl;
+class CBlockIndex;
 template <typename T>
 class CBlockLocator_impl;
-template <typename T>
-class CBlock_impl;
+class CBlock;
 
 class CValidationState;
 
@@ -33,13 +31,13 @@ public:
     CChain_impl() {}
 
     /** Returns the index entry for the genesis block of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Genesis() const;
+    CBlockIndex *Genesis() const;
 
     /** Returns the index entry for the tip of this chain, or NULL if none. */
-    CBlockIndex_impl<T> *Tip(bool fProofOfStake=false, bool fProofOfBench=false, bool fProofOfMasternode=false) const;
+    CBlockIndex *Tip(bool fProofOfStake=false, bool fProofOfBench=false, bool fProofOfMasternode=false) const;
 
     /** Returns the index entry at a particular height in this chain, or NULL if no such height exists. */
-    CBlockIndex_impl<T> *operator[](int nHeight) const;
+    CBlockIndex *operator[](int nHeight) const;
 
     /** Compare two chains efficiently. */
     friend bool operator==(const CChain_impl &a, const CChain_impl &b) {
@@ -48,10 +46,10 @@ public:
     }
 
     /** Efficiently check whether a block is present in this chain. */
-    bool Contains(const CBlockIndex_impl<T> *pindex) const;
+    bool Contains(const CBlockIndex *pindex) const;
 
     /** Find the successor of a block in this chain, or NULL if the given index is not found or is the tip. */
-    CBlockIndex_impl<T> *Next(const CBlockIndex_impl<T> *pindex) const;
+    CBlockIndex *Next(const CBlockIndex *pindex) const;
 
     /** Return the maximal height in the chain. Is equal to chain.Tip() ? chain.Tip()->nHeight : -1. */
     int Height() const {
@@ -59,26 +57,26 @@ public:
     }
 
     /** Set/initialize a chain with a given tip. */
-    void SetTip(CBlockIndex_impl<T> *pindex);
+    void SetTip(CBlockIndex *pindex);
 
     /** Return a CBlockLocator that refers to a block in this chain (by default the tip). */
-    CBlockLocator_impl<T> GetLocator(const CBlockIndex_impl<T> *pindex = nullptr) const;
+    CBlockLocator_impl<T> GetLocator(const CBlockIndex *pindex = nullptr) const;
 
     /** Find the last common block between this chain and a block index entry. */
-    const CBlockIndex_impl<T> *FindFork(const CBlockIndex_impl<T> *pindex) const;
+    const CBlockIndex *FindFork(const CBlockIndex *pindex) const;
 
 private:
-    std::vector<CBlockIndex_impl<T> *> vChain;
+    std::vector<CBlockIndex *> vChain;
 };
 using CChain = CChain_impl<uint256>;
 
 namespace block_active {
     // under development
     //template <typename T>
-    //extern void UpdateTip(CBlockIndex_impl<T> *pindexNew);
+    //extern void UpdateTip(CBlockIndex *pindexNew);
     //extern bool DisconnectTip(CValidationState &state);
     //template <typename T>
-    //extern bool ConnectTip(CValidationState &state, CBlockIndex_impl<T> *pindexNew, CBlock_impl<T> *pblock, bool fAlreadyChecked);
+    //extern bool ConnectTip(CValidationState &state, CBlockIndex *pindexNew, CBlock_impl<T> *pblock, bool fAlreadyChecked);
     //extern bool DisconnectBlocksAndReprocess(int blocks);
 }
 

@@ -12,7 +12,7 @@
 #include <file_operate/fs.h>
 #include <sync/lsync.h>
 
-template <typename T> class CBlockIndex_impl;
+class CBlockIndex;
 
 struct AutoCheckData {
     int32_t nHeight;
@@ -46,7 +46,7 @@ private:
     mutable CCriticalSection cs_autocp;
 
     bool is_prime(int in_height) const;
-    bool Write(const CBlockIndex_impl<T> &header, int32_t nHeight);
+    bool Write(const CBlockIndex &header, int32_t nHeight);
 
     CAutocheckPoint_impl();
     ~CAutocheckPoint_impl();

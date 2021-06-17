@@ -533,7 +533,7 @@ CCoinsModifier_impl<T>::~CCoinsModifier_impl()
 
 
 template <typename T>
-void block_check::manage<T>::InvalidChainFound(CBlockIndex_impl<T> *pindexNew)
+void block_check::manage<T>::InvalidChainFound(CBlockIndex *pindexNew)
 {
     if (pindexNew->get_nChainTrust() > block_info::nBestInvalidTrust) {
         block_info::nBestInvalidTrust = pindexNew->get_nChainTrust();
@@ -562,7 +562,7 @@ bool block_check::manage<T>::VerifySignature(const CTransaction &txFrom, const C
 }
 
 template <typename T>
-bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
+bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex *pindexNew)
 {
     logging::LogPrintf("REORGANIZE\n");
 
@@ -597,7 +597,7 @@ bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T>
     // Disconnect shorter branch
     std::vector<CTransaction> vResurrect;
     for(CBlockIndex *pindex: vDisconnect) {
-        CBlock_impl<T> block;
+        CBlock block;
         if (! block.ReadFromDisk(pindex))
             return logging::error("block_check::manage::Reorganize() : ReadFromDisk for disconnect failed");
         if (! block.DisconnectBlock(txdb, pindex))
@@ -614,7 +614,7 @@ bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex_impl<T>
     std::vector<CTransaction> vDelete;
     for (unsigned int i = 0; i < vConnect.size(); ++i) {
         CBlockIndex *pindex = vConnect[i];
-        CBlock_impl<T> block;
+        CBlock block;
         if (! block.ReadFromDisk(pindex))
             return logging::error("block_check::manage::Reorganize() : ReadFromDisk for connect failed");
         if (! block.ConnectBlock(txdb, pindex)) // Invalid block

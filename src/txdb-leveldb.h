@@ -132,12 +132,12 @@ public:
 
     bool WriteBlockHashType(HASH hash, const BLOCK_HASH_MODIFIER &modifier);
 
-    bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex_impl<HASH> *, CCoinsKeyHasher> &mapBlockIndex,
+    bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
                         std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,
-                        CBlockIndex_impl<HASH> *&pindexGenesisBlock,
+                        CBlockIndex *&pindexGenesisBlock,
                         HASH &hashBestChain,
                         int &nBestHeight,
-                        CBlockIndex_impl<HASH> *&pindexBest,
+                        CBlockIndex *&pindexBest,
                         HASH &nBestInvalidTrust,
                         HASH &nBestChainTrust);
 };

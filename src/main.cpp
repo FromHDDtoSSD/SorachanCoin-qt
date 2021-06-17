@@ -113,7 +113,7 @@ int CTxIndex::GetDepthInMainChain() const noexcept
 //
 /*
 template <typename T>
-bool CBlock_impl<T>::SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
+bool CBlock::SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex *pindexNew)
 {
     uint256 hash = CBlockHeader_impl::GetHash();
     //debugcs::instance() << "SetBestChainInner hash: " << hash.ToString() << debugcs::endl();

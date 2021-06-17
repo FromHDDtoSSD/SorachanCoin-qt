@@ -169,7 +169,7 @@ public:
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader::nTime;
     }
-    void UpdateTime(const CBlockIndex_impl<uint256> *pindexPrev);
+    void UpdateTime(const CBlockIndex *pindexPrev);
     std::string ToString() const {
         return tfm::format("CBlockHeader_impl: nVersion=%d hashPrevBlock=%s hashMerkleRoot=%s nTime=%d nBits=%d nNonce=%d",
                            CBlockHeader::nVersion,
@@ -186,44 +186,43 @@ public:
 // CBlockHeader + MerkleTree + Transactions, block data.
 // About R/W: ReadFromDisk or WriteToDisk. (pos: CBlockIndex)
 //
-template <typename T>
-class CBlock_impl final : public CBlockHeader_impl, public CMerkleTree<CTransaction_impl<T> >
+class CBlock final : public CBlockHeader_impl, public CMerkleTree<CTransaction_impl<uint256> >
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
-    using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
+    using vMerkle_t = prevector<PREVECTOR_BLOCK_N, uint256>;
 #else
-    using vMerkle_t = std::vector<T>;
+    using vMerkle_t = std::vector<uint256>;
 #endif
-    // CBlock_impl(const CBlock_impl &)=delete;
-    // CBlock_impl(CBlock_impl &&)=delete;
-    // CBlock_impl &operator=(const CBlock_impl &)=delete;
-    // CBlock_impl &operator=(CBlock_impl &&)=delete;
+    // CBlock(const CBlock &)=delete;
+    // CBlock(CBlock &&)=delete;
+    // CBlock &operator=(const CBlock &)=delete;
+    // CBlock &operator=(CBlock &&)=delete;
 private:
-    using Merkle_t = CMerkleTree<CTransaction_impl<T> >;
+    using Merkle_t = CMerkleTree<CTransaction_impl<uint256> >;
     // ppcoin: block signature - signed by one of the coin base txout[N]'s owner
     Script_util::valtype vchBlockSig;
     // Denial-of-service detection:
     mutable int nDoS;
-    bool SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
+    bool SetBestChainInner(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew);
 public:
-    const std::vector<CTransaction_impl<T> > &get_vtx() const {return Merkle_t::vtx;}
-    const CTransaction_impl<T> &get_vtx(int index) const {return Merkle_t::vtx[index];}
+    const std::vector<CTransaction_impl<uint256> > &get_vtx() const {return Merkle_t::vtx;}
+    const CTransaction_impl<uint256> &get_vtx(int index) const {return Merkle_t::vtx[index];}
     const Script_util::valtype &get_vchBlockSig() const {return vchBlockSig;}
-    std::vector<CTransaction_impl<T> > &set_vtx() {return Merkle_t::vtx;}
-    CTransaction_impl<T> &set_vtx(int index) {return Merkle_t::vtx[index];}
+    std::vector<CTransaction_impl<uint256> > &set_vtx() {return Merkle_t::vtx;}
+    CTransaction_impl<uint256> &set_vtx(int index) {return Merkle_t::vtx[index];}
     Script_util::valtype &set_vchBlockSig() {return vchBlockSig;}
     bool DoS(int nDoSIn, bool fIn) const {
         nDoS += nDoSIn;
         return fIn;
     }
     int get_nDoS() const {return nDoS;}
-    CBlock_impl() {SetNull();}
+    CBlock() {SetNull();}
     void SetNull() {
         CBlockHeader::SetNull();
         vchBlockSig.clear();
         nDoS = 0;
     }
-    T GetPoHash() const;
+    uint256 GetPoHash() const;
 
     // entropy bit for stake modifier if chosen by modifier
     unsigned int GetStakeEntropyBit(unsigned int nHeight) const {
@@ -247,29 +246,29 @@ public:
     bool IsProofOfWork() const {
         return !IsProofOfStake() && !IsProofOfBench() && !IsProofOfMasternode();
     }
-    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfStake() const {
-        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfStake() const {
+        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
     }
-    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfBench() const {
-        return IsProofOfBench() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfBench() const {
+        return IsProofOfBench() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
     }
-    std::pair<COutPoint_impl<T>, unsigned int> GetProofOfMasternode() const {
-        return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint_impl<T>(), (unsigned int)0);
+    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfMasternode() const {
+        return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
     }
     // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const {
         int64_t maxTransactionTime = 0;
-        for(const CTransaction_impl<T> &tx: Merkle_t::vtx)
+        for(const CTransaction_impl<uint256> &tx: Merkle_t::vtx)
             maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.get_nTime());
         return maxTransactionTime;
     }
     bool WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet);
     bool ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions=true);
     void print() const;
-    bool DisconnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex);
-    bool ConnectBlock(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindex, bool fJustCheck=false);
-    bool ReadFromDisk(const CBlockIndex_impl<T> *pindex, bool fReadTransactions=true);
-    bool SetBestChain(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew);
+    bool DisconnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex);
+    bool ConnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex, bool fJustCheck=false);
+    bool ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions=true);
+    bool SetBestChain(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew);
     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock();
@@ -292,22 +291,19 @@ public:
             READWRITE(this->vtx);
             READWRITE(this->vchBlockSig);
         } else if (ser_action.ForRead()) {
-            const_cast<CBlock_impl<T> *>(this)->vtx.clear();
-            const_cast<CBlock_impl<T> *>(this)->vchBlockSig.clear();
+            const_cast<CBlock *>(this)->vtx.clear();
+            const_cast<CBlock *>(this)->vchBlockSig.clear();
         }
 
         //ReadWriteLastHeight(s, ser_action);
     }
 };
-using CBlock = CBlock_impl<uint256>;
 
-template <typename T>
-struct CBlockTemplate_impl {
-    CBlock_impl<T> block;
+struct CBlockTemplate {
+    CBlock block;
     std::vector<CAmount> vTxFees;
     std::vector<int64_t> vTxSigOps;
 };
-using CBlockTemplate = CBlockTemplate_impl<uint256>;
 
 /** The block chain is a tree shaped structure starting with the
  * genesis block at the root, with each block potentially having multiple
@@ -316,20 +312,19 @@ using CBlockTemplate = CBlockTemplate_impl<uint256>;
  * to it, but pnext will only point forward to the longest branch, or will
  * be null if the block is not part of the longest chain.
  */
-template <typename T>
-class CBlockIndex_impl : public CBlockHeader
+class CBlockIndex : public CBlockHeader
 {
-    // CBlockIndex_impl(const CBlockIndex_impl &)=delete;
-    // CBlockIndex_impl(CBlockIndex_impl &&)=delete;
-    // CBlockIndex_impl &operator=(const CBlockIndex_impl &)=delete;
-    // CBlockIndex_impl &operator=(CBlockIndex_impl &&)=delete;
+    // CBlockIndex(const CBlockIndex &)=delete;
+    // CBlockIndex(CBlockIndex &&)=delete;
+    // CBlockIndex &operator=(const CBlockIndex &)=delete;
+    // CBlockIndex &operator=(CBlockIndex &&)=delete;
 protected:
-    const T *phashBlock; // mapBlockIndex hash pointer
-    CBlockIndex_impl<T> *pprev;
-    CBlockIndex_impl<T> *pnext;
+    const uint256 *phashBlock; // mapBlockIndex hash pointer
+    CBlockIndex *pprev;
+    CBlockIndex *pnext;
     uint32_t nFile;
     uint32_t nBlockPos;
-    T nChainTrust; // ppcoin: trust score of block chain
+    uint256 nChainTrust; // ppcoin: trust score of block chain
     int32_t nHeight;
     int64_t nMint;
     int64_t nMoneySupply;
@@ -340,21 +335,21 @@ protected:
     uint32_t nBenchModifierChecksum; // checksum of index; in-memory only
     uint32_t nMasternodeModifierChecksum; // checksum of index; in-memory only
     // proof-of-stake specific fields
-    COutPoint_impl<T> prevoutStake;
+    COutPoint_impl<uint256> prevoutStake;
     uint32_t nStakeTime;
-    T hashProofOfStake;
+    uint256 hashProofOfStake;
     // proof-of-bench specific fields
-    COutPoint_impl<T> prevoutBench;
+    COutPoint_impl<uint256> prevoutBench;
     uint32_t nBenchTime;
-    T hashProofOfBench;
+    uint256 hashProofOfBench;
     // proof-of-masternode specific fields
-    COutPoint_impl<T> prevoutMasternode;
+    COutPoint_impl<uint256> prevoutMasternode;
     uint32_t nMasternodeTime;
-    T hashProofOfMasternode;
+    uint256 hashProofOfMasternode;
     // ppcoin: block index flags
     uint32_t nFlags;
     // pointer to the index of some further predecessor of this block
-    CBlockIndex_impl<T> *pskip;
+    CBlockIndex *pskip;
     // (memory only) Total amount of work (expected number of hashes) in the chain up to and including this block
     uint256 nChainWork;
     // (memory only) Sequential id assigned to distinguish order in which blocks are received.
@@ -363,12 +358,12 @@ protected:
     //! This value will be non-zero only if and only if transactions for this block and all its parents are available.
     uint64_t nChainTx;
 public:
-    const T *get_phashBlock() const {return phashBlock;}
-    const CBlockIndex_impl<T> *get_pprev() const {return pprev;}
-    const CBlockIndex_impl<T> *get_pnext() const {return pnext;}
+    const uint256 *get_phashBlock() const {return phashBlock;}
+    const CBlockIndex *get_pprev() const {return pprev;}
+    const CBlockIndex *get_pnext() const {return pnext;}
     uint32_t get_nFile() const {return nFile;}
     uint32_t get_nBlockPos() const {return nBlockPos;}
-    T get_nChainTrust() const {return nChainTrust;}
+    uint256 get_nChainTrust() const {return nChainTrust;}
     int32_t get_nHeight() const {return nHeight;} ///// []
     int32_t get_nMint() const {return nMint;}
     int64_t get_nMoneySupply() const {return nMoneySupply;}
@@ -376,21 +371,23 @@ public:
     uint32_t get_nStakeModifierChecksum() const {return nStakeModifierChecksum;}
     uint64_t get_nMasternodeModifier() const {return nMasternodeModifier;}
     uint32_t get_nMasterModifierChecksum() const {return nMasternodeModifierChecksum;}
-    COutPoint_impl<T> get_prevoutStake() const {return prevoutStake;}
+    COutPoint_impl<uint256> get_prevoutStake() const {return prevoutStake;}
     uint32_t get_nStakeTime() const {return nStakeTime;}
-    T get_hashProofOfStake() const {return hashProofOfStake;}
-    COutPoint_impl<T> get_prevoutMasternode() const {return prevoutMasternode;}
+    uint256 get_hashProofOfStake() const {return hashProofOfStake;}
+    COutPoint_impl<uint256> get_prevoutMasternode() const {return prevoutMasternode;}
     uint32_t get_nMasternodeTime() const {return nMasternodeTime;}
-    T get_hashProofOfMasternode() const {return hashProofOfMasternode;}
+    uint256 get_hashProofOfMasternode() const {return hashProofOfMasternode;}
     uint32_t get_nFlags() const {return nFlags;}
-    void set_phashBlock(const T *_in) {phashBlock=_in;}
-    void set_pprev(CBlockIndex_impl<T> *_in) {pprev=_in;}
-    void set_pnext(CBlockIndex_impl<T> *_in) {pnext=_in;}
-    CBlockIndex_impl<T> *set_pprev() {return pprev;}
-    CBlockIndex_impl<T> *set_pnext() {return pnext;}
+    const uint256 &get_nChainWork() const {return nChainWork;}
+    uint32_t get_nSequenceId() const {return nSequenceId;}
+    void set_phashBlock(const uint256 *_in) {phashBlock=_in;}
+    void set_pprev(CBlockIndex *_in) {pprev=_in;}
+    void set_pnext(CBlockIndex *_in) {pnext=_in;}
+    CBlockIndex *set_pprev() {return pprev;}
+    CBlockIndex *set_pnext() {return pnext;}
     void set_nFile(uint32_t _in) {nFile=_in;}
     void set_nBlockPos(uint32_t _in) {nBlockPos=_in;}
-    void set_nChainTrust(const T &_in) {nChainTrust=_in;}
+    void set_nChainTrust(const uint256 &_in) {nChainTrust=_in;}
     void set_nHeight(int32_t _in) {nHeight=_in;}
     void set_nMint(int32_t _in) {nMint=_in;}
     void set_nMoneySupply(int64_t _in) {nMoneySupply=_in;}
@@ -398,13 +395,15 @@ public:
     void set_nStakeModifierChecksum(uint32_t _in) {nStakeModifierChecksum=_in;}
     void set_nMasternodeModifier(uint64_t _in) {nMasternodeModifier=_in;}
     void set_nMasternodeModifierChecksum(uint32_t _in) {nMasternodeModifierChecksum=_in;}
-    void set_prevoutStake(const COutPoint_impl<T> &_in) {prevoutStake=_in;}
+    void set_prevoutStake(const COutPoint_impl<uint256> &_in) {prevoutStake=_in;}
     void set_nStakeTime(uint32_t _in) {nStakeTime=_in;}
-    void set_hashProofOfStake(const T &_in) {hashProofOfStake=_in;}
-    void set_prevoutMasternode(const COutPoint_impl<T> &_in) {prevoutMasternode=_in;}
+    void set_hashProofOfStake(const uint256 &_in) {hashProofOfStake=_in;}
+    void set_prevoutMasternode(const COutPoint_impl<uint256> &_in) {prevoutMasternode=_in;}
     void set_nMasternodeTime(uint32_t _in) {nMasternodeTime=_in;}
-    void set_hashProofOfMasternode(const T &_in) {hashProofOfMasternode=_in;}
+    void set_hashProofOfMasternode(const uint256 &_in) {hashProofOfMasternode=_in;}
     void set_nFlags(uint32_t _in) {nFlags=_in;}
+    void set_nChainWork(const uint256 &_in) {nChainWork=_in;}
+    void set_nSequenceId(uint32_t _in) {nSequenceId=_in;}
     enum
     {
         BLOCK_PROOF_OF_STAKE = (1 << 0),        // v1 is proof-of-stake block
@@ -416,7 +415,7 @@ public:
         BLOCK_MASTERNODE_RATIO    = (1 << 18),  // v3 prrof-of-masternode block stake modifier ratio
         BLOCK_MASTERNODE_MODIFIER = (1 << 19)   // v3 regenerated stake modifier
     };
-    CBlockIndex_impl() {
+    CBlockIndex() {
         //CBlockHeader::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
@@ -448,7 +447,7 @@ public:
         prevoutMasternode.SetNull();
         nMasternodeTime = 0;
     }
-    CBlockIndex_impl(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock_impl<T> &block) {
+    CBlockIndex(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock &block) {
         //CBlockHeader::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
@@ -499,9 +498,9 @@ public:
         CBlockHeader::nBits          = block.get_nBits();
         CBlockHeader::nNonce         = block.get_nNonce();
     }
-    virtual ~CBlockIndex_impl() {}
-    CBlock_impl<T> GetBlockHeader() const {
-        CBlock_impl<T> block;
+    virtual ~CBlockIndex() {}
+    CBlock GetBlockHeader() const {
+        CBlock block;
         block.set_nVersion(CBlockHeader::nVersion);
         if (pprev) block.set_hashPrevBlock(pprev->GetBlockHash());
         block.set_hashMerkleRoot(CBlockHeader::hashMerkleRoot);
@@ -510,13 +509,13 @@ public:
         block.set_nNonce(CBlockHeader::nNonce);
         return block;
     }
-    T GetBlockHash() const {
+    uint256 GetBlockHash() const {
         return *phashBlock;
     }
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader::nTime;
     }
-    T GetBlockTrust() const;
+    uint256 GetBlockTrust() const;
     bool IsInMainChain() const {
         return (pnext || this == block_info::pindexBest);
     }
@@ -528,14 +527,14 @@ public:
         int64_t pmedian[nMedianTimeSpan];
         int64_t *pbegin = &pmedian[nMedianTimeSpan];
         int64_t *pend = &pmedian[nMedianTimeSpan];
-        const CBlockIndex_impl<T> *pindex = this;
+        const CBlockIndex *pindex = this;
         for (int i=0; i<(const int)nMedianTimeSpan && pindex; i++, pindex = pindex->pprev)
             *(--pbegin) = pindex->GetBlockTime();
         std::sort(pbegin, pend);
         return pbegin[(pend-pbegin)/2];
     }
     int64_t GetMedianTime() const {
-        const CBlockIndex_impl<T> *pindex = this;
+        const CBlockIndex *pindex = this;
         for (int i=0; i<(const int)nMedianTimeSpan / 2; ++i) {
             if (!pindex->pnext) return GetBlockTime();
             pindex = pindex->pnext;
@@ -544,7 +543,7 @@ public:
     }
     // Returns true if there are nRequired or more blocks of minVersion or above
     // in the last nToCheck blocks, starting at pstart and going backwards.
-    static bool IsSuperMajority(int minVersion, const CBlockIndex_impl<T> *pstart, unsigned int nRequired, unsigned int nToCheck) {
+    static bool IsSuperMajority(int minVersion, const CBlockIndex *pstart, unsigned int nRequired, unsigned int nToCheck) {
         unsigned int nFound = 0;
         for (unsigned int i=0; i<nToCheck && nFound<nRequired && pstart!=nullptr; ++i) {
             if (pstart->nVersion >= minVersion)
@@ -605,27 +604,25 @@ public:
         if (fGeneratedMasternodeModifier) nFlags |= BLOCK_MASTERNODE_MODIFIER;
     }
 
-    CBlockIndex_impl<T> *GetAncestor(int height);
-    const CBlockIndex_impl<T> *GetAncestor(int height) const;
+    CBlockIndex *GetAncestor(int height);
+    const CBlockIndex *GetAncestor(int height) const;
     void BuildSkip();
     std::string ToString() const;
     void print() const {
         logging::LogPrintf("%s\n", ToString().c_str());
     }
 };
-using CBlockIndex = CBlockIndex_impl<uint256>;
 
-template <typename T>
-struct CBlockIndexWorkComparator_impl {
-    bool operator()(CBlockIndex_impl<T> *pa, CBlockIndex_impl<T> *pb) const
+struct CBlockIndexWorkComparator {
+    bool operator()(CBlockIndex *pa, CBlockIndex *pb) const
     {
         // First sort by most total work, ...
-        if (pa->nChainWork > pb->nChainWork) return false;
-        if (pa->nChainWork < pb->nChainWork) return true;
+        if (pa->get_nChainWork() > pb->get_nChainWork()) return false;
+        if (pa->get_nChainWork() < pb->get_nChainWork()) return true;
 
         // ... then by earliest time received, ...
-        if (pa->nSequenceId < pb->nSequenceId) return false;
-        if (pa->nSequenceId > pb->nSequenceId) return true;
+        if (pa->get_nSequenceId() < pb->get_nSequenceId()) return false;
+        if (pa->get_nSequenceId() > pb->get_nSequenceId()) return true;
 
         // Use pointer address as tie breaker (should only happen with blocks
         // loaded from disk, as those all have id 0).
@@ -636,34 +633,32 @@ struct CBlockIndexWorkComparator_impl {
         return false;
     }
 };
-using CBlockIndexWorkComparator = CBlockIndexWorkComparator_impl<uint256>;
 
 //
-// Used to marshal pointers into hashes for db storage. (unused CDiskBlockHeader_impl)
+// Used to marshal pointers into hashes for db storage. (unused CDiskBlockHeader)
 // from DB to CDiskBlockIndex, from CDiskBlockIndex to CBlockIndex.
 //
-template <typename T>
-class CDiskBlockHeader_impl final : public CBlockHeader_impl
+class CDiskBlockHeader final : public CBlockHeader_impl
 {
-    CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;
-    CDiskBlockHeader_impl(CDiskBlockHeader_impl &&)=delete;
-    CDiskBlockHeader_impl &operator=(const CDiskBlockHeader_impl &)=delete;
-    CDiskBlockHeader_impl &operator=(CDiskBlockHeader_impl &&)=delete;
+    CDiskBlockHeader(const CDiskBlockHeader &)=delete;
+    CDiskBlockHeader(CDiskBlockHeader &&)=delete;
+    CDiskBlockHeader &operator=(const CDiskBlockHeader &)=delete;
+    CDiskBlockHeader &operator=(CDiskBlockHeader &&)=delete;
 private:
-    mutable T blockHash;
-    T hashPrev;
-    T hashNext;
+    mutable uint256 blockHash;
+    uint256 hashPrev;
+    uint256 hashNext;
 public:
-    CDiskBlockHeader_impl() {
+    CDiskBlockHeader() {
         blockHash = 0;
         hashPrev = 0;
         hashNext = 0;
     }
 
-    const T &get_hashPrev() const {return hashPrev;}
-    const T &get_hashNext() const {return hashNext;}
-    void set_hashPrev(const T &_in) {hashPrev=_in;}
-    void set_hashNext(const T &_in) {hashNext=_in;}
+    const uint256 &get_hashPrev() const {return hashPrev;}
+    const uint256 &get_hashNext() const {return hashNext;}
+    void set_hashPrev(const uint256 &_in) {hashPrev=_in;}
+    void set_hashNext(const uint256 &_in) {hashNext=_in;}
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -682,33 +677,31 @@ public:
         READWRITE(this->blockHash);
     }
 };
-//using CDiskBlockHeader = CDiskBlockHeader_impl<uint256>;
 
-template <typename T>
-class CDiskBlockIndex_impl final : public CBlockIndex_impl<T>
+class CDiskBlockIndex final : public CBlockIndex
 {
-    CDiskBlockIndex_impl(const CDiskBlockIndex_impl &)=delete;
-    CDiskBlockIndex_impl &operator=(const CDiskBlockIndex_impl &)=delete;
-    CDiskBlockIndex_impl &operator=(CDiskBlockIndex_impl &&)=delete;
+    CDiskBlockIndex(const CDiskBlockIndex &)=delete;
+    CDiskBlockIndex &operator=(const CDiskBlockIndex &)=delete;
+    CDiskBlockIndex &operator=(CDiskBlockIndex &&)=delete;
 private:
-    mutable T blockHash;
-    T hashPrev;
-    T hashNext;
+    mutable uint256 blockHash;
+    uint256 hashPrev;
+    uint256 hashNext;
 public:
-    const T &get_hashPrev() const {return hashPrev;}
-    const T &get_hashNext() const {return hashNext;}
-    void set_hashPrev(const T &_in) {hashPrev=_in;}
-    void set_hashNext(const T &_in) {hashNext=_in;}
-    CDiskBlockIndex_impl() {
+    const uint256 &get_hashPrev() const {return hashPrev;}
+    const uint256 &get_hashNext() const {return hashNext;}
+    void set_hashPrev(const uint256 &_in) {hashPrev=_in;}
+    void set_hashNext(const uint256 &_in) {hashNext=_in;}
+    CDiskBlockIndex() {
         hashPrev = 0;
         hashNext = 0;
         blockHash = 0;
     }
-    explicit CDiskBlockIndex_impl(CBlockIndex_impl<T> *pindex) : CBlockIndex_impl<T>(*pindex) {
-        hashPrev = (CBlockIndex_impl<T>::pprev ? CBlockIndex_impl<T>::pprev->GetBlockHash() : 0);
-        hashNext = (CBlockIndex_impl<T>::pnext ? CBlockIndex_impl<T>::pnext->GetBlockHash() : 0);
+    explicit CDiskBlockIndex(CBlockIndex *pindex) : CBlockIndex(*pindex) {
+        hashPrev = (CBlockIndex::pprev ? CBlockIndex::pprev->GetBlockHash() : 0);
+        hashNext = (CBlockIndex::pnext ? CBlockIndex::pnext->GetBlockHash() : 0);
     }
-    T GetBlockHash() const;
+    uint256 GetBlockHash() const;
     std::string ToString() const;
     void print() const {
         logging::LogPrintf("%s\n", ToString().c_str());
@@ -728,14 +721,14 @@ public:
         READWRITE(this->nMoneySupply);
         READWRITE(this->nFlags);
         READWRITE(this->nStakeModifier);
-        if (CBlockIndex_impl<T>::IsProofOfStake()) {
+        if (CBlockIndex::IsProofOfStake()) {
             READWRITE(this->prevoutStake);
             READWRITE(this->nStakeTime);
             READWRITE(this->hashProofOfStake);
         } else if (ser_action.ForRead()) {
-            const_cast<CDiskBlockIndex_impl *>(this)->prevoutStake.SetNull();
-            const_cast<CDiskBlockIndex_impl *>(this)->nStakeTime = 0;
-            const_cast<CDiskBlockIndex_impl *>(this)->hashProofOfStake = 0;
+            const_cast<CDiskBlockIndex *>(this)->prevoutStake.SetNull();
+            const_cast<CDiskBlockIndex *>(this)->nStakeTime = 0;
+            const_cast<CDiskBlockIndex *>(this)->hashProofOfStake = 0;
         }
 
         // block header
@@ -748,22 +741,19 @@ public:
         READWRITE(this->blockHash);
     }
 };
-using CDiskBlockIndex = CDiskBlockIndex_impl<uint256>;
 
-template <typename T>
 class block_notify : private no_instance
 {
-    friend class CBlock_impl<T>;
+    friend class CBlock;
 private:
     static void SetBestChain(const CBlockLocator &loc);
-    static void UpdatedTransaction(const T &hashTx);
+    static void UpdatedTransaction(const uint256 &hashTx);
 public:
     static bool IsInitialBlockDownload();
-    static void PrintWallets(const CBlock_impl<T> &block);
+    static void PrintWallets(const CBlock &block);
 };
 
-template <typename T>
-class CBlock_print_impl : private no_instance
+class CBlock_print : private no_instance
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vStack_t = prevector<PREVECTOR_BLOCK_N, std::pair<int, CBlockIndex *> >;
@@ -775,6 +765,5 @@ class CBlock_print_impl : private no_instance
 public:
     static void PrintBlockTree();
 };
-using CBlock_print = CBlock_print_impl<uint256>;
 
 #endif // BITCOIN_BLOCK_H

@@ -22,8 +22,7 @@ using checkpoints_vector = prevector<PREVECTOR_N, uint8_t>;
 using checkpoints_vector = std::vector<uint8_t>;
 #endif
 
-template<typename T> class CBlockIndex_impl;
-using CBlockIndex = CBlockIndex_impl<uint256>;
+class CBlockIndex;
 
 // ppcoin: synchronized checkpoint
 class CUnsignedSyncCheckpoint

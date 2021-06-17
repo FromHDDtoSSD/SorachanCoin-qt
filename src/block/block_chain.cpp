@@ -14,16 +14,16 @@
  * CChain_impl implementation
  */
 template <typename T>
-CBlockIndex_impl<T> *CChain_impl<T>::Genesis() const {
+CBlockIndex *CChain_impl<T>::Genesis() const {
     return vChain.size() > 0 ? vChain[0] : nullptr;
 }
 
 template <typename T>
-CBlockIndex_impl<T> *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fProofOfBench/*=false*/, bool fProofOfMasternode/*=false*/) const {
+CBlockIndex *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fProofOfBench/*=false*/, bool fProofOfMasternode/*=false*/) const {
     if (vChain.size() < 1)
         return nullptr;
 
-    CBlockIndex_impl<T> *pindex = vChain[vChain.size() - 1];
+    CBlockIndex *pindex = vChain[vChain.size() - 1];
     if (fProofOfStake) {
         while (pindex && pindex->get_pprev() && !pindex->IsProofOfStake())
             pindex = pindex->set_pprev();
@@ -40,19 +40,19 @@ CBlockIndex_impl<T> *CChain_impl<T>::Tip(bool fProofOfStake/*=false*/, bool fPro
 }
 
 template <typename T>
-CBlockIndex_impl<T> *CChain_impl<T>::operator[](int nHeight) const {
+CBlockIndex *CChain_impl<T>::operator[](int nHeight) const {
     if (nHeight < 0 || nHeight >= (int)vChain.size())
         return nullptr;
     return vChain[nHeight];
 }
 
 template <typename T>
-bool CChain_impl<T>::Contains(const CBlockIndex_impl<T> *pindex) const {
+bool CChain_impl<T>::Contains(const CBlockIndex *pindex) const {
     return (*this)[pindex->get_nHeight()] == pindex;
 }
 
 template <typename T>
-CBlockIndex_impl<T> *CChain_impl<T>::Next(const CBlockIndex_impl<T> *pindex) const {
+CBlockIndex *CChain_impl<T>::Next(const CBlockIndex *pindex) const {
     if (Contains(pindex))
         return (*this)[pindex->get_nHeight() + 1];
     else
@@ -60,7 +60,7 @@ CBlockIndex_impl<T> *CChain_impl<T>::Next(const CBlockIndex_impl<T> *pindex) con
 }
 
 template <typename T>
-void CChain_impl<T>::SetTip(CBlockIndex_impl<T> *pindex)
+void CChain_impl<T>::SetTip(CBlockIndex *pindex)
 {
     if (pindex == nullptr) {
         vChain.clear();
@@ -74,7 +74,7 @@ void CChain_impl<T>::SetTip(CBlockIndex_impl<T> *pindex)
 }
 
 template <typename T>
-CBlockLocator_impl<T> CChain_impl<T>::GetLocator(const CBlockIndex_impl<T> *pindex) const
+CBlockLocator_impl<T> CChain_impl<T>::GetLocator(const CBlockIndex *pindex) const
 {
     int nStep = 1;
     std::vector<T> vHave;
@@ -104,7 +104,7 @@ CBlockLocator_impl<T> CChain_impl<T>::GetLocator(const CBlockIndex_impl<T> *pind
 }
 
 template <typename T>
-const CBlockIndex_impl<T> *CChain_impl<T>::FindFork(const CBlockIndex_impl<T> *pindex) const
+const CBlockIndex *CChain_impl<T>::FindFork(const CBlockIndex *pindex) const
 {
     if (pindex->get_nHeight() > Height())
         pindex = pindex->GetAncestor(Height());
@@ -116,7 +116,7 @@ const CBlockIndex_impl<T> *CChain_impl<T>::FindFork(const CBlockIndex_impl<T> *p
 /** Update chainActive and related internal data structures. */
 /*
 template <typename T> // tip update: SetBestChain
-void block_active::UpdateTip(CBlockIndex_impl<T> *pindexNew)
+void block_active::UpdateTip(CBlockIndex *pindexNew)
 {
     block_info::chainActive.SetTip(pindexNew);
 
@@ -138,9 +138,9 @@ void block_active::UpdateTip(CBlockIndex_impl<T> *pindexNew)
     static bool fWarned = false;
     if (!IsInitialBlockDownload() && !fWarned) {
         int nUpgraded = 0;
-        const CBlockIndex_impl<T> *pindex = block_info::chainActive.Tip();
+        const CBlockIndex *pindex = block_info::chainActive.Tip();
         for (int i = 0; i < 100 && pindex != nullptr; i++) {
-            if (pindex->nVersion > CBlock_impl<T>::CURRENT_VERSION)
+            if (pindex->nVersion > CBlock::CURRENT_VERSION)
                 ++nUpgraded;
             pindex = pindex->pprev;
         }

@@ -19,11 +19,11 @@
 #include <script/script.h>
 #include <checkpoints/checkpoints_type.h>
 
-template <typename T> class CBlockIndex_impl;
+class CBlockIndex;
 template <typename T> class COutPoint_impl;
 class CWallet;
 
-using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
+using BlockMap = std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher>;
 
 /*
  * BLOCK_HASH_MODIFIER (SORA)
@@ -262,7 +262,7 @@ namespace block_info
     extern BlockMap mapBlockIndex;
     extern BlockHeight mapBlockLyraHeight;
     extern std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > setStakeSeen;
-    extern CBlockIndex_impl<uint256> *pindexGenesisBlock;// = nullptr;
+    extern CBlockIndex *pindexGenesisBlock;// = nullptr;
 
     const std::string strMessageMagic = strCoinName " Signed Message:\n";
 
@@ -277,7 +277,7 @@ namespace block_info
     extern uint256 nBestChainTrust;// = 0;
     extern uint256 nBestInvalidTrust;// = 0;
     extern uint256 hashBestChain;// = 0;
-    extern CBlockIndex_impl<uint256> *pindexBest;// = nullptr;
+    extern CBlockIndex *pindexBest;// = nullptr;
     extern unsigned int nTransactionsUpdated;// = 0;
 
     // Settings

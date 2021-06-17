@@ -103,7 +103,7 @@ bool CAutocheckPoint_impl<T>::Buildmap() const {
 }
 
 template <typename T>
-bool CAutocheckPoint_impl<T>::Write(const CBlockIndex_impl<T> &header, int32_t nHeight) {
+bool CAutocheckPoint_impl<T>::Write(const CBlockIndex &header, int32_t nHeight) {
     LOCK(cs_autocp);
     assert(header.get_hashPrevBlock()!=0);
     AutoCheckData data;
@@ -129,13 +129,13 @@ bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckp
         if(block_info::mapBlockIndex.empty())
             return false;
 
-        const CBlockIndex_impl<T> *const bestBlock = block_info::mapBlockIndex[block_info::hashBestChain];
+        const CBlockIndex *const bestBlock = block_info::mapBlockIndex[block_info::hashBestChain];
         for (int i=0; i < nCheckBlocks; ++i) {
             const auto &autocpValue = mapAutocheck.find(bestBlock->get_nHeight()-i);
             if(autocpValue==mapAutocheck.end())
                 continue;
 
-            const CBlockIndex_impl<T> *target = bestBlock;
+            const CBlockIndex *target = bestBlock;
             for(;;) {
                 if(bestBlock->get_nHeight()-i!=target->get_nHeight())
                     target = block_info::mapBlockIndex[target->get_pprev()->GetBlockHash()];
@@ -172,10 +172,10 @@ bool CAutocheckPoint_impl<T>::Verify() const {
 template <typename T>
 bool CAutocheckPoint_impl<T>::BuildAutocheckPoints() {
     LOCK(cs_autocp);
-    const CBlockIndex_impl<T> *block = block_info::mapBlockIndex[block_info::hashBestChain];
+    const CBlockIndex *block = block_info::mapBlockIndex[block_info::hashBestChain];
 
     assert(block);
-    CP_DEBUG_CS(tfm::format("CBlockIndex_impl<T> *block: %d", (uintptr_t)block));
+    CP_DEBUG_CS(tfm::format("CBlockIndex *block: %d", (uintptr_t)block));
     CP_DEBUG_CS(tfm::format("block addr: %s", block->get_hashPrevBlock().ToString()));
     if(block->get_hashPrevBlock()==0) { // genesis block
         return true;

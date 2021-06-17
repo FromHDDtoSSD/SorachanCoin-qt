@@ -15,8 +15,7 @@
 #include <const/block_params.h>
 #include <block/block_info.h>
 
-template <typename T> class CBlockIndex_impl;
-using CBlockIndex = CBlockIndex_impl<uint256>;
+class CBlockIndex;
 
 // Describes a place in the block chain to another node such that if the
 // other node doesn't have the same branch, it can find a recent common trunk.
@@ -39,7 +38,7 @@ public:
     }
 
     CBlockLocator_impl() {}
-    explicit CBlockLocator_impl(const CBlockIndex_impl<T> *pindex) {
+    explicit CBlockLocator_impl(const CBlockIndex *pindex) {
         Set(pindex);
     }
     explicit CBlockLocator_impl(T hashBlock) {
@@ -59,9 +58,9 @@ public:
         return vHave.empty();
     }
 
-    void Set(const CBlockIndex_impl<T> *pindex);
+    void Set(const CBlockIndex *pindex);
     int GetDistanceBack();
-    CBlockIndex_impl<T> *GetBlockIndex();
+    CBlockIndex *GetBlockIndex();
     T GetBlockHash();
     int GetHeight();
 

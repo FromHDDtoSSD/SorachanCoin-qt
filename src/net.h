@@ -24,8 +24,6 @@
 
 class CRequestTracker;
 class CNode;
-//template<typename T> class CBlockIndex_impl;
-//using CBlockIndex = CBlockIndex_impl<uint256>;
 
 //
 // Port

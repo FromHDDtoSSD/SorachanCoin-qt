@@ -22,7 +22,7 @@ public:
     ~CBlockDataDB() {}
 
     template <typename HASH>
-    bool Write(const CBlock_impl<HASH> &data, unsigned int &nFileRet, unsigned int &nBlockPosRet) {
+    bool Write(const CBlock &data, unsigned int &nFileRet, unsigned int &nBlockPosRet) {
         unsigned int blklastpos; // CAutoFile: offset bytes CBlockdataDB: number (start 0)
         if(! sqldb.Exists(std::string("blklastpos"))) {
             blklastpos = 0;
@@ -39,7 +39,7 @@ public:
     }
 
     template <typename HASH>
-    bool Read(CBlock_impl<HASH> &data, unsigned int nFile, unsigned int nBlockPos) {
+    bool Read(CBlock &data, unsigned int nFile, unsigned int nBlockPos) {
         (void)nFile;
         return sqldb.Read(std::make_pair(std::string("blkdata"), nBlockPos), data);
     }

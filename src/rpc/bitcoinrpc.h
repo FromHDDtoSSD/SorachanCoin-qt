@@ -357,10 +357,8 @@ class CRPCCmd;
 #ifdef QT_GUI
 class QtConsoleRPC;
 #endif
-template<typename T> class CBlock_impl;
-using CBlock = CBlock_impl<uint256>;
-template<typename T> class CBlockIndex_impl;
-using CBlockIndex = CBlockIndex_impl<uint256>;
+class CBlock;
+class CBlockIndex;
 
 class CRPCTable : private no_instance {
     friend class bitrpc;

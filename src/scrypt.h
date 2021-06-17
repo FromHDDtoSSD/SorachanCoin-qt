@@ -6,7 +6,7 @@
 #include <util.h>
 #include <pbkdf2.h>
 
-template<typename T> class CBlockIndex_impl;
+class CBlockIndex;
 
 class bitscrypt : private no_instance
 {

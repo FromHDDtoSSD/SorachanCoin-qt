@@ -1080,7 +1080,7 @@ void miner::ThreadStakeMiner(void *parg)
                     goto _endloop;
                 }
             }
-            while (net_node::vNodes.empty() || block_notify<uint256>::IsInitialBlockDownload())
+            while (net_node::vNodes.empty() || block_notify::IsInitialBlockDownload())
             {
                 fTrySync = true;
                 util::Sleep(1000);

@@ -11,8 +11,7 @@
 #include <uint256.h>
 
 class CBlockHeader_impl;
-template<typename T> class CBlockIndex_impl;
-using CBlockIndex = CBlockIndex_impl<uint256>;
+class CBlockIndex;
 
 // PoW / PoS difficulty
 namespace diff
