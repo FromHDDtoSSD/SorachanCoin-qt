@@ -24,7 +24,6 @@ template <typename T> class COutPoint_impl;
 class CWallet;
 
 using BlockMap = std::unordered_map<uint256, CBlockIndex_impl<uint256> *, CCoinsKeyHasher>;
-using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> *, CCoinsKeyHasher>;
 
 /*
  * BLOCK_HASH_MODIFIER (SORA)
@@ -47,12 +46,11 @@ using BlockMap65536 = std::unordered_map<uint65536, CBlockIndex_impl<uint65536> 
  *     ASIC(1) ASIC(1) GPU(1) GPU(1) CPU(0.05) CPU(0.05) GPU(1) ASIC(2.99) = 8 (24 min) 0
  */
 
-template <typename T>
 struct BLOCK_HASH_MODIFIER_MUTABLE {
     static constexpr int32_t BLOCK_HASH_MODIFIER_VERSION = 1;
 #pragma pack(push, 1)
     int32_t nVersion;
-    T prevHash;
+    uint256 prevHash;
     int32_t type;
     int32_t nFlags;
     int32_t nHeight;
@@ -85,10 +83,9 @@ namespace block_hash_modifier_genesis {
     constexpr uint32_t mainnet_timestamp = 0;
     constexpr uint32_t testnet_timestamp = 1623044072; // 07-Jun 2021 14:34:32
 
-    // uint256
     const uint256 mainnet_genesic_hash = uint256("0");
     const uint256 testnet_genesis_hash = uint256("0x7cc52e194af3c88de879a5d27e157d71f4e359da84937f2382edeba27230ed1b");
-    extern BLOCK_HASH_MODIFIER_MUTABLE<uint256> create_block_hash_modifier_genesis();
+    extern BLOCK_HASH_MODIFIER_MUTABLE create_block_hash_modifier_genesis();
 }
 
 // BLOCK_HASH_MODIFIER_checkpoints
@@ -147,15 +144,14 @@ namespace block_hash_helper {
     constexpr int32_t PoW_nonce_zero = 0;
 }
 
-template <typename T>
-class BLOCK_HASH_MODIFIER : protected BLOCK_HASH_MODIFIER_MUTABLE<T> {
+class BLOCK_HASH_MODIFIER : protected BLOCK_HASH_MODIFIER_MUTABLE {
     //BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER &)=delete;
     //BLOCK_HASH_MODIFIER &operator=(const BLOCK_HASH_MODIFIER &)=delete;
     //BLOCK_HASH_MODIFIER(BLOCK_HASH_MODIFIER &&)=delete;
     //BLOCK_HASH_MODIFIER &operator=(BLOCK_HASH_MODIFIER &&)=delete;
 public:
     int32_t get_nVersion() const {return this->nVersion;}
-    const T &get_prevHash() const {return this->prevHash;}
+    const uint256 &get_prevHash() const {return this->prevHash;}
     int32_t get_type() const {return this->type;}
     int32_t get_nFlags() const {return this->nFlags;}
     int32_t get_nHeight() const {return this->nHeight;}
@@ -165,7 +161,7 @@ public:
     uint32_t get_nTime() const {return this->nTime;}
 
     void set_nVersion(int32_t _v) {this->nVersion = _v;}
-    void set_prevHash(const T &_v) {this->prevHash = _v;}
+    void set_prevHash(const uint256 &_v) {this->prevHash = _v;}
     void set_type(int32_t _v) {this->type = _v;}
     void set_nFlags(int32_t _v) {this->nFlags = _v;}
     void set_nHeight(int32_t _v) {this->nHeight = _v;}
@@ -178,7 +174,7 @@ public:
         SetNull();
     }
 
-    BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER_MUTABLE<T> &obj) {
+    BLOCK_HASH_MODIFIER(const BLOCK_HASH_MODIFIER_MUTABLE &obj) {
         this->nVersion = obj.nVersion;
         this->prevHash = obj.prevHash;
         this->type = obj.type;
@@ -202,7 +198,7 @@ public:
     }
 
     void SetNull() {
-        this->nVersion = BLOCK_HASH_MODIFIER_MUTABLE<T>::BLOCK_HASH_MODIFIER_VERSION;
+        this->nVersion = BLOCK_HASH_MODIFIER_MUTABLE::BLOCK_HASH_MODIFIER_VERSION;
         this->prevHash = 0;
         this->type = LYRA2REV2_POW_TYPE;
         this->nFlags = BH_NORMAL;
@@ -234,8 +230,8 @@ public:
                            this->nTime);
     }
 
-    T GetBlockModifierHash() const;
-    //T GetBlockModifierHash(int32_t height) const;
+    uint256 GetBlockModifierHash() const;
+    //uint256 GetBlockModifierHash(int32_t height) const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -256,12 +252,8 @@ public:
     }
 };
 
-using BH_TYPE = BLOCK_HASH_MODIFIER<uint256>;
-using BlockHeight = std::unordered_map<uint256, BH_TYPE, CCoinsKeyHasher>;
-using BH_TYPE65536 = BLOCK_HASH_MODIFIER<uint65536>;
-using BlockHeight65536 = std::unordered_map<uint65536, BH_TYPE65536, CCoinsKeyHasher>;
+using BlockHeight = std::unordered_map<uint256, BLOCK_HASH_MODIFIER, CCoinsKeyHasher>;
 
-// T == uint256
 namespace block_info
 {
     extern CScript COINBASE_FLAGS;

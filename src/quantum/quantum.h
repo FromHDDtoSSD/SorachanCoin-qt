@@ -99,7 +99,7 @@ public:
 namespace quantum_hash
 {
     void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept;
-    void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data) noexcept;
+    void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) noexcept;
 }
 
 //

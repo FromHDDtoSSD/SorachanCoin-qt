@@ -8,13 +8,13 @@
 #include <prevector/prevector.h>
 #include <prevector/prevector_s.h>
 #include <crypto/sha512.h>
-#include <blake2.h>
 #include <pbkdf2.h>
 #include <compat/sanity.h>
 #include <const/macro.h>
 #include <random/random.h>
 #include <cleanse/cleanse.h>
 #include <util/args.h>
+#include <crypto/blake2.h>
 #ifndef WIN32
 # define MAP_NOCORE 0
 #endif
@@ -213,28 +213,28 @@ void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
 namespace quantum_hash {
 void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept {
     static constexpr size_t buffer_length = 32768;
-    blake2s_state S;
-    ::blake2s_init(&S, size_hash);
+    blake2s_hash::blake2s_state S;
+    blake2s_hash::blake2s_init(&S, size_hash);
     size_t remain = size_data;
     const std::uint8_t *p = data;
     const int count = size_data / buffer_length;
     int i = 0;
     do {
         if (remain <= buffer_length) {
-            ::blake2s_update(&S, p, remain);
+            blake2s_hash::blake2s_update(&S, p, remain);
             break;
         } else {
-            ::blake2s_update(&S, p, buffer_length);
+            blake2s_hash::blake2s_update(&S, p, buffer_length);
             remain -= buffer_length;
             p += buffer_length;
         }
     } while (i++ < count);
-    ::blake2s_final(&S, hash, size_hash);
+    blake2s_hash::blake2s_final(&S, hash, size_hash);
 }
 
-void blake2_hash(std::uint8_t hash[CBLAKE2::Size()], const std::uint8_t *data, size_t size_data) noexcept {
-    assert(latest_crypto::Lamport::BLAKE2KeyHash::Size()==CBLAKE2::Size());
-    CBLAKE2 ctx;
+void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) noexcept {
+    assert(latest_crypto::Lamport::BLAKE2KeyHash::Size()==CBLAKE2S::Size());
+    CBLAKE2S ctx;
     ctx.Write(data, size_data);
     ctx.Finalize(hash);
 }

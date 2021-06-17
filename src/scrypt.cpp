@@ -45,7 +45,7 @@
 
 using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
 using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
-using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2>;
+using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2S>;
 using pbkdf65536 = pbkdf2_impl<latest_crypto::CQHASH65536>;
 
 //

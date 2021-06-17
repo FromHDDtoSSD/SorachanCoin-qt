@@ -5,11 +5,10 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <merkle/merkle_tree.h>
-#include <uint256.h>
 #include <block/transaction.h>
 
-template <typename T, typename SRC>
-T CMerkleTree<T, SRC>::BuildMerkleTree() const {
+template <typename SRC>
+uint256 CMerkleTree<SRC>::BuildMerkleTree() const {
     vMerkleTree.clear();
     for(const SRC &tx: vtx) vMerkleTree.push_back(tx.GetHash());
     int j=0;
@@ -24,11 +23,11 @@ T CMerkleTree<T, SRC>::BuildMerkleTree() const {
     return (vMerkleTree.empty()? 0: vMerkleTree.back());
 }
 
-template <typename T, typename SRC>
+template <typename SRC>
 #ifdef BLOCK_PREVECTOR_ENABLE
-prevector<PREVECTOR_BLOCK_N, T> CMerkleTree<T, SRC>::GetMerkleBranch(int nIndex) const {
+prevector<PREVECTOR_BLOCK_N, uint256> CMerkleTree<SRC>::GetMerkleBranch(int nIndex) const {
 #else
-std::vector<T> CMerkleTree<T, SRC>::GetMerkleBranch(int nIndex) const {
+std::vector<uint256> CMerkleTree<SRC>::GetMerkleBranch(int nIndex) const {
 #endif
     if (vMerkleTree.empty()) BuildMerkleTree();
     vMerkle_t vMerkleBranch;
@@ -42,10 +41,10 @@ std::vector<T> CMerkleTree<T, SRC>::GetMerkleBranch(int nIndex) const {
     return vMerkleBranch;
 }
 
-template <typename T, typename SRC>
-T CMerkleTree<T, SRC>::CheckMerkleBranch(T hash, const vMerkle_t &vMerkleBranch, int nIndex) {
+template <typename SRC>
+uint256 CMerkleTree<SRC>::CheckMerkleBranch(uint256 hash, const vMerkle_t &vMerkleBranch, int nIndex) {
     if (nIndex == -1) return 0;
-    for(const T &otherside: vMerkleBranch) {
+    for(const uint256 &otherside: vMerkleBranch) {
         if (nIndex & 1)
             hash = hash_basis::Hash(BEGIN(otherside), END(otherside), BEGIN(hash), END(hash));
         else
@@ -55,4 +54,4 @@ T CMerkleTree<T, SRC>::CheckMerkleBranch(T hash, const vMerkle_t &vMerkleBranch,
     return hash;
 }
 
-template class CMerkleTree<uint256, CTransaction_impl<uint256> >;
+template class CMerkleTree<CTransaction_impl<uint256> >;

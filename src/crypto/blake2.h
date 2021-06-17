@@ -136,17 +136,17 @@ namespace blake2s_hash {
 
 namespace latest_crypto {
 
-class CBLAKE2
+class CBLAKE2S
 {
 private:
     blake2s_hash::blake2s_state S;
 public:
     static constexpr size_t OUTPUT_SIZE = 32;
 
-    CBLAKE2() noexcept;
-    CBLAKE2& Write(const unsigned char* data, size_t len) noexcept;
+    CBLAKE2S() noexcept;
+    CBLAKE2S& Write(const unsigned char* data, size_t len) noexcept;
     void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
-    CBLAKE2& Reset() noexcept;
+    CBLAKE2S& Reset() noexcept;
 
     static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
     void Clean() noexcept;

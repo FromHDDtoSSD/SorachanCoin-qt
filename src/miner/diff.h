@@ -10,10 +10,9 @@
 #include <bignum.h>
 #include <uint256.h>
 
+class CBlockHeader_impl;
 template<typename T> class CBlockIndex_impl;
 using CBlockIndex = CBlockIndex_impl<uint256>;
-
-template<typename T> class CBlockHeader_impl;
 
 // PoW / PoS difficulty
 namespace diff
@@ -47,7 +46,7 @@ namespace diff
     {
     public:
         static bool CheckProofOfWork(uint256 hash, unsigned int nBits); // [only compare nBits] old_chain(v1,v2,v3) or registered after mapBlockLyraHeight(ReadFromDisk and CheckDisk)
-        static bool CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl<uint256> &header, int &type); // [confirm type and compare nBits] new_chain(after v4)
+        static bool CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl &header, int &type); // [confirm type and compare nBits] new_chain(after v4)
     };
 
     //  miner's coin reward based on nBits

@@ -72,7 +72,7 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
 
 // BLOCK_HASH_MOFIFIER: check block type
 // Note: since there are blocks other than PoW, it is exactly check.
-bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl<uint256> &header, int &type) // height is current
+bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl &header, int &type) // height is current
 {
     const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
     if(height < sw_height) {

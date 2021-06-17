@@ -303,7 +303,7 @@ json_spirit::Value CRPCTable::getworkex(const json_spirit::Array &params, CBitrp
         if (vchData.size() != 128)
             return data.JSONRPCError(-8, "Invalid parameter");
 
-        CBlockHeader<uint256> *pdata = (CBlockHeader<uint256> *)&vchData[0];
+        CBlockHeader *pdata = (CBlockHeader *)&vchData[0];
 
         // Byte reverse
         for (int i = 0; i < 128 / 4; ++i)
@@ -421,7 +421,7 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, CBitrpcD
         if (vchData.size() != 128)
             return data.JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter");
 
-        CBlockHeader<uint256> *pdata = (CBlockHeader<uint256> *)&vchData[0];
+        CBlockHeader *pdata = (CBlockHeader *)&vchData[0];
 
         // Byte reverse
         for (int i = 0; i < 128 / 4; ++i)

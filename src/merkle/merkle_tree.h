@@ -8,21 +8,21 @@
 #define BITCOIN_MERKLE_TREE_H
 
 #include <prevector/prevector.h>
+#include <uint256.h>
 
 // Memory all load, Create Hash Tree
-template <typename T, typename SRC>
+template <typename SRC>
 class CMerkleTree
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
-    using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
+    using vMerkle_t = prevector<PREVECTOR_BLOCK_N, uint256>;
 #else
-    using vMerkle_t = std::vector<T>;
+    using vMerkle_t = std::vector<uint256>;
 #endif
-//private:
     //CMerkleTree(const CMerkleTree &)=delete;
-    //CMerkleTree(const CMerkleTree &&)=delete;
+    //CMerkleTree(CMerkleTree &&)=delete;
     //CMerkleTree &operator=(const CMerkleTree &)=delete;
-    //CMerkleTree &operator=(const CMerkleTree &&)=delete;
+    //CMerkleTree &operator=(CMerkleTree &&)=delete;
 protected:
     std::vector<SRC> vtx;
     mutable vMerkle_t vMerkleTree;
@@ -35,9 +35,9 @@ protected:
     }
 
 public:
-    T BuildMerkleTree() const;
+    uint256 BuildMerkleTree() const;
     vMerkle_t GetMerkleBranch(int nIndex) const;
-    static T CheckMerkleBranch(T hash, const vMerkle_t &vMerkleBranch, int nIndex);
+    static uint256 CheckMerkleBranch(uint256 hash, const vMerkle_t &vMerkleBranch, int nIndex);
 };
 
 #endif // BITCOIN_MERKLE_TREE_H

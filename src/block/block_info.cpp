@@ -12,7 +12,6 @@
 #include <crypto/sha512.h>
 #include <crypto/blake2.h>
 
-// T == uint256
 CScript block_info::COINBASE_FLAGS;
 CChain_impl<uint256> block_info::chainActive;
 BlockMap block_info::mapBlockIndex;
@@ -66,8 +65,8 @@ bool block_hash_modifier_checkpoints::CheckHardened(int nHeight, const uint256 &
 unsigned char block_hash_modifier_info::gpchMessageStart[4] = { 0xfe, 0xf8, 0xf5, 0xf1 };
 
 // block_hash_modifier genesis
-BLOCK_HASH_MODIFIER_MUTABLE<uint256> block_hash_modifier_genesis::create_block_hash_modifier_genesis() {
-    BLOCK_HASH_MODIFIER_MUTABLE<uint256> bhm;
+BLOCK_HASH_MODIFIER_MUTABLE block_hash_modifier_genesis::create_block_hash_modifier_genesis() {
+    BLOCK_HASH_MODIFIER_MUTABLE bhm;
     bhm.nVersion = block_hash_modifier_genesis::nVersion;
     bhm.prevHash = hash_basis::Hash(block_hash_modifier_genesis::szStr.begin(), block_hash_modifier_genesis::szStr.end());
     bhm.type = block_hash_modifier_genesis::type;
@@ -108,9 +107,8 @@ bool block_hash_helper::is_proof(int type, int32_t nonce_zero_value) {
     return false;
 }
 
-template <typename T>
-T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash() const {
-    T hash;
+uint256 BLOCK_HASH_MODIFIER::GetBlockModifierHash() const {
+    uint256 hash;
     lyra2re2_hash((const char *)this, BEGIN(hash));
     if(args_bool::fDebug)
         logging::LogPrintf("BLOCK_HASH_MODIFIER::GetBlockModifierHash hash:%s info:%s\n", hash.ToString().c_str(), this->ToString().c_str());
@@ -156,25 +154,6 @@ uint256 block_hash_func::GetPoW_SHA512D(const char *data) {
 
 uint256 block_hash_func::GetPoW_Blake2S(const char *data) {
     uint256 hash;
-    latest_crypto::CBLAKE2().Write((const unsigned char *)data, 80).Finalize((unsigned char *)BEGIN(hash));
+    latest_crypto::CBLAKE2S().Write((const unsigned char *)data, 80).Finalize((unsigned char *)BEGIN(hash));
     return hash;
 }
-
-/*
-template <typename T>
-T BLOCK_HASH_MODIFIER<T>::GetBlockModifierHash(int32_t height) const {
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(height >= sw_height) {
-        T hash;
-        lyra2re2_hash((const char *)this, BEGIN(hash));
-        return hash;
-    } else {
-        BLOCK_HASH_MODIFIER_MUTABLE<T> bhm = block_hash_modifier_genesis::create_block_hash_modifier_genesis();
-        T hash;
-        lyra2re2_hash((const char *)&bhm, BEGIN(hash));
-        return hash;
-    }
-}
-*/
-
-template class BLOCK_HASH_MODIFIER<uint256>;

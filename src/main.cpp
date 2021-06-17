@@ -111,10 +111,11 @@ int CTxIndex::GetDepthInMainChain() const noexcept
 //
 // Called from inside SetBestChain: attaches a block to the new best chain being built
 //
+/*
 template <typename T>
 bool CBlock_impl<T>::SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> *pindexNew)
 {
-    uint256 hash = CBlockHeader_impl<T>::GetHash();
+    uint256 hash = CBlockHeader_impl::GetHash();
     //debugcs::instance() << "SetBestChainInner hash: " << hash.ToString() << debugcs::endl();
 
     // Adding to current best branch
@@ -138,6 +139,7 @@ bool CBlock_impl<T>::SetBestChainInner(CTxDB_impl<T> &txdb, CBlockIndex_impl<T> 
 
     return true;
 }
+*/
 
 void block_load::UnloadBlockIndex()
 {

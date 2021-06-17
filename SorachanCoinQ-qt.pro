@@ -165,8 +165,8 @@ QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/includ
 QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/lib/libqrencode.a
 UPNP_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc
 UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
-BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
-BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
+#BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
+#BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
 SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
 SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs/libsqlite3.a
 
@@ -195,8 +195,8 @@ contains(RELEASE, 1) {
 }
 
 # Blake2
-INCLUDEPATH += $$BLAKE2_INC_PATH
-LIBS += $$BLAKE2_LIB_PATH
+#INCLUDEPATH += $$BLAKE2_INC_PATH
+#LIBS += $$BLAKE2_LIB_PATH
 
 #
 # -O3 optimized setting
@@ -1012,7 +1012,7 @@ macx:QMAKE_CXXFLAGS_THREAD += -pthread
 # Set libraries and includes at end, to use platform-defined defaults if not overridden
 #
 INCLUDEPATH += $$BOOST_INCLUDE_PATH $$OPENSSL_INCLUDE_PATH $$QRENCODE_INCLUDE_PATH
-LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) $$join(BLAKE2_LIB_PATH,,-L,)
+LIBS += $$join(BOOST_LIB_PATH,,-L,) $$join(OPENSSL_LIB_PATH,,-L,) $$join(QRENCODE_LIB_PATH,,-L,) #$$join(BLAKE2_LIB_PATH,,-L,)
 LIBS += -lssl -lcrypto
 
 #

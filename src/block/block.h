@@ -101,7 +101,6 @@ public:
  * Blocks are appended to blk0001.dat files on disk.
  * Their location on disk is indexed by CBlockIndex objects in memory.
  */
-template <typename T>
 class CBlockHeader {
 protected:
     static constexpr int CURRENT_VERSION = 6;
@@ -109,18 +108,18 @@ protected:
 #pragma pack(push, 1)
     // header
     mutable int32_t nVersion;
-    T hashPrevBlock;
-    T hashMerkleRoot;
+    uint256 hashPrevBlock;
+    uint256 hashMerkleRoot;
     uint32_t nTime;
     uint32_t nBits;
     uint32_t nNonce;
 #pragma pack(pop)
 private:
-    mutable int32_t LastHeight; // get nHeight from CBlockHeader<T> (LastBlock+1==nHeight)
+    mutable int32_t LastHeight; // get nHeight from CBlockHeader (LastBlock+1==nHeight)
 public:
     CBlockHeader() : LastHeight(-1) {SetNull();}
     void SetNull() {
-        nVersion = CBlockHeader<T>::CURRENT_VERSION;
+        nVersion = CBlockHeader::CURRENT_VERSION;
         hashPrevBlock = 0;
         hashMerkleRoot = 0;
         nTime = 0;
@@ -128,14 +127,14 @@ public:
         nNonce = 0;
     }
     int32_t get_nVersion() const {return nVersion;}
-    const T &get_hashPrevBlock() const {return hashPrevBlock;}
-    const T &get_hashMerkleRoot() const {return hashMerkleRoot;}
+    const uint256 &get_hashPrevBlock() const {return hashPrevBlock;}
+    const uint256 &get_hashMerkleRoot() const {return hashMerkleRoot;}
     uint32_t get_nTime() const {return nTime;}
     uint32_t get_nBits() const {return nBits;}
     uint32_t get_nNonce() const {return nNonce;}
     void set_nVersion(int32_t _in) {nVersion=_in;}
-    void set_hashPrevBlock(const T &_in) {hashPrevBlock=_in;}
-    void set_hashMerkleRoot(const T &_in) {hashMerkleRoot=_in;}
+    void set_hashPrevBlock(const uint256 &_in) {hashPrevBlock=_in;}
+    void set_hashMerkleRoot(const uint256 &_in) {hashMerkleRoot=_in;}
     void set_nTime(uint32_t _in) {nTime=_in;}
     uint32_t &set_nTime() {return nTime;}
     void set_nBits(uint32_t _in) {nBits=_in;}
@@ -157,32 +156,28 @@ public:
     }
 };
 
-template <typename T>
-class CBlockHeader_impl : public CBlockHeader<T> {
+class CBlockHeader_impl : public CBlockHeader {
 private:
-    T GetHash(int type) const;
+    uint256 GetHash(int type) const;
 public:
     bool IsNull() const {
-        return (CBlockHeader<T>::nBits == 0);
+        return (CBlockHeader::nBits == 0);
     }
     int set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const; // return: BLOCK_HASH_TYPE
-    //T GetPoHash() const;
-    T GetPoHash(int32_t height, int type) const;
+    //uint256 GetPoHash() const;
+    uint256 GetPoHash(int32_t height, int type) const;
     int64_t GetBlockTime() const {
-        return (int64_t)CBlockHeader<T>::nTime;
+        return (int64_t)CBlockHeader::nTime;
     }
-    void UpdateTime(const CBlockIndex_impl<T> *pindexPrev) {
-        CBlockHeader<T>::nTime = std::max(GetBlockTime(), bitsystem::GetAdjustedTime());
-        CBlockHeader<T>::set_LastHeight(pindexPrev->get_nHeight());
-    }
+    void UpdateTime(const CBlockIndex_impl<uint256> *pindexPrev);
     std::string ToString() const {
-        return tfm::format("CBlockHeader_impl<T>: nVersion=%d hashPrevBlock=%s hashMerkleRoot=%s nTime=%d nBits=%d nNonce=%d",
-                           CBlockHeader<T>::nVersion,
-                           CBlockHeader<T>::hashPrevBlock.ToString().c_str(),
-                           CBlockHeader<T>::hashMerkleRoot.ToString().c_str(),
-                           CBlockHeader<T>::nTime,
-                           CBlockHeader<T>::nBits,
-                           CBlockHeader<T>::nNonce);
+        return tfm::format("CBlockHeader_impl: nVersion=%d hashPrevBlock=%s hashMerkleRoot=%s nTime=%d nBits=%d nNonce=%d",
+                           CBlockHeader::nVersion,
+                           CBlockHeader::hashPrevBlock.ToString().c_str(),
+                           CBlockHeader::hashMerkleRoot.ToString().c_str(),
+                           CBlockHeader::nTime,
+                           CBlockHeader::nBits,
+                           CBlockHeader::nNonce);
     }
 };
 
@@ -192,7 +187,7 @@ public:
 // About R/W: ReadFromDisk or WriteToDisk. (pos: CBlockIndex)
 //
 template <typename T>
-class CBlock_impl final : public CBlockHeader_impl<T>, public CMerkleTree<T, CTransaction_impl<T> >
+class CBlock_impl final : public CBlockHeader_impl, public CMerkleTree<CTransaction_impl<T> >
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vMerkle_t = prevector<PREVECTOR_BLOCK_N, T>;
@@ -204,7 +199,7 @@ class CBlock_impl final : public CBlockHeader_impl<T>, public CMerkleTree<T, CTr
     // CBlock_impl &operator=(const CBlock_impl &)=delete;
     // CBlock_impl &operator=(CBlock_impl &&)=delete;
 private:
-    using Merkle_t = CMerkleTree<T, CTransaction_impl<T> >;
+    using Merkle_t = CMerkleTree<CTransaction_impl<T> >;
     // ppcoin: block signature - signed by one of the coin base txout[N]'s owner
     Script_util::valtype vchBlockSig;
     // Denial-of-service detection:
@@ -224,7 +219,7 @@ public:
     int get_nDoS() const {return nDoS;}
     CBlock_impl() {SetNull();}
     void SetNull() {
-        CBlockHeader<T>::SetNull();
+        CBlockHeader::SetNull();
         vchBlockSig.clear();
         nDoS = 0;
     }
@@ -322,7 +317,7 @@ using CBlockTemplate = CBlockTemplate_impl<uint256>;
  * be null if the block is not part of the longest chain.
  */
 template <typename T>
-class CBlockIndex_impl : public CBlockHeader<T>
+class CBlockIndex_impl : public CBlockHeader
 {
     // CBlockIndex_impl(const CBlockIndex_impl &)=delete;
     // CBlockIndex_impl(CBlockIndex_impl &&)=delete;
@@ -422,7 +417,7 @@ public:
         BLOCK_MASTERNODE_MODIFIER = (1 << 19)   // v3 regenerated stake modifier
     };
     CBlockIndex_impl() {
-        //CBlockHeader<T>::SetNull();
+        //CBlockHeader::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
         pnext = nullptr;
@@ -454,7 +449,7 @@ public:
         nMasternodeTime = 0;
     }
     CBlockIndex_impl(unsigned int nFileIn, unsigned int nBlockPosIn, CBlock_impl<T> &block) {
-        //CBlockHeader<T>::SetNull();
+        //CBlockHeader::SetNull();
         phashBlock = nullptr;
         pprev = nullptr;
         pnext = nullptr;
@@ -498,28 +493,28 @@ public:
             nBenchTime = 0;
             nMasternodeTime = 0;
         }
-        CBlockHeader<T>::nVersion       = block.get_nVersion();
-        CBlockHeader<T>::hashMerkleRoot = block.get_hashMerkleRoot();
-        CBlockHeader<T>::nTime          = block.get_nTime();
-        CBlockHeader<T>::nBits          = block.get_nBits();
-        CBlockHeader<T>::nNonce         = block.get_nNonce();
+        CBlockHeader::nVersion       = block.get_nVersion();
+        CBlockHeader::hashMerkleRoot = block.get_hashMerkleRoot();
+        CBlockHeader::nTime          = block.get_nTime();
+        CBlockHeader::nBits          = block.get_nBits();
+        CBlockHeader::nNonce         = block.get_nNonce();
     }
     virtual ~CBlockIndex_impl() {}
     CBlock_impl<T> GetBlockHeader() const {
         CBlock_impl<T> block;
-        block.set_nVersion(CBlockHeader<T>::nVersion);
+        block.set_nVersion(CBlockHeader::nVersion);
         if (pprev) block.set_hashPrevBlock(pprev->GetBlockHash());
-        block.set_hashMerkleRoot(CBlockHeader<T>::hashMerkleRoot);
-        block.set_nTime(CBlockHeader<T>::nTime);
-        block.set_nBits(CBlockHeader<T>::nBits);
-        block.set_nNonce(CBlockHeader<T>::nNonce);
+        block.set_hashMerkleRoot(CBlockHeader::hashMerkleRoot);
+        block.set_nTime(CBlockHeader::nTime);
+        block.set_nBits(CBlockHeader::nBits);
+        block.set_nNonce(CBlockHeader::nNonce);
         return block;
     }
     T GetBlockHash() const {
         return *phashBlock;
     }
     int64_t GetBlockTime() const {
-        return (int64_t)CBlockHeader<T>::nTime;
+        return (int64_t)CBlockHeader::nTime;
     }
     T GetBlockTrust() const;
     bool IsInMainChain() const {
@@ -648,7 +643,7 @@ using CBlockIndexWorkComparator = CBlockIndexWorkComparator_impl<uint256>;
 // from DB to CDiskBlockIndex, from CDiskBlockIndex to CBlockIndex.
 //
 template <typename T>
-class CDiskBlockHeader_impl final : public CBlockHeader_impl<T>
+class CDiskBlockHeader_impl final : public CBlockHeader_impl
 {
     CDiskBlockHeader_impl(const CDiskBlockHeader_impl &)=delete;
     CDiskBlockHeader_impl(CDiskBlockHeader_impl &&)=delete;

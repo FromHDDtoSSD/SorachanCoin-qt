@@ -71,7 +71,7 @@ int CMerkleTx::GetDepthInMainChain(CBlockIndex *&pindexRet) const
 
     // Make sure the merkle branch connects to this block
     if (! fMerkleVerified) {
-        if (CMerkleTree<uint256, CTransaction>::CheckMerkleBranch(GetHash(), vMerkleBranch, nIndex) != pindex->get_hashMerkleRoot())
+        if (CMerkleTree<CTransaction>::CheckMerkleBranch(GetHash(), vMerkleBranch, nIndex) != pindex->get_hashMerkleRoot())
             return 0;
         fMerkleVerified = true;
     }
