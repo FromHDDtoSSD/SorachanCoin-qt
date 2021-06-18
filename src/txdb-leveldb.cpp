@@ -235,12 +235,12 @@ bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx)
     return ReadDiskTx(hash, tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
+bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
 {
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx)
+bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
@@ -524,7 +524,7 @@ static CBlockIndex *InsertBlockIndex(const uint256 &hash, std::unordered_map<uin
 }
 
 bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
-        std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > &setStakeSeen,
+        std::set<std::pair<COutPoint, unsigned int> > &setStakeSeen,
         CBlockIndex *&pindexGenesisBlock,
         uint256 &hashBestChain,
         int &nBestHeight,

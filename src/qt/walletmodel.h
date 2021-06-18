@@ -20,8 +20,7 @@ class CWallet;
 class CKeyID;
 class CPubKey;
 class COutput;
-template <typename T> class COutPoint_impl;
-using COutPoint = COutPoint_impl<uint256>;
+class COutPoint;
 class uint256;
 class CCoinControl;
 

@@ -30,8 +30,7 @@
 class CWallet;
 class CTxDB;
 class CScriptCheck;
-template <typename T> class COutPoint_impl;
-using COutPoint = COutPoint_impl<uint256>;
+class COutPoint;
 
 static constexpr int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
@@ -75,26 +74,24 @@ namespace tx_util {
 }
 
 // An inpoint - a combination of a transaction and an index n into its vin
-template <typename T>
-class CInPoint_impl
+class CInPoint
 {
+    //CInPoint(const CInPoint &)=delete;
+    //CInPoint(CInPoint &&)=delete;
+    //CInPoint &operator=(const CInPoint &)=delete;
+    //CInPoint &operator=(CInPoint &&)=delete;
 private:
-    //CInPoint_impl(const CInPoint_impl &)=delete;
-    //CInPoint_impl(CInPoint_impl &&)=delete;
-    //CInPoint_impl &operator=(const CInPoint_impl &)=delete;
-    //CInPoint_impl &operator=(CInPoint_impl &&)=delete;
-
-    CTransaction_impl<T> *ptx;
+    CTransaction_impl<uint256> *ptx;
     uint32_t n;
 public:
-    const CTransaction_impl<T> *get_ptx() const noexcept {return ptx;}
-    CTransaction_impl<T> *get_ptx() noexcept {return ptx;}
+    const CTransaction_impl<uint256> *get_ptx() const noexcept {return ptx;}
+    CTransaction_impl<uint256> *get_ptx() noexcept {return ptx;}
     uint32_t get_n() const noexcept {return n;}
 
-    CInPoint_impl() {
+    CInPoint() {
         SetNull();
     }
-    CInPoint_impl(CTransaction_impl<T> *ptxIn, unsigned int nIn) {
+    CInPoint(CTransaction_impl<uint256> *ptxIn, unsigned int nIn) {
         ptx = ptxIn;
         n = nIn;
     }
@@ -107,28 +104,25 @@ public:
         return (ptx == nullptr && n == std::numeric_limits<uint32_t>::max());
     }
 };
-using CInPoint = CInPoint_impl<uint256>;
 
 // An outpoint - a combination of a transaction hash and an index n into its vout
-template <typename T>
-class COutPoint_impl
+class COutPoint
 {
+    //COutPoint(const COutPoint &)=delete;
+    //COutPoint(COutPoint &)=delete;
+    //COutPoint &operator=(const COutPoint &)=delete;
+    //COutPoint &operator=(COutPoint &&)=delete;
 private:
-    //COutPoint_impl(const COutPoint_impl &)=delete;
-    //COutPoint_impl(COutPoint_impl &)=delete;
-    //COutPoint_impl &operator=(const COutPoint_impl &)=delete;
-    //COutPoint_impl &operator=(COutPoint_impl &&)=delete;
-
-    T hash;
+    uint256 hash;
     uint32_t n;
 public:
     uint32_t get_n() const noexcept {return n;}
-    const T &get_hash() const noexcept {return hash;}
+    const uint256 &get_hash() const noexcept {return hash;}
 
-    COutPoint_impl() noexcept {
+    COutPoint() noexcept {
         SetNull();
     }
-    COutPoint_impl(T hashIn, unsigned int nIn) noexcept {
+    COutPoint(uint256 hashIn, unsigned int nIn) noexcept {
         hash = hashIn;
         n = nIn;
     }
@@ -140,13 +134,13 @@ public:
         return (hash == 0 && n == std::numeric_limits<uint32_t>::max());
     }
 
-    friend bool operator<(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
+    friend bool operator<(const COutPoint &a, const COutPoint &b) noexcept {
         return (a.hash < b.hash || (a.hash == b.hash && a.n < b.n));
     }
-    friend bool operator==(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
+    friend bool operator==(const COutPoint &a, const COutPoint &b) noexcept {
         return (a.hash == b.hash && a.n == b.n);
     }
-    friend bool operator!=(const COutPoint_impl &a, const COutPoint_impl &b) noexcept {
+    friend bool operator!=(const COutPoint &a, const COutPoint &b) noexcept {
         return !(a == b);
     }
 
@@ -161,17 +155,15 @@ public:
         READWRITE(FLATDATA(*this));
     }
 };
-using COutPoint = COutPoint_impl<uint256>;
 
 // Position on disk for a particular transaction
 class CDiskTxPos
 {
-private:
     //CDiskTxPos(const CDiskTxPos &)=delete;
     //CDiskTxPos(CDiskTxPos &)=delete;
     //CDiskTxPos &operator=(const CDiskTxPos &)=delete;
     //CDiskTxPos &operator=(CDiskTxPos &&)=delete;
-
+private:
     uint32_t nFile;
     uint32_t nBlockPos;
     uint32_t nTxPos;
@@ -223,12 +215,11 @@ public:
 // vSpent is really only used as a flag, but having the location is very helpful for debugging.
 class CTxIndex
 {
-private:
     //CTxIndex(const CTxIndex &)=delete;
     //CTxIndex(CTxIndex &)=delete;
     //CTxIndex &operator=(const CTxIndex &)=delete;
     //CTxIndex &operator=(CTxIndex &)=delete;
-
+private:
     CDiskTxPos pos;
     std::vector<CDiskTxPos> vSpent;
 public:
@@ -280,44 +271,43 @@ public:
 
 // Transaction Memory Pool
 // Singleton Class
-template <typename T>
-class CTxMemPool_impl
+class CTxMemPool
 {
-    CTxMemPool_impl(const CTxMemPool_impl &)=delete;
-    CTxMemPool_impl(CTxMemPool_impl &&)=delete;
-    CTxMemPool_impl &operator=(const CTxMemPool_impl &)=delete;
-    CTxMemPool_impl &operator=(CTxMemPool_impl &&)=delete;
+    CTxMemPool(const CTxMemPool &)=delete;
+    CTxMemPool(CTxMemPool &&)=delete;
+    CTxMemPool &operator=(const CTxMemPool &)=delete;
+    CTxMemPool &operator=(CTxMemPool &&)=delete;
 private:
-    CTxMemPool_impl() {
+    CTxMemPool() {
         nTransactionsUpdated = 0;
     }
     mutable CCriticalSection cs;
-    mutable std::map<T, CTransaction_impl<T> > mapTx; // mutable: operator []
-    std::map<COutPoint_impl<T>, CInPoint_impl<T> > mapNextTx;
+    mutable std::map<uint256, CTransaction_impl<uint256> > mapTx; // mutable: operator []
+    std::map<COutPoint, CInPoint> mapNextTx;
     unsigned int nTransactionsUpdated;
 public:
-    static CTxMemPool_impl mempool;
+    static CTxMemPool mempool;
     CCriticalSection &get_cs() const noexcept {return cs;}
-    const std::map<T, CTransaction_impl<T> > &get_mapTx() const noexcept {return mapTx;}
-    const CTransaction_impl<T> &get_mapTx(T hash) const {return mapTx[hash];}
+    const std::map<uint256, CTransaction_impl<uint256> > &get_mapTx() const noexcept {return mapTx;}
+    const CTransaction_impl<uint256> &get_mapTx(uint256 hash) const {return mapTx[hash];}
 
-    std::map<T, CTransaction_impl<T> > &set_mapTx() {return mapTx;}
+    std::map<uint256, CTransaction_impl<uint256> > &set_mapTx() {return mapTx;}
 
-    bool accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fCheckInputs, bool *pfMissingInputs);
-    bool addUnchecked(const T &hash, CTransaction_impl<T> &tx);
-    bool remove(CTransaction_impl<T> &tx);
+    bool accept(CTxDB &txdb, CTransaction_impl<uint256> &tx, bool fCheckInputs, bool *pfMissingInputs);
+    bool addUnchecked(const uint256 &hash, CTransaction_impl<uint256> &tx);
+    bool remove(CTransaction_impl<uint256> &tx);
     void clear();
-    void queryHashes(std::vector<T> &vtxid);
-    bool IsFromMe(CTransaction_impl<T> &tx);
-    void EraseFromWallets(T hash);
+    void queryHashes(std::vector<uint256> &vtxid);
+    bool IsFromMe(CTransaction_impl<uint256> &tx);
+    void EraseFromWallets(uint256 hash);
     size_t size() const noexcept {
         LOCK(cs);
         return mapTx.size();
     }
-    bool exists(T hash) const noexcept {
+    bool exists(uint256 hash) const noexcept {
         return (mapTx.count(hash) != 0);
     }
-    CTransaction_impl<T> &lookup(T hash) {
+    CTransaction_impl<uint256> &lookup(uint256 hash) {
         return mapTx[hash];
     }
 
@@ -330,14 +320,16 @@ public:
         nTransactionsUpdated += n;
     }
 };
-using CTxMemPool = CTxMemPool_impl<uint256>;
 
 // CTransaction IN
 // An input of a transaction.  It contains the location of the previous
 // transaction's output that it claims and a signature that matches the output's public key.
-template <typename T>
-class CTxIn_impl
+class CTxIn
 {
+    //CTxIn(const CTxIn &)=delete;
+    //CTxIn(CTxIn &)=delete;
+    //CTxIn &operator=(const CTxIn &)=delete;
+    //CTxIn &operator=(CTxIn &&)=delete;
 public:
     /* Setting nSequence to this value for every input in a transaction
      * disables nLockTime. */
@@ -367,22 +359,18 @@ public:
     static constexpr int SEQUENCE_LOCKTIME_GRANULARITY = 9;
 
 private:
-    //CTxIn_impl(const CTxIn_impl &)=delete;
-    //CTxIn_impl(CTxIn_impl &)=delete;
-    //CTxIn_impl &operator=(const CTxIn_impl &)=delete;
-    //CTxIn_impl &operator=(CTxIn_impl &&)=delete;
-
-    COutPoint_impl<T> prevout;
+    COutPoint prevout;
     CScript scriptSig;
     uint32_t nSequence;
     CScriptWitness scriptWitness; //!< Only serialized through CTransaction
+
 public:
-    const COutPoint_impl<T> &get_prevout() const noexcept {return prevout;}
+    const COutPoint &get_prevout() const noexcept {return prevout;}
     const CScript &get_scriptSig() const noexcept {return scriptSig;}
     uint32_t get_nSequence() const noexcept {return nSequence;}
     const CScriptWitness &get_scriptWitness() const noexcept {return scriptWitness;}
 
-    COutPoint_impl<T> &set_prevout() noexcept {return prevout;}
+    COutPoint &set_prevout() noexcept {return prevout;}
     CScript &set_scriptSig() noexcept {return scriptSig;}
     void set_nSequence(uint32_t _seq) noexcept {nSequence = _seq;}
     void set_scriptSig(const CScript &_sig) {scriptSig = _sig;}
@@ -390,24 +378,24 @@ public:
 
     // script <valtype>
     template <typename valtype>
-    CTxIn_impl &operator<<(const valtype &_obj) {
+    CTxIn &operator<<(const valtype &_obj) {
         scriptSig << _obj;
         return *this;
     }
 
-    CTxIn_impl() noexcept {
+    CTxIn() noexcept {
         //nSequence = std::numeric_limits<unsigned int>::max();
         nSequence = SEQUENCE_FINAL;
     }
-    //explicit CTxIn_impl(COutPoint_impl<T> prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max()) {
-    explicit CTxIn_impl(COutPoint_impl<T> prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=SEQUENCE_FINAL) {
+    //explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max()) {
+    explicit CTxIn(COutPoint prevoutIn, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=SEQUENCE_FINAL) {
         prevout = prevoutIn;
         scriptSig = scriptSigIn;
         nSequence = nSequenceIn;
     }
-    //CTxIn_impl(T hashPrevTx, unsigned int nOut, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max()) {
-    CTxIn_impl(T hashPrevTx, unsigned int nOut, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=SEQUENCE_FINAL) {
-        prevout = COutPoint_impl<T>(hashPrevTx, nOut);
+    //CTxIn(uint256 hashPrevTx, unsigned int nOut, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=std::numeric_limits<unsigned int>::max()) {
+    CTxIn(uint256 hashPrevTx, unsigned int nOut, CScript scriptSigIn=CScript(), unsigned int nSequenceIn=SEQUENCE_FINAL) {
+        prevout = COutPoint(hashPrevTx, nOut);
         scriptSig = scriptSigIn;
         nSequence = nSequenceIn;
     }
@@ -417,12 +405,12 @@ public:
         return (nSequence == SEQUENCE_FINAL);
     }
 
-    friend bool operator==(const CTxIn_impl &a, const CTxIn_impl &b) noexcept {
+    friend bool operator==(const CTxIn &a, const CTxIn &b) noexcept {
         return (a.prevout   == b.prevout &&
                 a.scriptSig == b.scriptSig &&
                 a.nSequence == b.nSequence);
     }
-    friend bool operator!=(const CTxIn_impl &a, const CTxIn_impl &b) noexcept {
+    friend bool operator!=(const CTxIn &a, const CTxIn &b) noexcept {
         return !(a == b);
     }
 
@@ -440,21 +428,19 @@ public:
         READWRITE(this->nSequence);
     }
 };
-using CTxIn = CTxIn_impl<uint256>;
 
 // CTransaction OUT
 // An output of a transaction. It contains the public key that the next input must be able to sign with to claim it.
-template <typename T>
-class CTxOut_impl
+class CTxOut
 {
+    //CTxOut(const CTxOut &)=delete;
+    //CTxOut(CTxOut &&)=delete;
+    //CTxOut &operator=(const CTxOut &)=delete;
+    //CTxOut &operator=(CTxOut &&)=delete;
 private:
-    //CTxOut_impl(const CTxOut_impl &)=delete;
-    //CTxOut_impl(CTxOut_impl &&)=delete;
-    //CTxOut_impl &operator=(const CTxOut_impl &)=delete;
-    //CTxOut_impl &operator=(CTxOut_impl &&)=delete;
-
     int64_t nValue; // amount
     CScript scriptPubKey;
+
 public:
     int64_t get_nValue() const noexcept {return nValue;}
     const CScript &get_scriptPubKey() const noexcept {return scriptPubKey;}
@@ -464,10 +450,10 @@ public:
     void sub_nValue(int64_t _InValue) noexcept {nValue -= _InValue; assert(nValue >= 0);}
     CScript &set_scriptPubKey() noexcept {return scriptPubKey;}
 
-    CTxOut_impl() {
+    CTxOut() {
         SetNull();
     }
-    CTxOut_impl(int64_t nValueIn, CScript scriptPubKeyIn) {
+    CTxOut(int64_t nValueIn, CScript scriptPubKeyIn) {
         nValue = nValueIn;
         scriptPubKey = scriptPubKeyIn;
     }
@@ -486,7 +472,7 @@ public:
     bool IsEmpty() const noexcept {
         return (nValue == 0 && scriptPubKey.empty());
     }
-    T GetHash() const {
+    uint256 GetHash() const {
         return hash_basis::SerializeHash(*this);
     }
 
@@ -494,11 +480,11 @@ public:
         return !scriptPubKey.empty() && scriptPubKey.IsZerocoinMint();
     }
 
-    friend bool operator==(const CTxOut_impl &a, const CTxOut_impl &b) noexcept {
+    friend bool operator==(const CTxOut &a, const CTxOut &b) noexcept {
         return (a.nValue       == b.nValue &&
                 a.scriptPubKey == b.scriptPubKey);
     }
-    friend bool operator!=(const CTxOut_impl &a, const CTxOut_impl &b) noexcept {
+    friend bool operator!=(const CTxOut &a, const CTxOut &b) noexcept {
         return !(a == b);
     }
 
@@ -515,7 +501,6 @@ public:
         READWRITE(this->scriptPubKey);
     }
 };
-using CTxOut = CTxOut_impl<uint256>;
 
 template <typename T>
 struct CMutableTransaction_impl;
@@ -633,7 +618,7 @@ public:
         GMF_SEND
     };
 protected: // CMerkleTx => CWalletTx
-    const CTxOut_impl<T> &GetOutputFor(const CTxIn_impl<T> &input, const MapPrevTx &inputs) const;
+    const CTxOut &GetOutputFor(const CTxIn &input, const MapPrevTx &inputs) const;
 private:
     // Default transaction version.
     // ver1: old core, after ver2: latest core
@@ -731,7 +716,7 @@ public:
             nBlockTime = bitsystem::GetAdjustedTime();
         if ((int64_t)nLockTime < ((int64_t)nLockTime < block_params::LOCKTIME_THRESHOLD ? (int64_t)nBlockHeight : nBlockTime))
             return true;
-        for(const CTxIn_impl<T> &txin: this->vin) {
+        for(const CTxIn &txin: this->vin) {
             if (! txin.IsFinal()) return false;
         }
         return true;
@@ -777,7 +762,7 @@ public:
         return (vin.size() > 0 && vin[0].get_prevout().IsNull() && vin[0].get_scriptSig()[0] == ScriptOpcodes::OP_ZEROCOINSPEND);
     }
     bool IsZerocoinMint() const {
-        for(const CTxOut_impl<T> &txout : vout) {
+        for(const CTxOut &txout : vout) {
             if (txout.get_scriptPubKey().IsZerocoinMint())
                 return true;
         }
@@ -846,9 +831,9 @@ public:
     }
 
     bool ReadFromDisk(CDiskTxPos pos, FILE **pfileRet=nullptr);
-    bool ReadFromDisk(CTxDB &txdb, COutPoint_impl<T> prevout, CTxIndex &txindexRet);
-    bool ReadFromDisk(CTxDB &txdb, COutPoint_impl<T> prevout);
-    bool ReadFromDisk(COutPoint_impl<T> prevout);
+    bool ReadFromDisk(CTxDB &txdb, COutPoint prevout, CTxIndex &txindexRet);
+    bool ReadFromDisk(CTxDB &txdb, COutPoint prevout);
+    bool ReadFromDisk(COutPoint prevout);
     bool DisconnectInputs(CTxDB &txdb);
 
     /** Fetch from memory and/or disk. inputsRet keys are transaction hashes.

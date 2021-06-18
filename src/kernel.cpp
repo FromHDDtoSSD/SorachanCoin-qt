@@ -307,9 +307,9 @@ bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModif
             if (fPrintProofOfStake || (pindex->GetBlockTime() + block_check::nStakeMinAge - nStakeModifierSelectionInterval > bitsystem::GetAdjustedTime())) {
                 return logging::error("bitkernel::GetKernelStakeModifier() : reached best block %s at height %d from block %s", pindex->GetBlockHash().ToString().c_str(), pindex->get_nHeight(), hashBlockFrom.ToString().c_str());
             } else {
-                // logging::LogPrintf("bitkernel::GetKernelStakeModifier nStakeModifierTime_%I64d pindexFrom->GetBlockTime()_%I64d Sum_%I64d\n", nStakeModifierTime, pindexFrom->GetBlockTime(), pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval);
-                // logging::LogPrintf("%I64d %I64d bitKernel::GetKernelStakeModifier %I64d\n", pindexFrom->GetBlockTime(), nStakeModifierTime, pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval - nStakeModifierTime);
-                // logging::LogPrintf("bitkernel::GetKernelStakeModifier() : reached best block %s at height %d from block %s\n", pindex->GetBlockHash().ToString().c_str(), pindex->nHeight, hashBlockFrom.ToString().c_str());
+                logging::LogPrintf("bitkernel::GetKernelStakeModifier nStakeModifierTime_%I64d pindexFrom->GetBlockTime()_%I64d Sum_%I64d\n", nStakeModifierTime, pindexFrom->GetBlockTime(), pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval);
+                logging::LogPrintf("%I64d %I64d bitKernel::GetKernelStakeModifier %I64d\n", pindexFrom->GetBlockTime(), nStakeModifierTime, pindexFrom->GetBlockTime() + nStakeModifierSelectionInterval - nStakeModifierTime);
+                logging::LogPrintf("bitkernel::GetKernelStakeModifier() : reached best block %s at height %d from block %s\n", pindex->GetBlockHash().ToString().c_str(), pindex->get_nHeight(), hashBlockFrom.ToString().c_str());
                 return false;
             }
         }
@@ -357,7 +357,7 @@ bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModif
 //   a proof-of-work situation.
 //
 template <typename T>
-bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint_impl<T> &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake)
+bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake)
 {
     if (nTimeTx < txPrev.get_nTime()) { // Transaction timestamp violation
         return logging::error("bitkernel::CheckStakeKernelHash() : nTime violation");

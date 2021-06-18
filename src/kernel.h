@@ -49,7 +49,7 @@ private:
 
     // Check whether stake kernel meets hash target
     // Sets hashProofOfStake on success return
-    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint_impl<T> &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake=false);
+    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake=false);
 
 public:
     static const MapModifierCheckpoints &getMapStakeModifierCheckpoints() {return bitkernel<T>::mapStakeModifierCheckpoints;}

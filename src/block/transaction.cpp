@@ -13,7 +13,7 @@
 #include <wallet.h>
 #include <block/blockdata_db.h>
 
-template <typename T> CTxMemPool_impl<T> CTxMemPool_impl<T>::mempool;
+CTxMemPool CTxMemPool::mempool;
 template <typename T> CBlockIndex *block_transaction::manage_impl<T>::pblockindexFBBHLast = nullptr;
 int block_transaction::nCoinbaseMaturity = block_transaction::mainnet::nCoinbaseMaturity;
 
@@ -34,7 +34,7 @@ CAmount CTransaction_impl<T>::GetZerocoinSpent() const {
         return 0;
 
     CAmount nValueOut = 0;
-    for (const CTxIn_impl<T> &txin : vin) {
+    for (const CTxIn &txin : vin) {
         if(! txin.get_scriptSig().IsZerocoinSpend())
             continue;
         nValueOut += txin.get_nSequence() * CAmountUnit::COIN;
@@ -72,7 +72,7 @@ unsigned int CTransaction_impl<T>::CalculateModifiedSize(unsigned int nTxSize) c
     // risk encouraging people to create junk outputs to redeem later.
     if (nTxSize == 0)
         nTxSize = ::GetSerializeSize(*this);
-    for (typename std::vector<CTxIn_impl<T>>::const_iterator it(vin.begin()); it != vin.end(); ++it)
+    for (typename std::vector<CTxIn>::const_iterator it(vin.begin()); it != vin.end(); ++it)
     {
         unsigned int offset = 41U + std::min(110U, (unsigned int)it->get_scriptSig().size());
         if (nTxSize > offset)
@@ -111,9 +111,8 @@ std::string CTransaction_impl<T>::ToString() const {
     return str;
 }
 
-template <typename T>
-std::string COutPoint_impl<T>::ToString() const noexcept {
-    return tfm::format("COutPoint_impl<T>(%s, %u)", hash.ToString().substr(0,10).c_str(), n);
+std::string COutPoint::ToString() const noexcept {
+    return tfm::format("COutPoint(%s, %u)", hash.ToString().substr(0,10).c_str(), n);
 }
 
 std::string CDiskTxPos::ToString() const noexcept {
@@ -123,13 +122,11 @@ std::string CDiskTxPos::ToString() const noexcept {
         return tfm::format("(nFile=%u, nBlockPos=%u, nTxPos=%u)", nFile, nBlockPos, nTxPos);
 }
 
-template <typename T>
-std::string CTxIn_impl<T>::ToStringShort() const {
+std::string CTxIn::ToStringShort() const {
     return tfm::format(" %s %d", prevout.get_hash().ToString().c_str(), prevout.get_n());
 }
 
-template <typename T>
-std::string CTxIn_impl<T>::ToString() const {
+std::string CTxIn::ToString() const {
     std::string str;
     str += "CTxIn(";
     str += prevout.ToString();
@@ -143,13 +140,11 @@ std::string CTxIn_impl<T>::ToString() const {
     return str;
 }
 
-template <typename T>
-std::string CTxOut_impl<T>::ToStringShort() const {
+std::string CTxOut::ToStringShort() const {
     return tfm::format(" out %s %s", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
 }
 
-template <typename T>
-std::string CTxOut_impl<T>::ToString() const {
+std::string CTxOut::ToString() const {
     if (IsEmpty()) return "CTxOut(empty)";
     if (scriptPubKey.size() < 6) return "CTxOut(error)";
     return tfm::format("CTxOut(nValue=%s, scriptPubKey=%s)", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
@@ -162,9 +157,9 @@ bool block_transaction::manage_impl<T>::GetTransaction(const T &hash, CTransacti
     {
         LOCK(block_process::cs_main);
         {
-            LOCK(CTxMemPool_impl<T>::mempool.get_cs());
-            if (CTxMemPool_impl<T>::mempool.exists(hash)) {
-                tx = CTxMemPool_impl<T>::mempool.lookup(hash);
+            LOCK(CTxMemPool::mempool.get_cs());
+            if (CTxMemPool::mempool.exists(hash)) {
+                tx = CTxMemPool::mempool.lookup(hash);
                 return true;
             }
         }
@@ -200,14 +195,13 @@ CBlockIndex *block_transaction::manage_impl<T>::FindBlockByHeight(int nHeight)
     return pblockindex;
 }
 
-template <typename T>
-bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fCheckInputs, bool *pfMissingInputs)
+bool CTxMemPool::accept(CTxDB &txdb, CTransaction_impl<uint256> &tx, bool fCheckInputs, bool *pfMissingInputs)
 {
     if (pfMissingInputs)
         *pfMissingInputs = false;
 
     // Time (prevent mempool memory exhaustion attack)
-    if (tx.get_nTime() > block_check::manage<T>::FutureDrift(bitsystem::GetAdjustedTime()))
+    if (tx.get_nTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
         return tx.DoS(10, logging::error("CTxMemPool::accept() : transaction timestamp is too far in the future"));
     if (! tx.CheckTransaction())
         return logging::error("CTxMemPool::accept() : CheckTransaction failed");
@@ -230,7 +224,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         return logging::error("CTxMemPool::accept() : nonstandard transaction (%s)", strNonStd.c_str());
 
     // Do we already have it?
-    T hash = tx.GetHash();
+    uint256 hash = tx.GetHash();
     {
         LOCK(cs);
         if (mapTx.count(hash)) return false;
@@ -241,9 +235,9 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
 
     // Check for conflicts with in-memory transactions
     // replacing with a newer version, ptxOld insert mapNextTx[outpoint].
-    CTransaction_impl<T> *ptxOld = nullptr;
+    CTransaction_impl<uint256> *ptxOld = nullptr;
     for (unsigned int i = 0; i < tx.get_vin().size(); ++i) {
-        COutPoint_impl<T> outpoint = tx.get_vin(i).get_prevout();
+        COutPoint outpoint = tx.get_vin(i).get_prevout();
         if (mapNextTx.count(outpoint)) {
             // Disable replacement feature for now
             return false;
@@ -257,7 +251,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
             if (! tx.IsNewerThan(*ptxOld))
                 return false;
             for (unsigned int i = 0; i < tx.get_vin().size(); ++i) {
-                COutPoint_impl<T> outpoint = tx.get_vin(i).get_prevout();
+                COutPoint outpoint = tx.get_vin(i).get_prevout();
                 if (!mapNextTx.count(outpoint) || mapNextTx[outpoint].get_ptx() != ptxOld)
                     return false;
             }
@@ -266,7 +260,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
     }
     if (fCheckInputs) {
         MapPrevTx mapInputs;
-        std::map<T, CTxIndex> mapUnused;
+        std::map<uint256, CTxIndex> mapUnused;
         bool fInvalid = false;
         if (! tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
             if (fInvalid)
@@ -287,7 +281,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
         unsigned int nSize = ::GetSerializeSize(tx);
 
         // Don't accept it if it can't get into a block
-        int64_t txMinFee = tx.GetMinFee(1000, true, CTransaction_impl<T>::GMF_RELAY, nSize);
+        int64_t txMinFee = tx.GetMinFee(1000, true, CTransaction_impl<uint256>::GMF_RELAY, nSize);
         if (nFees < txMinFee)
             return logging::error("CTxMemPool::accept() : not enough fees %s, %" PRId64 " < %" PRId64, hash.ToString().c_str(), nFees, txMinFee);
 
@@ -341,8 +335,7 @@ bool CTxMemPool_impl<T>::accept(CTxDB &txdb, CTransaction_impl<T> &tx, bool fChe
     return true;
 }
 
-template <typename T>
-bool CTxMemPool_impl<T>::addUnchecked(const T &hash, CTransaction_impl<T> &tx)
+bool CTxMemPool::addUnchecked(const uint256 &hash, CTransaction_impl<uint256> &tx)
 {
     // Add to memory pool without checking anything.  Don't call this directly,
     // call CTxMemPool::accept to properly check the transaction first.
@@ -355,13 +348,12 @@ bool CTxMemPool_impl<T>::addUnchecked(const T &hash, CTransaction_impl<T> &tx)
     return true;
 }
 
-template <typename T>
-bool CTxMemPool_impl<T>::remove(CTransaction_impl<T> &tx)
+bool CTxMemPool::remove(CTransaction_impl<uint256> &tx)
 {
     // Remove transaction from memory pool
     {
         LOCK(cs);
-        T hash = tx.GetHash();
+        uint256 hash = tx.GetHash();
         if (mapTx.count(hash)) {
             for(const CTxIn &txin: tx.get_vin())
                 mapNextTx.erase(txin.get_prevout());
@@ -372,8 +364,7 @@ bool CTxMemPool_impl<T>::remove(CTransaction_impl<T> &tx)
     return true;
 }
 
-template <typename T>
-void CTxMemPool_impl<T>::clear()
+void CTxMemPool::clear()
 {
     LOCK(cs);
     mapTx.clear();
@@ -381,19 +372,17 @@ void CTxMemPool_impl<T>::clear()
     ++block_info::nTransactionsUpdated;
 }
 
-template <typename T>
-void CTxMemPool_impl<T>::queryHashes(std::vector<T> &vtxid)
+void CTxMemPool::queryHashes(std::vector<uint256> &vtxid)
 {
     vtxid.clear();
     LOCK(cs);
     vtxid.reserve(mapTx.size());
-    for (typename std::map<T, CTransaction_impl<T> >::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)
+    for (typename std::map<uint256, CTransaction_impl<uint256> >::iterator mi = mapTx.begin(); mi != mapTx.end(); ++mi)
         vtxid.push_back((*mi).first);
 }
 
 // check whether the passed transaction is from us
-template <typename T>
-bool CTxMemPool_impl<T>::IsFromMe(CTransaction_impl<T> &tx)
+bool CTxMemPool::IsFromMe(CTransaction_impl<uint256> &tx)
 {
     for(CWallet *pwallet: block_info::setpwalletRegistered) {
         if (pwallet->IsFromMe(tx)) return true;
@@ -402,8 +391,7 @@ bool CTxMemPool_impl<T>::IsFromMe(CTransaction_impl<T> &tx)
 }
 
 // erases transaction with the given hash from all wallets
-template <typename T>
-void CTxMemPool_impl<T>::EraseFromWallets(T hash)
+void CTxMemPool::EraseFromWallets(uint256 hash)
 {
     for(CWallet *pwallet: block_info::setpwalletRegistered)
         pwallet->EraseFromWallet(hash);
@@ -419,7 +407,7 @@ bool CTransaction_impl<T>::IsStandard(std::string &strReason) const
 
     unsigned int nDataOut = 0;
     TxnOutputType::txnouttype whichType;
-    for(const CTxIn_impl<T> &txin: vin) {
+    for(const CTxIn &txin: vin) {
         // Biggest 'standard' txin is a 15-of-15 P2SH multisig with compressed
         // keys. (remember the 520 byte limit on redeemScript size) That works
         // out to a (15*(33+1))+3=513 byte redeemScript, 513+1+15*(73+1)=1624
@@ -440,7 +428,7 @@ bool CTransaction_impl<T>::IsStandard(std::string &strReason) const
         }
     }
 
-    for(const CTxOut_impl<T> &txout: vout) {
+    for(const CTxOut &txout: vout) {
         if (! Script_util::IsStandard(txout.get_scriptPubKey(), whichType)) {
             strReason = "scriptpubkey";
             return false;
@@ -489,7 +477,7 @@ bool CTransaction_impl<T>::AreInputsStandard(const MapPrevTx &mapInputs) const
     if (IsCoinBase())
         return true; // Coinbases don't use vin normally
     for (unsigned int i = 0; i < vin.size(); ++i) {
-        const CTxOut_impl<T> &prev = GetOutputFor(vin[i], mapInputs);
+        const CTxOut &prev = GetOutputFor(vin[i], mapInputs);
         Script_util::statype vSolutions;
         TxnOutputType::txnouttype whichType;
 
@@ -533,10 +521,10 @@ unsigned int CTransaction_impl<T>::GetLegacySigOpCount() const
     unsigned int nSigOps = 0;
     if (! IsCoinBase()) {
         // Coinbase scriptsigs are never executed, so there is no sense in calculation of sigops.
-        for(const CTxIn_impl<T> &txin: this->vin)
+        for(const CTxIn &txin: this->vin)
             nSigOps += txin.get_scriptSig().GetSigOpCount(false);
     }
-    for(const CTxOut_impl<T> &txout: this->vout)
+    for(const CTxOut &txout: this->vout)
         nSigOps += txout.get_scriptPubKey().GetSigOpCount(false);
 
     return nSigOps;
@@ -548,7 +536,7 @@ unsigned int CTransaction_impl<T>::GetP2SHSigOpCount(const MapPrevTx &inputs) co
     if (IsCoinBase()) return 0;
     unsigned int nSigOps = 0;
     for (unsigned int i = 0; i < vin.size(); ++i) {
-        const CTxOut_impl<T> &prevout = GetOutputFor(vin[i], inputs);
+        const CTxOut &prevout = GetOutputFor(vin[i], inputs);
         if (prevout.get_scriptPubKey().IsPayToScriptHash())
             nSigOps += prevout.get_scriptPubKey().GetSigOpCount(vin[i].get_scriptSig());
     }
@@ -558,7 +546,7 @@ unsigned int CTransaction_impl<T>::GetP2SHSigOpCount(const MapPrevTx &inputs) co
 template <typename T>
 int64_t CTransaction_impl<T>::GetValueOut() const {
     int64_t nValueOut = 0;
-    for(const CTxOut_impl<T> &txout: vout) {
+    for(const CTxOut &txout: vout) {
         nValueOut += txout.get_nValue();
         if (!block_transaction::manage::MoneyRange(txout.get_nValue()) || !block_transaction::manage::MoneyRange(nValueOut))
             throw std::runtime_error("CTransaction_impl<T>::GetValueOut() : value out of range");
@@ -612,7 +600,7 @@ int64_t CTransaction_impl<T>::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAll
     // require additional block_params::MIN_TX_FEE/block_params::MIN_RELAY_TX_FEE for
     // each non empty output which is less than 0.01
     // It's safe to ignore empty outputs here, because these inputs are allowed only for coinbase and coinstake transactions.
-    for(const CTxOut_impl<T> &txout: vout) {
+    for(const CTxOut &txout: vout) {
         if (txout.get_nValue() < util::CENT && !txout.IsEmpty())
             nMinFee += nBaseFee;
     }
@@ -653,7 +641,7 @@ bool CTransaction_impl<T>::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullpt
 }
 
 template <typename T>
-bool CTransaction_impl<T>::ReadFromDisk(CTxDB &txdb, COutPoint_impl<T> prevout, CTxIndex &txindexRet)
+bool CTransaction_impl<T>::ReadFromDisk(CTxDB &txdb, COutPoint prevout, CTxIndex &txindexRet)
 {
     SetNull();
     if (! txdb.ReadTxIndex(prevout.get_hash(), txindexRet)) return false;
@@ -666,14 +654,14 @@ bool CTransaction_impl<T>::ReadFromDisk(CTxDB &txdb, COutPoint_impl<T> prevout, 
 }
 
 template <typename T>
-bool CTransaction_impl<T>::ReadFromDisk(CTxDB &txdb, COutPoint_impl<T> prevout)
+bool CTransaction_impl<T>::ReadFromDisk(CTxDB &txdb, COutPoint prevout)
 {
     CTxIndex txindex;
     return ReadFromDisk(txdb, prevout, txindex);
 }
 
 template <typename T>
-bool CTransaction_impl<T>::ReadFromDisk(COutPoint_impl<T> prevout)
+bool CTransaction_impl<T>::ReadFromDisk(COutPoint prevout)
 {
     CTxDB txdb("r");
     CTxIndex txindex;
@@ -685,7 +673,7 @@ bool CTransaction_impl<T>::DisconnectInputs(CTxDB &txdb)
 {
     // Relinquish previous transactions' spent pointers
     if (! IsCoinBase()) {
-        for(const CTxIn_impl<T> &txin: this->vin) {
+        for(const CTxIn &txin: this->vin) {
             COutPoint prevout = txin.get_prevout();
 
             // Get prev txindex from disk
@@ -725,7 +713,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
         return true; // Coinbase transactions have no inputs to fetch.
 
     for (unsigned int i = 0; i < vin.size(); ++i) {
-        COutPoint_impl<T> prevout = vin[i].get_prevout();
+        COutPoint prevout = vin[i].get_prevout();
         if (inputsRet.count(prevout.get_hash()))
             continue; // Got it already
 
@@ -747,10 +735,10 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
         if (!fFound || txindex.get_pos() == CDiskTxPos(1,1,1)) {
             // Get prev tx from single transactions in memory
             {
-                LOCK(CTxMemPool_impl<T>::mempool.get_cs());
-                if (! CTxMemPool_impl<T>::mempool.exists(prevout.get_hash()))
+                LOCK(CTxMemPool::mempool.get_cs());
+                if (! CTxMemPool::mempool.exists(prevout.get_hash()))
                     return logging::error("FetchInputs() : %s CTxMemPool::mempool Tx prev not found %s", GetHash().ToString().substr(0,10).c_str(),  prevout.get_hash().ToString().substr(0,10).c_str());
-                txPrev = CTxMemPool_impl<T>::mempool.lookup(prevout.get_hash());
+                txPrev = CTxMemPool::mempool.lookup(prevout.get_hash());
             }
             if (! fFound)
                 txindex.set_vSpent().resize(txPrev.vout.size());
@@ -763,7 +751,7 @@ bool CTransaction_impl<T>::FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> 
 
     // Make sure all prevout.n indexes are valid:
     for (unsigned int i = 0; i < vin.size(); ++i) {
-        const COutPoint_impl<T> prevout = vin[i].get_prevout();
+        const COutPoint prevout = vin[i].get_prevout();
         assert(inputsRet.count(prevout.get_hash()) != 0);
         const CTxIndex &txindex = inputsRet[prevout.get_hash()].first;
         const CTransaction_impl<T> &txPrev = inputsRet[prevout.get_hash()].second;
@@ -789,7 +777,7 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
         int64_t nValueIn = 0;
         int64_t nFees = 0;
         for (unsigned int i = 0; i < vin.size(); ++i) {
-            COutPoint_impl<T> prevout = vin[i].get_prevout();
+            COutPoint prevout = vin[i].get_prevout();
             assert(inputs.count(prevout.get_hash()) > 0);
             CTxIndex &txindex = inputs[prevout.get_hash()].first;
             CTransaction_impl<T> &txPrev = inputs[prevout.get_hash()].second;
@@ -820,7 +808,7 @@ bool CTransaction_impl<T>::ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map
         // Only if ALL inputs pass do we perform expensive ECDSA signature checks.
         // Helps prevent CPU exhaustion attacks.
         for (unsigned int i = 0; i < vin.size(); ++i) {
-            COutPoint_impl<T> prevout = vin[i].get_prevout();
+            COutPoint prevout = vin[i].get_prevout();
             assert(inputs.count(prevout.get_hash()) > 0);
             CTxIndex &txindex = inputs[prevout.get_hash()].first;
             CTransaction_impl<T> &txPrev = inputs[prevout.get_hash()].second;
@@ -897,14 +885,14 @@ bool CTransaction_impl<T>::ClientConnectInputs()
 
     // Take over previous transactions' spent pointers
     {
-        LOCK(CTxMemPool_impl<T>::mempool.get_cs());
+        LOCK(CTxMemPool::mempool.get_cs());
         int64_t nValueIn = 0;
         for (unsigned int i = 0; i < vin.size(); ++i) {
             // Get prev tx from single transactions in memory
-            COutPoint_impl<T> prevout = vin[i].get_prevout();
-            if (! CTxMemPool_impl<T>::mempool.exists(prevout.get_hash()))
+            COutPoint prevout = vin[i].get_prevout();
+            if (! CTxMemPool::mempool.exists(prevout.get_hash()))
                 return false;
-            CTransaction_impl<T> &txPrev = CTxMemPool_impl<T>::mempool.lookup(prevout.get_hash());
+            CTransaction_impl<T> &txPrev = CTxMemPool::mempool.lookup(prevout.get_hash());
             if (prevout.get_n() >= txPrev.vout.size())
                 return false;
 
@@ -949,7 +937,7 @@ bool CTransaction_impl<T>::CheckTransaction() const
     // Check for negative or overflow output values
     int64_t nValueOut = 0;
     for (unsigned int i = 0; i < vout.size(); ++i) {
-        const CTxOut_impl<T> &txout = vout[i];
+        const CTxOut &txout = vout[i];
         if (txout.IsEmpty() && !IsCoinBase() && !IsCoinStake())
             return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : txout empty for user transaction"));
         if (txout.get_nValue() < 0)
@@ -962,8 +950,8 @@ bool CTransaction_impl<T>::CheckTransaction() const
     }
 
     // Check for duplicate inputs
-    std::set<COutPoint_impl<T> > vInOutPoints;
-    for(const CTxIn_impl<T> &txin: this->vin) {
+    std::set<COutPoint> vInOutPoints;
+    for(const CTxIn &txin: this->vin) {
         if (vInOutPoints.count(txin.get_prevout()))
             return false;
         vInOutPoints.insert(txin.get_prevout());
@@ -972,7 +960,7 @@ bool CTransaction_impl<T>::CheckTransaction() const
         if (vin[0].get_scriptSig().size() < 2 || vin[0].get_scriptSig().size() > 100)
             return DoS(100, logging::error("CTransaction_impl<T>::CheckTransaction() : coinbase script size is invalid"));
     } else {
-        for(const CTxIn_impl<T> &txin: this->vin) {
+        for(const CTxIn &txin: this->vin) {
             if (txin.get_prevout().IsNull())
                 return DoS(10, logging::error("CTransaction_impl<T>::CheckTransaction() : prevout is null"));
         }
@@ -984,7 +972,7 @@ bool CTransaction_impl<T>::CheckTransaction() const
 template <typename T>
 bool CTransaction_impl<T>::AcceptToMemoryPool(CTxDB &txdb, bool fCheckInputs/*=true*/, bool *pfMissingInputs/*=NULL*/)
 {
-    return CTxMemPool_impl<T>::mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);
+    return CTxMemPool::mempool.accept(txdb, *this, fCheckInputs, pfMissingInputs);
 }
 
 // ppcoin: total coin age spent in transaction, in the unit of coin-days.
@@ -1000,7 +988,7 @@ bool CTransaction_impl<T>::GetCoinAge(CTxDB &txdb, uint64_t &nCoinAge) const
     CBigNum bnCentSecond = 0;  // coin age in the unit of cent-seconds
     nCoinAge = 0;
     if (IsCoinBase()) return true;
-    for(const CTxIn_impl<T> &txin: this->vin) {
+    for(const CTxIn &txin: this->vin) {
         // First try finding the previous transaction in database
         CTransaction_impl<T> txPrev;
         CTxIndex txindex;
@@ -1031,7 +1019,7 @@ bool CTransaction_impl<T>::GetCoinAge(CTxDB &txdb, uint64_t &nCoinAge) const
 }
 
 template <typename T>
-const CTxOut_impl<T> &CTransaction_impl<T>::GetOutputFor(const CTxIn_impl<T> &input, const MapPrevTx &inputs) const
+const CTxOut &CTransaction_impl<T>::GetOutputFor(const CTxIn &input, const MapPrevTx &inputs) const
 {
     MapPrevTx::const_iterator mi = inputs.find(input.get_prevout().get_hash());
     if (mi == inputs.end())
@@ -1088,8 +1076,4 @@ T CMutableTransaction_impl<T>::GetHash() const
 }
 
 template class CTransaction_impl<uint256>;
-template class CTxMemPool_impl<uint256>;
-template class COutPoint_impl<uint256>;
-template class CTxIn_impl<uint256>;
-template class CTxOut_impl<uint256>;
 template class block_transaction::manage_impl<uint256>;

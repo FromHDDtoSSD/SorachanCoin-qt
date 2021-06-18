@@ -109,8 +109,8 @@ public:
 
     bool ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx, CTxIndex &txindex);
     bool ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx);
-    bool ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex);
-    bool ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx);
+    bool ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex);
+    bool ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx);
 
     bool WriteBlockIndex(const CDiskBlockIndex &blockindex);
 
@@ -132,7 +132,7 @@ public:
     bool WriteBlockHashType(uint256 hash, const BLOCK_HASH_MODIFIER &modifier);
 
     bool LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
-                        std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > &setStakeSeen,
+                        std::set<std::pair<COutPoint, unsigned int> > &setStakeSeen,
                         CBlockIndex *&pindexGenesisBlock,
                         uint256 &hashBestChain,
                         int &nBestHeight,

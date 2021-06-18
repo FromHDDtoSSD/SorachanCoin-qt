@@ -16,7 +16,7 @@ CScript block_info::COINBASE_FLAGS;
 CChain_impl<uint256> block_info::chainActive;
 BlockMap block_info::mapBlockIndex;
 BlockHeight block_info::mapBlockLyraHeight;
-std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > block_info::setStakeSeen;
+std::set<std::pair<COutPoint, unsigned int> > block_info::setStakeSeen;
 CBlockIndex *block_info::pindexGenesisBlock = nullptr;
 int64_t block_info::nTimeBestReceived = 0;
 std::set<CWallet *> block_info::setpwalletRegistered;
@@ -93,15 +93,15 @@ int32_t block_hash_helper::create_proof_nonce_zero(bool pos, bool masternode, bo
 }
 
 bool block_hash_helper::is_proof(int type, int32_t nonce_zero_value) {
-    if(type==LYRA2REV2_POS_TYPE)
+    if(type==SCRYPT_POS_TYPE)
         return (bool)(nonce_zero_value & (1 << 4));
-    if(type==LYRA2REV2_MASTERNODE_TYPE)
+    if(type==SCRYPT_MASTERNODE_TYPE)
         return (bool)(nonce_zero_value & (1 << 5));
-    if(type==LYRA2REV2_POBENCH_TYPE)
+    if(type==SCRYPT_POBENCH_TYPE)
         return (bool)(nonce_zero_value & (1 << 6));
-    if(type==LYRA2REV2_POSPACE_TYPE)
+    if(type==SCRYPT_POSPACE_TYPE)
         return (bool)(nonce_zero_value & (1 << 7));
-    if(type==LYRA2REV2_POPREDICT_TYPE)
+    if(type==SCRYPT_POPREDICT_TYPE)
         return (bool)(nonce_zero_value & (1 << 8));
 
     return false;

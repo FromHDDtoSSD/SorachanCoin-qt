@@ -106,10 +106,10 @@ template <typename T>
 class CTxOutCompressor_impl : protected CCompressAmount
 {
 private:
-    CTxOut_impl<T> &txout;
+    CTxOut &txout;
 
 public:
-    CTxOutCompressor_impl(CTxOut_impl<T> &txoutIn) : txout(txoutIn) {}
+    CTxOutCompressor_impl(CTxOut &txoutIn) : txout(txoutIn) {}
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -138,7 +138,7 @@ template <typename T>
 class CTxInUndo_impl
 {
 public:
-    CTxOut_impl<T> txout;   // the txout data before being spent
+    CTxOut txout;   // the txout data before being spent
     bool fCoinBase; // if the outpoint was the last unspent: whether it belonged to a coinbase
     bool fCoinStake;
     bool fCoinPoBench;
@@ -147,7 +147,7 @@ public:
     int nVersion;         // if the outpoint was the last unspent: its version
 
     CTxInUndo_impl() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0) {}
-    CTxInUndo_impl(const CTxOut_impl<T> &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoBenchIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoBench(fCoinPoBenchIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
+    CTxInUndo_impl(const CTxOut &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoBenchIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoBench(fCoinPoBenchIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
 
     unsigned int GetSerializeSize(int, int) const {
         return ::GetSerializeSize(VARUINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0) + (fCoinPoBench ? 16 : 0) + (fCoinMasternode ? 32 : 0))) +
@@ -397,7 +397,7 @@ public:
                 nMaskCode--;
         }
         // txouts themself
-        vout.assign(vAvail.size(), CTxOut_impl<T>());
+        vout.assign(vAvail.size(), CTxOut());
         for (unsigned int i = 0; i < vAvail.size(); i++) {
             if (vAvail[i])
                 ::Unserialize(s, REF(CTxOutCompressor_impl<T>(vout[i])));
@@ -408,7 +408,7 @@ public:
     }
 
     //! mark an outpoint spent, and construct undo information
-    bool Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo);
+    bool Spend(const COutPoint &out, CTxInUndo_impl<T> &undo);
 
     //! mark a vout spent
     bool Spend(int nPos);
@@ -428,7 +428,7 @@ public:
     bool fCoinMasternode;
 
     //! unspent transaction outputs; spent outputs are .IsNull(); spent outputs at the end of the array are dropped
-    std::vector<CTxOut_impl<T>> vout;
+    std::vector<CTxOut> vout;
 
     //! at which height this transaction was included in the active block chain
     int nHeight;
@@ -612,7 +612,7 @@ public:
     //! Return priority of tx at height nHeight
     double GetPriority(const CTransaction_impl<T> &tx, int nHeight) const;
 
-    const CTxOut_impl<T> &GetOutputFor(const CTxIn_impl<T> &input) const;
+    const CTxOut &GetOutputFor(const CTxIn &input) const;
 
     friend class CCoinsModifier_impl<T>;
 

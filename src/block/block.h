@@ -246,14 +246,14 @@ public:
     bool IsProofOfWork() const {
         return !IsProofOfStake() && !IsProofOfBench() && !IsProofOfMasternode();
     }
-    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfStake() const {
-        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
+    std::pair<COutPoint, unsigned int> GetProofOfStake() const {
+        return IsProofOfStake() ? std::make_pair(Merkle_t::vtx[1].get_vin(0).get_prevout(), Merkle_t::vtx[1].get_nTime()) : std::make_pair(COutPoint(), (unsigned int)0);
     }
-    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfBench() const {
-        return IsProofOfBench() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
+    std::pair<COutPoint, unsigned int> GetProofOfBench() const {
+        return IsProofOfBench() ? std::make_pair(Merkle_t::vtx[2].get_vin(0).get_prevout(), Merkle_t::vtx[2].get_nTime()) : std::make_pair(COutPoint(), (unsigned int)0);
     }
-    std::pair<COutPoint_impl<uint256>, unsigned int> GetProofOfMasternode() const {
-        return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint_impl<uint256>(), (unsigned int)0);
+    std::pair<COutPoint, unsigned int> GetProofOfMasternode() const {
+        return IsProofOfMasternode() ? std::make_pair(Merkle_t::vtx[3].get_vin(0).get_prevout(), Merkle_t::vtx[3].get_nTime()) : std::make_pair(COutPoint(), (unsigned int)0);
     }
     // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const {
@@ -335,15 +335,15 @@ protected:
     uint32_t nBenchModifierChecksum; // checksum of index; in-memory only
     uint32_t nMasternodeModifierChecksum; // checksum of index; in-memory only
     // proof-of-stake specific fields
-    COutPoint_impl<uint256> prevoutStake;
+    COutPoint prevoutStake;
     uint32_t nStakeTime;
     uint256 hashProofOfStake;
     // proof-of-bench specific fields
-    COutPoint_impl<uint256> prevoutBench;
+    COutPoint prevoutBench;
     uint32_t nBenchTime;
     uint256 hashProofOfBench;
     // proof-of-masternode specific fields
-    COutPoint_impl<uint256> prevoutMasternode;
+    COutPoint prevoutMasternode;
     uint32_t nMasternodeTime;
     uint256 hashProofOfMasternode;
     // ppcoin: block index flags
@@ -371,10 +371,10 @@ public:
     uint32_t get_nStakeModifierChecksum() const {return nStakeModifierChecksum;}
     uint64_t get_nMasternodeModifier() const {return nMasternodeModifier;}
     uint32_t get_nMasterModifierChecksum() const {return nMasternodeModifierChecksum;}
-    COutPoint_impl<uint256> get_prevoutStake() const {return prevoutStake;}
+    COutPoint get_prevoutStake() const {return prevoutStake;}
     uint32_t get_nStakeTime() const {return nStakeTime;}
     uint256 get_hashProofOfStake() const {return hashProofOfStake;}
-    COutPoint_impl<uint256> get_prevoutMasternode() const {return prevoutMasternode;}
+    COutPoint get_prevoutMasternode() const {return prevoutMasternode;}
     uint32_t get_nMasternodeTime() const {return nMasternodeTime;}
     uint256 get_hashProofOfMasternode() const {return hashProofOfMasternode;}
     uint32_t get_nFlags() const {return nFlags;}
@@ -395,10 +395,10 @@ public:
     void set_nStakeModifierChecksum(uint32_t _in) {nStakeModifierChecksum=_in;}
     void set_nMasternodeModifier(uint64_t _in) {nMasternodeModifier=_in;}
     void set_nMasternodeModifierChecksum(uint32_t _in) {nMasternodeModifierChecksum=_in;}
-    void set_prevoutStake(const COutPoint_impl<uint256> &_in) {prevoutStake=_in;}
+    void set_prevoutStake(const COutPoint &_in) {prevoutStake=_in;}
     void set_nStakeTime(uint32_t _in) {nStakeTime=_in;}
     void set_hashProofOfStake(const uint256 &_in) {hashProofOfStake=_in;}
-    void set_prevoutMasternode(const COutPoint_impl<uint256> &_in) {prevoutMasternode=_in;}
+    void set_prevoutMasternode(const COutPoint &_in) {prevoutMasternode=_in;}
     void set_nMasternodeTime(uint32_t _in) {nMasternodeTime=_in;}
     void set_hashProofOfMasternode(const uint256 &_in) {hashProofOfMasternode=_in;}
     void set_nFlags(uint32_t _in) {nFlags=_in;}

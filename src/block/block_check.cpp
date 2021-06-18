@@ -204,7 +204,7 @@ void CCoins_impl<T>::Clear() {
     fCoinStake = false;
     fCoinPoBench = false;
     fCoinMasternode = false;
-    std::vector<CTxOut_impl<T>>().swap(vout);
+    std::vector<CTxOut>().swap(vout);
     nHeight = 0;
     nVersion = 0;
 }
@@ -214,12 +214,12 @@ void CCoins_impl<T>::Cleanup() {
     while (vout.size() > 0 && vout.back().IsNull())
         vout.pop_back();
     if (vout.empty())
-        std::vector<CTxOut_impl<T>>().swap(vout);
+        std::vector<CTxOut>().swap(vout);
 }
 
 template <typename T>
 void CCoins_impl<T>::ClearUnspendable() {
-    for (CTxOut_impl<T> &txout: vout) {
+    for (CTxOut &txout: vout) {
         if (txout.get_scriptPubKey().IsUnspendable())
             txout.SetNull();
     }
@@ -228,7 +228,7 @@ void CCoins_impl<T>::ClearUnspendable() {
 
 template <typename T>
 bool CCoins_impl<T>::IsPruned() const {
-    for (const CTxOut_impl<T> &out: vout) {
+    for (const CTxOut &out: vout) {
         if (! out.IsNull())
             return false;
     }
@@ -236,7 +236,7 @@ bool CCoins_impl<T>::IsPruned() const {
 }
 
 template <typename T>
-bool CCoins_impl<T>::Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo) {
+bool CCoins_impl<T>::Spend(const COutPoint &out, CTxInUndo_impl<T> &undo) {
     if (out.get_n() >= vout.size())
         return false;
     if (vout[out.get_n()].IsNull())
@@ -258,7 +258,7 @@ bool CCoins_impl<T>::Spend(const COutPoint_impl<T> &out, CTxInUndo_impl<T> &undo
 template <typename T>
 bool CCoins_impl<T>::Spend(int nPos) {
     CTxInUndo_impl<T> undo;
-    COutPoint_impl<T> out(0, nPos);
+    COutPoint out(0, nPos);
     return Spend(out, undo);
 }
 
@@ -460,7 +460,7 @@ unsigned int CCoinsViewCache_impl<T>::GetCacheSize() const
 }
 
 template <typename T>
-const CTxOut_impl<T> &CCoinsViewCache_impl<T>::GetOutputFor(const CTxIn_impl<T> &input) const
+const CTxOut &CCoinsViewCache_impl<T>::GetOutputFor(const CTxIn &input) const
 {
     const CCoins_impl<T> *coins = AccessCoins(input.get_prevout().get_hash());
     assert(coins && coins->IsAvailable(input.get_prevout().get_n()));
@@ -485,7 +485,7 @@ bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction_impl<T> &tx) const
 {
     if (!tx.IsCoinBase() && !tx.IsZerocoinSpend()) {
         for (unsigned int i = 0; i < tx.get_vin().size(); i++) {
-            const COutPoint_impl<T> &prevout = tx.get_vin(i).get_prevout();
+            const COutPoint &prevout = tx.get_vin(i).get_prevout();
             const CCoins_impl<T> *coins = AccessCoins(prevout.get_hash());
             if (!coins || !coins->IsAvailable(prevout.get_n())) {
                 return false;
@@ -501,7 +501,7 @@ double CCoinsViewCache_impl<T>::GetPriority(const CTransaction_impl<T> &tx, int 
     if (tx.IsCoinBase() || tx.IsCoinStake() || tx.IsCoinBench() || tx.IsCoinMasternode())
         return 0.0;
     double dResult = 0.0;
-    for (const CTxIn_impl<T> &txin:  tx.get_vin()) {
+    for (const CTxIn &txin:  tx.get_vin()) {
         const CCoins_impl<T> *coins = AccessCoins(txin.get_prevout().get_hash());
         assert(coins);
         if (! coins->IsAvailable(txin.get_prevout().get_n())) continue;

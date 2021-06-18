@@ -81,24 +81,24 @@ bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, co
     }
 
     // other than PoW check
-    if(block_hash_helper::is_proof(LYRA2REV2_POS_TYPE, nonce_zero_value)) {
-        type = LYRA2REV2_POS_TYPE;
+    if(block_hash_helper::is_proof(SCRYPT_POS_TYPE, nonce_zero_value)) {
+        type = SCRYPT_POS_TYPE;
         return true;
     }
-    if(block_hash_helper::is_proof(LYRA2REV2_MASTERNODE_TYPE, nonce_zero_value)) {
-        type = LYRA2REV2_MASTERNODE_TYPE;
+    if(block_hash_helper::is_proof(SCRYPT_MASTERNODE_TYPE, nonce_zero_value)) {
+        type = SCRYPT_MASTERNODE_TYPE;
         return true;
     }
-    if(block_hash_helper::is_proof(LYRA2REV2_POBENCH_TYPE, nonce_zero_value)) {
-        type = LYRA2REV2_POBENCH_TYPE;
+    if(block_hash_helper::is_proof(SCRYPT_POBENCH_TYPE, nonce_zero_value)) {
+        type = SCRYPT_POBENCH_TYPE;
         return true;
     }
-    if(block_hash_helper::is_proof(LYRA2REV2_POSPACE_TYPE, nonce_zero_value)) {
-        type = LYRA2REV2_POSPACE_TYPE;
+    if(block_hash_helper::is_proof(SCRYPT_POSPACE_TYPE, nonce_zero_value)) {
+        type = SCRYPT_POSPACE_TYPE;
         return true;
     }
-    if(block_hash_helper::is_proof(LYRA2REV2_POPREDICT_TYPE, nonce_zero_value)) {
-        type = LYRA2REV2_POPREDICT_TYPE;
+    if(block_hash_helper::is_proof(SCRYPT_POPREDICT_TYPE, nonce_zero_value)) {
+        type = SCRYPT_POPREDICT_TYPE;
         return true;
     }
 

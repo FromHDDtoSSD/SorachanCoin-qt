@@ -20,7 +20,7 @@
 #include <checkpoints/checkpoints_type.h>
 
 class CBlockIndex;
-template <typename T> class COutPoint_impl;
+class COutPoint;
 class CWallet;
 
 using BlockMap = std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher>;
@@ -118,11 +118,11 @@ enum BLOCK_HASH_TYPE {
     SCRYPT_POW_TYPE = 1,       // ASIC
     LYRA2REV2_POW_TYPE,        // GPU
     YESPOWER_POW_TYPE,         // CPU
-    LYRA2REV2_POS_TYPE,        // Stake
-    LYRA2REV2_MASTERNODE_TYPE, // Masternode
-    LYRA2REV2_POBENCH_TYPE,    // SSD: Sora neko
-    LYRA2REV2_POSPACE_TYPE,    // HDD: Chia
-    LYRA2REV2_POPREDICT_TYPE,  // drive failure prediction: SoraChan
+    SCRYPT_POS_TYPE,           // Stake
+    SCRYPT_MASTERNODE_TYPE,    // Masternode
+    SCRYPT_POBENCH_TYPE,       // SSD: Sora neko
+    SCRYPT_POSPACE_TYPE,       // HDD: Chia
+    SCRYPT_POPREDICT_TYPE,     // drive failure prediction: SoraChan
     SHA256D_POW_TYPE,          // ASIC
     SHA512D_POW_TYPE,          // ASIC
     BLAKE2S_POW_TYPE,          // ASIC
@@ -261,7 +261,7 @@ namespace block_info
     extern CChain_impl<uint256> chainActive;
     extern BlockMap mapBlockIndex;
     extern BlockHeight mapBlockLyraHeight;
-    extern std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > setStakeSeen;
+    extern std::set<std::pair<COutPoint, unsigned int> > setStakeSeen;
     extern CBlockIndex *pindexGenesisBlock;// = nullptr;
 
     const std::string strMessageMagic = strCoinName " Signed Message:\n";

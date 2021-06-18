@@ -300,16 +300,16 @@ uint256 CBlockHeader_impl::GetHash(int type) const { // private
         return block_hash_func::GetPoW_Scrypt((const char *)this);
     } else if(type==LYRA2REV2_POW_TYPE) {
         return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==LYRA2REV2_POS_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==LYRA2REV2_MASTERNODE_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==LYRA2REV2_POBENCH_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==LYRA2REV2_POSPACE_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==LYRA2REV2_POPREDICT_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
+    } else if (type==SCRYPT_POS_TYPE) {
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
+    } else if (type==SCRYPT_MASTERNODE_TYPE) {
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
+    } else if (type==SCRYPT_POBENCH_TYPE) {
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
+    } else if (type==SCRYPT_POSPACE_TYPE) {
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
+    } else if (type==SCRYPT_POPREDICT_TYPE) {
+        return block_hash_func::GetPoW_Scrypt((const char *)this);
     } else if (type==SCRYPT_POW_TYPE) {
         return block_hash_func::GetPoW_Scrypt((const char *)this);
     } else if (type==SHA256D_POW_TYPE) {

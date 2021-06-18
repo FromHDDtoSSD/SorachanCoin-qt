@@ -2,11 +2,9 @@
 #define MULTISIGINPUTENTRY_H
 
 #include <QFrame>
+#include <uint256.h>
 
-#include "uint256.h"
-
-template <typename T> class CTxIn_impl;
-using CTxIn = CTxIn_impl<uint256>;
+class CTxIn;
 class WalletModel;
 
 namespace Ui
@@ -19,8 +17,10 @@ class MultisigInputEntry : public QFrame
     Q_OBJECT;
 
   private:
-    MultisigInputEntry(const MultisigInputEntry &); // {}
-    MultisigInputEntry &operator=(const MultisigInputEntry &); // {}
+    MultisigInputEntry(const MultisigInputEntry &)=delete;
+    MultisigInputEntry &operator=(const MultisigInputEntry &)=delete;
+    MultisigInputEntry(MultisigInputEntry &&)=delete;
+    MultisigInputEntry &operator=(MultisigInputEntry &&)=delete;
   public:
     explicit MultisigInputEntry(QWidget *parent = 0);
     ~MultisigInputEntry();
@@ -54,4 +54,3 @@ class MultisigInputEntry : public QFrame
 };
 
 #endif // MULTISIGINPUTENTRY_H
-//@
