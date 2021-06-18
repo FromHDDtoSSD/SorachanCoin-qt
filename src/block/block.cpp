@@ -241,7 +241,7 @@ int CBlockHeader_impl::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_
             if(! block_hash_modifier_checkpoints::CheckHardened(modifier_gene.get_nHeight(), modifier_gene.GetBlockModifierHash()))
                 throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
             block_info::mapBlockLyraHeight.insert(std::make_pair(hash_prev, modifier_gene));
-            if(! CTxDB_impl<uint256>().WriteBlockHashType(hash_prev, modifier_gene))
+            if(! CTxDB().WriteBlockHashType(hash_prev, modifier_gene))
                 throw std::runtime_error("BLOCK_HASH_MODIFIER prev DB write ERROR.");
             if(args_bool::fDebug) {
                 logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d info:%s\n", _in, modifier_gene.ToString().c_str());
@@ -252,7 +252,7 @@ int CBlockHeader_impl::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_
             BLOCK_HASH_MODIFIER modiffer_cblock = BLOCK_HASH_MODIFIER(_in-1, 0, HASH_TYPE_NONE);
             uint256 hash_cblock = GetPoHash(_in-1, HASH_TYPE_NONE);
             block_info::mapBlockLyraHeight.insert(std::make_pair(hash_cblock, modiffer_cblock));
-            if(! CTxDB_impl<uint256>().WriteBlockHashType(hash_cblock, modiffer_cblock))
+            if(! CTxDB().WriteBlockHashType(hash_cblock, modiffer_cblock))
                 throw std::runtime_error("BLOCK_HASH_MODIFIER cblock DB write ERROR.");
         }
 
@@ -285,7 +285,7 @@ int CBlockHeader_impl::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_
             throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash_current, modifier_current)); // current
 
-        if(! CTxDB_impl<uint256>().WriteBlockHashType(hash_current, modifier_current))
+        if(! CTxDB().WriteBlockHashType(hash_current, modifier_current))
             throw std::runtime_error("BLOCK_HASH_MODIFIER DB current write ERROR.");
         return type;
     } else { // debug (no write to DB)
@@ -383,7 +383,7 @@ void CBlockHeader_impl::UpdateTime(const CBlockIndex *pindexPrev) {
     CBlockHeader::set_LastHeight(pindexPrev->get_nHeight());
 }
 
-bool CBlock::DisconnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex)
+bool CBlock::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
 {
     // Disconnect in reverse order
     for (int i = Merkle_t::vtx.size() - 1; i >= 0; --i) {
@@ -406,7 +406,7 @@ bool CBlock::DisconnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex)
     return true;
 }
 
-bool CBlock::ConnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex, bool fJustCheck/*=false*/)
+bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=false*/)
 {
     CBlockHeader::set_LastHeight(pindex->get_nHeight() - 1);
     CBlockHeader_impl::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1,
@@ -564,7 +564,7 @@ bool CBlock::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions/*=tr
     return true;
 }
 
-bool CBlock::SetBestChain(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew)
+bool CBlock::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     uint256 hash = GetPoHash();
     if (! txdb.TxnBegin())
@@ -720,7 +720,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     pindexNew->set_phashBlock(&((*mi).first));
 
     // Write to disk block index
-    CTxDB_impl<uint256> txdb;
+    CTxDB txdb;
     if (! txdb.TxnBegin()) return false;
     txdb.WriteBlockIndex(CDiskBlockIndex(pindexNew));
     if (! txdb.TxnCommit()) return false;
@@ -1005,7 +1005,7 @@ bool CBlock::CheckBlockSignature() const
 }
 
 // Called from inside SetBestChain: attaches a block to the new best chain being built
-bool CBlock::SetBestChainInner(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew)
+bool CBlock::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     uint256 hash = GetPoHash();
 

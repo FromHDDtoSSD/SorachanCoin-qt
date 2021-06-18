@@ -966,7 +966,7 @@ public:
 /**
  * Level DB
  * RAII class that provides access to a LevelDB database
- * using (Blockchain): CTxDB_impl<uint256>, CTxDB_impl<uint65536>
+ * using (Blockchain): CTxDB
  */
 #ifdef USE_LEVELDB
 class CLevelDB : public IDB

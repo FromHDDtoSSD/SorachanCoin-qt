@@ -141,8 +141,7 @@ static void sqlite_oldblockindex_remove(bool fRemoveOld) {
 }
 
 // Note(pszMode): fReadOnly == false
-template <typename HASH>
-void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= false*/) {
+void CTxDB::init_blockindex(const char *pszMode, bool fRemoveOld /*= false*/) {
     bool fCreate = ::strchr(pszMode, 'c');
     if (Exists(std::string("version"))) {
         int nVersion;
@@ -157,11 +156,11 @@ void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= 
             // Note: activeBatch is nullptr.
             // Remove directory and create new database.
             if(! CLevelDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, leveldb_oldblockindex_remove)) {
-                throw std::runtime_error("CTxDB_impl::init_blockindex(): error opening database environment");
+                throw std::runtime_error("CTxDB::init_blockindex(): error opening database environment");
             }
 #else
             if(! CSqliteDBEnv::get_instance().restart(iofs::GetDataDir(), fRemoveOld, sqlite_oldblockindex_remove)) {
-                throw std::runtime_error("CTxDB_impl::init_blockindex(): error opening database environment");
+                throw std::runtime_error("CTxDB::init_blockindex(): error opening database environment");
             }
 #endif
 
@@ -175,16 +174,13 @@ void CTxDB_impl<HASH>::init_blockindex(const char *pszMode, bool fRemoveOld /*= 
 }
 
 // CLevelDB subclasses are created and destroyed VERY OFTEN. That's why we shouldn't treat this as a free operations.
-template <typename HASH>
-CTxDB_impl<HASH>::CTxDB_impl(const char *pszMode/* ="r+" */) : CTxDBHybrid(pszMode) {
+CTxDB::CTxDB(const char *pszMode/* ="r+" */) : CTxDBHybrid(pszMode) {
     assert(pszMode);
 }
 
-template <typename HASH>
-CTxDB_impl<HASH>::~CTxDB_impl() {}
+CTxDB::~CTxDB() {}
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
+bool CTxDB::ReadTxIndex(uint256 hash, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
 
@@ -192,42 +188,37 @@ bool CTxDB_impl<HASH>::ReadTxIndex(HASH hash, CTxIndex &txindex)
     return Read(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::UpdateTxIndex(HASH hash, const CTxIndex &txindex)
+bool CTxDB::UpdateTxIndex(uint256 hash, const CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::AddTxIndex(const CTransaction_impl<HASH> &tx, const CDiskTxPos &pos, int nHeight)
+bool CTxDB::AddTxIndex(const CTransaction_impl<uint256> &tx, const CDiskTxPos &pos, int nHeight)
 {
     assert(!args_bool::fClient);
 
     // Add to tx index
-    HASH hash = tx.GetHash();
+    uint256 hash = tx.GetHash();
     CTxIndex txindex(pos, tx.get_vout().size());
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::EraseTxIndex(const CTransaction_impl<HASH> &tx)
+bool CTxDB::EraseTxIndex(const CTransaction_impl<uint256> &tx)
 {
     assert(!args_bool::fClient);
-    HASH hash = tx.GetHash();
+    uint256 hash = tx.GetHash();
 
     return Erase(std::make_pair(std::string("tx"), hash));
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ContainsTx(HASH hash)
+bool CTxDB::ContainsTx(uint256 hash)
 {
     assert(!args_bool::fClient);
     return Exists(std::make_pair(std::string("tx"), hash));
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx, CTxIndex &txindex)
+bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     tx.SetNull();
@@ -238,42 +229,36 @@ bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx, CTxInd
     return (tx.ReadFromDisk(txindex.get_pos()));
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx)
+bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(hash, tx, txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx, CTxIndex &txindex)
+bool CTxDB::ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
 {
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx)
+bool CTxDB::ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBlockIndex(const CDiskBlockIndex &blockindex)
+bool CTxDB::WriteBlockIndex(const CDiskBlockIndex &blockindex)
 {
     return Write(std::make_pair(std::string("blockindex"), blockindex.GetBlockHash()), blockindex);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadHashBestChain(HASH &hashBestChain)
+bool CTxDB::ReadHashBestChain(uint256 &hashBestChain)
 {
     return Read(std::string("hashBestChain"), hashBestChain);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
+bool CTxDB::WriteHashBestChain(uint256 hashBestChain)
 {
-    //debugcs::instance() << "CTxDB_impl called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
+    //debugcs::instance() << "CTxDB called WriteHashBestChain hash: " << hashBestChain.ToString() << debugcs::endl();
     bool ret1 = Write(std::string("hashBestChain"), hashBestChain);
     bool ret2 = Write(std::string("hashGenesisChain"),
                      (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
@@ -281,62 +266,52 @@ bool CTxDB_impl<HASH>::WriteHashBestChain(HASH hashBestChain)
     //return Write(std::string("hashBestChain"), hashBestChain);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust)
+bool CTxDB::ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust)
 {
     return Read(std::string("bnBestInvalidTrust"), bnBestInvalidTrust);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
+bool CTxDB::WriteBestInvalidTrust(CBigNum bnBestInvalidTrust)
 {
     return Write(std::string("bnBestInvalidTrust"), bnBestInvalidTrust);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadSyncCheckpoint(HASH &hashCheckpoint)
+bool CTxDB::ReadSyncCheckpoint(uint256 &hashCheckpoint)
 {
     return Read(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteSyncCheckpoint(HASH hashCheckpoint)
+bool CTxDB::WriteSyncCheckpoint(uint256 hashCheckpoint)
 {
     return Write(std::string("hashSyncCheckpoint"), hashCheckpoint);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadCheckpointPubKey(std::string &strPubKey)
+bool CTxDB::ReadCheckpointPubKey(std::string &strPubKey)
 {
     return Read(std::string("strCheckpointPubKey"), strPubKey);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteCheckpointPubKey(const std::string &strPubKey)
+bool CTxDB::WriteCheckpointPubKey(const std::string &strPubKey)
 {
     return Write(std::string("strCheckpointPubKey"), strPubKey);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::ReadModifierUpgradeTime(unsigned int &nUpgradeTime)
+bool CTxDB::ReadModifierUpgradeTime(unsigned int &nUpgradeTime)
 {
     return Read(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
+bool CTxDB::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
 {
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::WriteBlockHashType(HASH hash, const BLOCK_HASH_MODIFIER &modifier) {
+bool CTxDB::WriteBlockHashType(uint256 hash, const BLOCK_HASH_MODIFIER &modifier) {
     return Write(std::make_pair(std::string("blockhashtype"), hash), modifier); // overwrite: true
 }
 
 // like block_info::mapBlockIndex
 // must be singleton model
-template <typename HASH>
 class CmapBlockIndex final {
     CmapBlockIndex(const CmapBlockIndex &)=delete;
     CmapBlockIndex(CmapBlockIndex &&)=delete;
@@ -351,7 +326,7 @@ class CmapBlockIndex final {
         iterator() noexcept : pidb(nullptr), pmap(nullptr) { // end iterator
             fNotfound=true;
         }
-        explicit iterator(IDB::DbIterator *pidbIn, typename std::map<HASH, CBlockIndex *> *pmapIn, typename std::map<HASH, CBlockIndex *>::iterator imapIn) noexcept {
+        explicit iterator(IDB::DbIterator *pidbIn, typename std::map<uint256, CBlockIndex *> *pmapIn, typename std::map<uint256, CBlockIndex *>::iterator imapIn) noexcept {
             this->pidb = pidbIn;
             this->pmap = pmapIn;
             this->imap = imapIn;
@@ -381,7 +356,7 @@ class CmapBlockIndex final {
                     return;
                 }
                 try {
-                    HASH hash;
+                    uint256 hash;
                     CBlockIndex *pobj = new CBlockIndex;
                     ssKey.ignore();
                     ::Unserialize(ssKey, hash);
@@ -409,7 +384,7 @@ class CmapBlockIndex final {
         bool operator!=(const iterator &obj) const {
             return !operator==(obj);
         }
-        const std::pair<HASH, CBlockIndex *> operator*() const {
+        const std::pair<uint256, CBlockIndex *> operator*() const {
             if(vbuffer.size()==0)
                 return *imap;
             else
@@ -418,12 +393,12 @@ class CmapBlockIndex final {
      private:
         mutable bool fNotfound;
         IDB::DbIterator *pidb;
-        std::map<HASH, CBlockIndex *> *pmap;
-        typename std::map<HASH, CBlockIndex *>::iterator imap;
+        std::map<uint256, CBlockIndex *> *pmap;
+        typename std::map<uint256, CBlockIndex *>::iterator imap;
 
         // temp buffer
-        std::vector<std::pair<HASH, CBlockIndex *>> vbuffer;
-        typename std::vector<std::pair<HASH, CBlockIndex *>>::iterator ibuffer;
+        std::vector<std::pair<uint256, CBlockIndex *>> vbuffer;
+        typename std::vector<std::pair<uint256, CBlockIndex *>>::iterator ibuffer;
     };
 
     static CmapBlockIndex &get_instance() {
@@ -431,23 +406,23 @@ class CmapBlockIndex final {
         return obj;
     }
 
-    int count(const HASH &hash) const {
+    int count(const uint256 &hash) const {
         if(_mapBlockIndex.count(hash))
             return 1;
         try {
             CBlockIndex *pobj = new CBlockIndex;
-            if(getsqlBlockIndex(hash, pobj)==false) {
+            if(getsqlBlockIndex(hash, *pobj)==false) {
                 delete pobj;
                 return 0;
             }
-            _mapBlockIndex.emplace(hash, pobj);
+            _mapBlockIndex.insert(std::make_pair(hash, pobj));
             return 1;
         } catch (const std::exception &) {
             throw std::runtime_error("CmapBlockIndex count() out of memory");
         }
     }
 
-    iterator find(const HASH &hash) {
+    iterator find(const uint256 &hash) {
         if(count(hash)==0)
             return std::move(iterator());
         return std::move(iterator(&_ite, &_mapBlockIndex, _mapBlockIndex.find(hash)));
@@ -457,12 +432,12 @@ class CmapBlockIndex final {
         if(_mapBlockIndex.size()==0) {
             try {
                 CBlockIndex *pobj = new CBlockIndex;
-                HASH hash;
+                uint256 hash;
                 if(getnextBlockIndex(_ite, hash, *pobj)==false) {
                     delete pobj;
                     return end();
                 }
-                _mapBlockIndex.emplace(hash, pobj);
+                _mapBlockIndex.insert(std::make_pair(hash, pobj));
             } catch (const std::exception &) {
                 throw std::runtime_error("CmapBlockIndex begin: out of memory");
             }
@@ -474,14 +449,14 @@ class CmapBlockIndex final {
         return std::move(iterator());
     }
 
-    CBlockIndex *operator[](const HASH &hash) const {
+    CBlockIndex *operator[](const uint256 &hash) const {
         if(_mapBlockIndex.count(hash))
             return _mapBlockIndex[hash];
         try {
             CBlockIndex *pobj = new CBlockIndex;
-            if(! getsqlBlockIndex(hash, pobj))
+            if(! getsqlBlockIndex(hash, *pobj))
                 throw std::runtime_error("CmapBlockIndex [] getsqlBlockIndex failure");
-            _mapBlockIndex.emplace(hash, pobj);
+            _mapBlockIndex.insert(std::make_pair(hash, pobj));
             return _mapBlockIndex[hash];
         } catch (const std::exception &e) {
             throw std::runtime_error(e.what());
@@ -494,7 +469,7 @@ class CmapBlockIndex final {
     }
     ~CmapBlockIndex() {}
 
-    static bool getnextBlockIndex(const IDB::DbIterator &ite, HASH &hash, CBlockIndex &blockIndex) {
+    static bool getnextBlockIndex(const IDB::DbIterator &ite, uint256 &hash, CBlockIndex &blockIndex) {
         std::vector<char> vchKey;
         CDBStream ssKey(&vchKey);
         std::vector<char> vchValue;
@@ -506,7 +481,7 @@ class CmapBlockIndex final {
         ::Unserialize(ssValue, blockIndex);
         return true;
     }
-    static bool getsqlBlockIndex(const HASH &hash, CBlockIndex &blockIndex) {
+    static bool getsqlBlockIndex(const uint256 &hash, CBlockIndex &blockIndex) {
         try {
             std::vector<char> vchKey;
             CDBStream ssKey(&vchKey);
@@ -525,11 +500,10 @@ class CmapBlockIndex final {
 
  private:
     IDB::DbIterator _ite;
-    std::map<HASH, CBlockIndex *> _mapBlockIndex;
+    mutable std::map<uint256, CBlockIndex *> _mapBlockIndex;
 };
 
-template <typename HASH>
-static CBlockIndex *InsertBlockIndex(const HASH &hash, std::unordered_map<HASH, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex) {
+static CBlockIndex *InsertBlockIndex(const uint256 &hash, std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex) {
     if (hash == 0)
         return nullptr;
 
@@ -549,16 +523,14 @@ static CBlockIndex *InsertBlockIndex(const HASH &hash, std::unordered_map<HASH, 
     return pindexNew;
 }
 
-template <typename HASH>
-bool CTxDB_impl<HASH>::LoadBlockIndex(
-        std::unordered_map<HASH, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
-        std::set<std::pair<COutPoint_impl<HASH>, unsigned int>> &setStakeSeen,
+bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
+        std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > &setStakeSeen,
         CBlockIndex *&pindexGenesisBlock,
-        HASH &hashBestChain,
+        uint256 &hashBestChain,
         int &nBestHeight,
         CBlockIndex *&pindexBest,
-        HASH &nBestInvalidTrust,
-        HASH &nBestChainTrust)
+        uint256 &nBestInvalidTrust,
+        uint256 &nBestChainTrust)
 {
     if (mapBlockIndex.size() > 0) {
         // Already loaded once in this session. It can happen during migration from BDB.
@@ -591,7 +563,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
         ssKey.ignore();
 
-        HASH hash;
+        uint256 hash;
         ::Unserialize(ssKey, hash);
         BLOCK_HASH_MODIFIER data;
         ::Unserialize(ssValue, data);
@@ -619,10 +591,10 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         CDiskBlockIndex diskindex;
         ::Unserialize(ssValue, diskindex);
 
-        HASH blockHash = diskindex.GetBlockHash();
-        //debugcs::instance() << "CTxDB_impl ReadAtCursor HASH: " << blockHash.ToString().c_str() << debugcs::endl();
+        uint256 blockHash = diskindex.GetBlockHash();
+        //debugcs::instance() << "CTxDB ReadAtCursor hash: " << blockHash.ToString().c_str() << debugcs::endl();
         //if(diskindex.get_nHeight() > 1400000)
-        //    debugcs::instance() << "CTxDB_impl ReadAtCursor height: " << diskindex.get_nHeight() << debugcs::endl();
+        //    debugcs::instance() << "CTxDB ReadAtCursor height: " << diskindex.get_nHeight() << debugcs::endl();
 
         // Construct block index object
         CBlockIndex *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
@@ -663,9 +635,9 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     // checking mapBlockIndex
     /*
     {
-        CmapBlockIndex<HASH> &mbi = CmapBlockIndex<HASH>::get_instance();
-        for(typename CmapBlockIndex<HASH>::iterator ite = mbi.begin(); ite != mbi.end(); ++ite) {
-            debugcs::instance() << "block HASH : " << (*ite).first.ToString().c_str() << debugcs::endl();
+        CmapBlockIndex &mbi = CmapBlockIndex::get_instance();
+        for(typename CmapBlockIndex::iterator ite = mbi.begin(); ite != mbi.end(); ++ite) {
+            debugcs::instance() << "block hash : " << (*ite).first.ToString().c_str() << debugcs::endl();
         }
     }
     */
@@ -673,7 +645,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 #else
 
     // Seek to start blockhashtype.
-    if(! this->seek(std::string("blockhashtype"), HASH(0)))
+    if(! this->seek(std::string("blockhashtype"), uint256(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
 
     // Now read each blockhashtype.
@@ -689,7 +661,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         if (args_bool::fRequestShutdown || strType != "blockhashtype")
             break;
 
-        HASH hash;
+        uint256 hash;
         ::Unserialize(ssKey, hash);
         BLOCK_HASH_MODIFIER data;
         ::Unserialize(ssValue, data);
@@ -699,7 +671,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
     }
 
     // Seek to start key.
-    if(! this->seek(std::string("blockindex"), HASH(0)))
+    if(! this->seek(std::string("blockindex"), uint256(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
 
     // Now read each entry.
@@ -718,7 +690,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         CDiskBlockIndex diskindex;
         ::Unserialize(ssValue, diskindex);
 
-        HASH blockHash = diskindex.GetBlockHash();
+        uint256 blockHash = diskindex.GetBlockHash();
 
         // Construct block index object
         CBlockIndex *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
@@ -783,8 +755,8 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
         pindex->set_nChainTrust((pindex->get_pprev() ? pindex->get_pprev()->get_nChainTrust() : 0) + pindex->GetBlockTrust());
 
         // calculate stake modifier checksum
-        pindex->set_nStakeModifierChecksum(bitkernel<HASH>::GetStakeModifierChecksum(pindex));
-        if (! bitkernel<HASH>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum()))
+        pindex->set_nStakeModifierChecksum(bitkernel<uint256>::GetStakeModifierChecksum(pindex));
+        if (! bitkernel<uint256>::CheckStakeModifierCheckpoints(pindex->get_nHeight(), pindex->get_nStakeModifierChecksum()))
             return logging::error("CTxDB::LoadBlockIndex() : Failed stake modifier checkpoint height=%d, modifier=0x%016" PRIx64,
                                   pindex->get_nHeight(),
                                   pindex->get_nStakeModifier());
@@ -862,7 +834,7 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
             mapBlockPos[pos] = pindex;
             for(const CTransaction &tx: block.get_vtx())
             {
-                HASH hashTx = tx.GetHash();
+                uint256 hashTx = tx.GetHash();
                 CTxIndex txindex;
                 if (ReadTxIndex(hashTx, txindex)) {
                     //
@@ -964,17 +936,3 @@ bool CTxDB_impl<HASH>::LoadBlockIndex(
 
     return true;
 }
-
-// multi-threading DB
-/*
-unsigned int CMTxDB::dbcall(cla_thread<CMTxDB>::thread_data *data) {
-
-
-    return 0;
-}
-*/
-
-
-
-template class CTxDB_impl<uint256>;
-//template class CTxDB_impl<uint65536>;

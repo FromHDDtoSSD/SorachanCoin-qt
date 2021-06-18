@@ -562,7 +562,7 @@ bool block_check::manage<T>::VerifySignature(const CTransaction &txFrom, const C
 }
 
 template <typename T>
-bool block_check::manage<T>::Reorganize(CTxDB_impl<T> &txdb, CBlockIndex *pindexNew)
+bool block_check::manage<T>::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     logging::LogPrintf("REORGANIZE\n");
 

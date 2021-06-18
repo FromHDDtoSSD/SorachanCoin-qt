@@ -882,6 +882,9 @@ bool miner::CheckWork(CBlock *pblock, CWallet &wallet, CReserveKey &reservekey) 
 bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
 {
     uint256 proofHash = 0, hashTarget = 0;
+    logging::LogPrintf("miner::CheckStake() : LastHeight: %d\n", pblock->get_LastHeight());
+    int type = pblock->set_Last_LyraHeight_hash(pblock->get_LastHeight(), block_hash_helper::create_proof_nonce_zero(true, false, false));
+    logging::LogPrintf("miner::CheckStake() : type: %d\n", type);
     uint256 hashBlock = pblock->GetPoHash();
 
     if (! pblock->IsProofOfStake()) {

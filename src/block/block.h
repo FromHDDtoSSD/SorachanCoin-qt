@@ -203,7 +203,7 @@ private:
     Script_util::valtype vchBlockSig;
     // Denial-of-service detection:
     mutable int nDoS;
-    bool SetBestChainInner(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew);
+    bool SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew);
 public:
     const std::vector<CTransaction_impl<uint256> > &get_vtx() const {return Merkle_t::vtx;}
     const CTransaction_impl<uint256> &get_vtx(int index) const {return Merkle_t::vtx[index];}
@@ -265,10 +265,10 @@ public:
     bool WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet);
     bool ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fReadTransactions=true);
     void print() const;
-    bool DisconnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex);
-    bool ConnectBlock(CTxDB_impl<uint256> &txdb, CBlockIndex *pindex, bool fJustCheck=false);
+    bool DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex);
+    bool ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck=false);
     bool ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions=true);
-    bool SetBestChain(CTxDB_impl<uint256> &txdb, CBlockIndex *pindexNew);
+    bool SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew);
     bool AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos);
     bool CheckBlock(bool fCheckPOW=true, bool fCheckMerkleRoot=true, bool fCheckSig=true) const;
     bool AcceptBlock();

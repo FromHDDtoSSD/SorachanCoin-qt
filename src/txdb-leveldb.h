@@ -85,16 +85,15 @@ private:
 #endif
 };
 
-template <typename HASH>
-class CTxDB_impl final : protected CTxDBHybrid // should use protected: hide Write() method.
+class CTxDB final : protected CTxDBHybrid // should use protected: hide Write() method.
 {
-    CTxDB_impl(const CTxDB_impl &)=delete;
-    CTxDB_impl(CTxDB_impl &&)=delete;
-    CTxDB_impl &operator=(const CTxDB_impl &)=delete;
-    CTxDB_impl &operator=(CTxDB_impl &&)=delete;
+    CTxDB(const CTxDB &)=delete;
+    CTxDB(CTxDB &&)=delete;
+    CTxDB &operator=(const CTxDB &)=delete;
+    CTxDB &operator=(CTxDB &&)=delete;
 public:
-    CTxDB_impl(const char *pszMode = "r+");
-    ~CTxDB_impl();
+    CTxDB(const char *pszMode = "r+");
+    ~CTxDB();
 
     bool TxnBegin() {return CTxDBHybrid::TxnBegin();}
     bool TxnCommit() {return CTxDBHybrid::TxnCommit();}
@@ -102,27 +101,27 @@ public:
 
     void init_blockindex(const char *pszMode, bool fRemoveOld = false);
 
-    bool ReadTxIndex(HASH hash, CTxIndex &txindex);
-    bool UpdateTxIndex(HASH hash, const CTxIndex &txindex);
-    bool AddTxIndex(const CTransaction_impl<HASH> &tx, const CDiskTxPos &pos, int nHeight);
-    bool EraseTxIndex(const CTransaction_impl<HASH> &tx);
-    bool ContainsTx(HASH hash);
+    bool ReadTxIndex(uint256 hash, CTxIndex &txindex);
+    bool UpdateTxIndex(uint256 hash, const CTxIndex &txindex);
+    bool AddTxIndex(const CTransaction_impl<uint256> &tx, const CDiskTxPos &pos, int nHeight);
+    bool EraseTxIndex(const CTransaction_impl<uint256> &tx);
+    bool ContainsTx(uint256 hash);
 
-    bool ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx, CTxIndex &txindex);
-    bool ReadDiskTx(HASH hash, CTransaction_impl<HASH> &tx);
-    bool ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx, CTxIndex &txindex);
-    bool ReadDiskTx(COutPoint_impl<HASH> outpoint, CTransaction_impl<HASH> &tx);
+    bool ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx, CTxIndex &txindex);
+    bool ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx);
+    bool ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex);
+    bool ReadDiskTx(COutPoint_impl<uint256> outpoint, CTransaction_impl<uint256> &tx);
 
     bool WriteBlockIndex(const CDiskBlockIndex &blockindex);
 
-    bool ReadHashBestChain(HASH &hashBestChain);
-    bool WriteHashBestChain(HASH hashBestChain);
+    bool ReadHashBestChain(uint256 &hashBestChain);
+    bool WriteHashBestChain(uint256 hashBestChain);
 
     bool ReadBestInvalidTrust(CBigNum &bnBestInvalidTrust);
     bool WriteBestInvalidTrust(CBigNum bnBestInvalidTrust);
 
-    bool ReadSyncCheckpoint(HASH &hashCheckpoint);
-    bool WriteSyncCheckpoint(HASH hashCheckpoint);
+    bool ReadSyncCheckpoint(uint256 &hashCheckpoint);
+    bool WriteSyncCheckpoint(uint256 hashCheckpoint);
 
     bool ReadCheckpointPubKey(std::string &strPubKey);
     bool WriteCheckpointPubKey(const std::string &strPubKey);
@@ -130,48 +129,16 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-    bool WriteBlockHashType(HASH hash, const BLOCK_HASH_MODIFIER &modifier);
+    bool WriteBlockHashType(uint256 hash, const BLOCK_HASH_MODIFIER &modifier);
 
-    bool LoadBlockIndex(std::unordered_map<HASH, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
-                        std::set<std::pair<COutPoint_impl<HASH>, unsigned int> > &setStakeSeen,
+    bool LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
+                        std::set<std::pair<COutPoint_impl<uint256>, unsigned int> > &setStakeSeen,
                         CBlockIndex *&pindexGenesisBlock,
-                        HASH &hashBestChain,
+                        uint256 &hashBestChain,
                         int &nBestHeight,
                         CBlockIndex *&pindexBest,
-                        HASH &nBestInvalidTrust,
-                        HASH &nBestChainTrust);
+                        uint256 &nBestInvalidTrust,
+                        uint256 &nBestChainTrust);
 };
-using CTxDB = CTxDB_impl<uint256>; // mainchain
-
-// multi-threading DB
-/*
-class CMTxDB final : public CTxDB
-{
-public:
-    CMTxDB(const char *pszMode = "r+") : thread(&CMTxDB::dbcall), CTxDB(pszMode) {}
-    ~CMTxDB() {}
-
-    bool start() {return thread.start(nullptr, this);}
-    void stop() {thread.stop();}
-    bool signal() const {return thread.signal();}
-
-    template<typename K, typename T>
-    bool Write(const K &key, const T &value) {
-        LOCK(csTxdb_write);
-        return CTxDB::Write(key, value);
-    }
-
-    template<typename K>
-    bool Erase(const K &key) {
-        LOCK(csTxdb_write);
-        return CTxDB::Erase(key);
-    }
-
-private:
-    static CCriticalSection csTxdb_write; // Write and Erase
-    unsigned int dbcall(cla_thread<CMTxDB>::thread_data *data);
-    cla_thread<CMTxDB> thread;
-};
-*/
 
 #endif // BITCOIN_DB_H

@@ -28,11 +28,7 @@
 #include <debug/debug.h>
 
 class CWallet;
-//class CTxDB;
-
-template <typename T> class CTxDB_impl;
-using CTxDB = CTxDB_impl<uint256>;
-
+class CTxDB;
 class CScriptCheck;
 template <typename T> class COutPoint_impl;
 using COutPoint = COutPoint_impl<uint256>;
