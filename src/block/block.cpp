@@ -400,7 +400,7 @@ bool CBlock::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
     }
 
     // ppcoin: clean up wallet after disconnecting coinstake
-    for(CTransaction_impl<uint256> &tx: this->vtx)
+    for(CTransaction &tx: this->vtx)
         wallet_process::manage::SyncWithWallets(tx, this, false, false);
 
     return true;
@@ -447,7 +447,7 @@ bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=fa
     int64_t nValueIn = 0;
     int64_t nValueOut = 0;
     unsigned int nSigOps = 0;
-    for(CTransaction_impl<uint256> &tx: this->vtx) {
+    for(CTransaction &tx: this->vtx) {
         uint256 hashTx = tx.GetHash();
         if (fEnforceBIP30) {
             CTxIndex txindexOld;
@@ -540,7 +540,7 @@ bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=fa
     }
 
     // Watch for transactions paying to me
-    for(CTransaction_impl<uint256> &tx: this->vtx)
+    for(CTransaction &tx: this->vtx)
         wallet_process::manage::SyncWithWallets(tx, this, true);
 
     return true;

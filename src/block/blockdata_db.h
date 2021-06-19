@@ -45,7 +45,7 @@ public:
     }
 
     template <typename HASH>
-    bool Read(CTransaction_impl<HASH> &tx, unsigned int nFile, unsigned int nBlockPos, unsigned int nTxPos) {
+    bool Read(CTransaction &tx, unsigned int nFile, unsigned int nBlockPos, unsigned int nTxPos) {
         (void)nFile;
         std::vector<char> vchKey;
         CDBStream ssKey(&vchKey);

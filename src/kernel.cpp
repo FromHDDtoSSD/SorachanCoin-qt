@@ -357,7 +357,7 @@ bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModif
 //   a proof-of-work situation.
 //
 template <typename T>
-bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction_impl<T> &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake)
+bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake)
 {
     if (nTimeTx < txPrev.get_nTime()) { // Transaction timestamp violation
         return logging::error("bitkernel::CheckStakeKernelHash() : nTime violation");
@@ -474,7 +474,7 @@ bool bitkernel<T>::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint
 
 // Check kernel hash target and coinstake signature
 template <typename T>
-bool bitkernel<T>::CheckProofOfStake(const CTransaction_impl<T> &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake)
+bool bitkernel<T>::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake)
 {
     if (! tx.IsCoinStake())
         return logging::error("bitkernel::CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());

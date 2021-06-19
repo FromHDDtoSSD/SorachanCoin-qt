@@ -54,4 +54,4 @@ uint256 CMerkleTree<SRC>::CheckMerkleBranch(uint256 hash, const vMerkle_t &vMerk
     return hash;
 }
 
-template class CMerkleTree<CTransaction_impl<uint256> >;
+template class CMerkleTree<CTransaction>;

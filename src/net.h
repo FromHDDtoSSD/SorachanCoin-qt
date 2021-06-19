@@ -829,8 +829,7 @@ public:
     static uint64_t GetTotalBytesSent();
 };
 
-template <typename T> class CTransaction_impl;
-using CTransaction = CTransaction_impl<uint256>;
+class CTransaction;
 class bitrelay : private no_instance
 {
 public:

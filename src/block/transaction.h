@@ -56,7 +56,7 @@ namespace block_transaction
         static CBlockIndex *pblockindexFBBHLast;
     public:
         static void setnull_pblockindexFBBHLast() { pblockindexFBBHLast = nullptr; } // New Block
-        static bool GetTransaction(const T &hash, CTransaction_impl<T> &tx, T &hashBlock);
+        static bool GetTransaction(const T &hash, CTransaction &tx, T &hashBlock);
         static CBlockIndex *FindBlockByHeight(int nHeight);
         static bool MoneyRange(int64_t nValue) noexcept {
             return (nValue >= 0 && nValue <= block_params::MAX_MONEY);
@@ -81,17 +81,17 @@ class CInPoint
     //CInPoint &operator=(const CInPoint &)=delete;
     //CInPoint &operator=(CInPoint &&)=delete;
 private:
-    CTransaction_impl<uint256> *ptx;
+    CTransaction *ptx;
     uint32_t n;
 public:
-    const CTransaction_impl<uint256> *get_ptx() const noexcept {return ptx;}
-    CTransaction_impl<uint256> *get_ptx() noexcept {return ptx;}
+    const CTransaction *get_ptx() const noexcept {return ptx;}
+    CTransaction *get_ptx() noexcept {return ptx;}
     uint32_t get_n() const noexcept {return n;}
 
     CInPoint() {
         SetNull();
     }
-    CInPoint(CTransaction_impl<uint256> *ptxIn, unsigned int nIn) {
+    CInPoint(CTransaction *ptxIn, unsigned int nIn) {
         ptx = ptxIn;
         n = nIn;
     }
@@ -282,23 +282,23 @@ private:
         nTransactionsUpdated = 0;
     }
     mutable CCriticalSection cs;
-    mutable std::map<uint256, CTransaction_impl<uint256> > mapTx; // mutable: operator []
+    mutable std::map<uint256, CTransaction> mapTx; // mutable: operator []
     std::map<COutPoint, CInPoint> mapNextTx;
     unsigned int nTransactionsUpdated;
 public:
     static CTxMemPool mempool;
     CCriticalSection &get_cs() const noexcept {return cs;}
-    const std::map<uint256, CTransaction_impl<uint256> > &get_mapTx() const noexcept {return mapTx;}
-    const CTransaction_impl<uint256> &get_mapTx(uint256 hash) const {return mapTx[hash];}
+    const std::map<uint256, CTransaction> &get_mapTx() const noexcept {return mapTx;}
+    const CTransaction &get_mapTx(uint256 hash) const {return mapTx[hash];}
 
-    std::map<uint256, CTransaction_impl<uint256> > &set_mapTx() {return mapTx;}
+    std::map<uint256, CTransaction> &set_mapTx() {return mapTx;}
 
-    bool accept(CTxDB &txdb, CTransaction_impl<uint256> &tx, bool fCheckInputs, bool *pfMissingInputs);
-    bool addUnchecked(const uint256 &hash, CTransaction_impl<uint256> &tx);
-    bool remove(CTransaction_impl<uint256> &tx);
+    bool accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *pfMissingInputs);
+    bool addUnchecked(const uint256 &hash, CTransaction &tx);
+    bool remove(CTransaction &tx);
     void clear();
     void queryHashes(std::vector<uint256> &vtxid);
-    bool IsFromMe(CTransaction_impl<uint256> &tx);
+    bool IsFromMe(CTransaction &tx);
     void EraseFromWallets(uint256 hash);
     size_t size() const noexcept {
         LOCK(cs);
@@ -307,7 +307,7 @@ public:
     bool exists(uint256 hash) const noexcept {
         return (mapTx.count(hash) != 0);
     }
-    CTransaction_impl<uint256> &lookup(uint256 hash) {
+    CTransaction &lookup(uint256 hash) {
         return mapTx[hash];
     }
 
@@ -502,8 +502,7 @@ public:
     }
 };
 
-template <typename T>
-struct CMutableTransaction_impl;
+struct CMutableTransaction;
 
 /**
  * Basic transaction serialization format:
@@ -600,17 +599,15 @@ inline void SerializeTransaction(const TxType &tx, Stream &s) {
 
 // The basic transaction that is broadcasted on the network and contained in blocks.
 // transaction can contain multiple inputs and outputs.
-template <typename T> class CTransaction_impl;
-using CTransaction = CTransaction_impl<uint256>;
+class CMutableTransaction;
 using MapPrevTx = std::map<uint256, std::pair<CTxIndex, CTransaction> >;
-template <typename T>
-class CTransaction_impl
+class CTransaction
 {
-//private:
-    //CTransaction_impl(const CTransaction_impl &)=delete;
-    //CTransaction_impl(CTransaction_impl &&)=delete;
-    //CTransaction_impl &operator=(const CTransaction_impl &)=delete;
-    //CTransaction_impl &operator=(CTransaction_impl &&)=delete;
+    friend class CMutableTransaction;
+    //CTransaction(const CTransaction &)=delete;
+    //CTransaction(CTransaction &&)=delete;
+    //CTransaction &operator=(const CTransaction &)=delete;
+    //CTransaction &operator=(CTransaction &&)=delete;
 public:
     enum GetMinFee_mode {
         GMF_BLOCK,
@@ -621,7 +618,6 @@ protected: // CMerkleTx => CWalletTx
     const CTxOut &GetOutputFor(const CTxIn &input, const MapPrevTx &inputs) const;
 private:
     // Default transaction version.
-    // ver1: old core, after ver2: latest core
     static constexpr int CURRENT_VERSION = 1;
 
     // Changing the default transaction version requires a two step process: first
@@ -642,15 +638,15 @@ private:
     uint32_t nLockTime;
 private:
     /** CURRENT_VERSION == 1: hash */
-    mutable T hash_v1;
+    mutable uint256 hash_v1;
     /** Memory only. */
-    //const T hash;
-    //const T m_witness_hash;
-    T hash;
-    T m_witness_hash;
+    //const uint256 hash;
+    //const uint256 m_witness_hash;
+    uint256 hash;
+    uint256 m_witness_hash;
 
-    T ComputeHash() const;
-    T ComputeWitnessHash() const;
+    uint256 ComputeHash() const;
+    uint256 ComputeWitnessHash() const;
 public:
     // Denial-of-service detection:
     mutable int nDoS;
@@ -679,25 +675,25 @@ public:
     uint32_t &set_nLockTime() {return nLockTime;}
 
     /** Construct a CTransaction that qualifies as IsNull() */
-    CTransaction_impl() : hash{}, m_witness_hash{} {
+    CTransaction() : hash{}, m_witness_hash{} {
         SetNull();
     }
 
-    virtual ~CTransaction_impl() {}
+    virtual ~CTransaction() {}
 
     void SetNull() {
-        nVersion = CTransaction_impl<T>::CURRENT_VERSION;
+        nVersion = CTransaction::CURRENT_VERSION;
         nTime = (uint32_t)bitsystem::GetAdjustedTime();
         vin.clear();
         vout.clear();
-        hash_v1 = T(0);
+        hash_v1 = uint256(0);
         nLockTime = 0;
         nDoS = 0;  // Denial-of-service prevention
     }
     bool IsNull() const {
         return (vin.empty() && vout.empty());
     }
-    //T GetHash() const {
+    //uint256 GetHash() const {
     //    return hash_basis::SerializeHash(*this);
     //}
 
@@ -721,7 +717,7 @@ public:
         }
         return true;
     }
-    bool IsNewerThan(const CTransaction_impl<T> &old) const {
+    bool IsNewerThan(const CTransaction &old) const {
         if (vin.size() != old.vin.size()) return false;
         for (unsigned int i = 0; i < vin.size(); ++i) {
             if (vin[i].get_prevout() != old.vin[i].get_prevout()) return false;
@@ -783,18 +779,18 @@ public:
     // [1] Check for standard transaction types
     //    @param[in] mapInputs Map of previous transactions that have outputs we're spending
     //    @return True if all inputs (scriptSigs) use only standard transaction forms
-    //    @see CTransaction_impl<T>::FetchInputs
+    //    @see CTransaction::FetchInputs
     bool AreInputsStandard(const MapPrevTx &mapInputs) const;
 
     // [2] Count ECDSA signature operations the old-fashioned (pre-0.6) way
     //    @return number of sigops this transaction's outputs will produce when spent
-    //    @see CTransaction_impl<T>::FetchInputs
+    //    @see CTransaction::FetchInputs
     unsigned int GetLegacySigOpCount() const;
 
     // [3] Count ECDSA signature operations in pay-to-script-hash inputs.
     //    @param[in] mapInputs    Map of previous transactions that have outputs we're spending
     //    @return maximum number of sigops required to validate this transaction's inputs
-    //    @see CTransaction_impl<T>::FetchInputs
+    //    @see CTransaction::FetchInputs
     unsigned int GetP2SHSigOpCount(const MapPrevTx &mapInputs) const;
 
     // [A] Amount of bitcoins spent by this transaction.
@@ -813,14 +809,14 @@ public:
     static bool AllowFree(double dPriority);
     int64_t GetMinFee(unsigned int nBlockSize=1, bool fAllowFree=false, enum GetMinFee_mode mode=GMF_BLOCK, unsigned int nBytes = 0) const;
 
-    friend bool operator==(const CTransaction_impl<T> &a, const CTransaction_impl<T> &b) {
+    friend bool operator==(const CTransaction &a, const CTransaction &b) {
         return (a.nVersion  == b.nVersion &&
                 a.nTime     == b.nTime &&
                 a.vin       == b.vin &&
                 a.vout      == b.vout &&
                 a.nLockTime == b.nLockTime);
     }
-    friend bool operator!=(const CTransaction_impl<T> &a, const CTransaction_impl<T> &b) {
+    friend bool operator!=(const CTransaction &a, const CTransaction &b) {
         return !(a == b);
     }
 
@@ -845,7 +841,7 @@ public:
      @param[out] fInvalid    returns true if transaction is invalid
      @return    Returns true if all inputs are in txdb or mapTestPool
      */
-    bool FetchInputs(CTxDB &txdb, const std::map<T, CTxIndex> &mapTestPool, bool fBlock, bool fMiner, MapPrevTx &inputsRet, bool &fInvalid);
+    bool FetchInputs(CTxDB &txdb, const std::map<uint256, CTxIndex> &mapTestPool, bool fBlock, bool fMiner, MapPrevTx &inputsRet, bool &fInvalid);
 
     /** Sanity check previous transactions, then, if all checks succeed,
         mark them as spent by this transaction.
@@ -860,7 +856,7 @@ public:
         @param[in] pvChecks    NULL If pvChecks is not NULL, script checks are pushed onto it instead of being performed inline.
         @return Returns true if all checks succeed
      */
-    bool ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<T, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks=true, unsigned int flags=Script_param::STRICT_FLAGS, std::vector<CScriptCheck> *pvChecks = nullptr);
+    bool ConnectInputs(CTxDB &txdb, MapPrevTx inputs, std::map<uint256, CTxIndex> &mapTestPool, const CDiskTxPos &posThisTx, const CBlockIndex *pindexBlock, bool fBlock, bool fMiner, bool fScriptChecks=true, unsigned int flags=Script_param::STRICT_FLAGS, std::vector<CScriptCheck> *pvChecks = nullptr);
 
     bool ClientConnectInputs();
     bool CheckTransaction() const;
@@ -869,27 +865,27 @@ public:
 
     // witness(Segwit) programs
     /** Convert a CMutableTransaction into a CTransaction. */
-    explicit CTransaction_impl(const CMutableTransaction_impl<T> &tx);
-    CTransaction_impl(CMutableTransaction_impl<T> &&tx);
+    explicit CTransaction(const CMutableTransaction &tx);
+    CTransaction(CMutableTransaction &&tx);
 
     /** This deserializing constructor is provided instead of an Unserialize method.
      *  Unserialize is not possible, since it would require overwriting const fields. */
     template <typename Stream>
-    CTransaction_impl(deserialize_type, Stream &s) : CTransaction_impl(CMutableTransaction_impl<T>(deserialize, s)) {}
+    CTransaction(deserialize_type, Stream &s) : CTransaction(CMutableTransaction(deserialize, s)) {}
 
-    const T &GetHash() const noexcept {
-        if(CTransaction_impl<T>::CURRENT_VERSION == 1) {
+    const uint256 &GetHash() const noexcept {
+        if(CTransaction::CURRENT_VERSION == 1) {
             hash_v1 = hash_basis::SerializeHash(*this);
             return hash_v1;
-        } else if (CTransaction_impl<T>::CURRENT_VERSION == 2) {
+        } else if (CTransaction::CURRENT_VERSION == 2) {
             return hash;
         } else {
-            assert(!"Error: CTransaction_impl<T>::CURRENT_VERSION is no setting.");
+            assert(!"Error: CTransaction::CURRENT_VERSION is no setting.");
             hash_v1 = hash_basis::SerializeHash(*this);
             return hash_v1;
         }
     }
-    const T &GetWitnessHash() const noexcept { return m_witness_hash; }
+    const uint256 &GetWitnessHash() const noexcept { return m_witness_hash; }
 
     bool HasWitness() const noexcept {
         for (size_t i = 0; i < vin.size(); i++) {
@@ -911,8 +907,8 @@ public:
             size += ::GetSerializeSize(this->nLockTime);
             return size;
         } else {
-            assert(!"Only using CTransaction_impl<T>::GetSerializeSize is (nVersion == 1)");
-            throw std::runtime_error("Only using CTransaction_impl<T>::GetSerializeSize is (nVersion == 1)");
+            assert(!"Only using CTransaction::GetSerializeSize is (nVersion == 1)");
+            throw std::runtime_error("Only using CTransaction::GetSerializeSize is (nVersion == 1)");
 
             size_t size = 0;
             size += ::GetSerializeSize(this->nVersion);
@@ -944,7 +940,7 @@ public:
             READWRITE(this->nLockTime);
         } else {
             debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
-            assert(!"Only using CTransaction_impl<T>::Unserialize is (2 < nVersion)");
+            assert(!"Only using CTransaction::Unserialize is (2 < nVersion)");
             READWRITE(this->nVersion);
             READWRITE(this->vin);
             READWRITE(this->vout);
@@ -984,15 +980,14 @@ private:
 };
 
 /** A mutable version of CTransaction. */
-template <typename T>
-struct CMutableTransaction_impl {
+struct CMutableTransaction {
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     int32_t nVersion;
     uint32_t nLockTime;
 
-    CMutableTransaction_impl();
-    explicit CMutableTransaction_impl(const CTransaction_impl<T> &tx);
+    CMutableTransaction();
+    explicit CMutableTransaction(const CTransaction &tx);
 
     template <typename Stream>
     inline void Serialize(Stream &s) const {
@@ -1005,13 +1000,13 @@ struct CMutableTransaction_impl {
     }
 
     template <typename Stream>
-    CMutableTransaction_impl(deserialize_type, Stream &s) {
+    CMutableTransaction(deserialize_type, Stream &s) {
         this->Unserialize(s);
     }
 
     // Compute the hash of this CMutableTransaction. This is computed on the
     // fly, as opposed to GetHash() in CTransaction, which uses a cached result.
-    T GetHash() const;
+    uint256 GetHash() const;
 
     bool HasWitness() const noexcept {
         for (size_t i = 0; i < vin.size(); i++) {
@@ -1021,7 +1016,17 @@ struct CMutableTransaction_impl {
         }
         return false;
     }
+
+    // same CTransaction methods
+    int32_t get_nVersion() const {return nVersion;}
+    uint32_t get_nTime() const {
+        assert(!"CMutableTransaction no member nTime.");
+        return 0;
+    }
+    const std::vector<CTxIn> &get_vin() const {return vin;}
+    const std::vector<CTxOut> &get_vout() const {return vout;}
+    const CTxIn &get_vin(size_t index) const {return vin[index];}
+    uint32_t get_nLockTime() const {return nLockTime;}
 };
-using CMutableTransaction = CMutableTransaction_impl<uint256>;
 
 #endif // BITCOIN_TRANSACTION_H

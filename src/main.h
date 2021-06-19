@@ -13,8 +13,7 @@
 #include <block/block.h>
 
 class CWallet;
-template <typename T> class CTransaction_impl;
-using CTransaction = CTransaction_impl<uint256>;
+class CTransaction;
 
 //
 // block_load

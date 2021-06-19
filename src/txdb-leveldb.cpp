@@ -194,7 +194,7 @@ bool CTxDB::UpdateTxIndex(uint256 hash, const CTxIndex &txindex)
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-bool CTxDB::AddTxIndex(const CTransaction_impl<uint256> &tx, const CDiskTxPos &pos, int nHeight)
+bool CTxDB::AddTxIndex(const CTransaction &tx, const CDiskTxPos &pos, int nHeight)
 {
     assert(!args_bool::fClient);
 
@@ -204,7 +204,7 @@ bool CTxDB::AddTxIndex(const CTransaction_impl<uint256> &tx, const CDiskTxPos &p
     return Write(std::make_pair(std::string("tx"), hash), txindex);
 }
 
-bool CTxDB::EraseTxIndex(const CTransaction_impl<uint256> &tx)
+bool CTxDB::EraseTxIndex(const CTransaction &tx)
 {
     assert(!args_bool::fClient);
     uint256 hash = tx.GetHash();
@@ -218,7 +218,7 @@ bool CTxDB::ContainsTx(uint256 hash)
     return Exists(std::make_pair(std::string("tx"), hash));
 }
 
-bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
+bool CTxDB::ReadDiskTx(uint256 hash, CTransaction &tx, CTxIndex &txindex)
 {
     assert(!args_bool::fClient);
     tx.SetNull();
@@ -229,18 +229,18 @@ bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx, CTxIndex &t
     return (tx.ReadFromDisk(txindex.get_pos()));
 }
 
-bool CTxDB::ReadDiskTx(uint256 hash, CTransaction_impl<uint256> &tx)
+bool CTxDB::ReadDiskTx(uint256 hash, CTransaction &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(hash, tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx, CTxIndex &txindex)
+bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction &tx, CTxIndex &txindex)
 {
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);
 }
 
-bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction_impl<uint256> &tx)
+bool CTxDB::ReadDiskTx(COutPoint outpoint, CTransaction &tx)
 {
     CTxIndex txindex;
     return ReadDiskTx(outpoint.get_hash(), tx, txindex);

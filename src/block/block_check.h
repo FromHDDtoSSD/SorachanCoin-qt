@@ -252,10 +252,10 @@ template <typename T>
 class CCoins_impl
 {
 public:
-    void FromTx(const CTransaction_impl<T> &tx, int nHeightIn);
+    void FromTx(const CTransaction &tx, int nHeightIn);
 
     //! construct a CCoins from a CTransaction, at a given height
-    CCoins_impl(const CTransaction_impl<T> &tx, int nHeightIn) {
+    CCoins_impl(const CTransaction &tx, int nHeightIn) {
         FromTx(tx, nHeightIn);
     }
 
@@ -604,13 +604,13 @@ public:
      * @param[in] tx	transaction for which we are checking input total
      * @return	Sum of value of all inputs (scriptSigs)
      */
-    CAmount GetValueIn(const CTransaction_impl<T> &tx) const;
+    CAmount GetValueIn(const CTransaction &tx) const;
 
     //! Check whether all prevouts of the transaction are present in the UTXO set represented by this view
-    bool HaveInputs(const CTransaction_impl<T> &tx) const;
+    bool HaveInputs(const CTransaction &tx) const;
 
     //! Return priority of tx at height nHeight
-    double GetPriority(const CTransaction_impl<T> &tx, int nHeight) const;
+    double GetPriority(const CTransaction &tx, int nHeight) const;
 
     const CTxOut &GetOutputFor(const CTxIn &input) const;
 

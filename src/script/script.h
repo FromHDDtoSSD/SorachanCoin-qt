@@ -17,8 +17,7 @@
 #include <bignum.h>
 #include <address/base58.h>
 
-template <typename T> class CTransaction_impl;
-using CTransaction = CTransaction_impl<uint256>;
+class CTransaction;
 template <typename ENC, typename VER> class CBitcoinAddress_impl;
 class CBase58Data;
 class VERBase58;

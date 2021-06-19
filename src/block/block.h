@@ -186,7 +186,7 @@ public:
 // CBlockHeader + MerkleTree + Transactions, block data.
 // About R/W: ReadFromDisk or WriteToDisk. (pos: CBlockIndex)
 //
-class CBlock final : public CBlockHeader_impl, public CMerkleTree<CTransaction_impl<uint256> >
+class CBlock final : public CBlockHeader_impl, public CMerkleTree<CTransaction>
 {
 #ifdef BLOCK_PREVECTOR_ENABLE
     using vMerkle_t = prevector<PREVECTOR_BLOCK_N, uint256>;
@@ -198,18 +198,18 @@ class CBlock final : public CBlockHeader_impl, public CMerkleTree<CTransaction_i
     // CBlock &operator=(const CBlock &)=delete;
     // CBlock &operator=(CBlock &&)=delete;
 private:
-    using Merkle_t = CMerkleTree<CTransaction_impl<uint256> >;
+    using Merkle_t = CMerkleTree<CTransaction>;
     // ppcoin: block signature - signed by one of the coin base txout[N]'s owner
     Script_util::valtype vchBlockSig;
     // Denial-of-service detection:
     mutable int nDoS;
     bool SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew);
 public:
-    const std::vector<CTransaction_impl<uint256> > &get_vtx() const {return Merkle_t::vtx;}
-    const CTransaction_impl<uint256> &get_vtx(int index) const {return Merkle_t::vtx[index];}
+    const std::vector<CTransaction> &get_vtx() const {return Merkle_t::vtx;}
+    const CTransaction &get_vtx(int index) const {return Merkle_t::vtx[index];}
     const Script_util::valtype &get_vchBlockSig() const {return vchBlockSig;}
-    std::vector<CTransaction_impl<uint256> > &set_vtx() {return Merkle_t::vtx;}
-    CTransaction_impl<uint256> &set_vtx(int index) {return Merkle_t::vtx[index];}
+    std::vector<CTransaction> &set_vtx() {return Merkle_t::vtx;}
+    CTransaction &set_vtx(int index) {return Merkle_t::vtx[index];}
     Script_util::valtype &set_vchBlockSig() {return vchBlockSig;}
     bool DoS(int nDoSIn, bool fIn) const {
         nDoS += nDoSIn;
@@ -258,7 +258,7 @@ public:
     // ppcoin: get max transaction timestamp
     int64_t GetMaxTransactionTime() const {
         int64_t maxTransactionTime = 0;
-        for(const CTransaction_impl<uint256> &tx: Merkle_t::vtx)
+        for(const CTransaction &tx: Merkle_t::vtx)
             maxTransactionTime = std::max(maxTransactionTime, (int64_t)tx.get_nTime());
         return maxTransactionTime;
     }

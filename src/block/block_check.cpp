@@ -187,7 +187,7 @@ uint64_t CCompressAmount::DecompressAmount(uint64_t x)
 }
 
 template <typename T>
-void CCoins_impl<T>::FromTx(const CTransaction_impl<T> &tx, int nHeightIn) {
+void CCoins_impl<T>::FromTx(const CTransaction &tx, int nHeightIn) {
     fCoinBase = tx.IsCoinBase();
     fCoinStake = tx.IsCoinStake();
     fCoinPoBench = tx.IsCoinBench();
@@ -468,7 +468,7 @@ const CTxOut &CCoinsViewCache_impl<T>::GetOutputFor(const CTxIn &input) const
 }
 
 template <typename T>
-CAmount CCoinsViewCache_impl<T>::GetValueIn(const CTransaction_impl<T> &tx) const
+CAmount CCoinsViewCache_impl<T>::GetValueIn(const CTransaction &tx) const
 {
     if (tx.IsCoinBase())
         return 0;
@@ -481,7 +481,7 @@ CAmount CCoinsViewCache_impl<T>::GetValueIn(const CTransaction_impl<T> &tx) cons
 }
 
 template <typename T>
-bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction_impl<T> &tx) const
+bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction &tx) const
 {
     if (!tx.IsCoinBase() && !tx.IsZerocoinSpend()) {
         for (unsigned int i = 0; i < tx.get_vin().size(); i++) {
@@ -496,7 +496,7 @@ bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction_impl<T> &tx) const
 }
 
 template <typename T>
-double CCoinsViewCache_impl<T>::GetPriority(const CTransaction_impl<T> &tx, int nHeight) const
+double CCoinsViewCache_impl<T>::GetPriority(const CTransaction &tx, int nHeight) const
 {
     if (tx.IsCoinBase() || tx.IsCoinStake() || tx.IsCoinBench() || tx.IsCoinMasternode())
         return 0.0;

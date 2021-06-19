@@ -20,8 +20,6 @@
 
 class CPubKey;
 class CScript;
-//template <typename T> class CTransaction_impl;
-//using CTransaction = CTransaction_impl<uint256>;
 class uint256;
 
 // old core: Script_util
