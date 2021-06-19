@@ -90,20 +90,20 @@ build_libressl() {
  ${CMD_MAKE} install
 }
 
-build_blake2() {
- blake2_wget="https://github.com/BLAKE2/libb2/archive/master.zip"
- cd "$srcdir"/"$WORK_DIR"
- mkdir -p "$blake2_dir"
- cd "$blake2_dir"
- wget "$blake2_wget"
- unzip master.zip
- unlink master.zip
- cd libb2-master
- ./autogen.sh
- ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$blake2_dir"
- ${CMD_MAKE}
- ${CMD_MAKE} install
-}
+#build_blake2() {
+# blake2_wget="https://github.com/BLAKE2/libb2/archive/master.zip"
+# cd "$srcdir"/"$WORK_DIR"
+# mkdir -p "$blake2_dir"
+# cd "$blake2_dir"
+# wget "$blake2_wget"
+# unzip master.zip
+# unlink master.zip
+# cd libb2-master
+# ./autogen.sh
+# ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$blake2_dir"
+# ${CMD_MAKE}
+# ${CMD_MAKE} install
+#}
 
 build_sqlite() {
  sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
@@ -135,10 +135,10 @@ if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  if [ ! -d ${libressl_dir} ]; then
   build_libressl
  fi
- cd "$srcdir"/"$LIBRARY_DIR"
- if [ ! -d ${blake2_dir} ]; then
-  build_blake2
- fi
+# cd "$srcdir"/"$LIBRARY_DIR"
+# if [ ! -d ${blake2_dir} ]; then
+#  build_blake2
+# fi
  cd "$srcdir"/"$LIBRARY_DIR"
  if [ ! -d ${sqlite_dir} ]; then
   build_sqlite

@@ -38,14 +38,14 @@ https://www.junkhdd.com/download/usage.html
 How to build?
 ===========================
 
-./autogen.sh  
-./configure  
-make  
-  
-"SorachanCoind" will be generated under ./src  
-  
-Require library: libtool, autoconf, unzip  
-(sudo apt-get install libtool, autoconf, unzip)
+./autogen.sh<br>
+./configure<br>
+make<br>
+<br>
+"SorachanCoind" will be generated under ./src<br>
+<br>
+Require library: autoconf, unzip<br>
+(sudo apt-get install autoconf, unzip)<br>
 
 BlockExplorer
 ===========================

@@ -967,7 +967,7 @@ QMAKE_EXTRA_COMPILERS += TSQM
 # "Other files" to show in Qt Creator
 #
 OTHER_FILES += doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
-OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite
+OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh
 
 #
 # windows: indicate define

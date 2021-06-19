@@ -1,6 +1,6 @@
 
 bin_PROGRAMS = SorachanCoind
-INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/blake2/include -I../library/sqlite/include
+INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/sqlite/include
 SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_QUANTUM -DWALLET_SQL_MODE -DBLK_SQL_MODE -DUSE_IPV6 -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
 SorachanCoind_LDADD = -lpthread \
  ../library/boost_1_68_0/lib/libboost_system.a \
@@ -10,7 +10,6 @@ SorachanCoind_LDADD = -lpthread \
  ../library/boost_1_68_0/lib/libboost_chrono.a \
  ../library/libressl-2.8.2/lib/libssl.a \
  ../library/libressl-2.8.2/lib/libcrypto.a \
- ../library/blake2/lib/libb2.a \
  ../library/sqlite/lib/libsqlite3.a \
  -lz \
  -ldl \
