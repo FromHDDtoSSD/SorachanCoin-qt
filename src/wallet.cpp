@@ -2336,7 +2336,7 @@ bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx 
 
 void CWallet::GetStakeWeightFromValue(const int64_t &nTime, const int64_t &nValue, uint64_t &nWeight)
 {
-    int64_t nTimeWeight = bitkernel<uint256>::GetWeight(nTime, bitsystem::GetTime());
+    int64_t nTimeWeight = bitkernel::GetWeight(nTime, bitsystem::GetTime());
 
     // If time weight is lower or equal to zero then weight is zero.
     if (nTimeWeight <= 0) {
@@ -2572,7 +2572,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
     }
 
     bool fDontSplitCoins = false;
-    if (bitkernel<uint256>::GetWeight((int64_t)wtx.get_nTime(), (int64_t)nGenerationTime) == block_check::nStakeMaxAge) {
+    if (bitkernel::GetWeight((int64_t)wtx.get_nTime(), (int64_t)nGenerationTime) == block_check::nStakeMaxAge) {
         //
         // Only one output for old kernel inputs
         //
@@ -2600,7 +2600,7 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
                 break;
             }
 
-            int64_t nTimeWeight = bitkernel<uint256>::GetWeight((int64_t)pcoin->first->get_nTime(), (int64_t)nGenerationTime);
+            int64_t nTimeWeight = bitkernel::GetWeight((int64_t)pcoin->first->get_nTime(), (int64_t)nGenerationTime);
 
             // Do not add input that is still too young
             if (nTimeWeight < block_check::nStakeMaxAge) {

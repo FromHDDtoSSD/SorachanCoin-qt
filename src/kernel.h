@@ -12,7 +12,6 @@
 using MapModifierCheckpoints = std::map<int, unsigned int>;
 class MMCP_startup;
 
-template <typename T>
 class bitkernel : private no_instance
 {
     friend class MMCP_startup;
@@ -41,19 +40,19 @@ private:
     // select a block from the candidate blocks in vSortedByTimestamp, excluding
     // already selected blocks in vSelectedBlocks, and with timestamp up to
     // nSelectionIntervalStop.
-    static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
+    static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
 
     // The stake modifier used to hash for a stake kernel is chosen as the stake
     // modifier about a selection interval later than the coin generating the kernel
-    static bool GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake);
+    static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake);
 
     // Check whether stake kernel meets hash target
     // Sets hashProofOfStake on success return
-    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake=false);
+    static bool CheckStakeKernelHash(unsigned int nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, uint256 &hashProofOfStake, uint256 &targetProofOfStake, bool fPrintProofOfStake=false);
 
 public:
-    static const MapModifierCheckpoints &getMapStakeModifierCheckpoints() {return bitkernel<T>::mapStakeModifierCheckpoints;}
-    static const MapModifierCheckpoints &getMapStakeModifierCheckpointsTestnet() {return bitkernel<T>::mapStakeModifierCheckpointsTestNet;}
+    static const MapModifierCheckpoints &getMapStakeModifierCheckpoints() {return bitkernel::mapStakeModifierCheckpoints;}
+    static const MapModifierCheckpoints &getMapStakeModifierCheckpointsTestnet() {return bitkernel::mapStakeModifierCheckpointsTestNet;}
 
     // Note: user must upgrade before the protocol switch deadline, otherwise it's required to
     // re-download the blockchain. The timestamp of upgrade is recorded in the blockchain database.
@@ -68,14 +67,14 @@ public:
 
     // The stake modifier used to hash for a stake kernel is chosen as the stake
     // modifier about a selection interval later than the coin generating the kernel
-    static bool GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier);
+    static bool GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t &nStakeModifier);
 
     // Scan given kernel for solutions
-    static bool ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint32_t nInputTxTime, int64_t nValueIn, std::pair<uint32_t, uint32_t> &SearchInterval, std::vector<std::pair<T, uint32_t> > &solutions);
+    static bool ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint32_t nInputTxTime, int64_t nValueIn, std::pair<uint32_t, uint32_t> &SearchInterval, std::vector<std::pair<uint256, uint32_t> > &solutions);
 
     // Check kernel hash target and coinstake signature
     // Sets hashProofOfStake on success return
-    static bool CheckProofOfStake(const CTransaction &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake);
+    static bool CheckProofOfStake(const CTransaction &tx, unsigned int nBits, uint256 &hashProofOfStake, uint256 &targetProofOfStake);
 
     // Get stake modifier checksum
     static uint32_t GetStakeModifierChecksum(const CBlockIndex *pindex);

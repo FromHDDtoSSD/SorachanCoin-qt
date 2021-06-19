@@ -194,7 +194,7 @@ bool CTxMemPool::accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *
         *pfMissingInputs = false;
 
     // Time (prevent mempool memory exhaustion attack)
-    if (tx.get_nTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
+    if (tx.get_nTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
         return tx.DoS(10, logging::error("CTxMemPool::accept() : transaction timestamp is too far in the future"));
     if (! tx.CheckTransaction())
         return logging::error("CTxMemPool::accept() : CheckTransaction failed");
@@ -873,7 +873,7 @@ bool CTransaction::ClientConnectInputs()
                 return false;
 
             // Verify signature
-            if (! block_check::manage<uint256>::VerifySignature(txPrev, *this, i, Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH, 0))
+            if (! block_check::manage::VerifySignature(txPrev, *this, i, Script_param::SCRIPT_VERIFY_NOCACHE | Script_param::SCRIPT_VERIFY_P2SH, 0))
                 return logging::error("ClientConnectInputs() : block_check::manage::VerifySignature failed");
 
             // this is redundant with the CTxMemPool::mempool.mapNextTx stuff,

@@ -56,7 +56,7 @@ void KernelWorker::Do_generic()
         if (hashProofOfStake[7] > nMaxTarget32) {
             continue;
         } else {
-            CBigNum bnCoinDayWeight = bnValueIn * bitkernel<uint256>::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
+            CBigNum bnCoinDayWeight = bnValueIn * bitkernel::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
             CBigNum bnTargetProofOfStake = bnCoinDayWeight * bnTargetPerCoinDay;
             if (bnTargetProofOfStake >= CBigNum(*pnHashProofOfStake)) {
                 solutions.push_back(std::pair<uint256, uint32_t>(*pnHashProofOfStake, nTimeTx));
@@ -97,7 +97,7 @@ bool KernelWorker::ScanKernelBackward(unsigned char *kernel, uint32_t nBits, uin
         if (hashProofOfStake > nMaxTarget) {
             continue;
         } else {
-            CBigNum bnCoinDayWeight = bnValueIn * bitkernel<uint256>::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
+            CBigNum bnCoinDayWeight = bnValueIn * bitkernel::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
             CBigNum bnTargetProofOfStake = bnCoinDayWeight * bnTargetPerCoinDay;
             if (bnTargetProofOfStake >= CBigNum(hashProofOfStake)) {
                 solution.first = hashProofOfStake;

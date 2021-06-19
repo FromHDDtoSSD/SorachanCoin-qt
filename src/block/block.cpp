@@ -595,9 +595,9 @@ bool CBlock::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
             logging::LogPrintf("Postponing %" PRIszu " reconnects\n", vpindexSecondary.size());
 
         // Switch to new best branch
-        if (! block_check::manage<uint256>::Reorganize(txdb, pindexIntermediate)) {
+        if (! block_check::manage::Reorganize(txdb, pindexIntermediate)) {
             txdb.TxnAbort();
-            block_check::manage<uint256>::InvalidChainFound(pindexNew);
+            block_check::manage::InvalidChainFound(pindexNew);
             return logging::error("SetBestChain() : block_check::manage::Reorganize failed");
         }
 
@@ -705,12 +705,12 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
     // ppcoin: compute stake modifier
     uint64_t nStakeModifier = 0;
     bool fGeneratedStakeModifier = false;
-    if (! bitkernel<uint256>::ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier))
+    if (! bitkernel::ComputeNextStakeModifier(pindexNew, nStakeModifier, fGeneratedStakeModifier))
         return logging::error("AddToBlockIndex() : bitkernel::ComputeNextStakeModifier() failed");
 
     pindexNew->SetStakeModifier(nStakeModifier, fGeneratedStakeModifier);
-    pindexNew->set_nStakeModifierChecksum(bitkernel<uint256>::GetStakeModifierChecksum(pindexNew));
-    if (! bitkernel<uint256>::CheckStakeModifierCheckpoints(pindexNew->get_nHeight(), pindexNew->get_nStakeModifierChecksum()))
+    pindexNew->set_nStakeModifierChecksum(bitkernel::GetStakeModifierChecksum(pindexNew));
+    if (! bitkernel::CheckStakeModifierCheckpoints(pindexNew->get_nHeight(), pindexNew->get_nStakeModifierChecksum()))
         return logging::error("AddToBlockIndex() : Rejected by stake modifier checkpoint height=%d, modifier=0x%016" PRIx64, pindexNew->get_nHeight(), nStakeModifier);
 
     // Add to block_info::mapBlockIndex
@@ -811,11 +811,11 @@ bool CBlock::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*=true*/,
         }
 
         // Check timestamp
-        if (CBlockHeader_impl::GetBlockTime() > block_check::manage<uint256>::FutureDrift(bitsystem::GetAdjustedTime()))
+        if (CBlockHeader_impl::GetBlockTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
             return logging::error("CheckBlock() : block timestamp too far in the future");
 
         // Check coinbase timestamp
-        if (CBlockHeader_impl::GetBlockTime() < block_check::manage<uint256>::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
+        if (CBlockHeader_impl::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
             return DoS(50, logging::error("CheckBlock() : coinbase timestamp is too late"));
     }
 
@@ -893,7 +893,7 @@ bool CBlock::AcceptBlock()
         block_transaction::DONOT_ACCEPT_BLOCKS_ADMIT_HOURS * util::nOneHour;
 
     // Check timestamp against prev
-    if (CBlockHeader_impl::GetBlockTime() <= nMedianTimePast || block_check::manage<uint256>::FutureDrift(CBlockHeader_impl::GetBlockTime()) < pindexPrev->GetBlockTime())
+    if (CBlockHeader_impl::GetBlockTime() <= nMedianTimePast || block_check::manage::FutureDrift(CBlockHeader_impl::GetBlockTime()) < pindexPrev->GetBlockTime())
         return logging::error("CBlock::AcceptBlock() : block's timestamp is too early");
 
     // Don't accept blocks with future timestamps
@@ -1012,7 +1012,7 @@ bool CBlock::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
     // Adding to current best branch
     if (!ConnectBlock(txdb, pindexNew) || !txdb.WriteHashBestChain(hash)) {
         txdb.TxnAbort();
-        block_check::manage<uint256>::InvalidChainFound(pindexNew);
+        block_check::manage::InvalidChainFound(pindexNew);
         return false;
     }
     if (! txdb.TxnCommit())

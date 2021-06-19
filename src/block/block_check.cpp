@@ -186,8 +186,7 @@ uint64_t CCompressAmount::DecompressAmount(uint64_t x)
     return n;
 }
 
-template <typename T>
-void CCoins_impl<T>::FromTx(const CTransaction &tx, int nHeightIn) {
+void CCoins::FromTx(const CTransaction &tx, int nHeightIn) {
     fCoinBase = tx.IsCoinBase();
     fCoinStake = tx.IsCoinStake();
     fCoinPoBench = tx.IsCoinBench();
@@ -198,8 +197,7 @@ void CCoins_impl<T>::FromTx(const CTransaction &tx, int nHeightIn) {
     ClearUnspendable();
 }
 
-template <typename T>
-void CCoins_impl<T>::Clear() {
+void CCoins::Clear() {
     fCoinBase = false;
     fCoinStake = false;
     fCoinPoBench = false;
@@ -209,16 +207,14 @@ void CCoins_impl<T>::Clear() {
     nVersion = 0;
 }
 
-template <typename T>
-void CCoins_impl<T>::Cleanup() {
+void CCoins::Cleanup() {
     while (vout.size() > 0 && vout.back().IsNull())
         vout.pop_back();
     if (vout.empty())
         std::vector<CTxOut>().swap(vout);
 }
 
-template <typename T>
-void CCoins_impl<T>::ClearUnspendable() {
+void CCoins::ClearUnspendable() {
     for (CTxOut &txout: vout) {
         if (txout.get_scriptPubKey().IsUnspendable())
             txout.SetNull();
@@ -226,8 +222,7 @@ void CCoins_impl<T>::ClearUnspendable() {
     Cleanup();
 }
 
-template <typename T>
-bool CCoins_impl<T>::IsPruned() const {
+bool CCoins::IsPruned() const {
     for (const CTxOut &out: vout) {
         if (! out.IsNull())
             return false;
@@ -235,13 +230,12 @@ bool CCoins_impl<T>::IsPruned() const {
     return true;
 }
 
-template <typename T>
-bool CCoins_impl<T>::Spend(const COutPoint &out, CTxInUndo_impl<T> &undo) {
+bool CCoins::Spend(const COutPoint &out, CTxInUndo &undo) {
     if (out.get_n() >= vout.size())
         return false;
     if (vout[out.get_n()].IsNull())
         return false;
-    undo = CTxInUndo_impl<T>(vout[out.get_n()]);
+    undo = CTxInUndo(vout[out.get_n()]);
     vout[out.get_n()].SetNull();
     Cleanup();
     if (vout.size() == 0) {
@@ -255,15 +249,13 @@ bool CCoins_impl<T>::Spend(const COutPoint &out, CTxInUndo_impl<T> &undo) {
     return true;
 }
 
-template <typename T>
-bool CCoins_impl<T>::Spend(int nPos) {
-    CTxInUndo_impl<T> undo;
+bool CCoins::Spend(int nPos) {
+    CTxInUndo undo;
     COutPoint out(0, nPos);
     return Spend(out, undo);
 }
 
-template <typename T>
-bool CCoins_impl<T>::IsAvailable(unsigned int nPos) const {
+bool CCoins::IsAvailable(unsigned int nPos) const {
     return (nPos < vout.size() && !vout[nPos].IsNull() && !vout[nPos].get_scriptPubKey().IsZerocoinMint());
 }
 
@@ -272,8 +264,7 @@ bool CCoins_impl<T>::IsAvailable(unsigned int nPos) const {
  * each bit in the bitmask represents the availability of one output, but the
  * availabilities of the first two outputs are encoded separately
  */
-template <typename T>
-void CCoins_impl<T>::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const
+void CCoins::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const
 {
     unsigned int nLastUsedByte = 0;
     for (unsigned int b = 0; 2 + b * 8 < vout.size(); b++) {
@@ -292,43 +283,33 @@ void CCoins_impl<T>::CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBy
     nBytes += nLastUsedByte;
 }
 
-template <typename T>
-CCoinsViewBacked_impl<T>::CCoinsViewBacked_impl(CCoinsView_impl<T> *viewIn) : base(viewIn) {}
+CCoinsViewBacked::CCoinsViewBacked(CCoinsView *viewIn) : base(viewIn) {}
 
-template <typename T>
-bool CCoinsViewBacked_impl<T>::GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const { return base->GetCoins(txid, coins); }
+bool CCoinsViewBacked::GetCoins(const uint256 &txid, CCoins &coins) const { return base->GetCoins(txid, coins); }
 
-template <typename T>
-bool CCoinsViewBacked_impl<T>::HaveCoins(const uint256 &txid) const { return base->HaveCoins(txid); }
+bool CCoinsViewBacked::HaveCoins(const uint256 &txid) const { return base->HaveCoins(txid); }
 
-template <typename T>
-uint256 CCoinsViewBacked_impl<T>::GetBestBlock() const { return base->GetBestBlock(); }
+uint256 CCoinsViewBacked::GetBestBlock() const { return base->GetBestBlock(); }
 
-template <typename T>
-void CCoinsViewBacked_impl<T>::SetBackend(CCoinsView_impl<T> &viewIn) { base = &viewIn; }
+void CCoinsViewBacked::SetBackend(CCoinsView &viewIn) { base = &viewIn; }
 
-template <typename T>
-bool CCoinsViewBacked_impl<T>::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) { return base->BatchWrite(mapCoins, hashBlock); }
+bool CCoinsViewBacked::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock) { return base->BatchWrite(mapCoins, hashBlock); }
 
-template <typename T>
-bool CCoinsViewBacked_impl<T>::GetStats(CCoinsStats &stats) const { return base->GetStats(stats); }
+bool CCoinsViewBacked::GetStats(CCoinsStats &stats) const { return base->GetStats(stats); }
 
-template <typename T>
-CCoinsViewCache_impl<T>::CCoinsViewCache_impl(CCoinsView_impl<T> *baseIn) : CCoinsViewBacked_impl<T>(baseIn), hasModifier(false), hashBlock(0) {}
+CCoinsViewCache::CCoinsViewCache(CCoinsView *baseIn) : CCoinsViewBacked(baseIn), hasModifier(false), hashBlock(0) {}
 
-template <typename T>
-CCoinsViewCache_impl<T>::~CCoinsViewCache_impl() {
+CCoinsViewCache::~CCoinsViewCache() {
     assert(! hasModifier);
 }
 
-template <typename T>
-CCoinsMap::const_iterator CCoinsViewCache_impl<T>::FetchCoins(const uint256 &txid) const
+CCoinsMap::const_iterator CCoinsViewCache::FetchCoins(const uint256 &txid) const
 {
     CCoinsMap::iterator it = cacheCoins.find(txid);
     if (it != cacheCoins.end())
         return it;
-    CCoins_impl<T> tmp;
-    if (! CCoinsViewBacked_impl<T>::base->GetCoins(txid, tmp))
+    CCoins tmp;
+    if (! CCoinsViewBacked::base->GetCoins(txid, tmp))
         return cacheCoins.end();
     CCoinsMap::iterator ret = cacheCoins.insert(std::make_pair(txid, CCoinsCacheEntry())).first;
     tmp.swap(ret->second.coins);
@@ -340,8 +321,7 @@ CCoinsMap::const_iterator CCoinsViewCache_impl<T>::FetchCoins(const uint256 &txi
     return ret;
 }
 
-template <typename T>
-bool CCoinsViewCache_impl<T>::GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const
+bool CCoinsViewCache::GetCoins(const uint256 &txid, CCoins &coins) const
 {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     if (it != cacheCoins.end()) {
@@ -351,13 +331,12 @@ bool CCoinsViewCache_impl<T>::GetCoins(const uint256 &txid, CCoins_impl<T> &coin
     return false;
 }
 
-template <typename T>
-CCoinsModifier_impl<T> CCoinsViewCache_impl<T>::ModifyCoins(const uint256 &txid)
+CCoinsModifier CCoinsViewCache::ModifyCoins(const uint256 &txid)
 {
     assert(! hasModifier);
     std::pair<CCoinsMap::iterator, bool> ret = cacheCoins.insert(std::make_pair(txid, CCoinsCacheEntry()));
     if (ret.second) {
-        if (! CCoinsViewBacked_impl<T>::base->GetCoins(txid, ret.first->second.coins)) {
+        if (! CCoinsViewBacked::base->GetCoins(txid, ret.first->second.coins)) {
             // The parent view does not have this entry; mark it as fresh.
             ret.first->second.coins.Clear();
             ret.first->second.flags = CCoinsCacheEntry::FRESH;
@@ -371,8 +350,7 @@ CCoinsModifier_impl<T> CCoinsViewCache_impl<T>::ModifyCoins(const uint256 &txid)
     return CCoinsModifier(*this, ret.first);
 }
 
-template <typename T>
-const CCoins_impl<T> *CCoinsViewCache_impl<T>::AccessCoins(const uint256 &txid) const
+const CCoins *CCoinsViewCache::AccessCoins(const uint256 &txid) const
 {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     if (it == cacheCoins.end()) {
@@ -382,8 +360,7 @@ const CCoins_impl<T> *CCoinsViewCache_impl<T>::AccessCoins(const uint256 &txid) 
     }
 }
 
-template <typename T>
-bool CCoinsViewCache_impl<T>::HaveCoins(const uint256 &txid) const
+bool CCoinsViewCache::HaveCoins(const uint256 &txid) const
 {
     CCoinsMap::const_iterator it = FetchCoins(txid);
     // We're using vtx.empty() instead of IsPruned here for performance reasons,
@@ -393,22 +370,19 @@ bool CCoinsViewCache_impl<T>::HaveCoins(const uint256 &txid) const
     return (it != cacheCoins.end() && !it->second.coins.vout.empty());
 }
 
-template <typename T>
-uint256 CCoinsViewCache_impl<T>::GetBestBlock() const
+uint256 CCoinsViewCache::GetBestBlock() const
 {
     if (hashBlock == uint256(0))
-        hashBlock = CCoinsViewBacked_impl<T>::base->GetBestBlock();
+        hashBlock = CCoinsViewBacked::base->GetBestBlock();
     return hashBlock;
 }
 
-template <typename T>
-void CCoinsViewCache_impl<T>::SetBestBlock(const uint256 &hashBlockIn)
+void CCoinsViewCache::SetBestBlock(const uint256 &hashBlockIn)
 {
     hashBlock = hashBlockIn;
 }
 
-template <typename T>
-bool CCoinsViewCache_impl<T>::BatchWrite(CCoinsMap& mapCoins, const uint256 &hashBlockIn)
+bool CCoinsViewCache::BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlockIn)
 {
     assert(! hasModifier);
     for (CCoinsMap::iterator it = mapCoins.begin(); it != mapCoins.end();) {
@@ -445,30 +419,26 @@ bool CCoinsViewCache_impl<T>::BatchWrite(CCoinsMap& mapCoins, const uint256 &has
     return true;
 }
 
-template <typename T>
-bool CCoinsViewCache_impl<T>::Flush()
+bool CCoinsViewCache::Flush()
 {
-    bool fOk = CCoinsViewBacked_impl<T>::base->BatchWrite(cacheCoins, hashBlock);
+    bool fOk = CCoinsViewBacked::base->BatchWrite(cacheCoins, hashBlock);
     cacheCoins.clear();
     return fOk;
 }
 
-template <typename T>
-unsigned int CCoinsViewCache_impl<T>::GetCacheSize() const
+unsigned int CCoinsViewCache::GetCacheSize() const
 {
     return cacheCoins.size();
 }
 
-template <typename T>
-const CTxOut &CCoinsViewCache_impl<T>::GetOutputFor(const CTxIn &input) const
+const CTxOut &CCoinsViewCache::GetOutputFor(const CTxIn &input) const
 {
-    const CCoins_impl<T> *coins = AccessCoins(input.get_prevout().get_hash());
+    const CCoins *coins = AccessCoins(input.get_prevout().get_hash());
     assert(coins && coins->IsAvailable(input.get_prevout().get_n()));
     return coins->vout[input.get_prevout().get_n()];
 }
 
-template <typename T>
-CAmount CCoinsViewCache_impl<T>::GetValueIn(const CTransaction &tx) const
+CAmount CCoinsViewCache::GetValueIn(const CTransaction &tx) const
 {
     if (tx.IsCoinBase())
         return 0;
@@ -480,13 +450,12 @@ CAmount CCoinsViewCache_impl<T>::GetValueIn(const CTransaction &tx) const
     return nResult;
 }
 
-template <typename T>
-bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction &tx) const
+bool CCoinsViewCache::HaveInputs(const CTransaction &tx) const
 {
     if (!tx.IsCoinBase() && !tx.IsZerocoinSpend()) {
         for (unsigned int i = 0; i < tx.get_vin().size(); i++) {
             const COutPoint &prevout = tx.get_vin(i).get_prevout();
-            const CCoins_impl<T> *coins = AccessCoins(prevout.get_hash());
+            const CCoins *coins = AccessCoins(prevout.get_hash());
             if (!coins || !coins->IsAvailable(prevout.get_n())) {
                 return false;
             }
@@ -495,14 +464,13 @@ bool CCoinsViewCache_impl<T>::HaveInputs(const CTransaction &tx) const
     return true;
 }
 
-template <typename T>
-double CCoinsViewCache_impl<T>::GetPriority(const CTransaction &tx, int nHeight) const
+double CCoinsViewCache::GetPriority(const CTransaction &tx, int nHeight) const
 {
     if (tx.IsCoinBase() || tx.IsCoinStake() || tx.IsCoinBench() || tx.IsCoinMasternode())
         return 0.0;
     double dResult = 0.0;
     for (const CTxIn &txin:  tx.get_vin()) {
-        const CCoins_impl<T> *coins = AccessCoins(txin.get_prevout().get_hash());
+        const CCoins *coins = AccessCoins(txin.get_prevout().get_hash());
         assert(coins);
         if (! coins->IsAvailable(txin.get_prevout().get_n())) continue;
         if (coins->nHeight < nHeight) {
@@ -512,15 +480,13 @@ double CCoinsViewCache_impl<T>::GetPriority(const CTransaction &tx, int nHeight)
     return tx.ComputePriority(dResult);
 }
 
-template <typename T>
-CCoinsModifier_impl<T>::CCoinsModifier_impl(CCoinsViewCache_impl<T> &cache_, CCoinsMap::iterator it_) : cache(cache_), it(it_)
+CCoinsModifier::CCoinsModifier(CCoinsViewCache &cache_, CCoinsMap::iterator it_) : cache(cache_), it(it_)
 {
     assert(! cache.hasModifier);
     cache.hasModifier = true;
 }
 
-template <typename T>
-CCoinsModifier_impl<T>::~CCoinsModifier_impl()
+CCoinsModifier::~CCoinsModifier()
 {
     assert(cache.hasModifier);
     cache.hasModifier = false;
@@ -532,8 +498,7 @@ CCoinsModifier_impl<T>::~CCoinsModifier_impl()
 
 
 
-template <typename T>
-void block_check::manage<T>::InvalidChainFound(CBlockIndex *pindexNew)
+void block_check::manage::InvalidChainFound(CBlockIndex *pindexNew)
 {
     if (pindexNew->get_nChainTrust() > block_info::nBestInvalidTrust) {
         block_info::nBestInvalidTrust = pindexNew->get_nChainTrust();
@@ -555,14 +520,12 @@ void block_check::manage<T>::InvalidChainFound(CBlockIndex *pindexNew)
             util::DateTimeStrFormat("%x %H:%M:%S", block_info::pindexBest->GetBlockTime()).c_str());
 }
 
-template <typename T>
-bool block_check::manage<T>::VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
+bool block_check::manage::VerifySignature(const CTransaction &txFrom, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType)
 {
-    return CScriptCheck(txFrom, txTo, nIn, flags, nHashType)();    // Call by functor
+    return CScriptCheck(txFrom, txTo, nIn, flags, nHashType)();    // Call by functor (to Queue)
 }
 
-template <typename T>
-bool block_check::manage<T>::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
+bool block_check::manage::Reorganize(CTxDB &txdb, CBlockIndex *pindexNew)
 {
     logging::LogPrintf("REORGANIZE\n");
 
@@ -668,8 +631,3 @@ void block_check::thread::ThreadScriptCheckQuit()
 {
     scriptcheckqueue.Quit();
 }
-
-template class CCoins_impl<uint256>;
-template class CCoinsModifier_impl<uint256>;
-template class CCoinsViewCache_impl<uint256>;
-template class block_check::manage<uint256>;

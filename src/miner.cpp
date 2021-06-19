@@ -422,7 +422,7 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
         pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
-            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
@@ -732,7 +732,7 @@ CBlockTemplate *miner::CreateNewBlock2(CWallet *pwallet, CTransaction *txCoinSta
         pblock->set_hashPrevBlock(pindexPrev->GetBlockHash());
         if (! fProofOfStake) {
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
-            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage<uint256>::PastDrift(pindexPrev->GetBlockTime())));
+            pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
             pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
@@ -892,7 +892,7 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
     }
 
     // verify hash target and signature of coinstake tx
-    if (! bitkernel<uint256>::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
+    if (! bitkernel::CheckProofOfStake(pblock->get_vtx(1), pblock->get_nBits(), proofHash, hashTarget)) {
         return logging::error("miner::CheckStake() : proof-of-stake checking failed");
     }
 
@@ -989,7 +989,7 @@ bool miner::FillMap(CWallet *pwallet, uint32_t nUpperTime, MidstateMap &inputsMa
 
             // Get stake modifier
             uint64_t nStakeModifier = 0;
-            if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier)) {
+            if (! bitkernel::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier)) {
                 continue;
             }
 

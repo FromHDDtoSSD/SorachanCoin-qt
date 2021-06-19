@@ -164,7 +164,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "CBlock::ReadFromDisk() failed");
 
         uint64_t nStakeModifier = 0;
-        if (! bitkernel<uint256>::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier))
+        if (! bitkernel::GetKernelStakeModifier(block.GetPoHash(), nStakeModifier))
             return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "No kernel stake modifier generated yet");
 
         std::pair<uint32_t, uint32_t> interval;
@@ -192,7 +192,7 @@ json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, CBitrp
             ssKernel << block.get_nTime() << (txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos()) << tx.get_nTime() << nOut;
             CDataStream::const_iterator itK = ssKernel.begin();
             std::vector<std::pair<uint256, uint32_t> > result;
-            if (bitkernel<uint256>::ScanKernelForward((unsigned char *)&itK[0], nBits, tx.get_nTime(), tx.get_vout(nOut).get_nValue(), interval, result)) {
+            if (bitkernel::ScanKernelForward((unsigned char *)&itK[0], nBits, tx.get_nTime(), tx.get_vout(nOut).get_nValue(), interval, result)) {
                 for(const std::pair<uint256, uint32_t> solution: result) {
                     json_spirit::Object item;
                     item.push_back(json_spirit::Pair("nout", nOut));

@@ -7,12 +7,9 @@
 #include <kernel_worker.h>
 #include <txdb.h>
 
-template <typename T>
-unsigned int bitkernel<T>::nModifierUpgradeTime = 0;
-template <typename T>
-MapModifierCheckpoints bitkernel<T>::mapStakeModifierCheckpoints = {};
-template <typename T>
-MapModifierCheckpoints bitkernel<T>::mapStakeModifierCheckpointsTestNet = {};
+unsigned int bitkernel::nModifierUpgradeTime = 0;
+MapModifierCheckpoints bitkernel::mapStakeModifierCheckpoints = {};
+MapModifierCheckpoints bitkernel::mapStakeModifierCheckpointsTestNet = {};
 
 //
 // Hard checkpoints of stake modifiers to ensure they are deterministic
@@ -21,33 +18,28 @@ class MMCP_startup {
 public:
     MMCP_startup() {
         // mainchain
-        bitkernel<uint256>::mapStakeModifierCheckpoints =
+        bitkernel::mapStakeModifierCheckpoints =
             {
                 { 0, 0xe00670bu },
                 { 377262, 0x10e0e614u },
                 { 426387, 0xdf71ab5fu },
                 { 434550, 0x2511363fu }
             };
-        bitkernel<uint256>::mapStakeModifierCheckpointsTestNet =
+        bitkernel::mapStakeModifierCheckpointsTestNet =
             {
                 { 0, 0xfd11f4e7u }
                 //{ 10, 0xfd11f4e7u } // [OK] NG test
             };
-
-        bitkernel<uint65536>::mapStakeModifierCheckpoints = {};
-        bitkernel<uint65536>::mapStakeModifierCheckpointsTestNet = {};
     }
 };
 MMCP_startup mmcp;
 
 // Whether the given block is subject to new modifier protocol
-template <typename T>
-bool bitkernel<T>::IsFixedModifierInterval(unsigned int nTimeBlock) {
+bool bitkernel::IsFixedModifierInterval(unsigned int nTimeBlock) {
     return (nTimeBlock >= (args_bool::fTestNet? nModifierTestSwitchTime : nModifierSwitchTime));
 }
 
-template <typename T>
-bool bitkernel<T>::GetLastStakeModifier(const CBlockIndex *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime)
+bool bitkernel::GetLastStakeModifier(const CBlockIndex *pindex, uint64_t &nStakeModifier, int64_t &nModifierTime)
 {
     if (! pindex) {
         return logging::error("bitkernel::GetLastStakeModifier: null pindex");
@@ -67,15 +59,13 @@ bool bitkernel<T>::GetLastStakeModifier(const CBlockIndex *pindex, uint64_t &nSt
     return true;
 }
 
-template <typename T>
-int64_t bitkernel<T>::GetStakeModifierSelectionIntervalSection(int nSection)
+int64_t bitkernel::GetStakeModifierSelectionIntervalSection(int nSection)
 {
     assert (nSection >= 0 && nSection < 64);
     return (block_check::nModifierInterval * 63 / (63 + ((63 - nSection) * (MODIFIER_INTERVAL_RATIO - 1))));
 }
 
-template <typename T>
-int64_t bitkernel<T>::GetStakeModifierSelectionInterval()
+int64_t bitkernel::GetStakeModifierSelectionInterval()
 {
     int64_t nSelectionInterval = 0;
     for (int nSection=0; nSection<64; ++nSection)
@@ -85,13 +75,12 @@ int64_t bitkernel<T>::GetStakeModifierSelectionInterval()
     return nSelectionInterval;
 }
 
-template <typename T>
-bool bitkernel<T>::SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> > &vSortedByTimestamp, std::map<T, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected)
+bool bitkernel::SelectBlockFromCandidates(std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected)
 {
     bool fSelected = false;
-    T hashBest = 0;
+    uint256 hashBest = 0;
     *pindexSelected = (const CBlockIndex *)0;
-    for(const std::pair<int64_t, T> &item: vSortedByTimestamp)
+    for(const std::pair<int64_t, uint256> &item: vSortedByTimestamp)
     {
         if (! block_info::mapBlockIndex.count(item.second)) {
             return logging::error("bitkernel::SelectBlockFromCandidates: failed to find block index for candidate block %s", item.second.ToString().c_str());
@@ -107,10 +96,10 @@ bool bitkernel<T>::SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> >
 
         // compute the selection hash by hashing its proof-hash and the
         // previous proof-of-stake modifier
-        T hashProof = pindex->IsProofOfStake()? pindex->get_hashProofOfStake() : pindex->GetBlockHash();
+        uint256 hashProof = pindex->IsProofOfStake()? pindex->get_hashProofOfStake() : pindex->GetBlockHash();
         CDataStream ss(SER_GETHASH, 0);
         ss << hashProof << nStakeModifierPrev;
-        T hashSelection = hash_basis::Hash(ss.begin(), ss.end());
+        uint256 hashSelection = hash_basis::Hash(ss.begin(), ss.end());
 
         // the selection hash is divided by 2**32 so that proof-of-stake block
         // is always favored over proof-of-work block. this is to preserve
@@ -148,8 +137,7 @@ bool bitkernel<T>::SelectBlockFromCandidates(std::vector<std::pair<int64_t, T> >
 // additional bits in the stake modifier, even after generating a chain of
 // blocks.
 //
-template <typename T>
-bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, uint64_t &nStakeModifier, bool &fGeneratedStakeModifier)
+bool bitkernel::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, uint64_t &nStakeModifier, bool &fGeneratedStakeModifier)
 {
     nStakeModifier = 0;
     fGeneratedStakeModifier = false;
@@ -180,7 +168,7 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, ui
         //
         // fixed interval protocol requires current block timestamp also be in a different modifier interval
         //
-        if (bitkernel<T>::IsFixedModifierInterval(pindexCurrent->get_nTime())) {
+        if (bitkernel::IsFixedModifierInterval(pindexCurrent->get_nTime())) {
             if (args_bool::fDebug) {
                 logging::LogPrintf("bitkernel::ComputeNextStakeModifier: no new interval keep current modifier: pindexCurrent nHeight=%d nTime=%u\n", pindexCurrent->get_nHeight(), (unsigned int)pindexCurrent->GetBlockTime());
             }
@@ -195,7 +183,7 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, ui
     //
     // Sort candidate blocks by timestamp
     //
-    std::vector<std::pair<int64_t, T> > vSortedByTimestamp;
+    std::vector<std::pair<int64_t, uint256> > vSortedByTimestamp;
     vSortedByTimestamp.reserve(64 * block_check::nModifierInterval / block_check::nStakeTargetSpacing);
 
     int64_t nSelectionInterval = GetStakeModifierSelectionInterval();
@@ -217,7 +205,7 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, ui
     //
     uint64_t nStakeModifierNew = 0;
     int64_t nSelectionIntervalStop = nSelectionIntervalStart;
-    std::map<T, const CBlockIndex *> mapSelectedBlocks;
+    std::map<uint256, const CBlockIndex *> mapSelectedBlocks;
     for (int nRound=0; nRound<std::min(64, (int)vSortedByTimestamp.size()); ++nRound)
     {
         //
@@ -266,7 +254,7 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, ui
             pindex = pindex->get_pprev();
         }
 
-        for(const std::pair<T, const CBlockIndex *> &item: mapSelectedBlocks)
+        for(const std::pair<uint256, const CBlockIndex *> &item: mapSelectedBlocks)
         {
             //
             // 'S' indicates selected proof-of-stake blocks
@@ -285,8 +273,7 @@ bool bitkernel<T>::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, ui
     return true;
 }
 
-template <typename T>
-bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake)
+bool bitkernel::GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t &nStakeModifier, int &nStakeModifierHeight, int64_t &nStakeModifierTime, bool fPrintProofOfStake)
 {
     nStakeModifier = 0;
     if (! block_info::mapBlockIndex.count(hashBlockFrom)) {
@@ -325,8 +312,7 @@ bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModif
     return true;
 }
 
-template <typename T>
-bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModifier)
+bool bitkernel::GetKernelStakeModifier(uint256 hashBlockFrom, uint64_t &nStakeModifier)
 {
     int nStakeModifierHeight;
     int64_t nStakeModifierTime;
@@ -356,8 +342,7 @@ bool bitkernel<T>::GetKernelStakeModifier(T hashBlockFrom, uint64_t &nStakeModif
 //   quantities so as to generate blocks faster, degrading the system back into
 //   a proof-of-work situation.
 //
-template <typename T>
-bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, T &hashProofOfStake, T &targetProofOfStake, bool fPrintProofOfStake)
+bool bitkernel::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom, uint32_t nTxPrevOffset, const CTransaction &txPrev, const COutPoint &prevout, uint32_t nTimeTx, uint256 &hashProofOfStake, uint256 &targetProofOfStake, bool fPrintProofOfStake)
 {
     if (nTimeTx < txPrev.get_nTime()) { // Transaction timestamp violation
         return logging::error("bitkernel::CheckStakeKernelHash() : nTime violation");
@@ -372,10 +357,10 @@ bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom,
     bnTargetPerCoinDay.SetCompact(nBits);
     int64_t nValueIn = txPrev.get_vout(prevout.get_n()).get_nValue();
 
-    T hashBlockFrom = blockFrom.GetPoHash();
+    uint256 hashBlockFrom = blockFrom.GetPoHash();
 
     CBigNum bnCoinDayWeight = CBigNum(nValueIn) * GetWeight((int64_t)txPrev.get_nTime(), (int64_t)nTimeTx) / util::COIN / util::nOneDay;
-    targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint<T>();
+    targetProofOfStake = (bnCoinDayWeight * bnTargetPerCoinDay).getuint<uint256>();
 
     // Calculate hash
     CDataStream ss(SER_GETHASH, 0);
@@ -421,8 +406,7 @@ bool bitkernel<T>::CheckStakeKernelHash(uint32_t nBits, const CBlock &blockFrom,
 }
 
 // Scan given kernel for solution
-template <typename T>
-bool bitkernel<T>::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint32_t nInputTxTime, int64_t nValueIn, std::pair<uint32_t, uint32_t> &SearchInterval, std::vector<std::pair<T, uint32_t> > &solutions)
+bool bitkernel::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint32_t nInputTxTime, int64_t nValueIn, std::pair<uint32_t, uint32_t> &SearchInterval, std::vector<std::pair<uint256, uint32_t> > &solutions)
 {
     try {
         //
@@ -451,7 +435,7 @@ bool bitkernel<T>::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint
         solutions.clear();
         for(size_t i = 0; i < nThreads; ++i)
         {
-            std::vector<std::pair<T, uint32_t> > ws = workers[i]->GetSolutions();
+            std::vector<std::pair<uint256, uint32_t> > ws = workers[i]->GetSolutions();
             solutions.insert(solutions.end(), ws.begin(), ws.end());
         }
 
@@ -473,8 +457,7 @@ bool bitkernel<T>::ScanKernelForward(unsigned char *kernel, uint32_t nBits, uint
 }
 
 // Check kernel hash target and coinstake signature
-template <typename T>
-bool bitkernel<T>::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, T &hashProofOfStake, T &targetProofOfStake)
+bool bitkernel::CheckProofOfStake(const CTransaction &tx, unsigned int nBits, uint256 &hashProofOfStake, uint256 &targetProofOfStake)
 {
     if (! tx.IsCoinStake())
         return logging::error("bitkernel::CheckProofOfStake() : called on non-coinstake %s", tx.GetHash().ToString().c_str());
@@ -490,7 +473,7 @@ bool bitkernel<T>::CheckProofOfStake(const CTransaction &tx, unsigned int nBits,
         return tx.DoS(1, logging::error("bitkernel::CheckProofOfStake() : INFO: read txPrev failed"));  // previous transaction not in main chain, may occur during initial download
 
     // Verify signature
-    if (! block_check::manage<T>::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0))
+    if (! block_check::manage::VerifySignature(txPrev, tx, 0, Script_param::MANDATORY_SCRIPT_VERIFY_FLAGS, 0))
         return tx.DoS(100, logging::error("bitkernel::CheckProofOfStake() : block_check::manage::VerifySignature failed on coinstake %s", tx.GetHash().ToString().c_str()));
 
     // Read block header
@@ -499,15 +482,14 @@ bool bitkernel<T>::CheckProofOfStake(const CTransaction &tx, unsigned int nBits,
         return args_bool::fDebug? logging::error("bitkernel::CheckProofOfStake() : read block failed") : false; // unable to read block of previous transaction
 
     // check
-    if (! bitkernel<T>::CheckStakeKernelHash(nBits, block, txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos(), txPrev, txin.get_prevout(), tx.get_nTime(), hashProofOfStake, targetProofOfStake, args_bool::fDebug))
+    if (! bitkernel::CheckStakeKernelHash(nBits, block, txindex.get_pos().get_nTxPos() - txindex.get_pos().get_nBlockPos(), txPrev, txin.get_prevout(), tx.get_nTime(), hashProofOfStake, targetProofOfStake, args_bool::fDebug))
         return tx.DoS(1, logging::error("bitkernel::CheckProofOfStake() : INFO: check kernel failed on coinstake %s, hashProof=%s", tx.GetHash().ToString().c_str(), hashProofOfStake.ToString().c_str())); // may occur during initial download or if behind on block chain sync
 
     return true;
 }
 
 // Get stake modifier checksum
-template <typename T>
-uint32_t bitkernel<T>::GetStakeModifierChecksum(const CBlockIndex *pindex)
+uint32_t bitkernel::GetStakeModifierChecksum(const CBlockIndex *pindex)
 {
     assert (pindex->get_pprev() || pindex->GetBlockHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
 
@@ -520,7 +502,7 @@ uint32_t bitkernel<T>::GetStakeModifierChecksum(const CBlockIndex *pindex)
     }
 
     ss << pindex->get_nFlags() << pindex->get_hashProofOfStake() << pindex->get_nStakeModifier();
-    T hashChecksum = hash_basis::Hash(ss.begin(), ss.end());
+    uint256 hashChecksum = hash_basis::Hash(ss.begin(), ss.end());
     hashChecksum >>= (256 - 32);
 
     uint32_t ret = static_cast<uint32_t>(hashChecksum.Get64());
@@ -530,10 +512,9 @@ uint32_t bitkernel<T>::GetStakeModifierChecksum(const CBlockIndex *pindex)
 }
 
 // Check stake modifier hard checkpoints
-template <typename T>
-bool bitkernel<T>::CheckStakeModifierCheckpoints(int nHeight, uint32_t nStakeModifierChecksum)
+bool bitkernel::CheckStakeModifierCheckpoints(int nHeight, uint32_t nStakeModifierChecksum)
 {
-    MapModifierCheckpoints &checkpoints = (args_bool::fTestNet ? bitkernel<T>::mapStakeModifierCheckpointsTestNet : bitkernel<T>::mapStakeModifierCheckpoints);
+    MapModifierCheckpoints &checkpoints = (args_bool::fTestNet ? bitkernel::mapStakeModifierCheckpointsTestNet : bitkernel::mapStakeModifierCheckpoints);
     if (checkpoints.count(nHeight)) {
         bool ret = (nStakeModifierChecksum == checkpoints[nHeight]);
         if(! ret) {
@@ -543,5 +524,3 @@ bool bitkernel<T>::CheckStakeModifierCheckpoints(int nHeight, uint32_t nStakeMod
 
     return true;
 }
-
-template class bitkernel<uint256>;

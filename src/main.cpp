@@ -295,16 +295,16 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         //
         // upgrade time set to zero if blocktreedb initialized
         //
-        if (txdb.ReadModifierUpgradeTime(bitkernel<uint256>::nModifierUpgradeTime)) {
-            if (bitkernel<uint256>::nModifierUpgradeTime) {
-                logging::LogPrintf(" Upgrade Info: blocktreedb upgrade detected at timestamp %d\n", bitkernel<uint256>::nModifierUpgradeTime);
+        if (txdb.ReadModifierUpgradeTime(bitkernel::nModifierUpgradeTime)) {
+            if (bitkernel::nModifierUpgradeTime) {
+                logging::LogPrintf(" Upgrade Info: blocktreedb upgrade detected at timestamp %d\n", bitkernel::nModifierUpgradeTime);
             } else {
                 logging::LogPrintf(" Upgrade Info: no blocktreedb upgrade detected.\n");
             }
         } else {
-            bitkernel<uint256>::nModifierUpgradeTime = bitsystem::GetTime();
-            logging::LogPrintf(" Upgrade Info: upgrading blocktreedb at timestamp %u\n", bitkernel<uint256>::nModifierUpgradeTime);
-            if (! txdb.WriteModifierUpgradeTime(bitkernel<uint256>::nModifierUpgradeTime)) {
+            bitkernel::nModifierUpgradeTime = bitsystem::GetTime();
+            logging::LogPrintf(" Upgrade Info: upgrading blocktreedb at timestamp %u\n", bitkernel::nModifierUpgradeTime);
+            if (! txdb.WriteModifierUpgradeTime(bitkernel::nModifierUpgradeTime)) {
                 return logging::error("LoadBlockIndex() : failed to write upgrade info");
             }
         }

@@ -31,6 +31,7 @@ class CWallet;
 class CTxDB;
 class CScriptCheck;
 class COutPoint;
+class CTransaction;
 
 static constexpr int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 
@@ -266,58 +267,6 @@ public:
 
         READWRITE(this->pos);
         READWRITE(this->vSpent);
-    }
-};
-
-// Transaction Memory Pool
-// Singleton Class
-class CTxMemPool
-{
-    CTxMemPool(const CTxMemPool &)=delete;
-    CTxMemPool(CTxMemPool &&)=delete;
-    CTxMemPool &operator=(const CTxMemPool &)=delete;
-    CTxMemPool &operator=(CTxMemPool &&)=delete;
-private:
-    CTxMemPool() {
-        nTransactionsUpdated = 0;
-    }
-    mutable CCriticalSection cs;
-    mutable std::map<uint256, CTransaction> mapTx; // mutable: operator []
-    std::map<COutPoint, CInPoint> mapNextTx;
-    unsigned int nTransactionsUpdated;
-public:
-    static CTxMemPool mempool;
-    CCriticalSection &get_cs() const noexcept {return cs;}
-    const std::map<uint256, CTransaction> &get_mapTx() const noexcept {return mapTx;}
-    const CTransaction &get_mapTx(uint256 hash) const {return mapTx[hash];}
-
-    std::map<uint256, CTransaction> &set_mapTx() {return mapTx;}
-
-    bool accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *pfMissingInputs);
-    bool addUnchecked(const uint256 &hash, CTransaction &tx);
-    bool remove(CTransaction &tx);
-    void clear();
-    void queryHashes(std::vector<uint256> &vtxid);
-    bool IsFromMe(CTransaction &tx);
-    void EraseFromWallets(uint256 hash);
-    size_t size() const noexcept {
-        LOCK(cs);
-        return mapTx.size();
-    }
-    bool exists(uint256 hash) const noexcept {
-        return (mapTx.count(hash) != 0);
-    }
-    CTransaction &lookup(uint256 hash) {
-        return mapTx[hash];
-    }
-
-    unsigned int GetTransactionsUpdated() const {
-        LOCK(cs);
-        return nTransactionsUpdated;
-    }
-    void AddTransactionsUpdated(unsigned int n) {
-        LOCK(cs);
-        nTransactionsUpdated += n;
     }
 };
 
@@ -599,7 +548,6 @@ inline void SerializeTransaction(const TxType &tx, Stream &s) {
 
 // The basic transaction that is broadcasted on the network and contained in blocks.
 // transaction can contain multiple inputs and outputs.
-class CMutableTransaction;
 using MapPrevTx = std::map<uint256, std::pair<CTxIndex, CTransaction> >;
 class CTransaction
 {
@@ -946,6 +894,58 @@ public:
             READWRITE(this->vout);
             READWRITE(this->nLockTime);
         }
+    }
+};
+
+// Transaction Memory Pool
+// Singleton Class
+class CTxMemPool
+{
+    CTxMemPool(const CTxMemPool &)=delete;
+    CTxMemPool(CTxMemPool &&)=delete;
+    CTxMemPool &operator=(const CTxMemPool &)=delete;
+    CTxMemPool &operator=(CTxMemPool &&)=delete;
+private:
+    CTxMemPool() {
+        nTransactionsUpdated = 0;
+    }
+    mutable CCriticalSection cs;
+    mutable std::map<uint256, CTransaction> mapTx; // mutable: operator []
+    std::map<COutPoint, CInPoint> mapNextTx;
+    unsigned int nTransactionsUpdated;
+public:
+    static CTxMemPool mempool;
+    CCriticalSection &get_cs() const noexcept {return cs;}
+    const std::map<uint256, CTransaction> &get_mapTx() const noexcept {return mapTx;}
+    const CTransaction &get_mapTx(uint256 hash) const {return mapTx[hash];}
+
+    std::map<uint256, CTransaction> &set_mapTx() {return mapTx;}
+
+    bool accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *pfMissingInputs);
+    bool addUnchecked(const uint256 &hash, CTransaction &tx);
+    bool remove(CTransaction &tx);
+    void clear();
+    void queryHashes(std::vector<uint256> &vtxid);
+    bool IsFromMe(CTransaction &tx);
+    void EraseFromWallets(uint256 hash);
+    size_t size() const noexcept {
+        LOCK(cs);
+        return mapTx.size();
+    }
+    bool exists(uint256 hash) const noexcept {
+        return (mapTx.count(hash) != 0);
+    }
+    CTransaction &lookup(uint256 hash) {
+        return mapTx[hash];
+    }
+
+    unsigned int GetTransactionsUpdated() const {
+        LOCK(cs);
+        return nTransactionsUpdated;
+    }
+    void AddTransactionsUpdated(unsigned int n) {
+        LOCK(cs);
+        nTransactionsUpdated += n;
     }
 };
 

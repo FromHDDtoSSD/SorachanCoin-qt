@@ -102,14 +102,13 @@ protected:
     static uint64_t DecompressAmount(uint64_t nAmount);
 };
 
-template <typename T>
-class CTxOutCompressor_impl : protected CCompressAmount
+class CTxOutCompressor : protected CCompressAmount
 {
 private:
     CTxOut &txout;
 
 public:
-    CTxOutCompressor_impl(CTxOut &txoutIn) : txout(txoutIn) {}
+    CTxOutCompressor(CTxOut &txoutIn) : txout(txoutIn) {}
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -126,7 +125,6 @@ public:
         READWRITE(cscript);
     }
 };
-using CTxOutCompressor = CTxOutCompressor_impl<uint256>;
 
 /** Undo information for a CTxIn
  *
@@ -134,8 +132,7 @@ using CTxOutCompressor = CTxOutCompressor_impl<uint256>;
  *  last output of the affected transaction, its metadata as well
  *  (coinbase or not, height, transaction version)
  */
-template <typename T>
-class CTxInUndo_impl
+class CTxInUndo
 {
 public:
     CTxOut txout;   // the txout data before being spent
@@ -146,8 +143,8 @@ public:
     unsigned int nHeight; // if the outpoint was the last unspent: its height
     int nVersion;         // if the outpoint was the last unspent: its version
 
-    CTxInUndo_impl() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0) {}
-    CTxInUndo_impl(const CTxOut &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoBenchIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoBench(fCoinPoBenchIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
+    CTxInUndo() : txout(), fCoinBase(false), fCoinStake(false), nHeight(0), nVersion(0) {}
+    CTxInUndo(const CTxOut &txoutIn, bool fCoinBaseIn = false, bool fCoinStakeIn = false, bool fCoinPoBenchIn = false, bool fCoinMasternodeIn = false, unsigned int nHeightIn = 0, int nVersionIn = 0) : txout(txoutIn), fCoinBase(fCoinBaseIn), fCoinStake(fCoinStakeIn), fCoinPoBench(fCoinPoBenchIn), fCoinMasternode(fCoinMasternodeIn), nHeight(nHeightIn), nVersion(nVersionIn) {}
 
     unsigned int GetSerializeSize(int, int) const {
         return ::GetSerializeSize(VARUINT(nHeight * 4 + (fCoinBase ? 2 : 0) + (fCoinStake ? 1 : 0) + (fCoinPoBench ? 16 : 0) + (fCoinMasternode ? 32 : 0))) +
@@ -179,12 +176,11 @@ public:
 };
 
 /** Undo information for a CTransaction */
-template <typename T>
-class CTxUndo_impl
+class CTxUndo
 {
 public:
     // undo information for all txins
-    std::vector<CTxInUndo_impl<T>> vprevout;
+    std::vector<CTxInUndo> vprevout;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -192,7 +188,6 @@ public:
         READWRITE(vprevout);
     }
 };
-using CTxUndo = CTxUndo_impl<uint256>;
 
 /**
 
@@ -248,21 +243,20 @@ using CTxUndo = CTxUndo_impl<uint256>;
  *  - height = 120891
  */
 
-template <typename T>
-class CCoins_impl
+class CCoins
 {
 public:
     void FromTx(const CTransaction &tx, int nHeightIn);
 
     //! construct a CCoins from a CTransaction, at a given height
-    CCoins_impl(const CTransaction &tx, int nHeightIn) {
+    CCoins(const CTransaction &tx, int nHeightIn) {
         FromTx(tx, nHeightIn);
     }
 
     void Clear();
 
     //! empty constructor
-    CCoins_impl() : fCoinBase(false), fCoinStake(false), fCoinPoBench(false), fCoinMasternode(false), vout(0), nHeight(0), nVersion(0) {}
+    CCoins() : fCoinBase(false), fCoinStake(false), fCoinPoBench(false), fCoinMasternode(false), vout(0), nHeight(0), nVersion(0) {}
 
     //! remove spent outputs at the end of vout
     void Cleanup();
@@ -270,7 +264,7 @@ public:
     //! when OP_RETURN, txout.setNull()
     void ClearUnspendable();
 
-    void swap(CCoins_impl &to) {
+    void swap(CCoins &to) {
         std::swap(to.fCoinBase, fCoinBase);
         std::swap(to.fCoinStake, fCoinStake);
         std::swap(to.fCoinPoBench, fCoinPoBench);
@@ -281,7 +275,7 @@ public:
     }
 
     //! equality test
-    friend bool operator==(const CCoins_impl &a, const CCoins_impl &b) {
+    friend bool operator==(const CCoins &a, const CCoins &b) {
         // Empty CCoins objects are always equal.
         if (a.IsPruned() && b.IsPruned())
             return true;
@@ -293,7 +287,7 @@ public:
                a.nVersion == b.nVersion &&
                a.vout == b.vout;
     }
-    friend bool operator!=(const CCoins_impl &a, const CCoins_impl &b) {
+    friend bool operator!=(const CCoins &a, const CCoins &b) {
         return !(a == b);
     }
 
@@ -400,7 +394,7 @@ public:
         vout.assign(vAvail.size(), CTxOut());
         for (unsigned int i = 0; i < vAvail.size(); i++) {
             if (vAvail[i])
-                ::Unserialize(s, REF(CTxOutCompressor_impl<T>(vout[i])));
+                ::Unserialize(s, REF(CTxOutCompressor(vout[i])));
         }
         // coinbase height
         ::Unserialize(s, VARINT(nHeight));
@@ -408,7 +402,7 @@ public:
     }
 
     //! mark an outpoint spent, and construct undo information
-    bool Spend(const COutPoint &out, CTxInUndo_impl<T> &undo);
+    bool Spend(const COutPoint &out, CTxInUndo &undo);
 
     //! mark a vout spent
     bool Spend(int nPos);
@@ -437,11 +431,9 @@ public:
     //! as new tx version will probably only be introduced at certain heights
     int nVersion;
 };
-using CCoins = CCoins_impl<uint256>;
 
-template <typename T>
-struct CCoinsCacheEntry_impl {
-    CCoins_impl<T> coins; // The actual cached data.
+struct CCoinsCacheEntry {
+    CCoins coins; // The actual cached data.
     unsigned char flags;
 
     enum Flags {
@@ -449,9 +441,8 @@ struct CCoinsCacheEntry_impl {
         FRESH = (1 << 1), // The parent view does not have this entry (or it is pruned).
     };
 
-    CCoinsCacheEntry_impl() : coins(), flags(0) {}
+    CCoinsCacheEntry() : coins(), flags(0) {}
 };
-using CCoinsCacheEntry = CCoinsCacheEntry_impl<uint256>;
 
 using CCoinsMap = std::unordered_map<uint256b, CCoinsCacheEntry, CCoinsKeyHasher>;
 
@@ -468,12 +459,11 @@ struct CCoinsStats {
 };
 
 /** Abstract view on the open txout dataset. */
-template <typename T>
-class CCoinsView_impl
+class CCoinsView
 {
 public:
     //! Retrieve the CCoins (unspent transaction outputs) for a given txid
-    virtual bool GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const = 0;
+    virtual bool GetCoins(const uint256 &txid, CCoins &coins) const = 0;
 
     //! Just check whether we have data for a given txid.
     //! This may (but cannot always) return true for fully spent transactions
@@ -490,22 +480,21 @@ public:
     virtual bool GetStats(CCoinsStats &stats) const = 0;
 
     //! As we use CCoinsViews polymorphically, have a virtual destructor
-    virtual ~CCoinsView_impl() {}
+    virtual ~CCoinsView() {}
 };
 
 /** CCoinsView backed by another CCoinsView */
-template <typename T>
-class CCoinsViewBacked_impl : public CCoinsView_impl<T>
+class CCoinsViewBacked : public CCoinsView
 {
 protected:
-    CCoinsView_impl<T> *base;
+    CCoinsView *base;
 
 public:
-    CCoinsViewBacked_impl(CCoinsView_impl<T> *viewIn);
-    bool GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const;
+    CCoinsViewBacked(CCoinsView *viewIn);
+    bool GetCoins(const uint256 &txid, CCoins &coins) const;
     bool HaveCoins(const uint256 &txid) const;
     uint256 GetBestBlock() const;
-    void SetBackend(CCoinsView_impl<T> &viewIn);
+    void SetBackend(CCoinsView &viewIn);
     bool BatchWrite(CCoinsMap &mapCoins, const uint256 &hashBlock);
     bool GetStats(CCoinsStats &stats) const;
 };
@@ -528,27 +517,23 @@ static constexpr unsigned int STANDARD_LOCKTIME_VERIFY_FLAGS = LOCKTIME_VERIFY_S
  *  cleanup code after the modification is finished, and keeping track of
  *  concurrent modifications.
  */
-template <typename T>
-class CCoinsViewCache_impl;
-template <typename T>
-class CCoinsModifier_impl
+class CCoinsViewCache;
+class CCoinsModifier
 {
 private:
-    CCoinsViewCache_impl<T> &cache;
+    CCoinsViewCache &cache;
     CCoinsMap::iterator it;
-    CCoinsModifier_impl(CCoinsViewCache_impl<T> &cache_, CCoinsMap::iterator it_);
+    CCoinsModifier(CCoinsViewCache &cache_, CCoinsMap::iterator it_);
 
 public:
-    CCoins_impl<T> *operator->() { return &it->second.coins; }
-    CCoins_impl<T> &operator*() { return it->second.coins; }
-    ~CCoinsModifier_impl();
-    friend class CCoinsViewCache_impl<T>;
+    CCoins *operator->() { return &it->second.coins; }
+    CCoins &operator*() { return it->second.coins; }
+    ~CCoinsModifier();
+    friend class CCoinsViewCache;
 };
-using CCoinsModifier = CCoinsModifier_impl<uint256>;
 
 /** CCoinsView that adds a memory cache for transactions to another CCoinsView */
-template <typename T>
-class CCoinsViewCache_impl : public CCoinsViewBacked_impl<T>
+class CCoinsViewCache : public CCoinsViewBacked
 {
 protected:
     /* Whether this cache has an active modifier. */
@@ -562,11 +547,11 @@ protected:
     mutable CCoinsMap cacheCoins;
 
 public:
-    CCoinsViewCache_impl(CCoinsView_impl<T> *baseIn);
-    ~CCoinsViewCache_impl();
+    CCoinsViewCache(CCoinsView *baseIn);
+    ~CCoinsViewCache();
 
     // Standard CCoinsView methods
-    bool GetCoins(const uint256 &txid, CCoins_impl<T> &coins) const;
+    bool GetCoins(const uint256 &txid, CCoins &coins) const;
     bool HaveCoins(const uint256 &txid) const;
     uint256 GetBestBlock() const;
     void SetBestBlock(const uint256 &hashBlock);
@@ -577,14 +562,14 @@ public:
      * more efficient than GetCoins. Modifications to other cache entries are
      * allowed while accessing the returned pointer.
      */
-    const CCoins_impl<T> *AccessCoins(const uint256 &txid) const;
+    const CCoins *AccessCoins(const uint256 &txid) const;
 
     /**
      * Return a modifiable reference to a CCoins. If no entry with the given
      * txid exists, a new one is created. Simultaneous modifications are not
      * allowed.
      */
-    CCoinsModifier_impl<T> ModifyCoins(const uint256 &txid);
+    CCoinsModifier ModifyCoins(const uint256 &txid);
 
     /**
      * Push the modifications applied to this cache to its base.
@@ -614,13 +599,12 @@ public:
 
     const CTxOut &GetOutputFor(const CTxIn &input) const;
 
-    friend class CCoinsModifier_impl<T>;
+    friend class CCoinsModifier;
 
 private:
     CCoinsMap::iterator FetchCoins(const uint256 &txid);
     CCoinsMap::const_iterator FetchCoins(const uint256 &txid) const;
 };
-using CCoinsViewCache = CCoinsViewCache_impl<uint256>;
 
 
 namespace block_check
@@ -648,7 +632,6 @@ namespace block_check
     extern unsigned int nModifierInterval;// = mainnet::nModifierInterval;
     const int64_t nTargetTimespan = 7 * util::nOneDay;
 
-    template <typename T>
     class manage : private no_instance
     {
     public:
