@@ -23,7 +23,6 @@
 /*
 ** Reference:
 */
-// HASH     BLAKE2:            https://github.com/BLAKE2/libb2
 // MEMORY   libsodium:         https://github.com/jedisct1/libsodium
 // LAMPORT  Lamport Signature: https://github.com/GEO-Protocol/lib-crypto-lamport
 //
@@ -35,14 +34,14 @@ namespace latest_crypto {
 //
 class quantum_lib
 {
-private:
     quantum_lib()=delete;
     quantum_lib(const quantum_lib &)=delete;
-    quantum_lib(const quantum_lib &&)=delete;
+    quantum_lib(quantum_lib &&)=delete;
     quantum_lib &operator=(const quantum_lib &)=delete;
-    quantum_lib &operator=(const quantum_lib &&)=delete;
+    quantum_lib &operator=(quantum_lib &&)=delete;
 
-    typedef std::uint8_t byte;
+private:
+    using byte = std::uint8_t;
     enum secure_type
     {
         LOCK_UNLOCK,
@@ -52,44 +51,43 @@ private:
 #pragma pack(push, 1)
     typedef union _tag_alloc_info
     {
-        struct {
-            byte m[4 * 1024];
-        } align;
-        struct {
-            secure_type type;
-            size_t size;
-            bool fMemoryLocked;
-        } data;
+        int32_t type;
+        int32_t size;
+        int32_t fMemoryLocked;
     } alloc_info;
 #pragma pack(pop)
 
     static constexpr size_t alloc_info_size = sizeof(alloc_info);
+
 private:
     class manage
     {
-    private:
+        manage()=delete;
         manage(const manage &)=delete;
         manage(manage &&)=delete;
         manage &operator=(const manage &)=delete;
         manage &operator=(manage &&)=delete;
+    public:
+        explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn), fUnlock(false) {}
+        bool readonly() const;
+        bool readwrite() const;
+        bool noaccess() const;
+        ~manage();
+    private:
         void *ptr;
         size_t size;
-    public:
-        explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn) {}
-        void readonly() const;
-        void readwrite() const;
-        ~manage();
+        mutable bool fUnlock;
     };
 public:
     static void *secure_malloc(size_t sizeIn);
-    static void secure_free(void *ptr, bool fRandom = false) noexcept;
-    static void secure_memzero(void *ptr, size_t sizeIn) noexcept;
-    static void secure_memrandom(void *ptr, size_t sizeIn) noexcept;
-    static void secure_stackzero(const size_t sizeIn) noexcept;
-    static void secure_stackrandom(const size_t sizeIn) noexcept;
-    NODISCARD static bool secure_mprotect_noaccess(const void *ptr) noexcept;
-    NODISCARD static bool secure_mprotect_readonly(const void *ptr) noexcept;
-    NODISCARD static bool secure_mprotect_readwrite(void *ptr) noexcept;
+    static void secure_free(void *ptr, bool fRandom = false);
+    static void secure_memzero(void *ptr, size_t sizeIn);
+    static void secure_memrandom(void *ptr, size_t sizeIn);
+    static void secure_stackzero(const size_t sizeIn);
+    static void secure_stackrandom(const size_t sizeIn);
+    NODISCARD static bool secure_mprotect_noaccess(const void *ptr);
+    NODISCARD static bool secure_mprotect_readonly(const void *ptr);
+    NODISCARD static bool secure_mprotect_readwrite(void *ptr);
     static void secure_randombytes_buf(unsigned char *data, size_t sizeIn);
 };
 
