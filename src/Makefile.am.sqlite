@@ -64,7 +64,6 @@ SorachanCoind_SOURCES = \
  json/json_spirit_writer.cpp \
  key/privkey.cpp \
  key/pubkey.cpp \
- libstr/cmstring.cpp \
  merkle/merkle_tree.cpp \
  merkle/merkle_tx.cpp \
  miner/diff.cpp \
