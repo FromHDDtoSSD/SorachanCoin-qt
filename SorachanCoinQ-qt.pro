@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.26.10
+VERSION = 3.27.10
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -16,7 +16,7 @@ message(Qt version: $$[QT_VERSION])
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
 
 #
 # GUI_MODE
@@ -908,7 +908,6 @@ SOURCES += \
     src/nvme/nvme_mem.cpp \
     src/util/thread.cpp \
     src/util/exception.cpp \
-    src/libstr/cmstring.cpp \
     src/PoBench/pob_challenge.cpp \
     src/PoBench/pob_proof.cpp \
     src/PoBench/pob_plot.cpp \
@@ -930,7 +929,13 @@ RESOURCES += \
 #
 SOURCES += \
     src/test/bignum_test.cpp \
-    src/test/bip39_test.cpp
+    src/test/bip39_test.cpp \
+    src/test/cmstring_test.cpp \
+    src/test/uintnum_test.cpp \
+    src/test/quantum_test.cpp \
+    src/test/key_test.cpp \
+    src/test/transaction_test.cpp \
+    src/test/script_test.cpp
 
 contains(USE_QRCODE, 1) {
     contains(GUI_MODE, 1) {

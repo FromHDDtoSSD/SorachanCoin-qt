@@ -88,14 +88,14 @@ void *quantum_lib::secure_malloc(size_t sizeIn) {
 void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) {
     void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
     size_t size;
-    bool fMemoryLocked;
+    //bool fMemoryLocked;
     {
         manage mem(fptr, alloc_info_size);
         if(! mem.readonly())
             throw std::runtime_error("quantum_lib::secure_free readonly failure");
         const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
         size = pinfo->size;
-        fMemoryLocked = pinfo->fMemoryLocked;
+        //fMemoryLocked = pinfo->fMemoryLocked;
         if(! mem.noaccess())
             throw std::runtime_error("quantum_lib::secure_free noaccess failure");
     }
@@ -104,6 +104,7 @@ void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) {
         if(! mem.readwrite())
             throw std::runtime_error("quantum_lib::secure_free readonly failure");
         fRandom ? secure_memrandom(fptr, size + alloc_info_size) : secure_memzero(fptr, size + alloc_info_size);
+        /* unused
         if(fMemoryLocked) {
 #if defined(WIN32)
             if(! ::VirtualUnlock(fptr, size + alloc_info_size))
@@ -113,11 +114,12 @@ void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) {
                 throw std::runtime_error("quantum_lib::secure_free munlock failure");
 #endif
         }
+        */
     }
 
 #if defined(WIN32)
     if(! ::VirtualFree(fptr, 0U, MEM_RELEASE))
-        throw std::runtime_error("quantum_lib::secure_free VirtualFree failure");
+        throw std::runtime_error("quantum_lib::secure_free munmap failure");
 #else
     if(::munmap(fptr, size + alloc_info_size)!=0)
         throw std::runtime_error("quantum_lib::secure_free munmap failure");

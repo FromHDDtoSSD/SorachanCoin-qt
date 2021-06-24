@@ -1,16 +1,16 @@
-// Copyright (c) 2019-2021 The SorachanCoin Developers
-// Distributed under the MIT/X11 software license, see the accompanying
-// file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <libstr/cmstring.h>
 #include <libstr/movestream.h>
 #include <random/random.h>
+#include <debugcs/debugcs.h>
 
-//
-// CMString test OK (Windows and Linux/UNIX)
-//
-#if defined(WIN32) && defined(DEBUG)
-void CMString_test() {
+class CMString_test {
+public:
+    CMString_test() {
+        return; // OK
+
+        debugcs::instance() << "CMString_test" << debugcs::endl();
+
         CMString str = CMString(L"cats") += 456;
         str += CMString("doge") + L"doge";
         str += CMString(std::string("mike")) + std::wstring(L"neko");
@@ -91,7 +91,8 @@ void CMString_test() {
             CMString strg(CMString(std::string("fes").c_str()) + (char *)buf);
             assert(strg==("fes"+CMString((char *)buf)));
         }
-}
-#else
-void CMString_test() {}
+    }
+};
+#ifdef DEBUG
+CMString_test CMString_test_obj;
 #endif

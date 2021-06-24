@@ -19,8 +19,6 @@
 #include <quantum/quantum.h>
 #include <compat/compat.h> // IS_TRIVIALLY_CONSTRUCTIBLE
 
-namespace latest_crypto {
-
 template <typename T>
 class stack_ptr {
     stack_ptr()=delete;
@@ -91,7 +89,7 @@ template <unsigned int N, typename T, typename Size = uint32_t,
     typename Diff = int32_t>
 class prevector_s {
 private:
-    typedef secure_segment::secure_protect_allocator<T> A;
+    typedef latest_crypto::secure_segment::secure_protect_allocator<T> A;
     class memory {
     private:
         memory()=delete;
@@ -103,15 +101,15 @@ private:
     public:
         template<typename R> memory(R *pIn) : ptr(reinterpret_cast<char *>(pIn)) {}
         void readonly() const {
-            if(! quantum_lib::secure_mprotect_readonly(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readonly(ptr))
                 throw std::runtime_error("prevector_s memory: failed to readonly");
         }
         void readwtite() const {
-            if(! quantum_lib::secure_mprotect_readwrite(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(ptr))
                 throw std::runtime_error("prevector_s memory: failed to readwrite");
         }
         void noaccess() const {
-            if(! quantum_lib::secure_mprotect_noaccess(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(ptr))
                 throw std::runtime_error("prevector_s memory: failed to noaccess");
         }
         ~memory() {
@@ -329,12 +327,12 @@ public:
         explicit raw_pointer(char *pIn) noexcept : ptr(pIn) {}
         explicit raw_pointer(unsigned char *pIn) noexcept : ptr((char *)pIn) {}
         template <typename R> operator R *() const {
-            if(! quantum_lib::secure_mprotect_readwrite(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(ptr))
                 throw std::runtime_error("prevector_s raw_pointer: failed to raw_pointer");
             return reinterpret_cast<T *>(ptr);
         }
         ~raw_pointer() {
-            if(! quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
+            if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
         }
     } rp;
 
@@ -351,13 +349,13 @@ public:
         explicit raw_ref(char *pIn, size_type posIn) noexcept : ptr(pIn), pos(posIn) {}
         explicit raw_ref(unsigned char *pIn, size_type posIn) noexcept : ptr((char *)pIn), pos(posIn) {}
         template <typename R> operator R &() const {
-            if(! quantum_lib::secure_mprotect_readwrite(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(ptr))
                 throw std::runtime_error("prevector_s raw_ref: failed to readwrite");
             R *value = reinterpret_cast<R *>(ptr) + pos;
             return reinterpret_cast<R &>(*value);
         }
         ~raw_ref() {
-            if(! quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
+            if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
         }
     } rr;
 
@@ -373,12 +371,12 @@ public:
         explicit const_raw_pointer(const char *pIn) noexcept : ptr(pIn) {}
         explicit const_raw_pointer(const unsigned char *pIn) noexcept : ptr((const char *)pIn) {}
         template <typename R> operator const R *() const {
-            if(! quantum_lib::secure_mprotect_readonly(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readonly(ptr))
                 throw std::runtime_error("prevector_s const_raw_pointer: failed to readonly");
             return reinterpret_cast<const T *>(ptr);
         }
         ~const_raw_pointer() {
-            if(! quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
+            if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
         }
     } crp;
 
@@ -395,13 +393,13 @@ public:
         explicit const_raw_ref(const char *pIn, size_type posIn) noexcept : ptr(pIn), pos(posIn) {}
         explicit const_raw_ref(const unsigned char *pIn, size_type posIn) noexcept : ptr((const char *)pIn), pos(posIn) {}
         template <typename R> operator const R &() const {
-            if(! quantum_lib::secure_mprotect_readonly(ptr))
+            if(! latest_crypto::quantum_lib::secure_mprotect_readonly(ptr))
                 throw std::runtime_error("prevector_s const_raw_ref: failed to readonly");
             R *value = reinterpret_cast<R *>(ptr) + pos;
             return reinterpret_cast<R &>(*value);
         }
         ~const_raw_ref() {
-            if(! quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
+            if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(ptr)) {(void)ptr;}
         }
     } crr;
 
@@ -421,14 +419,14 @@ private:
 
     void direct_alloc() {
         if(! _union.direct) {
-            _union.direct = static_cast<char *>(quantum_lib::secure_malloc(sizeof(T) * N));
+            _union.direct = static_cast<char *>(latest_crypto::quantum_lib::secure_malloc(sizeof(T) * N));
         }
-        if(! quantum_lib::secure_mprotect_noaccess(_union.direct))
+        if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(_union.direct))
             throw std::runtime_error("prevector_s::direct_alloc : Failed to noaccess");
     }
     void direct_free() noexcept {
-        if(quantum_lib::secure_mprotect_readwrite(_union.direct)) {
-            quantum_lib::secure_free(_union.direct);
+        if(latest_crypto::quantum_lib::secure_mprotect_readwrite(_union.direct)) {
+            latest_crypto::quantum_lib::secure_free(_union.direct);
             _union.direct = nullptr;
         }
     }
@@ -453,7 +451,7 @@ private:
             if(! is_direct()) {
                 memory dm(_union.direct);
                 dm.readwtite();
-                if(! quantum_lib::secure_mprotect_readwrite(_union._s.indirect))
+                if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(_union._s.indirect))
                     throw std::runtime_error("prevector_s change_capacity: failed to readwrite");
                 T *indirect = indirect_ptr(0);
                 T *src = indirect;
@@ -474,12 +472,12 @@ private:
                 //
                 // FIXED: Assign here std::vector instead of malloc/realloc and
                 // increase N to avoid using this re-allocation as much possible.
-                if(! quantum_lib::secure_mprotect_readwrite(_union._s.indirect))
+                if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(_union._s.indirect))
                     throw std::runtime_error("prevector_s change_capacity: failed to readwrite");
                 _invch->resize((size_t)sizeof(T) * new_capacity);
                 _union._s.indirect = &_invch->at(0);
                 _union._s.capacity = new_capacity;
-                if(! quantum_lib::secure_mprotect_noaccess(_union._s.indirect))
+                if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(_union._s.indirect))
                     throw std::runtime_error("prevector_s change_capacity: failed to noaccess");
             } else {
                 _invch = new(std::nothrow) std::vector<unsigned char, A>();
@@ -488,14 +486,14 @@ private:
                 _invch->resize((size_t)sizeof(T) * new_capacity);
                 T *src = direct_ptr(0);
                 T *dst = reinterpret_cast<T *>(&_invch->at(0));
-                if(! quantum_lib::secure_mprotect_readonly(src))
+                if(! latest_crypto::quantum_lib::secure_mprotect_readonly(src))
                     throw std::runtime_error("prevector_s change_capacity: failed to readonly");
                 std::memcpy(dst, src, size() * sizeof(T));
-                if(! quantum_lib::secure_mprotect_noaccess(src))
+                if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(src))
                     throw std::runtime_error("prevector_s change_capacity: failed to noaccess");
                 _union._s.indirect = &_invch->at(0);
                 _union._s.capacity = new_capacity;
-                if(! quantum_lib::secure_mprotect_noaccess(_union._s.indirect))
+                if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(_union._s.indirect))
                     throw std::runtime_error("prevector_s change_capacity: failed to noaccess");
                 _size += N + 1;
             }
@@ -878,7 +876,7 @@ public:
             clear();
         }
         if(! is_direct()) {
-            if(quantum_lib::secure_mprotect_readwrite(_union._s.indirect)) { // _union._s.indirect = &_invch.at(0)
+            if(latest_crypto::quantum_lib::secure_mprotect_readwrite(_union._s.indirect)) { // _union._s.indirect = &_invch.at(0)
                 delete _invch;
                 _invch = nullptr;
                 _union._s.indirect = nullptr;
@@ -1011,7 +1009,5 @@ const int PREVECTOR_S_N = 512;
 #ifdef USE_PREVECTOR_S
 
 #endif
-
-} // namespace latest_crypto
 
 #endif

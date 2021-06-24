@@ -1339,7 +1339,4 @@ static inline bool operator==(const uint131072 &u1, const CMString &s2) {
     return (s2==u1);
 }
 
-// test
-extern void CMString_test();
-
 #endif // SORACHANCOIN_CMSTRING_H

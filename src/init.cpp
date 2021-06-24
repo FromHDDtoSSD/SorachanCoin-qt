@@ -598,9 +598,6 @@ std::string entry::HelpMessage()
 #define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 bool entry::AppInit2(bool restart/*=false*/)
 {
-    // ********************************************************* Test and Autocheckpoint load (if DEBUG)
-    //CMString_test();
-
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
 

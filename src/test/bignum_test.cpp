@@ -2,11 +2,14 @@
 #include <bignum.h>
 #include <uint256.h>
 #include <script/scriptnum.h>
+#include <debugcs/debugcs.h>
 
-class uint256_bignum_test {
+class bignum_test {
 public:
-    uint256_bignum_test() {
-        debugcs::instance() << "bignum(uint256b) test" << debugcs::endl();
+    bignum_test() {
+        debugcs::instance() << "bignum_test" << debugcs::endl();
+
+        // https://www.iuec.co.jp/blockchain/bignum.html
         CBigNum bNum(123456789);
         uint256b uNum(123456789);
         debugcs::instance() << "CBigNum GetCompact: " << bNum.GetCompact() << debugcs::endl();
@@ -40,14 +43,8 @@ public:
 
         uint256b u256Target3(u256Target2);
         assert(bnTarget2.GetCompact()==u256Target3.GetCompact());
-
-        CScriptNum scTarget(123456789);
-        assert(bnTarget1.getuint64()==scTarget.getint64());
-
-        CNekoNum nekoTarget(123456789);
-        assert(bnTarget1.getuint64()==nekoTarget.getuint64());
     }
 };
 #ifdef DEBUG
-uint256_bignum_test bnum_test;
+bignum_test bignum_test_obj;
 #endif
