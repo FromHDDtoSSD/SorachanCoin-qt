@@ -50,12 +50,12 @@ const MapCheckpoints Checkpoints::manage::mapCheckpointsTestnet =
     {
         { 0, block_params::hashGenesisBlockTestNet },
         { 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") },    // 1533660799
-        { 1493840, uint256("0x0000600a878c1ff8462557ffee2b5cfabfd9ae5b05d0af6789418419efc0f53a") }  // 1623896603
+        { 1488851, uint256("0x000019df8993b5c0dd756a25be579f76c08b3f10eeaa2b97b667f0bd1de80c7a") }  // 1619607581
         //{ 15330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }  // [OK] NG test 1533660799
     };
 
 const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1609580025;
-const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1623896603;
+const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1619607581;
 
 //
 // Banned
