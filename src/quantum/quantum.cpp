@@ -115,6 +115,8 @@ void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) {
 #endif
         }
         */
+        if(! mem.noaccess())
+            throw std::runtime_error("quantum_lib::secure_free noaccess failure");
     }
 
 #if defined(WIN32)

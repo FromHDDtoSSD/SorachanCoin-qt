@@ -20,6 +20,7 @@
 #include <cleanse/cleanse.h>
 
 class CKey;
+class key_test;
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using key_vector = prevector<PREVECTOR_N, uint8_t>;
@@ -45,6 +46,7 @@ public:
 class CPubKey
 {
     friend class CKey;
+    friend class key_test;
 public:
     //! secp256k1
     //structure: struct secp256k1_data {BIGNUM *r; BIGNUM *s;};
