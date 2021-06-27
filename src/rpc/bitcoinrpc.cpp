@@ -181,7 +181,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, CBitrpcData
 }
 
 // Call Table
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[97] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[98] =
 {   //  name                        function                      safemd  unlocked
     //  ------------------------    -----------------------       ------  --------
     { "help",                       &help,                        true,   true },
@@ -232,6 +232,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[97] =
     { "dumpblockbynumber",          &dumpblockbynumber,           false,  false },
     { "getblockhash",               &getblockhash,                false,  false },
     { "getblockqhash",              &getblockqhash,               false,  false },
+    { "getblockmodifierhash",       &getblockmodifierhash,        false,  false },
     { "gettransaction",             &gettransaction,              false,  false },
     { "listtransactions",           &listtransactions,            false,  false },
     { "listaddressgroupings",       &listaddressgroupings,        false,  false },
@@ -1278,6 +1279,7 @@ json_spirit::Array bitrpc::RPCConvertValues(CBitrpcData &data, const std::string
     else if (strMethod == "getblockbynumber"       && n > 1) { ConvertTo<bool>(data, params[1]); }
     else if (strMethod == "getblockhash"           && n > 0) { ConvertTo<int64_t>(data, params[0]); }
     else if (strMethod == "getblockqhash"          && n > 0) { ConvertTo<int64_t>(data, params[0]); }
+    else if (strMethod == "getblockmodifierhash"   && n > 0) { ConvertTo<int64_t>(data, params[0]); }
     else if (strMethod == "move"                   && n > 2) { ConvertTo<double>(data, params[2]); }
     else if (strMethod == "move"                   && n > 3) { ConvertTo<int64_t>(data, params[3]); }
     else if (strMethod == "sendfrom"               && n > 2) { ConvertTo<double>(data, params[2]); }

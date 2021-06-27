@@ -730,15 +730,53 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
     if (args_bool::fRequestShutdown)
         return true;
 
-    // Calculate nChainTrust
+    // BLOCK_HASH_MODIFIER hash checker
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     for(const auto &item: mapBlockIndex) {
         CBlockIndex *pindex = item.second;
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
-
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
+    if(0 < block_info::mapBlockLyraHeight.size()) {
+        std::vector<std::pair<int32_t, BLOCK_HASH_MODIFIER *> > vSortedModiByHeight;
+        vSortedModiByHeight.reserve(block_info::mapBlockLyraHeight.size());
+        for (auto &item: block_info::mapBlockLyraHeight) {
+            BLOCK_HASH_MODIFIER *pmodi = &item.second;
+            vSortedModiByHeight.push_back(std::make_pair(pmodi->get_nHeight(), pmodi));
+        }
+        std::sort(vSortedModiByHeight.begin(), vSortedModiByHeight.end());
+        std::map<int32_t, int32_t> orphan_block; // nHeight, dummy(always 0)
+        for (int i=0; i<vSortedModiByHeight.size()-1; ++i) {
+            BLOCK_HASH_MODIFIER *p1 = vSortedModiByHeight[i].second;
+            BLOCK_HASH_MODIFIER *p2 = vSortedModiByHeight[i+1].second;
+            if(p1->get_nHeight()==p2->get_nHeight()) { // orphan Block_hash_modifier found
+                //debugcs::instance() << "vSortedModiByHeight orphan found nHeight: " << p1->get_nHeight() << debugcs::endl();
+                orphan_block.insert(std::make_pair(p1->get_nHeight(), 0));
+            }
+        }
+
+        for (const auto &item: orphan_block) {
+            CBlockIndex *pindex=nullptr;
+            for(auto &item2: block_info::mapBlockIndex) {
+                if(item.first==item2.second->get_nHeight()) {
+                    pindex=item2.second;
+                    break;
+                }
+            }
+            assert(pindex!=nullptr);
+            assert(pindex->get_nHeight()==item.first);
+            //auto mi = block_info::mapBlockLyraHeight.find(pindex->GetBlockHash());
+            //auto miprev = block_info::mapBlockLyraHeight.find(pprevindex->GetBlockHash());
+            //if(mi!=block_info::mapBlockLyraHeight.end() && miprev!=block_info::mapBlockLyraHeight.end()) {
+            //    BLOCK_HASH_MODIFIER &modi1 = (*mi).second;
+            //    const BLOCK_HASH_MODIFIER &modiprev = (*miprev).second;
+            //    modi1.set_prevHash(modiprev.GetBlockModifierHash());
+            //}
+        }
+    }
+
+    // Calculate nChainTrust
     for(const auto &item: vSortedByHeight) {
         CBlockIndex *pindex = item.second;
 

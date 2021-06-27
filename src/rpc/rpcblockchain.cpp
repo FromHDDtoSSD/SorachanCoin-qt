@@ -247,6 +247,31 @@ json_spirit::Value CRPCTable::getblockqhash(const json_spirit::Array &params, CB
     return data.JSONRPCSuccess(tt.GetHex());
 }
 
+// SorachanCoin: BLOCK_HASH_MODIFIER
+json_spirit::Value CRPCTable::getblockmodifierhash(const json_spirit::Array &params, CBitrpcData &data) noexcept {
+    if (data.fHelp() || params.size() != 1) {
+        return data.JSONRPCSuccess(
+            "getblockmodifierhash <index>\n"
+            "Returns BLOCK_HASH_MODIFIER of block in best-block-chain at <index>.");
+    }
+
+    json_spirit::json_flags status;
+    int nHeight = params[0].get_int(status);
+    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
+    if (nHeight < 0 || nHeight > block_info::nBestHeight)
+        return data.runtime_error("Block number out of range.");
+
+    CBlockIndex *pblockindex = block_transaction::manage::FindBlockByHeight(nHeight);
+    uint256 hash = pblockindex->GetBlockHash();
+
+    BlockHeight::const_iterator mi = block_info::mapBlockLyraHeight.find(hash);
+    if(mi==block_info::mapBlockLyraHeight.end()) {
+        return data.runtime_error("Block number out of range.");
+    }
+
+    return data.JSONRPCSuccess((*mi).second.GetBlockModifierHash().GetHex());
+}
+
 json_spirit::Value CRPCTable::getblock(const json_spirit::Array &params, CBitrpcData &data) {
     if (data.fHelp() || params.size() < 1 || params.size() > 2) {
         return data.JSONRPCSuccess(
