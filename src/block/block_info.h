@@ -88,13 +88,13 @@ namespace block_hash_modifier_genesis {
     extern BLOCK_HASH_MODIFIER_MUTABLE create_block_hash_modifier_genesis();
 }
 
-// BLOCK_HASH_MODIFIER_checkpoints
+// BLOCK_HASH_MODIFIER orphan block checker
 namespace block_hash_modifier_checkpoints {
     extern const MapCheckpoints mapCheckpoints;
     extern const MapCheckpoints mapCheckpointsTestnet;
     extern const LastCheckpointTime CheckpointLastTime;
     extern const LastCheckpointTime CheckpointLastTimeTestnet;
-    extern bool CheckHardened(int nHeight, const uint256 &hash, const std::string ToString="");
+    extern bool CheckOrphanBlock(int nHeight, const uint256 &hash, const std::string ToString="");
 }
 
 // BLOCK_HASH_MODIFIER info

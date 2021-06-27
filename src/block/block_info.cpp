@@ -36,29 +36,33 @@ unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
 
 // block_hash_modifier checkpoints and modifierChecksum
 const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpoints = {
-    //{SWITCH_LYRE2RE_BLOCK-1, block_hash_modifier_genesis::mainnet_genesic_hash},
+    {SWITCH_LYRE2RE_BLOCK-1, block_hash_modifier_genesis::mainnet_genesic_hash},
 };
 
 const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpointsTestnet = {
     {SWITCH_LYRE2RE_BLOCK_TESTNET-1, block_hash_modifier_genesis::testnet_genesis_hash},
+    {1501700, uint256("0xe70859bc50c10caf55d3436e70614b50553d2805bf802846605af839f311ff1e")},
 };
 
 const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTime = 0;
 const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTimeTestnet = 0;
 
-bool block_hash_modifier_checkpoints::CheckHardened(int nHeight, const uint256 &hash, const std::string ToString/*=""*/) { // nHeight is current
+bool block_hash_modifier_checkpoints::CheckOrphanBlock(int nHeight, const uint256 &hash, const std::string ToString/*=""*/) { // nHeight is current
     if(args_bool::fDebug)
         debugcs::instance() << "block_hash_modifier checkpoint nHeight: " << nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
     const MapCheckpoints &mapcp = args_bool::fTestNet ?
             block_hash_modifier_checkpoints::mapCheckpointsTestnet:
             block_hash_modifier_checkpoints::mapCheckpoints;
+
     MapCheckpoints::const_iterator mi = mapcp.find(nHeight);
     if(mi==mapcp.end())
         return true;
     if((*mi).second==hash)
         return true;
-    debugcs::instance() << "ERROR: block_hash_modifier info: " << ToString.c_str() << debugcs::endl();
-    return false;
+
+    // under development
+    logging::LogPrintf("If pass block_hash_modifier_checkpoints::CheckOrphanBlock, there is an orphan block on the Blockchain.\n");
+    return true;
 }
 
 // block_hash_modofier message

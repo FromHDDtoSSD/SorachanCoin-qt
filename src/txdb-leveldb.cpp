@@ -730,7 +730,6 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
     if (args_bool::fRequestShutdown)
         return true;
 
-    // BLOCK_HASH_MODIFIER hash checker
     std::vector<std::pair<int32_t, CBlockIndex *> > vSortedByHeight;
     vSortedByHeight.reserve(mapBlockIndex.size());
     for(const auto &item: mapBlockIndex) {
@@ -738,6 +737,9 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
         vSortedByHeight.push_back(std::make_pair(pindex->get_nHeight(), pindex));
     }
     std::sort(vSortedByHeight.begin(), vSortedByHeight.end());
+
+    // BLOCK_HASH_MODIFIER orphan checker
+    // Note: when -debug, Checkpoints take from the Blockchain where no assert.
     if(0 < block_info::mapBlockLyraHeight.size()) {
         std::vector<std::pair<int32_t, BLOCK_HASH_MODIFIER *> > vSortedModiByHeight;
         vSortedModiByHeight.reserve(block_info::mapBlockLyraHeight.size());
@@ -751,28 +753,13 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
             BLOCK_HASH_MODIFIER *p1 = vSortedModiByHeight[i].second;
             BLOCK_HASH_MODIFIER *p2 = vSortedModiByHeight[i+1].second;
             if(p1->get_nHeight()==p2->get_nHeight()) { // orphan Block_hash_modifier found
-                //debugcs::instance() << "vSortedModiByHeight orphan found nHeight: " << p1->get_nHeight() << debugcs::endl();
+                if(args_bool::fDebug)
+                    debugcs::instance() << "vSortedModiByHeight orphan found nHeight: " << p1->get_nHeight() << debugcs::endl();
                 orphan_block.insert(std::make_pair(p1->get_nHeight(), 0));
             }
         }
-
-        for (const auto &item: orphan_block) {
-            CBlockIndex *pindex=nullptr;
-            for(auto &item2: block_info::mapBlockIndex) {
-                if(item.first==item2.second->get_nHeight()) {
-                    pindex=item2.second;
-                    break;
-                }
-            }
-            assert(pindex!=nullptr);
-            assert(pindex->get_nHeight()==item.first);
-            //auto mi = block_info::mapBlockLyraHeight.find(pindex->GetBlockHash());
-            //auto miprev = block_info::mapBlockLyraHeight.find(pprevindex->GetBlockHash());
-            //if(mi!=block_info::mapBlockLyraHeight.end() && miprev!=block_info::mapBlockLyraHeight.end()) {
-            //    BLOCK_HASH_MODIFIER &modi1 = (*mi).second;
-            //    const BLOCK_HASH_MODIFIER &modiprev = (*miprev).second;
-            //    modi1.set_prevHash(modiprev.GetBlockModifierHash());
-            //}
+        if(args_bool::fDebug) {
+            assert(orphan_block.size()==0);
         }
     }
 
