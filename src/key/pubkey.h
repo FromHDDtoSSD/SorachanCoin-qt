@@ -130,19 +130,9 @@ public:
 #endif
         } secp256k1_fe;
         typedef struct {
-            /* X = sum(i=0..9, elem[i]*2^26) mod n */
-            int32_t n[10];
-#ifdef VERIFY
-            int magnitude;
-            int normalized;
-#endif
-        } secp256k1_fe_signed;
-        typedef struct {
             uint32_t n[8];
         } secp256k1_fe_storage;
-        typedef struct {
-            int32_t n[8];
-        } secp256k1_fe_storage_signed;
+
         /** A group element of the secp256k1 curve, in affine coordinates. */
         typedef struct {
             secp256k1_fe x;
@@ -150,18 +140,19 @@ public:
             int infinity; /* whether this represents the point at infinity */
         } secp256k1_ge;
         typedef struct {
-            secp256k1_fe_signed x;
-            secp256k1_fe_signed y;
-            int infinity; /* whether this represents the point at infinity */
-        } secp256k1_ge_signed;
+            secp256k1_fe re;
+            secp256k1_fe im;
+            int line;
+        } secp256k1_gai;
         typedef struct {
             secp256k1_fe_storage x;
             secp256k1_fe_storage y;
         } secp256k1_ge_storage;
         typedef struct {
-            secp256k1_fe_storage_signed x;
-            secp256k1_fe_storage_signed y;
-        } secp256k1_ge_storage_signed;
+            secp256k1_fe_storage re;
+            secp256k1_fe_storage im;
+        } secp256k1_gai_storage;
+
         /** A group element of the secp256k1 curve, in jacobian coordinates. */
         typedef struct {
             secp256k1_fe x; /* actual X: x/z^2 */
@@ -169,18 +160,11 @@ public:
             secp256k1_fe z;
             int infinity; /* whether this represents the point at infinity */
         } secp256k1_gej;
-        typedef struct {
-            secp256k1_fe_signed x; /* actual X: x/z^2 */
-            secp256k1_fe_signed y; /* actual Y: y/z^3 */
-            secp256k1_fe_signed z;
-            int infinity; /* whether this represents the point at infinity */
-        } secp256k1_gej_signed;
+
 #ifdef VERIFY
         static void secp256k1_fe_verify(const secp256k1_fe *a) noexcept;
-            static void secp256k1_fe_signed_verify(const secp256k1_fe_signed *a) noexcept;
 #endif
         static int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a) noexcept;
-            static int secp256k1_fe_signed_set_be32(secp256k1_fe_signed *r, const unsigned char *a) noexcept;
         static int secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
         static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
         static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) noexcept;
