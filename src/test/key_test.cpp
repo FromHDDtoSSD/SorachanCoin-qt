@@ -128,6 +128,87 @@ public:
 
         return gai;
     }
+    gai_t secp256k1_gai_conj(const gai_t *gai1) { // (gai1)*
+        gai_t gai;
+        secp256k1_gai_set_zero(&gai);
+        CPubKey::ecmult::secp256k1_fe gai_im_negate = gai1->im;
+        CPubKey::ecmult::secp256k1_fe_mul_int(&gai_im_negate, -1);
+        gai.re = gai1->re;
+        gai.im = gai_im_negate;
+        return gai;
+    }
+    int secp256k1_gai_equal(const gai_t *gai1, const gai_t *gai2) { // gai1 == gai2
+        int g1 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->re, &gai2->re);
+        int g2 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->im, &gai2->im);
+        return (g1 && g2) ? 1: 0;
+    }
+
+    gai_t secp256k1_gai_dot(const std::pair<gai_t, gai_t> *gaivx, const std::pair<gai_t, gai_t> *gaivy) { // (gaivx, gaivy)
+        std::pair<gai_t, gai_t> gaivx_conj;
+        gaivx_conj.first = secp256k1_gai_conj(&gaivx->first);
+        gaivx_conj.second = secp256k1_gai_conj(&gaivx->second);
+
+        CPubKey::ecmult::secp256k1_fe gai_ae, gai_bf, gai_cg, gai_dh, gai_af, gai_be, gai_ch, gai_dg;
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_ae);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_bf);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_cg);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_dh);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_af);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_be);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_ch);
+        CPubKey::ecmult::secp256k1_fe_clear(&gai_dg);
+
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_ae, &gaivx_conj.first.re, &gaivy->first.re);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_bf, &gaivx_conj.first.im, &gaivy->first.im);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_cg, &gaivx_conj.second.re, &gaivy->second.re);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_dh, &gaivx_conj.second.im, &gaivy->second.im);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_af, &gaivx_conj.first.re, &gaivy->first.im);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_be, &gaivx_conj.first.im, &gaivy->first.re);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_ch, &gaivx_conj.second.re, &gaivy->second.im);
+        CPubKey::ecmult::secp256k1_fe_mul(&gai_dg, &gaivx_conj.second.im, &gaivy->second.re);
+
+        gai_t gai_dot;
+        secp256k1_gai_set_zero(&gai_dot);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.re, &gai_ae);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.re, &gai_bf);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.re, &gai_cg);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.re, &gai_dh);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.im, &gai_af);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.im, &gai_be);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.im, &gai_ch);
+        CPubKey::ecmult::secp256k1_fe_add(&gai_dot.im, &gai_dg);
+
+        return gai_dot;
+    }
+
+    // from secp256k1_scalar to uint256
+    uint256 secp256k1_scalar_get_uint256(const CPubKey::secp256k1_unit *unit) {
+        uint256 value;
+        CPubKey::secp256k1_scalar_get_be32((unsigned char *)&value, unit);
+        return value;
+    }
+    std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const CPubKey::secp256k1_unit *re, const CPubKey::secp256k1_unit *im) {
+        return std::make_pair(secp256k1_scalar_get_uint256(re), secp256k1_scalar_get_uint256(im));
+    }
+    std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const gai_t *gai) {
+        int overflow = 0;
+        CPubKey::secp256k1_unit unit_re, unit_im;
+        CPubKey::secp256k1_scalar_set_int(&unit_re, 0);
+        CPubKey::secp256k1_scalar_set_int(&unit_im, 0);
+        CPubKey::secp256k1_scalar_set_be32(&unit_re, (const unsigned char *)&gai->re, &overflow);
+        CPubKey::secp256k1_scalar_set_be32(&unit_im, (const unsigned char *)&gai->im, &overflow);
+        return secp256k1_scalar_get_uint256(&unit_re, &unit_im);
+    }
+
+    // from gai_t to std::string
+    std::string secp256k1_gai_ToString(const gai_t *gai) {
+        std::pair<uint256, uint256> gai_reim = secp256k1_scalar_get_uint256(gai);
+        if(gai_reim.second!=0)
+            return tfm::format("secp256k1 gai\n Re: 0x%s\n Im: 0x%s\n", gai_reim.first.ToString().c_str(), gai_reim.second.ToString().c_str());
+        else // im == 0
+            return tfm::format("secp256k1 gai\n 0x%s\n", gai_reim.first.ToString().c_str());
+    }
+
     key_test() {
         debugcs::instance() << "key_test" << debugcs::endl();
 
