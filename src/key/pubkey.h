@@ -142,6 +142,8 @@ public:
         typedef struct {
             secp256k1_fe re;
             secp256k1_fe im;
+            int re_negate;
+            int im_negate;
             int line;
         } secp256k1_gai;
         typedef struct {

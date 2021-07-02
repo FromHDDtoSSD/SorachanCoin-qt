@@ -46,6 +46,60 @@ public:
     void secp256k1_gai_set_imzero(gai_t *gai) {
         CPubKey::ecmult::secp256k1_fe_set_int(&gai->im, 0);
     }
+
+    //
+    // secp256k1_fe sub, div
+    //
+    // Note: if use modifier[], must use primary conversion: normalize fe_operator modifier[]
+    // e.g.1: (fe1 + fe2) * fe3 - fe4 + fe5
+    // - operator use negate modifier
+    // primary conversion: normalize +fe5 negate[+fe4] *fe3 +fe2 +fe1 0
+    //
+    // e.g.2: fe1 - fe2 + fe3 (fe1 - fe2 >= fe3)
+    // primary conversion: normalize +fe3 negate[+fe2] +fe1 0 or +fe3 normalize negate[+fe2] +fe1 0
+    //
+    // e.g.3: fe1 - fe2 + fe3 (fe1 - fe2 < fe3)
+    // primary conversion: normalize +fe3 negate[+fe2] +fe1 0
+    //
+    CPubKey::ecmult::secp256k1_fe secp256k1_fe_sub_normalize(const CPubKey::ecmult::secp256k1_fe *fe1, const CPubKey::ecmult::secp256k1_fe *fe2) { // fe1 - fe2 (-fe2 + fe1)
+        CPubKey::ecmult::secp256k1_fe fe_na_fe2;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_na_fe2);
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na_fe2, fe2, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na_fe2, fe1);
+        CPubKey::ecmult::secp256k1_fe_normalize(&fe_na_fe2);
+        return fe_na_fe2;
+    }
+    CPubKey::ecmult::secp256k1_fe secp256k1_fe_sub(const CPubKey::ecmult::secp256k1_fe *fe1, const CPubKey::ecmult::secp256k1_fe *fe2) { // negate[+fe2] + fe1
+        CPubKey::ecmult::secp256k1_fe fe_na_fe2;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_na_fe2);
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na_fe2, fe2, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na_fe2, fe1);
+        return fe_na_fe2;
+    }
+    CPubKey::ecmult::secp256k1_fe secp256k1_fe_div_normalize(const CPubKey::ecmult::secp256k1_fe *fe1, const CPubKey::ecmult::secp256k1_fe *fe2) { // fe1 / fe2
+        CPubKey::ecmult::secp256k1_fe fe_inv_fe2, fe_div;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_inv_fe2);
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_div);
+        CPubKey::ecmult::secp256k1_fe_inv(&fe_inv_fe2, fe2);
+        CPubKey::ecmult::secp256k1_fe_mul(&fe_div, fe1, &fe_inv_fe2);
+        CPubKey::ecmult::secp256k1_fe_normalize(&fe_div);
+        return fe_div;
+    }
+    CPubKey::ecmult::secp256k1_fe secp256k1_fe_div(const CPubKey::ecmult::secp256k1_fe *fe1, const CPubKey::ecmult::secp256k1_fe *fe2) { // inv[*fe2] * fe1
+        CPubKey::ecmult::secp256k1_fe fe_inv_fe2, fe_div;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_inv_fe2);
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_div);
+        CPubKey::ecmult::secp256k1_fe_inv(&fe_inv_fe2, fe2);
+        CPubKey::ecmult::secp256k1_fe_mul(&fe_div, fe1, &fe_inv_fe2);
+        return fe_div;
+    }
+    int secp256k1_fe_get_signed(const CPubKey::ecmult::secp256k1_fe *fe_na) { // negate[+fe_na] -: 0, +: 1
+        CPubKey::ecmult::secp256k1_fe fe_check = *fe_na;
+        CPubKey::ecmult::secp256k1_fe_normalize(&fe_check);
+        return (fe_check.n[9]==0x3FFFFFUL) ? 0: 1;
+    }
+
+    // gat_t + - * /
     gai_t secp256k1_gai_add(const gai_t *gai1, const gai_t *gai2) { // gai1 + gai2
         gai_t gai = *gai1;
         CPubKey::ecmult::secp256k1_fe_add(&gai.re, &gai2->re);
@@ -200,13 +254,28 @@ public:
         return secp256k1_scalar_get_uint256(&unit_re, &unit_im);
     }
 
+    // from secp256k1_fe to std::string
+    std::string secp256k1_fe_ToString(const CPubKey::ecmult::secp256k1_fe *fe) {
+        CPubKey::secp256k1_unit unit;
+        int overflow = 0;
+        CPubKey::secp256k1_scalar_set_be32(&unit, (const unsigned char *)fe, &overflow);
+        uint256 value;
+        if(! overflow)
+            CPubKey::secp256k1_scalar_get_be32((unsigned char *)&value, &unit);
+        else
+            value = ~uint256(0);
+        return tfm::format("0x%s", value.ToString().c_str());
+    }
+
     // from gai_t to std::string
     std::string secp256k1_gai_ToString(const gai_t *gai) {
         std::pair<uint256, uint256> gai_reim = secp256k1_scalar_get_uint256(gai);
-        if(gai_reim.second!=0)
-            return tfm::format("secp256k1 gai\n Re: 0x%s\n Im: 0x%s\n", gai_reim.first.ToString().c_str(), gai_reim.second.ToString().c_str());
-        else // im == 0
-            return tfm::format("secp256k1 gai\n 0x%s\n", gai_reim.first.ToString().c_str());
+        if(gai_reim.first!=0 && gai_reim.second!=0)
+            return tfm::format("secp256k1 gai\n Re: %s0x%s\n Im: %s0x%s\n", gai->re_negate?"-":"", gai_reim.first.ToString().c_str(), gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
+        else if(gai_reim.second==0) // im == 0
+            return tfm::format("secp256k1 gai\n Re: %s0x%s\n Im: zero\n", gai->re_negate?"-":"", gai_reim.first.ToString().c_str());
+        else // re == 0
+            return tfm::format("secp256k1 gai\n Re: zero\n Im: %s0x%s\n", gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
     }
 
     key_test() {
@@ -239,7 +308,41 @@ public:
         int ret2 = CPubKey::ecmult::secp256k1_ge_is_valid_var(&Q);
         ::fprintf(stdout, "get_is_valid_var: %d\n", ret2);
 
-        util::Sleep(10000);
+        CPubKey::ecmult::secp256k1_gai gai_z1x, gai_z1y, gai_z2x, gai_z2y;
+        secp256k1_gai_set_zero(&gai_z1x);
+        secp256k1_gai_set_zero(&gai_z1y);
+        secp256k1_gai_set_zero(&gai_z2x);
+        secp256k1_gai_set_zero(&gai_z2y);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1x.re, 1);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1x.im, 2);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1y.re, 3);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1y.im, 4);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2x.re, 5);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2x.im, 6);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2y.re, 7);
+        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2y.im, 8);
+        //auto gaivx = std::make_pair(gai_z1x, gai_z1y);
+        //auto gaivy = std::make_pair(gai_z2x, gai_z2y);
+
+        CPubKey::ecmult::secp256k1_fe fe_test1, fe_test2, fe_na;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_test1);
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_test2);
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_na);
+        CPubKey::ecmult::secp256k1_fe_set_int(&fe_test1, 1234562);
+        CPubKey::ecmult::secp256k1_fe_set_int(&fe_test2, 1234567);
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na, &fe_test1, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na, &fe_test2);
+        int sign = secp256k1_fe_get_signed(&fe_na);
+        ::fprintf(stdout, "sign: %d\n", sign);
+        if(sign) {
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_na);
+            std::string result = secp256k1_fe_ToString(&fe_na);
+            ::fprintf(stdout, "secp256k1_fe value: %s\n", result.c_str());
+        } else {
+
+        }
+
+        assert(!"secp256k1 test");
     }
 };
 #ifdef DEBUG
