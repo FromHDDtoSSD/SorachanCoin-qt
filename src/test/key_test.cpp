@@ -38,13 +38,17 @@ public:
     void secp256k1_gai_set_zero(gai_t *gai) {
         CPubKey::ecmult::secp256k1_fe_clear(&gai->re);
         CPubKey::ecmult::secp256k1_fe_clear(&gai->im);
+        gai->re_negate = 0;
+        gai->im_negate = 0;
         gai->line = 0;
     }
     void secp256k1_gai_set_rezero(gai_t *gai) {
         CPubKey::ecmult::secp256k1_fe_set_int(&gai->re, 0);
+        gai->re_negate = 0;
     }
     void secp256k1_gai_set_imzero(gai_t *gai) {
         CPubKey::ecmult::secp256k1_fe_set_int(&gai->im, 0);
+        gai->im_negate = 0;
     }
 
     //
@@ -98,22 +102,106 @@ public:
         CPubKey::ecmult::secp256k1_fe_normalize(&fe_check);
         return (fe_check.n[9]==0x3FFFFFUL) ? 0: 1;
     }
+    void secp256k1_fe_normalize_negative(CPubKey::ecmult::secp256k1_fe *fe_na) { // negate[-fe_na]
+        CPubKey::ecmult::secp256k1_fe fe_max;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_max);
+        CPubKey::ecmult::secp256k1_fe_set_int(&fe_max, 2);
+        for(int i=0; i<8; ++i)
+            CPubKey::ecmult::secp256k1_fe_sqr(&fe_max, &fe_max);
+        CPubKey::ecmult::secp256k1_fe_add(fe_na, &fe_max);
+        CPubKey::ecmult::secp256k1_fe_normalize(fe_na);
 
-    // gat_t + - * /
-    gai_t secp256k1_gai_add(const gai_t *gai1, const gai_t *gai2) { // gai1 + gai2
-        gai_t gai = *gai1;
-        CPubKey::ecmult::secp256k1_fe_add(&gai.re, &gai2->re);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.im, &gai2->im);
+        CPubKey::ecmult::secp256k1_fe fe_na_na;
+        CPubKey::ecmult::secp256k1_fe_clear(&fe_na_na);
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na_na, fe_na, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na_na, &fe_max);
+        CPubKey::ecmult::secp256k1_fe_normalize(&fe_na_na);
+        *fe_na = fe_na_na;
+    }
+
+    gai_t secp256k1_gai_create(int re, int im) {
+        gai_t gai;
+        secp256k1_gai_set_zero(&gai);
+        if(0<=re&&0<=im) {
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.re, re);
+            gai.re_negate = 0;
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.im, im);
+            gai.im_negate = 0;
+        } else if (0>re&&0<=im) {
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.re, (-1)*re);
+            gai.re_negate = 1;
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.im, im);
+            gai.im_negate = 0;
+        } else if (0<=re&&0>im) {
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.re, re);
+            gai.re_negate = 0;
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.im, (-1)*im);
+            gai.im_negate = 1;
+        } else {
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.re, (-1)*re);
+            gai.re_negate = 1;
+            CPubKey::ecmult::secp256k1_fe_set_int(&gai.im, (-1)*im);
+            gai.im_negate = 1;
+        }
         return gai;
     }
-    gai_t secp256k1_gai_sub(const gai_t *gai1, const gai_t *gai2) { // gai1 - gai2
-        gai_t gai = *gai1;
+
+    // gai_t + - * /
+    gai_t secp256k1_gai_add(const gai_t *gai1, const gai_t *gai2) { // gai1 + gai2
+        gai_t _gai1 = *gai1;
         gai_t _gai2 = *gai2;
-        CPubKey::ecmult::secp256k1_fe_mul_int(&_gai2.re, -1);
-        CPubKey::ecmult::secp256k1_fe_mul_int(&_gai2.im, -1);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.re, &_gai2.re);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.im, &_gai2.im);
-        return gai;
+
+        if(_gai1.re_negate==_gai2.re_negate) {
+            CPubKey::ecmult::secp256k1_fe_add(&_gai1.re, &_gai2.re);
+        } else if(_gai1.re_negate==1&&_gai2.re_negate==0) {
+            CPubKey::ecmult::secp256k1_fe_negate(&_gai1.re, &gai1->re, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&_gai1.re, &_gai2.re);
+            _gai1.re_negate = secp256k1_fe_get_signed(&_gai1.re)? 0: 1;
+            if(_gai1.re_negate==0)
+                CPubKey::ecmult::secp256k1_fe_normalize(&_gai1.re);
+            else
+                secp256k1_fe_normalize_negative(&_gai1.re);
+        } else if(_gai1.re_negate==0&&_gai2.re_negate==1) {
+            CPubKey::ecmult::secp256k1_fe_negate(&_gai2.re, &gai2->re, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&_gai2.re, &_gai1.re);
+            _gai2.re_negate = secp256k1_fe_get_signed(&_gai2.re)? 0: 1;
+            if(_gai2.re_negate==0)
+                CPubKey::ecmult::secp256k1_fe_normalize(&_gai2.re);
+            else
+                secp256k1_fe_normalize_negative(&_gai2.re);
+            _gai1.re = _gai2.re;
+            _gai1.re_negate = _gai2.re_negate;
+        }
+
+        if(_gai1.im_negate==_gai2.im_negate) {
+            CPubKey::ecmult::secp256k1_fe_add(&_gai1.im, &_gai2.im);
+        } else if(_gai1.im_negate==1&&_gai2.im_negate==0) {
+            CPubKey::ecmult::secp256k1_fe_negate(&_gai1.im, &gai1->im, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&_gai1.im, &_gai2.im);
+            _gai1.im_negate = secp256k1_fe_get_signed(&_gai1.im)? 0: 1;
+            if(_gai1.im_negate==0)
+                CPubKey::ecmult::secp256k1_fe_normalize(&_gai1.im);
+            else
+                secp256k1_fe_normalize_negative(&_gai1.im);
+        } else if(_gai1.im_negate==0&&_gai2.im_negate==1) {
+            CPubKey::ecmult::secp256k1_fe_negate(&_gai2.im, &gai2->im, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&_gai2.im, &_gai1.im);
+            _gai2.im_negate = secp256k1_fe_get_signed(&_gai2.im)? 0: 1;
+            if(_gai2.im_negate==0)
+                CPubKey::ecmult::secp256k1_fe_normalize(&_gai2.im);
+            else
+                secp256k1_fe_normalize_negative(&_gai2.im);
+            _gai1.im = _gai2.im;
+            _gai1.im_negate = _gai2.im_negate;
+        }
+
+        return _gai1;
+    }
+    gai_t secp256k1_gai_sub(const gai_t *gai1, const gai_t *gai2) { // gai1 - gai2
+        gai_t _gai2 = *gai2;
+        _gai2.im_negate = _gai2.im_negate==0? 1: 0;
+        _gai2.re_negate = _gai2.re_negate==0? 1: 0;
+        return secp256k1_gai_add(gai1, &_gai2);
     }
     gai_t secp256k1_gai_mul(const gai_t *gai1, const gai_t *gai2) { // gai1 * gai2
         gai_t gai;
@@ -124,17 +212,98 @@ public:
         CPubKey::ecmult::secp256k1_fe_clear(&re2);
         CPubKey::ecmult::secp256k1_fe_mul(&re1, &gai1->re, &gai2->re);
         CPubKey::ecmult::secp256k1_fe_mul(&re2, &gai1->im, &gai2->im);
-        CPubKey::ecmult::secp256k1_fe_mul_int(&re2, -1);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re1);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re2);
+        const int re1_sign = gai1->re_negate==gai2->re_negate? 1: 0;
+        const int re2_sign = gai1->im_negate==gai2->im_negate? 1: 0;
+        if(re1_sign==1&&re2_sign==1) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re1);
+            CPubKey::ecmult::secp256k1_fe re2_na;
+            CPubKey::ecmult::secp256k1_fe_clear(&re2_na);
+            CPubKey::ecmult::secp256k1_fe_negate(&re2_na, &re2, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&re2_na, &gai.re);
+            int sign = secp256k1_fe_get_signed(&re2_na);
+            if(sign) {
+                CPubKey::ecmult::secp256k1_fe_normalize(&re2_na);
+                gai.re = re2_na;
+                gai.re_negate = 0;
+            } else {
+                secp256k1_fe_normalize_negative(&re2_na);
+                gai.re = re2_na;
+                gai.re_negate = 1;
+            }
+        } else if (re1_sign==0&&re2_sign) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re1);
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re2);
+            gai.re_negate = 1;
+        } else if (re1_sign&&re2_sign==0) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re1);
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re2);
+            gai.re_negate = 0;
+        } else if (re1_sign==0&&re2_sign==0) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.re, &re2);
+            CPubKey::ecmult::secp256k1_fe re1_na;
+            CPubKey::ecmult::secp256k1_fe_clear(&re1_na);
+            CPubKey::ecmult::secp256k1_fe_negate(&re1_na, &re1, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&re1_na, &gai.re);
+            int sign = secp256k1_fe_get_signed(&re1_na);
+            if(sign) {
+                CPubKey::ecmult::secp256k1_fe_normalize(&re1_na);
+                gai.re = re1_na;
+                gai.re_negate = 0;
+            } else {
+                secp256k1_fe_normalize_negative(&re1_na);
+                gai.re = re1_na;
+                gai.re_negate = 1;
+            }
+        }
 
         CPubKey::ecmult::secp256k1_fe im1, im2;
         CPubKey::ecmult::secp256k1_fe_clear(&im1);
         CPubKey::ecmult::secp256k1_fe_clear(&im2);
         CPubKey::ecmult::secp256k1_fe_mul(&im1, &gai1->re, &gai2->im);
         CPubKey::ecmult::secp256k1_fe_mul(&im2, &gai1->im, &gai2->re);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im1);
-        CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im2);
+        const int im1_sign = gai1->re_negate==gai2->im_negate? 1: 0;
+        const int im2_sign = gai1->im_negate==gai2->re_negate? 1: 0;
+        if(im1_sign==1&&im2_sign==1) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im1);
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im2);
+            gai.im_negate = 0;
+        } else if (im1_sign==0&&im2_sign) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im2);
+            CPubKey::ecmult::secp256k1_fe im1_na;
+            CPubKey::ecmult::secp256k1_fe_clear(&im1_na);
+            CPubKey::ecmult::secp256k1_fe_negate(&im1_na, &im1, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&im1_na, &gai.im);
+            int sign = secp256k1_fe_get_signed(&im1_na);
+            if(sign) {
+                CPubKey::ecmult::secp256k1_fe_normalize(&im1_na);
+                gai.im = im1_na;
+                gai.im_negate = 0;
+            } else {
+                secp256k1_fe_normalize_negative(&im1_na);
+                gai.im = im1_na;
+                gai.im_negate = 1;
+            }
+        } else if (im1_sign&&im2_sign==0) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im1);
+            CPubKey::ecmult::secp256k1_fe im2_na;
+            CPubKey::ecmult::secp256k1_fe_clear(&im2_na);
+            CPubKey::ecmult::secp256k1_fe_negate(&im2_na, &im2, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&im2_na, &gai.im);
+            int sign = secp256k1_fe_get_signed(&im2_na);
+            if(sign) {
+                CPubKey::ecmult::secp256k1_fe_normalize(&im2_na);
+                gai.im = im2_na;
+                gai.im_negate = 0;
+            } else {
+                secp256k1_fe_normalize_negative(&im2_na);
+                gai.im = im2_na;
+                gai.im_negate = 1;
+            }
+        } else if (im1_sign==0&&im2_sign==0) {
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im1);
+            CPubKey::ecmult::secp256k1_fe_add(&gai.im, &im2);
+            gai.im_negate = 1;
+        }
 
         return gai;
     }
@@ -182,21 +351,25 @@ public:
 
         return gai;
     }
+
+    // gai_t ()* ==
     gai_t secp256k1_gai_conj(const gai_t *gai1) { // (gai1)*
-        gai_t gai;
-        secp256k1_gai_set_zero(&gai);
-        CPubKey::ecmult::secp256k1_fe gai_im_negate = gai1->im;
-        CPubKey::ecmult::secp256k1_fe_mul_int(&gai_im_negate, -1);
-        gai.re = gai1->re;
-        gai.im = gai_im_negate;
-        return gai;
+        if(CPubKey::ecmult::secp256k1_fe_is_zero(&gai1->im))
+            return *gai1;
+        gai_t gai_conj = *gai1;
+        gai_conj.im_negate = gai_conj.im_negate==0? 1: 0;
+        return gai_conj;
     }
     int secp256k1_gai_equal(const gai_t *gai1, const gai_t *gai2) { // gai1 == gai2
-        int g1 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->re, &gai2->re);
-        int g2 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->im, &gai2->im);
-        return (g1 && g2) ? 1: 0;
+        if(gai1->im_negate==gai2->im_negate && gai1->re_negate==gai2->re_negate) {
+            int g1 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->re, &gai2->re);
+            int g2 = CPubKey::ecmult::secp256k1_fe_equal(&gai1->im, &gai2->im);
+            return (g1 && g2) ? 1: 0;
+        } else
+            return 0;
     }
 
+    // gai_t dot vector
     gai_t secp256k1_gai_dot(const std::pair<gai_t, gai_t> *gaivx, const std::pair<gai_t, gai_t> *gaivy) { // (gaivx, gaivy)
         std::pair<gai_t, gai_t> gaivx_conj;
         gaivx_conj.first = secp256k1_gai_conj(&gaivx->first);
@@ -268,14 +441,14 @@ public:
     }
 
     // from gai_t to std::string
-    std::string secp256k1_gai_ToString(const gai_t *gai) {
+    std::string secp256k1_gai_ToString(const gai_t *gai, std::string str="") {
         std::pair<uint256, uint256> gai_reim = secp256k1_scalar_get_uint256(gai);
         if(gai_reim.first!=0 && gai_reim.second!=0)
-            return tfm::format("secp256k1 gai\n Re: %s0x%s\n Im: %s0x%s\n", gai->re_negate?"-":"", gai_reim.first.ToString().c_str(), gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
+            return tfm::format("secp256k1 gai %s \n Re: %s0x%s\n Im: %s0x%s\n", str.c_str(), gai->re_negate?"-":"", gai_reim.first.ToString().c_str(), gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
         else if(gai_reim.second==0) // im == 0
-            return tfm::format("secp256k1 gai\n Re: %s0x%s\n Im: zero\n", gai->re_negate?"-":"", gai_reim.first.ToString().c_str());
+            return tfm::format("secp256k1 gai %s \n Re: %s0x%s\n Im: zero\n", str.c_str(), gai->re_negate?"-":"", gai_reim.first.ToString().c_str());
         else // re == 0
-            return tfm::format("secp256k1 gai\n Re: zero\n Im: %s0x%s\n", gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
+            return tfm::format("secp256k1 gai %s \n Re: zero\n Im: %s0x%s\n", str.c_str(), gai->im_negate?"-":"", gai_reim.second.ToString().c_str());
     }
 
     key_test() {
@@ -308,38 +481,56 @@ public:
         int ret2 = CPubKey::ecmult::secp256k1_ge_is_valid_var(&Q);
         ::fprintf(stdout, "get_is_valid_var: %d\n", ret2);
 
-        CPubKey::ecmult::secp256k1_gai gai_z1x, gai_z1y, gai_z2x, gai_z2y;
-        secp256k1_gai_set_zero(&gai_z1x);
-        secp256k1_gai_set_zero(&gai_z1y);
-        secp256k1_gai_set_zero(&gai_z2x);
-        secp256k1_gai_set_zero(&gai_z2y);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1x.re, 1);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1x.im, 2);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1y.re, 3);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z1y.im, 4);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2x.re, 5);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2x.im, 6);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2y.re, 7);
-        CPubKey::ecmult::secp256k1_fe_set_int(&gai_z2y.im, 8);
-        //auto gaivx = std::make_pair(gai_z1x, gai_z1y);
-        //auto gaivy = std::make_pair(gai_z2x, gai_z2y);
+        //
+        // test OK: secp256k1 gai
+        //
 
-        CPubKey::ecmult::secp256k1_fe fe_test1, fe_test2, fe_na;
-        CPubKey::ecmult::secp256k1_fe_clear(&fe_test1);
-        CPubKey::ecmult::secp256k1_fe_clear(&fe_test2);
-        CPubKey::ecmult::secp256k1_fe_clear(&fe_na);
-        CPubKey::ecmult::secp256k1_fe_set_int(&fe_test1, 1234562);
-        CPubKey::ecmult::secp256k1_fe_set_int(&fe_test2, 1234567);
-        CPubKey::ecmult::secp256k1_fe_negate(&fe_na, &fe_test1, 1);
-        CPubKey::ecmult::secp256k1_fe_add(&fe_na, &fe_test2);
-        int sign = secp256k1_fe_get_signed(&fe_na);
-        ::fprintf(stdout, "sign: %d\n", sign);
-        if(sign) {
-            CPubKey::ecmult::secp256k1_fe_normalize(&fe_na);
-            std::string result = secp256k1_fe_ToString(&fe_na);
-            ::fprintf(stdout, "secp256k1_fe value: %s\n", result.c_str());
-        } else {
+        // gai1 + gai2
+        {
+            gai_t gai1 = secp256k1_gai_create(-5, 8563);
+            gai_t gai2 = secp256k1_gai_create(-156544, -1330000);
+            gai_t gai3 = secp256k1_gai_add(&gai1, &gai2);
+            std::string _test1 = secp256k1_gai_ToString(&gai3, std::string("gai1+gai2"));
+            ::fprintf(stdout, "%s\n", _test1.c_str());
+        }
 
+        // gai1 - gai2
+        {
+            gai_t gai1 = secp256k1_gai_create(-1, -256);
+            gai_t gai2 = secp256k1_gai_create(15, -128);
+            gai_t gai3 = secp256k1_gai_sub(&gai1, &gai2);
+            std::string _test1 = secp256k1_gai_ToString(&gai3, std::string("gai1-gai2"));
+            ::fprintf(stdout, "%s\n", _test1.c_str());
+        }
+
+        // gai1 * gai2
+        {
+            gai_t gai1 = secp256k1_gai_create(-12345, 1254);
+            gai_t gai2 = secp256k1_gai_create(152345, -113451);
+            gai_t gai3 = secp256k1_gai_mul(&gai1, &gai2);
+            std::string _test1 = secp256k1_gai_ToString(&gai3, std::string("gai1*gai2"));
+            ::fprintf(stdout, "%s\n", _test1.c_str());
+        }
+
+        // (gai)*
+        {
+            gai_t gai1 = secp256k1_gai_create(-1, -256);
+            gai_t gai2 = secp256k1_gai_conj(&gai1);
+            std::string _test1 = secp256k1_gai_ToString(&gai2, std::string("(gai1)*"));
+            ::fprintf(stdout, "%s\n", _test1.c_str());
+
+            gai_t gai3 = secp256k1_gai_create(1, 256);
+            gai_t gai4 = secp256k1_gai_conj(&gai3);
+            std::string _test2 = secp256k1_gai_ToString(&gai4, std::string("(gai4)*"));
+            ::fprintf(stdout, "%s\n", _test2.c_str());
+        }
+
+        // gai1 == gai2
+        {
+            gai_t gai1 = secp256k1_gai_create(-1, -256);
+            gai_t gai2 = secp256k1_gai_create(-1, -256);
+            int ret = secp256k1_gai_equal(&gai1, &gai2);
+            ::fprintf(stdout, "(gai1==gai2) %d\n", ret);
         }
 
         assert(!"secp256k1 test");
