@@ -378,7 +378,7 @@ private:
     unsigned char m_state[32] GUARDED_BY(m_mutex) = {0};
     uint64_t m_counter GUARDED_BY(m_mutex) = 0;
     bool m_strongly_seeded GUARDED_BY(m_mutex) = false;
-    Mutex *m_pmutexOpenSSL = nullptr;
+    Mutex **m_ppmutexOpenSSL = nullptr;
 
     static void LockingCallbackOpenSSL(int mode, int i, const char *file, int line) NO_THREAD_SAFETY_ANALYSIS
     {
@@ -398,11 +398,11 @@ public:
 
         // Init OpenSSL library multithreading support
         DEBUG_LSYNC_CS("called RNGState() 2");
-        m_pmutexOpenSSL = (Mutex *)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(Mutex));
-        if(! m_pmutexOpenSSL)
+        m_ppmutexOpenSSL = (Mutex **)OPENSSL_malloc(::CRYPTO_num_locks() * sizeof(Mutex*));
+        if(! m_ppmutexOpenSSL)
             throw std::runtime_error("Out of memory: Init OpenSSL library multithreading support");
         for(int i=0; i<::CRYPTO_num_locks(); ++i)
-            new(m_pmutexOpenSSL + i) Mutex;
+            m_ppmutexOpenSSL[i] = new Mutex;
 
         DEBUG_LSYNC_CS("called RNGState() 3");
         ::CRYPTO_set_locking_callback(LockingCallbackOpenSSL);
@@ -415,9 +415,12 @@ public:
         DEBUG_LSYNC_CS("called RNGState() 4");
         ::OPENSSL_no_config();
 
+        /*
+         * Moved to the GetRNGState(), because below they call the same RNGState before the RNGState object has created.
+         *
 #ifdef WIN32
         // Seed random number generator with screen scrape and other hardware sources
-        //::RAND_screen(); // case OpenSSL
+        //::RAND_screen(); // if OpenSSL
         DEBUG_LSYNC_CS("called RNGState() 5");
         ::RAND_poll();
 #endif
@@ -425,6 +428,7 @@ public:
         // Seed random number generator with performance counter
         DEBUG_LSYNC_CS("called RNGState() 6");
         seed::RandAddSeed();
+        */
     }
 
     ~RNGState() {
@@ -435,10 +439,8 @@ public:
         ::CRYPTO_set_locking_callback(nullptr);
 
         for (int i=0; i<::CRYPTO_num_locks(); ++i)
-            (m_pmutexOpenSSL + i)->~Mutex();
-
-        cleanse::OPENSSL_cleanse(m_pmutexOpenSSL, ::CRYPTO_num_locks() * sizeof(Mutex));
-        OPENSSL_free(m_pmutexOpenSSL);
+            delete m_ppmutexOpenSSL[i];
+        OPENSSL_free(m_ppmutexOpenSSL);
     }
 
     /** Extract up to 32 bytes of entropy from the RNG state, mixing in new entropy from hasher.
@@ -517,11 +519,25 @@ public:
         // on first call, even when multiple parallel calls are permitted.
         DEBUG_LSYNC_CS("called GetRNGState()");
         static manage obj;
+        static bool init=false;
+        if(! init) {
+            init=true;
+#ifdef WIN32
+            // Seed random number generator with screen scrape and other hardware sources
+            //::RAND_screen(); // if OpenSSL
+            DEBUG_LSYNC_CS("called RNGState() 5");
+            ::RAND_poll();
+#endif
+
+            // Seed random number generator with performance counter
+            DEBUG_LSYNC_CS("called RNGState() 6");
+            seed::RandAddSeed();
+        }
         return obj.get();
     }
 
     Mutex &GetOpenSSLMutex(int i) noexcept {
-        return *(m_pmutexOpenSSL + i);
+        return *(m_ppmutexOpenSSL[i]);
     }
 };
 

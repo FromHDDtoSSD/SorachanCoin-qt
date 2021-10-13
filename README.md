@@ -52,7 +52,7 @@ BlockExplorer
 
 mainnet:<br>
 from PoW[Scrypt]/PoS to PoW[Available hash algorithm: Scrypt, Lyra2REv2, Lyra2RE, SHA256D, Blake2s]/PoS<br>
-switch block: 720000 (jul-2022)<br>
+switch block: 1000000 (feb-2024)<br>
 https://sora.junkhdd.com:7350/<br>
 <br>
 testnet:<br>

@@ -20,7 +20,6 @@
 #include <cleanse/cleanse.h>
 
 class CKey;
-class key_test;
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using key_vector = prevector<PREVECTOR_N, uint8_t>;
@@ -36,7 +35,7 @@ public:
     CKeyID(const uint160 &in) noexcept : uint160(in) {}
 };
 
-// An encapsulated OpenSSL Elliptic Curve key (public)
+// An encapsulated OpenSSL or secp256k1 Elliptic Curve key (public)
 // 32Bytes or 32Bytes + 32Bytes PublicKey
 // The signature is 1 byte at the beginning. so 33Bytes or 65 Bytes.
 // CoinAddress to use when sending coins is converted from CPubKey(65 Bytes) to CBitcoinAddress.
@@ -46,7 +45,6 @@ public:
 class CPubKey
 {
     friend class CKey;
-    friend class key_test;
 public:
     //! secp256k1
     //structure: struct secp256k1_data {BIGNUM *r; BIGNUM *s;};
@@ -140,19 +138,22 @@ public:
             int infinity; /* whether this represents the point at infinity */
         } secp256k1_ge;
         typedef struct {
+            secp256k1_fe_storage x;
+            secp256k1_fe_storage y;
+        } secp256k1_ge_storage;
+
+        /** A group element of the secp256k1 curve, in complex coordinates. */
+        typedef struct {
             secp256k1_fe re;
             secp256k1_fe im;
             int re_negate;
             int im_negate;
-            int line;
         } secp256k1_gai;
-        typedef struct {
-            secp256k1_fe_storage x;
-            secp256k1_fe_storage y;
-        } secp256k1_ge_storage;
         typedef struct {
             secp256k1_fe_storage re;
             secp256k1_fe_storage im;
+            int re_negate;
+            int im_negate;
         } secp256k1_gai_storage;
 
         /** A group element of the secp256k1 curve, in jacobian coordinates. */
@@ -163,54 +164,66 @@ public:
             int infinity; /* whether this represents the point at infinity */
         } secp256k1_gej;
 
+        /** R^n */
+        typedef struct {
+            std::vector<secp256k1_fe> vfe; /* actual a,b,c ... */
+            int infinity;
+        } secp256k1_grn;
+
 #ifdef VERIFY
         static void secp256k1_fe_verify(const secp256k1_fe *a) noexcept;
 #endif
-        static int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a) noexcept;
-        static int secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+        static void secp256k1_fe_clear(secp256k1_fe *a) noexcept;
+        static  int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a) noexcept;
+        static void secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) noexcept;
+        static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_set_int(secp256k1_fe *r, int a) noexcept;
+
+        static  int secp256k1_fe_is_odd(const secp256k1_fe *a) noexcept;
+        static  int secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept;
+
         static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b) noexcept;
+        static void secp256k1_fe_mul_int(secp256k1_fe *r, int a) noexcept;
+        static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+        static  int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+
+        static  int secp256k1_fe_cmp(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+        static  int secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+        static  int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+        static  int secp256k1_fe_equal_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+
+        static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) noexcept;
+        static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_normalize(secp256k1_fe *r) noexcept;
+        static void secp256k1_fe_normalize_weak(secp256k1_fe *r) noexcept;
+        static void secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept;
+        static  int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) noexcept;
+        static  int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r) noexcept;
+
         static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) noexcept;
         static int secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe *x) noexcept;
-        static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b) noexcept;
-        static void secp256k1_fe_set_int(secp256k1_fe *r, int a) noexcept;
-        static int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
-        static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) noexcept;
-        static int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) noexcept;
-        static void secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept;
-        static int secp256k1_fe_is_odd(const secp256k1_fe *a) noexcept;
         static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) noexcept;
-        static void secp256k1_fe_normalize_weak(secp256k1_fe *r) noexcept;
-        static void secp256k1_fe_mul_int(secp256k1_fe *r, int a) noexcept;
-        static int secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r) noexcept;
         static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr) noexcept;
         static void secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1_gej *a, const ecmult::secp256k1_fe *zi) noexcept;
         static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, ecmult::secp256k1_fe *rzr) noexcept;
         static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp256k1_fe *globalz, const secp256k1_gej *a, const secp256k1_fe *zr) noexcept;
-        static void secp256k1_fe_clear(secp256k1_fe *a) noexcept;
         static void secp256k1_gej_set_infinity(secp256k1_gej *r) noexcept;
         static void secp256k1_ge_neg(secp256k1_ge *r, const secp256k1_ge *a) noexcept;
-        static void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) noexcept;
         static void secp256k1_ge_from_storage(secp256k1_ge *r, const secp256k1_ge_storage *a) noexcept;
         static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, const secp256k1_fe *bzinv) noexcept;
-        static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
         static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a) noexcept;
         static int secp256k1_gej_is_infinity(const secp256k1_gej *a) noexcept;
-        static void secp256k1_fe_normalize(secp256k1_fe *r) noexcept;
-        static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a) noexcept;
         static void secp256k1_ge_to_storage(secp256k1_ge_storage *r, const secp256k1_ge *a) noexcept;
         static int secp256k1_ge_is_infinity(const secp256k1_ge *a) noexcept;
-        static void secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe *a) noexcept;
         static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y) noexcept;
         static int secp256k1_ge_is_valid_var(const secp256k1_ge *a) noexcept;
-        static int secp256k1_fe_equal_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
         static void secp256k1_ge_clear(secp256k1_ge *r) noexcept;
         static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) noexcept;
         static bool secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge_storage *pre, const secp256k1_gej *a) noexcept;
         static void secp256k1_ge_set_table_gej_var(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zr, size_t len) noexcept;
-        static int secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept;
         static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) noexcept;
         static const secp256k1_ge *secp256k1_get_ge_const_g() noexcept;
 
@@ -543,5 +556,33 @@ struct CExtPubKey {
         }
     }
 };
+
+// SorachanCoin Sora neko
+// secp256k1 signed negate operator
+using s256k1_fe = CPubKey::ecmult::secp256k1_fe;
+namespace secp256k1_negate_ope {
+    // secp256k1 from fe to uint256, from uint256 to fe.
+    uint256 fe_get_uint256(const s256k1_fe *fe); // fe (be normalized)
+    void fe_set_uint256(s256k1_fe *fe, const uint256 *lvalue);
+
+    // from secp256k1_fe to std::string
+    std::string fe_ToString(const s256k1_fe *fe); // fe (be normalized)
+    std::string fe_normalize_to_ToString(const s256k1_fe *fe);
+
+    int fe_get_signed(const s256k1_fe *fe_na); // negate[+fe_na] -: 0, +: 1
+    int fe_get_negate(const s256k1_fe *fe_na); // negate[+fe_na] -: 1, +: 0
+    void fe_normalize_negative(s256k1_fe *fe_na); // negate[-fe_na]
+    int fe_normalize_to_cmp(s256k1_fe *fe1, s256k1_fe *fe2); // [fe1] cmp [fe2]
+
+    // secp256k1_fe signed operator [negate ret 0: +, ret 1: -]
+    // [set f1, f2 are normalized]
+    // [result fe1 is normalized]
+    int fe_add_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate); // fe1 = fe1 + fe2
+    int fe_sub_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate); // fe1 = fe1 - fe2
+    int fe_mul_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate); // fe1 = fe1 * fe2
+    int fe_div_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate); // fe1 = fe1 / fe2
+    int fe_mod_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate); // fe1 = fe1 % fe2
+    int fe_pow_to_negate(s256k1_fe *fe1, int fe1_negate, unsigned int n); // fe1^n (n>=0)
+}
 
 #endif

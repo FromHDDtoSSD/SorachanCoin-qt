@@ -3,7 +3,7 @@
 // Copyright (c) 2018-2021 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_UINT256_H
 #define BITCOIN_UINT256_H
 
@@ -55,6 +55,9 @@ public:
         }
         return ret;
     }
+    base_uint &operator*=(const base_uint &b);
+    base_uint &operator/=(const base_uint &b);
+    base_uint &operator%=(const base_uint &b);
     base_uint &operator=(uint64_t b) {
         pn[0] = (uint32_t)b;
         pn[1] = (uint32_t)(b >> 32);
@@ -426,6 +429,22 @@ UINT_DEF(uint256, base_uint256)
 UINT_DEF(uint512, base_uint512)
 UINT_DEF(uint65536, base_uint65536)
 UINT_DEF(uint131072, base_uint131072)
+
+inline const base_uint256 operator*(const base_uint256 &a, const base_uint256 &b) {
+    base_uint256 u = a;
+    u*=b;
+    return u;
+}
+inline const base_uint256 operator/(const base_uint256 &a, const base_uint256 &b) {
+    base_uint256 u = a;
+    u/=b;
+    return u;
+}
+inline const base_uint256 operator%(const base_uint256 &a, const base_uint256 &b) {
+    base_uint256 u = a;
+    u%=b;
+    return u;
+}
 
 class uint256b : public uint256
 {

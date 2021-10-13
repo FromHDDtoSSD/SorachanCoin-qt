@@ -36,12 +36,11 @@ unsigned char block_info::gpchMessageStart[4] = { 0xe4, 0xe8, 0xe9, 0xe5 };
 
 // block_hash_modifier checkpoints and modifierChecksum
 const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpoints = {
-    {SWITCH_LYRE2RE_BLOCK-1, block_hash_modifier_genesis::mainnet_genesic_hash},
+    // {SWITCH_LYRE2RE_BLOCK-1, block_hash_modifier_genesis::mainnet_genesic_hash},
 };
 
 const MapCheckpoints block_hash_modifier_checkpoints::mapCheckpointsTestnet = {
-    {SWITCH_LYRE2RE_BLOCK_TESTNET-1, block_hash_modifier_genesis::testnet_genesis_hash},
-    {1501700, uint256("0xe70859bc50c10caf55d3436e70614b50553d2805bf802846605af839f311ff1e")},
+    // {SWITCH_LYRE2RE_BLOCK_TESTNET-1, block_hash_modifier_genesis::testnet_genesis_hash},
 };
 
 const LastCheckpointTime block_hash_modifier_checkpoints::CheckpointLastTime = 0;

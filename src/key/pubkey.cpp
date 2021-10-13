@@ -875,7 +875,7 @@ int CPubKey::ecmult::secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char 
     return 1;
 }
 
-int CPubKey::ecmult::secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept {
+int CPubKey::ecmult::secp256k1_fe_cmp(const secp256k1_fe *a, const secp256k1_fe *b) noexcept {
     int i;
 #ifdef VERIFY
     VERIFY_CHECK(a->normalized);
@@ -892,6 +892,10 @@ int CPubKey::ecmult::secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1
         }
     }
     return 0;
+}
+
+int CPubKey::ecmult::secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept {
+    return secp256k1_fe_cmp(a, b);
 }
 
 void CPubKey::ecmult::secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a) noexcept {
@@ -1724,62 +1728,6 @@ int CPubKey::ecmult::secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe 
     return secp256k1_fe_sqrt(&r->y, &c);
 }
 
-void CPubKey::ecmult::secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept {
-    uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],
-             t5 = r->n[5], t6 = r->n[6], t7 = r->n[7], t8 = r->n[8], t9 = r->n[9];
-
-    /* Reduce t9 at the start so there will be at most a single carry from the first pass */
-    uint32_t m;
-    uint32_t x = t9 >> 22; t9 &= 0x03FFFFFUL;
-
-    /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x3D1UL; t1 += (x << 6);
-    t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
-    t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
-    t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL; m = t2;
-    t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL; m &= t3;
-    t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL; m &= t4;
-    t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL; m &= t5;
-    t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL; m &= t6;
-    t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL; m &= t7;
-    t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL; m &= t8;
-
-    /* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-    VERIFY_CHECK(t9 >> 23 == 0);
-
-    /* At most a single final reduction is needed; check if the value is >= the field characteristic */
-    x = (t9 >> 22) | ((t9 == 0x03FFFFFUL) & (m == 0x3FFFFFFUL)
-        & ((t1 + 0x40UL + ((t0 + 0x3D1UL) >> 26)) > 0x3FFFFFFUL));
-
-    if (x) {
-        t0 += 0x3D1UL; t1 += (x << 6);
-        t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
-        t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
-        t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL;
-        t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL;
-        t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL;
-        t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL;
-        t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL;
-        t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL;
-        t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL;
-
-        /* If t9 didn't carry to bit 22 already, then it should have after any final reduction */
-        VERIFY_CHECK(t9 >> 22 == x);
-
-        /* Mask off the possible multiple of 2^256 from the final reduction */
-        t9 &= 0x03FFFFFUL;
-    }
-
-    r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
-    r->n[5] = t5; r->n[6] = t6; r->n[7] = t7; r->n[8] = t8; r->n[9] = t9;
-
-#ifdef VERIFY
-    r->magnitude = 1;
-    r->normalized = 1;
-    secp256k1_fe_verify(r);
-#endif
-}
-
 int CPubKey::ecmult::secp256k1_fe_is_odd(const secp256k1_fe *a) noexcept {
 #ifdef VERIFY
     VERIFY_CHECK(a->normalized);
@@ -2333,37 +2281,6 @@ unsigned int CPubKey::secp256k1_scalar_get_bits_var(const secp256k1_unit *a, uns
     }
 }
 
-void CPubKey::ecmult::secp256k1_fe_normalize_weak(secp256k1_fe *r) noexcept {
-    uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],
-             t5 = r->n[5], t6 = r->n[6], t7 = r->n[7], t8 = r->n[8], t9 = r->n[9];
-
-    /* Reduce t9 at the start so there will be at most a single carry from the first pass */
-    uint32_t x = t9 >> 22; t9 &= 0x03FFFFFUL;
-
-    /* The first pass ensures the magnitude is 1, ... */
-    t0 += x * 0x3D1UL; t1 += (x << 6);
-    t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
-    t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
-    t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL;
-    t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL;
-    t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL;
-    t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL;
-    t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL;
-    t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL;
-    t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL;
-
-    /* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
-    VERIFY_CHECK(t9 >> 23 == 0);
-
-    r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
-    r->n[5] = t5; r->n[6] = t6; r->n[7] = t7; r->n[8] = t8; r->n[9] = t9;
-
-#ifdef VERIFY
-    r->magnitude = 1;
-    secp256k1_fe_verify(r);
-#endif
-}
-
 void CPubKey::ecmult::secp256k1_fe_mul_int(secp256k1_fe *r, int a) noexcept {
     r->n[0] *= a;
     r->n[1] *= a;
@@ -2447,7 +2364,7 @@ void CPubKey::ecmult::secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1
     r->infinity = a->infinity;
 }
 
-int CPubKey::ecmult::secp256k1_fe_normalizes_to_zero_var(secp256k1_fe *r) noexcept {
+int CPubKey::ecmult::secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r) noexcept {
     uint32_t t0, t1, t2, t3, t4, t5, t6, t7, t8, t9;
     uint32_t z0, z1;
     uint32_t x;
@@ -3119,6 +3036,7 @@ void CPubKey::ecmult::secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *
 #if defined(USE_FIELD_INV_BUILTIN)
     secp256k1_fe_inv(r, a);
 #elif defined(USE_FIELD_INV_NUM)
+#error "Please select field GMP implementation"
     secp256k1_num n, m;
     static constexpr secp256k1_fe negone = SECP256K1_FE_CONST(
         0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
@@ -3263,6 +3181,93 @@ void CPubKey::ecmult::secp256k1_fe_normalize(secp256k1_fe *r) noexcept {
 #ifdef VERIFY
     r->magnitude = 1;
     r->normalized = 1;
+    secp256k1_fe_verify(r);
+#endif
+}
+
+void CPubKey::ecmult::secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept {
+    uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],
+             t5 = r->n[5], t6 = r->n[6], t7 = r->n[7], t8 = r->n[8], t9 = r->n[9];
+
+    /* Reduce t9 at the start so there will be at most a single carry from the first pass */
+    uint32_t m;
+    uint32_t x = t9 >> 22; t9 &= 0x03FFFFFUL;
+
+    /* The first pass ensures the magnitude is 1, ... */
+    t0 += x * 0x3D1UL; t1 += (x << 6);
+    t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
+    t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
+    t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL; m = t2;
+    t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL; m &= t3;
+    t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL; m &= t4;
+    t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL; m &= t5;
+    t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL; m &= t6;
+    t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL; m &= t7;
+    t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL; m &= t8;
+
+    /* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
+    VERIFY_CHECK(t9 >> 23 == 0);
+
+    /* At most a single final reduction is needed; check if the value is >= the field characteristic */
+    x = (t9 >> 22) | ((t9 == 0x03FFFFFUL) & (m == 0x3FFFFFFUL)
+        & ((t1 + 0x40UL + ((t0 + 0x3D1UL) >> 26)) > 0x3FFFFFFUL));
+
+    if (x) {
+        t0 += 0x3D1UL; t1 += (x << 6);
+        t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
+        t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
+        t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL;
+        t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL;
+        t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL;
+        t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL;
+        t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL;
+        t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL;
+        t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL;
+
+        /* If t9 didn't carry to bit 22 already, then it should have after any final reduction */
+        VERIFY_CHECK(t9 >> 22 == x);
+
+        /* Mask off the possible multiple of 2^256 from the final reduction */
+        t9 &= 0x03FFFFFUL;
+    }
+
+    r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
+    r->n[5] = t5; r->n[6] = t6; r->n[7] = t7; r->n[8] = t8; r->n[9] = t9;
+
+#ifdef VERIFY
+    r->magnitude = 1;
+    r->normalized = 1;
+    secp256k1_fe_verify(r);
+#endif
+}
+
+void CPubKey::ecmult::secp256k1_fe_normalize_weak(secp256k1_fe *r) noexcept {
+    uint32_t t0 = r->n[0], t1 = r->n[1], t2 = r->n[2], t3 = r->n[3], t4 = r->n[4],
+             t5 = r->n[5], t6 = r->n[6], t7 = r->n[7], t8 = r->n[8], t9 = r->n[9];
+
+    /* Reduce t9 at the start so there will be at most a single carry from the first pass */
+    uint32_t x = t9 >> 22; t9 &= 0x03FFFFFUL;
+
+    /* The first pass ensures the magnitude is 1, ... */
+    t0 += x * 0x3D1UL; t1 += (x << 6);
+    t1 += (t0 >> 26); t0 &= 0x3FFFFFFUL;
+    t2 += (t1 >> 26); t1 &= 0x3FFFFFFUL;
+    t3 += (t2 >> 26); t2 &= 0x3FFFFFFUL;
+    t4 += (t3 >> 26); t3 &= 0x3FFFFFFUL;
+    t5 += (t4 >> 26); t4 &= 0x3FFFFFFUL;
+    t6 += (t5 >> 26); t5 &= 0x3FFFFFFUL;
+    t7 += (t6 >> 26); t6 &= 0x3FFFFFFUL;
+    t8 += (t7 >> 26); t7 &= 0x3FFFFFFUL;
+    t9 += (t8 >> 26); t8 &= 0x3FFFFFFUL;
+
+    /* ... except for a possible carry at bit 22 of t9 (i.e. bit 256 of the field element) */
+    VERIFY_CHECK(t9 >> 23 == 0);
+
+    r->n[0] = t0; r->n[1] = t1; r->n[2] = t2; r->n[3] = t3; r->n[4] = t4;
+    r->n[5] = t5; r->n[6] = t6; r->n[7] = t7; r->n[8] = t8; r->n[9] = t9;
+
+#ifdef VERIFY
+    r->magnitude = 1;
     secp256k1_fe_verify(r);
 #endif
 }
@@ -3951,4 +3956,250 @@ bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChild) const noexcept {
     std::memcpy(&out.vchFingerprint[0], &id, 4);
     out.nChild = _nChild;
     return pubkey.Derive(out.pubkey, out.chaincode, _nChild, chaincode);
+}
+
+uint256 secp256k1_negate_ope::fe_get_uint256(const s256k1_fe *fe) { // fe (be normalized)
+    uint256 value;
+    CPubKey::ecmult::secp256k1_fe_get_be32((unsigned char *)&value, fe); // big endian
+    auto le = [](uint32_t v) {
+        uint32_t r=0;
+        r |= (v & 0xFF000000UL) >> 24;
+        r |= (v & 0x000000FFUL) << 24;
+        r |= (v & 0x00FF0000UL) >> 8;
+        r |= (v & 0x0000FF00UL) << 8;
+        return r;
+    };
+    for(int i=0; i<4; ++i) {
+        uint32_t t = *((uint32_t *)&value + i);
+        *((uint32_t *)&value + i) = le(*((uint32_t *)&value + (7-i)));
+        *((uint32_t *)&value + (7-i)) = le(t);
+    }
+    return value;
+}
+
+void secp256k1_negate_ope::fe_set_uint256(s256k1_fe *fe, const uint256 *lvalue) {
+    uint256 bvalue = *lvalue;
+    auto be = [](uint32_t v) {
+        uint32_t r=0;
+        r |= (v & 0xFF000000UL) >> 24;
+        r |= (v & 0x000000FFUL) << 24;
+        r |= (v & 0x00FF0000UL) >> 8;
+        r |= (v & 0x0000FF00UL) << 8;
+        return r;
+    };
+    for(int i=0; i<4; ++i) {
+        uint32_t t = *((uint32_t *)&bvalue + i);
+        *((uint32_t *)&bvalue + i) = be(*((uint32_t *)&bvalue + (7-i)));
+        *((uint32_t *)&bvalue + (7-i)) = be(t);
+    }
+    CPubKey::ecmult::secp256k1_fe_set_be32(fe, (const unsigned char *)&bvalue);
+}
+
+std::string secp256k1_negate_ope::fe_ToString(const s256k1_fe *fe) { // fe (be normalized)
+    return tfm::format("0x%s", fe_get_uint256(fe).ToString().c_str());
+}
+
+std::string secp256k1_negate_ope::fe_normalize_to_ToString(const s256k1_fe *fe) {
+    CPubKey::ecmult::secp256k1_fe fe_str = *fe;
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_str);
+    return fe_ToString(&fe_str);
+}
+
+int secp256k1_negate_ope::fe_get_signed(const s256k1_fe *fe_na) { // negate[+fe_na] -: 0, +: 1
+    CPubKey::ecmult::secp256k1_fe fe_check = *fe_na;
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_check);
+    return (fe_check.n[9]==0x3FFFFFUL) ? 0: 1;
+}
+
+int secp256k1_negate_ope::fe_get_negate(const s256k1_fe *fe_na) { // negate[+fe_na] -: 1, +: 0
+    return fe_get_signed(fe_na)? 0: 1;
+}
+
+void secp256k1_negate_ope::fe_normalize_negative(s256k1_fe *fe_na) { // negate[-fe_na]
+    static constexpr CPubKey::ecmult::secp256k1_fe fe_negone = SECP256K1_FE_CONST(
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFFUL,
+        0xFFFFFFFFUL, 0xFFFFFFFFUL, 0xFFFFFFFEUL, 0xFFFFFC2EUL
+    );
+
+    CPubKey::ecmult::secp256k1_fe_add(fe_na, &fe_negone);
+    CPubKey::ecmult::secp256k1_fe_normalize(fe_na);
+
+    CPubKey::ecmult::secp256k1_fe fe_na_na;
+    CPubKey::ecmult::secp256k1_fe_clear(&fe_na_na);
+    CPubKey::ecmult::secp256k1_fe_negate(&fe_na_na, fe_na, 1);
+    CPubKey::ecmult::secp256k1_fe_add(&fe_na_na, &fe_negone);
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_na_na);
+    *fe_na = fe_na_na;
+}
+
+int secp256k1_negate_ope::fe_normalize_to_cmp(s256k1_fe *fe1, s256k1_fe *fe2) { // fe1 cmp fe2
+    CPubKey::ecmult::secp256k1_fe_normalize(fe1);
+    CPubKey::ecmult::secp256k1_fe_normalize(fe2);
+    return CPubKey::ecmult::secp256k1_fe_cmp(fe1, fe2);
+}
+
+int secp256k1_negate_ope::fe_add_to_negate(CPubKey::ecmult::secp256k1_fe *fe1, int fe1_negate, const CPubKey::ecmult::secp256k1_fe *fe2, int fe2_negate) { // fe1 = fe1 + fe2
+    if(fe1_negate==fe2_negate) {
+        CPubKey::ecmult::secp256k1_fe_add(fe1, fe2);
+        return fe1_negate;
+    } else if (fe1_negate==1&&fe2_negate==0) {
+        CPubKey::ecmult::secp256k1_fe fe_na;
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na, fe1, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na, fe2);
+        int ne_sign = fe_get_negate(&fe_na);
+        if(ne_sign==0)
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_na);
+        else
+            fe_normalize_negative(&fe_na);
+        *fe1 = fe_na;
+        return ne_sign;
+    } else {
+        CPubKey::ecmult::secp256k1_fe fe_na;
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_na, fe2, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_na, fe1);
+        int ne_sign = fe_get_negate(&fe_na);
+        if(ne_sign==0)
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_na);
+        else
+            fe_normalize_negative(&fe_na);
+        *fe1 = fe_na;
+        return ne_sign;
+    }
+}
+
+int secp256k1_negate_ope::fe_sub_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate) { // fe1 = fe1 - fe2
+    return fe_add_to_negate(fe1, fe1_negate, fe2, fe2_negate?0:1);
+}
+
+int secp256k1_negate_ope::fe_mul_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate) { // fe1 = fe1 * fe2
+    CPubKey::ecmult::secp256k1_fe fe_mul;
+    CPubKey::ecmult::secp256k1_fe_mul(&fe_mul, fe1, fe2);
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_mul);
+    *fe1 = fe_mul;
+    return ((fe1_negate^fe2_negate) & 0x01UL);
+}
+
+int secp256k1_negate_ope::fe_div_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate) { // fe1 = fe1 / fe2
+    if(CPubKey::ecmult::secp256k1_fe_cmp(fe1, fe2)==-1) {
+        CPubKey::ecmult::secp256k1_fe_set_int(fe1, 0);
+        return ((fe1_negate^fe2_negate) & 0x01UL);
+    }
+
+    CPubKey::ecmult::secp256k1_fe fe_div;
+    CPubKey::ecmult::secp256k1_fe_inv(&fe_div, fe2);
+    CPubKey::ecmult::secp256k1_fe fe_mul;
+    CPubKey::ecmult::secp256k1_fe_mul(&fe_mul, &fe_div, fe1);
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_mul);
+    if(fe_mul.n[9] & 0x3FFFFFUL) {
+        CPubKey::ecmult::secp256k1_fe fe_mod = *fe1;
+        fe_mod_to_negate(&fe_mod, 0, fe2, 0);
+        if(CPubKey::ecmult::secp256k1_fe_is_zero(&fe_mod)==1) {
+            *fe1 = fe_mul;
+            return ((fe1_negate^fe2_negate) & 0x01UL);
+        }
+
+        CPubKey::ecmult::secp256k1_fe fe_neg;
+        CPubKey::ecmult::secp256k1_fe_negate(&fe_neg, &fe_mod, 1);
+        CPubKey::ecmult::secp256k1_fe_add(&fe_neg, fe1);
+        CPubKey::ecmult::secp256k1_fe_normalize(&fe_neg);
+        int neg_sign = fe_div_to_negate(&fe_neg, fe1_negate, fe2, fe2_negate);
+        *fe1 = fe_neg;
+        return neg_sign;
+    }
+
+    *fe1 = fe_mul;
+    return ((fe1_negate^fe2_negate) & 0x01UL);
+}
+
+int secp256k1_negate_ope::fe_mod_to_negate(s256k1_fe *fe1, int fe1_negate, const s256k1_fe *fe2, int fe2_negate) { // fe1 = fe1 % fe2
+    (void)fe1_negate;
+    (void)fe2_negate;
+    if(CPubKey::ecmult::secp256k1_fe_cmp(fe1, fe2)==-1)
+        return 0;
+    CPubKey::ecmult::secp256k1_fe fe_1or2;
+    CPubKey::ecmult::secp256k1_fe_set_int(&fe_1or2, 1);
+    if(CPubKey::ecmult::secp256k1_fe_cmp(fe2, &fe_1or2)<=0) {
+        CPubKey::ecmult::secp256k1_fe_set_int(fe1, 0);
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_fe_set_int(&fe_1or2, 2);
+    if(CPubKey::ecmult::secp256k1_fe_cmp(fe2, &fe_1or2)<=0) {
+        if(CPubKey::ecmult::secp256k1_fe_is_odd(fe1)==1)
+            CPubKey::ecmult::secp256k1_fe_set_int(fe1, 1);
+        else
+            CPubKey::ecmult::secp256k1_fe_set_int(fe1, 0);
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_fe fe_div;
+    CPubKey::ecmult::secp256k1_fe_inv(&fe_div, fe2);
+    CPubKey::ecmult::secp256k1_fe fe_mul;
+    CPubKey::ecmult::secp256k1_fe_mul(&fe_mul, &fe_div, fe1);
+    CPubKey::ecmult::secp256k1_fe_normalize(&fe_mul);
+    if(fe_mul.n[9] & 0x3FFFFFUL) {
+        CPubKey::ecmult::secp256k1_fe fe_sqrv[1024];
+        fe_sqrv[0] = *fe2;
+        int sqrn_end = 1;
+        for(;;) {
+            CPubKey::ecmult::secp256k1_fe_mul(&fe_sqrv[sqrn_end], &fe_sqrv[sqrn_end-1], fe2);
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_sqrv[sqrn_end]);
+            if(CPubKey::ecmult::secp256k1_fe_cmp(fe1, &fe_sqrv[sqrn_end])<=0)
+                break;
+            ++sqrn_end;
+        }
+        CPubKey::ecmult::secp256k1_fe fe_neg;
+        CPubKey::ecmult::secp256k1_fe fe_t1 = *fe1;
+        int sqrn_ite = sqrn_end - 1;
+        for(;;) {
+            CPubKey::ecmult::secp256k1_fe_negate(&fe_neg, &fe_sqrv[sqrn_ite], 1);
+            CPubKey::ecmult::secp256k1_fe_add(&fe_neg, &fe_t1);
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_neg);
+            if(CPubKey::ecmult::secp256k1_fe_cmp(&fe_neg, &fe_sqrv[sqrn_ite])<=0) {
+                if(sqrn_ite==0)
+                    break;
+                else {
+                    for(;;) {
+                        --sqrn_ite;
+                        if(CPubKey::ecmult::secp256k1_fe_cmp(&fe_neg, &fe_sqrv[sqrn_ite])>0) break;
+                        if(sqrn_ite==0) break;
+                    }
+                    if(sqrn_ite==0) break;
+                }
+            }
+            fe_t1 = fe_neg;
+        }
+        CPubKey::ecmult::secp256k1_fe fe_na = fe_neg;
+        while(CPubKey::ecmult::secp256k1_fe_cmp(&fe_na, fe2)>0) {
+            CPubKey::ecmult::secp256k1_fe_negate(&fe_na, fe2, 1);
+            CPubKey::ecmult::secp256k1_fe_add(&fe_na, &fe_neg);
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_na);
+            fe_neg = fe_na;
+        }
+        if(CPubKey::ecmult::secp256k1_fe_cmp(&fe_na, fe2)==0)
+            CPubKey::ecmult::secp256k1_fe_set_int(fe1, 0);
+        else
+            *fe1 = fe_na;
+        return 0;
+    } else {
+        CPubKey::ecmult::secp256k1_fe_set_int(fe1, 0);
+        return 0;
+    }
+}
+
+int secp256k1_negate_ope::fe_pow_to_negate(s256k1_fe *fe1, int fe1_negate, unsigned int n) { // fe1^n (n>=0)
+    if(n==0) {
+        CPubKey::ecmult::secp256k1_fe_set_int(fe1, 1);
+    } else {
+        CPubKey::ecmult::secp256k1_fe fe_mul = *fe1;
+        for(int i=0; i<n-1; ++i) {
+            CPubKey::ecmult::secp256k1_fe fe_ret;
+            CPubKey::ecmult::secp256k1_fe_mul(&fe_ret, &fe_mul, fe1);
+            CPubKey::ecmult::secp256k1_fe_normalize(&fe_ret);
+            fe_mul = fe_ret;
+        }
+        *fe1 = fe_mul;
+    }
+    if(fe1_negate==0)
+        return 0;
+    else
+        return (n%2==0) ? 0: 1;
 }

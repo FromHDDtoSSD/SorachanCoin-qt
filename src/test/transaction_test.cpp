@@ -7,7 +7,6 @@ class transaction_test {
 public:
     transaction_test() {
         debugcs::instance() << "transaction_test" << debugcs::endl();
-
     }
 };
 #ifdef DEBUG

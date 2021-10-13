@@ -6,7 +6,6 @@ class script_test {
 public:
     script_test() {
         debugcs::instance() << "script_test" << debugcs::endl();
-
     }
 };
 #ifdef DEBUG

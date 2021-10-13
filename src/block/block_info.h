@@ -70,9 +70,7 @@ struct BLOCK_HASH_MODIFIER_MUTABLE {
 
 // BLOCK_HASH_MODIFIER genesis block
 namespace block_hash_modifier_genesis {
-    const std::string szStr           = "Certain Exchange in Hong Kong stole a Dogecoin that is owned by one of the SorachanCoin(Sora neko) developers. "
-                                        "We are currently under negotiation. Please back a Dogecoin. "
-                                        "[junkhdd.com and iuec.co.jp] Data Recovery in JAPAN project.";
+    const std::string szStr           = "[junkhdd.com and iuec.co.jp] Data Recovery in JAPAN project.";
     constexpr int32_t nVersion        = 1;
     constexpr int32_t type            = 1;
     constexpr int32_t nFlags          = 1;
@@ -84,7 +82,7 @@ namespace block_hash_modifier_genesis {
     constexpr uint32_t testnet_timestamp = 1623044072; // 07-Jun 2021 14:34:32
 
     const uint256 mainnet_genesic_hash = uint256("0");
-    const uint256 testnet_genesis_hash = uint256("0x7cc52e194af3c88de879a5d27e157d71f4e359da84937f2382edeba27230ed1b");
+    const uint256 testnet_genesis_hash = uint256("0");
     extern BLOCK_HASH_MODIFIER_MUTABLE create_block_hash_modifier_genesis();
 }
 
