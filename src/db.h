@@ -1643,6 +1643,7 @@ private:
                 ssKey.reserve(1000);
                 ssKey << key;
                 CDataStream ssValue;
+                ssValue.resize(1);
                 txn->insert(CTxnSecureBuffer::TXN_ERASE, ssKey, ssValue); // ssValue unused.
             } catch (const std::exception &) {
                 return false;
@@ -1683,6 +1684,7 @@ private:
                 ssKey.reserve(1000);
                 ssKey << key;
                 CDataStream ssValue;
+                ssValue.resize(1);
                 txn->insert(CTxnSecureBuffer::TXN_ERASE, ssKey, ssValue); // ssValue unused.
             } catch (const std::exception &) {
                 return false;

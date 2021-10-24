@@ -206,11 +206,20 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
             HDC hDC = ::BeginPaint(hWnd, &ps);
 
             std::string bal = "Balance: ";
-            bal += tfm::format("%d", GetBalance());
+            bal += tfm::format("%.2f", GetBalance());
             bal += " SORA";
             font::instance(FONT_CHEIGHT)(hDC, rc, bal);
 
             ::EndPaint(hWnd, &ps);
+        }
+        {
+            if(!IsCryptedWallet())
+                ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_ENCRYPT);
+            else if (IsLockedWallet())
+                ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_UNLOCK);
+            else {
+                ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_STAKING);
+            }
         }
         break;
     case WM_SYSCOMMAND:
@@ -261,9 +270,10 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
                 SecureString strWalletPass;
                 get_edit(strWalletPass);
                 if(EncryptWallet(strWalletPass)) {
-                    ::MessageBoxA(hWnd, TRANS_STRING("The encryption in wallet was successful, therefore SORA will reload the blockchain."), TRANS_STRING("[Re Start] SorachanCoin"), MB_OK | MB_ICONINFORMATION);
-                    pwu->restart = true;
-                    ::PostMessageW(hWnd, WM_CLOSE, 0, 0);
+                    ::MessageBoxA(hWnd, TRANS_STRING("The encryption in wallet was successful."), TRANS_STRING("SorachanCoin"), MB_OK | MB_ICONINFORMATION);
+                    //pwu->restart = true;
+                    //::PostMessageW(hWnd, WM_CLOSE, 0, 0);
+                    ::SetWindowTextA(pwu->ci->hWalletButton, IDM_TO_UNLOCK);
                 } else {
                     ::MessageBoxA(hWnd, TRANS_STRING("Failed to encrypt wallet."), TRANS_STRING("[Error] SORA"), MB_OK | MB_ICONWARNING);
                 }
@@ -470,10 +480,10 @@ bool predsystem::CreateMiniwindow(bool *restart) noexcept
                 "EDIT",
                 IDS_EDIT_WALLET_STATUS,
                 WS_CHILD | WS_VISIBLE | WS_BORDER | ES_PASSWORD,
-                10,
-                80,
+                15,
+                75,
                 320,
-                30,
+                25,
                 hWnd,
                 (HMENU)IDC_EDIT_WALLET_STATUS,
                 ::GetModuleHandleW(nullptr),
