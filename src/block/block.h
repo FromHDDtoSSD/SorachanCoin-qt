@@ -19,7 +19,7 @@
 #include <prevector/prevector.h>
 
 #ifndef SWITCH_LYRE2RE_BLOCK
-# define SWITCH_LYRE2RE_BLOCK (1000000) // hardfork: to Lyra2REv2
+# define SWITCH_LYRE2RE_BLOCK (1495000) // hardfork: to Lyra2REv2
 # define SWITCH_LYRE2RE_BLOCK_TESTNET (1495000)
 #endif
 
