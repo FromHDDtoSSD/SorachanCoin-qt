@@ -7,6 +7,12 @@
 #ifndef BITCOIN_LSYNC_H
 #define BITCOIN_LSYNC_H
 
+#define LSYNC_DISABLED // using sync.h
+
+#ifdef LSYNC_DISABLED
+#include <sync/sync.h>
+#else
+
 #ifdef LSYNC_DEBUG
 # define HAVE_THREAD_LOCAL
 # define DEBUG_LOCKCONTENTION
@@ -311,5 +317,7 @@ public:
         return fHaveGrant;
     }
 };
+
+#endif // LSYNC_DISABLED
 
 #endif // BITCOIN_LSYNC_H

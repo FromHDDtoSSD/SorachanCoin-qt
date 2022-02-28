@@ -9,7 +9,11 @@
 
 // SorachanCoin
 // from sync.h to lsync.h
+#ifndef LSYNC_DISABLED
 static_assert(false, "from sync.h(old core) to lsync.h(latest core)");
+#else
+#define DEBUG_LSYNC_CS(str)
+#endif
 
 #include <mutex>
 #include <condition_variable>
@@ -22,8 +26,10 @@ static_assert(false, "from sync.h(old core) to lsync.h(latest core)");
 using CCriticalSection = std::recursive_mutex;
 
 /** Wrapped mutex: supports waiting but not recursive locking */
-//using Mutex = std::mutex;
 using CWaitableCriticalSection = std::mutex;
+#ifdef LSYNC_DISABLED
+using Mutex = CCriticalSection; // if lsync, std::mutex
+#endif
 
 /**
  * implement: LOCK(), LOCK2() and DEBUG_LOCKORDER

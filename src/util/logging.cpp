@@ -9,6 +9,7 @@
 #include <util/logging.h>
 #include <util/time.h>
 #include <version.h>
+#include <debugcs/debugcs.h>
 
 BCLog::Logger &LogInstance() noexcept {
 /**
