@@ -31,7 +31,7 @@ How to use?
 ===========================
 https://www.junkhdd.com/download/usage.html<br>
 https://www.fromhddtossd.com/<br >
-https://èHót.jp
+https://xn--gmzw8s.jp/
 
 How to build?
 ===========================

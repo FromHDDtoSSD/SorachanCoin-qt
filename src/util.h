@@ -120,9 +120,11 @@ namespace util // used json-RPC
         return util::HexStr(vch.begin(), vch.end(), fSpaces);
     }
 
+#ifdef CSCRIPT_PREVECTOR_ENABLE
     inline std::string HexStr(const std::vector<unsigned char> &vch, bool fSpaces = false) {
         return util::HexStr(vch.begin(), vch.end(), fSpaces);
     }
+#endif
 
     template<typename T>
     inline void PrintHex(const T pbegin, const T pend, const char *pszFormat = "%s", bool fSpaces = true) {
