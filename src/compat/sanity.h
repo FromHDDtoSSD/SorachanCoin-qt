@@ -18,7 +18,7 @@
 #include <bench/bench.h>
 
 // FIXME: When _bench_func( ... 2, 2), vector object has been brought to break.
-static inline void _bench_func(const char *name, void (*_f)(benchmark::State &), uint64_t num_evals = 10, double num_iters = 10) noexcept {
+static inline void _bench_func(const char *name, void (*_f)(benchmark::State &), uint64_t num_evals = 10, double num_iters = 10) {
     benchmark::ConsolePrinter pobj;
     benchmark::State state(name, num_evals, num_iters, pobj);
     _f(state);

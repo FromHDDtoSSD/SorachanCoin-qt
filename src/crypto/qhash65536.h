@@ -20,14 +20,14 @@ private:
     unsigned char memory[sizeof(Lamport::CLamport)];
     Lamport::CLamport *plamport;
 public:
-    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
+    static constexpr size_t Size() {return OUTPUT_SIZE;}
 
-    CQHASH65536 &operator=(const CQHASH65536 &obj) noexcept;
-    void Clean() noexcept;
-    CQHASH65536() noexcept;
-    CQHASH65536& Write(const unsigned char* data, size_t len) noexcept;
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
-    CQHASH65536& Reset() noexcept;
+    CQHASH65536 &operator=(const CQHASH65536 &obj);
+    void Clean();
+    CQHASH65536();
+    CQHASH65536& Write(const unsigned char* data, size_t len);
+    void Finalize(unsigned char hash[OUTPUT_SIZE]);
+    CQHASH65536& Reset();
 
     ~CQHASH65536();
 };

@@ -31,8 +31,8 @@ using key_vector = std::vector<uint8_t>;
 class CKeyID : public uint160
 {
 public:
-    CKeyID() noexcept : uint160(0) {}
-    CKeyID(const uint160 &in) noexcept : uint160(in) {}
+    CKeyID() : uint160(0) {}
+    CKeyID(const uint160 &in) : uint160(in) {}
 };
 
 // An encapsulated OpenSSL or secp256k1 Elliptic Curve key (public)
@@ -171,61 +171,61 @@ public:
         } secp256k1_grn;
 
 #ifdef VERIFY
-        static void secp256k1_fe_verify(const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_verify(const secp256k1_fe *a);
 #endif
-        static void secp256k1_fe_clear(secp256k1_fe *a) noexcept;
-        static  int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a) noexcept;
-        static void secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a) noexcept;
-        static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_set_int(secp256k1_fe *r, int a) noexcept;
+        static void secp256k1_fe_clear(secp256k1_fe *a);
+        static  int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a);
+        static void secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe *a);
+        static void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a);
+        static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a);
+        static void secp256k1_fe_set_int(secp256k1_fe *r, int a);
 
-        static  int secp256k1_fe_is_odd(const secp256k1_fe *a) noexcept;
-        static  int secp256k1_fe_is_zero(const secp256k1_fe *a) noexcept;
+        static  int secp256k1_fe_is_odd(const secp256k1_fe *a);
+        static  int secp256k1_fe_is_zero(const secp256k1_fe *a);
 
-        static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b) noexcept;
-        static void secp256k1_fe_mul_int(secp256k1_fe *r, int a) noexcept;
-        static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static  int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
+        static void secp256k1_fe_add(secp256k1_fe *r, const secp256k1_fe *a);
+        static void secp256k1_fe_mul(secp256k1_fe *r, const secp256k1_fe *a, const secp256k1_fe * SECP256K1_RESTRICT b);
+        static void secp256k1_fe_mul_int(secp256k1_fe *r, int a);
+        static void secp256k1_fe_sqr(secp256k1_fe *r, const secp256k1_fe *a);
+        static  int secp256k1_fe_sqrt(secp256k1_fe *r, const secp256k1_fe *a);
 
-        static  int secp256k1_fe_cmp(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
-        static  int secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
-        static  int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
-        static  int secp256k1_fe_equal_var(const secp256k1_fe *a, const secp256k1_fe *b) noexcept;
+        static  int secp256k1_fe_cmp(const secp256k1_fe *a, const secp256k1_fe *b);
+        static  int secp256k1_fe_cmp_var(const secp256k1_fe *a, const secp256k1_fe *b);
+        static  int secp256k1_fe_equal(const secp256k1_fe *a, const secp256k1_fe *b);
+        static  int secp256k1_fe_equal_var(const secp256k1_fe *a, const secp256k1_fe *b);
 
-        static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m) noexcept;
-        static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *a) noexcept;
-        static void secp256k1_fe_normalize(secp256k1_fe *r) noexcept;
-        static void secp256k1_fe_normalize_weak(secp256k1_fe *r) noexcept;
-        static void secp256k1_fe_normalize_var(secp256k1_fe *r) noexcept;
-        static  int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r) noexcept;
-        static  int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r) noexcept;
+        static void secp256k1_fe_negate(secp256k1_fe *r, const secp256k1_fe *a, int m);
+        static void secp256k1_fe_inv(secp256k1_fe *r, const secp256k1_fe *a);
+        static void secp256k1_fe_inv_var(secp256k1_fe *r, const secp256k1_fe *a);
+        static void secp256k1_fe_normalize(secp256k1_fe *r);
+        static void secp256k1_fe_normalize_weak(secp256k1_fe *r);
+        static void secp256k1_fe_normalize_var(secp256k1_fe *r);
+        static  int secp256k1_fe_normalizes_to_zero(const secp256k1_fe *r);
+        static  int secp256k1_fe_normalizes_to_zero_var(const secp256k1_fe *r);
 
-        static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd) noexcept;
-        static int secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe *x) noexcept;
-        static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a) noexcept;
-        static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr) noexcept;
-        static void secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1_gej *a, const ecmult::secp256k1_fe *zi) noexcept;
-        static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, ecmult::secp256k1_fe *rzr) noexcept;
-        static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp256k1_fe *globalz, const secp256k1_gej *a, const secp256k1_fe *zr) noexcept;
-        static void secp256k1_gej_set_infinity(secp256k1_gej *r) noexcept;
-        static void secp256k1_ge_neg(secp256k1_ge *r, const secp256k1_ge *a) noexcept;
-        static void secp256k1_ge_from_storage(secp256k1_ge *r, const secp256k1_ge_storage *a) noexcept;
-        static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, const secp256k1_fe *bzinv) noexcept;
-        static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a) noexcept;
-        static int secp256k1_gej_is_infinity(const secp256k1_gej *a) noexcept;
-        static void secp256k1_ge_to_storage(secp256k1_ge_storage *r, const secp256k1_ge *a) noexcept;
-        static int secp256k1_ge_is_infinity(const secp256k1_ge *a) noexcept;
-        static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y) noexcept;
-        static int secp256k1_ge_is_valid_var(const secp256k1_ge *a) noexcept;
-        static void secp256k1_ge_clear(secp256k1_ge *r) noexcept;
-        static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a) noexcept;
-        static bool secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge_storage *pre, const secp256k1_gej *a) noexcept;
-        static void secp256k1_ge_set_table_gej_var(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zr, size_t len) noexcept;
-        static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a) noexcept;
-        static const secp256k1_ge *secp256k1_get_ge_const_g() noexcept;
+        static int secp256k1_ge_set_xo_var(secp256k1_ge *r, const secp256k1_fe *x, int odd);
+        static int secp256k1_ge_set_xquad(secp256k1_ge *r, const secp256k1_fe *x);
+        static void secp256k1_gej_set_ge(secp256k1_gej *r, const secp256k1_ge *a);
+        static void secp256k1_gej_double_var(secp256k1_gej *r, const secp256k1_gej *a, secp256k1_fe *rzr);
+        static void secp256k1_ge_set_gej_zinv(secp256k1_ge *r, const secp256k1_gej *a, const ecmult::secp256k1_fe *zi);
+        static void secp256k1_gej_add_ge_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, ecmult::secp256k1_fe *rzr);
+        static void secp256k1_ge_globalz_set_table_gej(size_t len, secp256k1_ge *r, secp256k1_fe *globalz, const secp256k1_gej *a, const secp256k1_fe *zr);
+        static void secp256k1_gej_set_infinity(secp256k1_gej *r);
+        static void secp256k1_ge_neg(secp256k1_ge *r, const secp256k1_ge *a);
+        static void secp256k1_ge_from_storage(secp256k1_ge *r, const secp256k1_ge_storage *a);
+        static void secp256k1_gej_add_zinv_var(secp256k1_gej *r, const secp256k1_gej *a, const secp256k1_ge *b, const secp256k1_fe *bzinv);
+        static void secp256k1_ge_set_gej_var(secp256k1_ge *r, secp256k1_gej *a);
+        static int secp256k1_gej_is_infinity(const secp256k1_gej *a);
+        static void secp256k1_ge_to_storage(secp256k1_ge_storage *r, const secp256k1_ge *a);
+        static int secp256k1_ge_is_infinity(const secp256k1_ge *a);
+        static void secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y);
+        static int secp256k1_ge_is_valid_var(const secp256k1_ge *a);
+        static void secp256k1_ge_clear(secp256k1_ge *r);
+        static void secp256k1_ge_set_gej(secp256k1_ge *r, secp256k1_gej *a);
+        static bool secp256k1_ecmult_odd_multiples_table_storage_var(int n, secp256k1_ge_storage *pre, const secp256k1_gej *a);
+        static void secp256k1_ge_set_table_gej_var(secp256k1_ge *r, const secp256k1_gej *a, const secp256k1_fe *zr, size_t len);
+        static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a);
+        static const secp256k1_ge *secp256k1_get_ge_const_g();
 
         // context
         class secp256k1_context {
@@ -234,10 +234,10 @@ public:
 #ifdef USE_ENDOMORPHISM
             secp256k1_ge_storage (*pre_g_128_)[]; /* odd multiples of 2^128*generator */
 #endif
-            void init() noexcept;
-            bool build() noexcept;
-            void clear() noexcept;
-            secp256k1_context() noexcept;
+            void init();
+            bool build();
+            void clear();
+            secp256k1_context();
             secp256k1_context(const secp256k1_context &)=delete;
             secp256k1_context(secp256k1_context &&)=delete;
             secp256k1_context &operator=(const secp256k1_context &)=delete;
@@ -280,57 +280,57 @@ public:
     static constexpr unsigned char SECP256K1_TAG_PUBKEY_HYBRID_ODD = 0x07;
 
     // BIP66 (src/secp256k1)
-    static int secp256k1_scalar_check_overflow(const secp256k1_unit *a) noexcept;
-    static uint32_t secp256k1_scalar_reduce(secp256k1_unit *r, uint32_t overflow) noexcept;
-    static void secp256k1_scalar_set_be32(secp256k1_unit *r, const unsigned char *b32, int *overflow) noexcept;
-    static void secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_unit *a) noexcept;
-    static void secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s) noexcept;
-    static void secp256k1_ecdsa_signature_load(secp256k1_unit *r, secp256k1_unit *s, const secp256k1_signature *sig) noexcept;
-    static int secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, unsigned char *input64) noexcept;
-    static int ecdsa_signature_parse_der_lax(secp256k1_signature *sig, const unsigned char *input, size_t inputlen) noexcept;
-    static int secp256k1_scalar_is_high(const secp256k1_unit *a) noexcept;
-    static int secp256k1_scalar_is_zero(const secp256k1_unit *a) noexcept;
-    static int secp256k1_ecdsa_signature_normalize(const secp256k1_signature *sigin) noexcept;
-    static int secp256k1_ecdsa_signature_normalize(secp256k1_signature *sigout, const secp256k1_signature *sigin) noexcept;
-    static void secp256k1_ecdsa_recoverable_signature_save(secp256k1_ecdsa_recoverable_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s, int recid) noexcept;
-    static void secp256k1_ecdsa_recoverable_signature_load(secp256k1_unit *r, secp256k1_unit *s, int *recid, const secp256k1_ecdsa_recoverable_signature *sig) noexcept;
-    static int secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_ecdsa_recoverable_signature *sig, const unsigned char *input64, int recid) noexcept;
-    static void secp256k1_scalar_negate(secp256k1_unit *r, const secp256k1_unit *a) noexcept;
-    static unsigned int secp256k1_scalar_get_bits(const secp256k1_unit *a, unsigned int offset, unsigned int count) noexcept;
-    static unsigned int secp256k1_scalar_get_bits_var(const secp256k1_unit *a, unsigned int offset, unsigned int count) noexcept;
-    static void secp256k1_ecmult_odd_multiples_table(int n, ecmult::secp256k1_gej *prej, ecmult::secp256k1_fe *zr, const ecmult::secp256k1_gej *a) noexcept;
-    static int secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng) noexcept;
-    static int secp256k1_ecdsa_sig_recover(const secp256k1_unit *sigr, const secp256k1_unit *sigs, ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message, int recid) noexcept;
-    static void secp256k1_scalar_sqr_512(uint32_t *l, const secp256k1_unit *a) noexcept;
-    static void secp256k1_scalar_reduce_512(secp256k1_unit *r, const uint32_t *l) noexcept;
-    static void secp256k1_scalar_sqr(secp256k1_unit *r, const secp256k1_unit *a) noexcept;
-    static void secp256k1_scalar_mul_512(uint32_t *l, const secp256k1_unit *a, const secp256k1_unit *b) noexcept;
-    static void secp256k1_scalar_mul(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b) noexcept;
-    static void secp256k1_scalar_inverse(secp256k1_unit *r, const secp256k1_unit *x) noexcept;
-    // static int secp256k1_scalar_is_even(const secp256k1_unit *a) noexcept;
-    static void secp256k1_scalar_inverse_var(secp256k1_unit *r, const secp256k1_unit *x) noexcept;
-    static void secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge) noexcept;
-    static int secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32) noexcept;
-    static int secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pubkey *pubkey) noexcept;
-    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed) noexcept;
-    static int secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) noexcept;
-    static int secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) noexcept;
-        //static int secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) noexcept;
-    static int secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsigned char *pub, size_t size) noexcept;
-        //static int secp256k1_eckey_pubkey_parse_signed(ecmult::secp256k1_ge_signed *elem, const unsigned char *pub, size_t size) noexcept;
-    static int secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsigned char *tweak) noexcept;
-    static int secp256k1_eckey_pubkey_tweak_add(ecmult::secp256k1_ge *key, const secp256k1_unit *tweak) noexcept;
-    static void secp256k1_scalar_set_int(secp256k1_unit *r, unsigned int v) noexcept;
-    static int secp256k1_ecdsa_verify(const secp256k1_signature *sig, const unsigned char *msg32, const secp256k1_pubkey *pubkey) noexcept;
-    static int secp256k1_ecdsa_sig_verify(const secp256k1_unit *sigr, const secp256k1_unit *sigs, const ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message) noexcept;
+    static int secp256k1_scalar_check_overflow(const secp256k1_unit *a);
+    static uint32_t secp256k1_scalar_reduce(secp256k1_unit *r, uint32_t overflow);
+    static void secp256k1_scalar_set_be32(secp256k1_unit *r, const unsigned char *b32, int *overflow);
+    static void secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_unit *a);
+    static void secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s);
+    static void secp256k1_ecdsa_signature_load(secp256k1_unit *r, secp256k1_unit *s, const secp256k1_signature *sig);
+    static int secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, unsigned char *input64);
+    static int ecdsa_signature_parse_der_lax(secp256k1_signature *sig, const unsigned char *input, size_t inputlen);
+    static int secp256k1_scalar_is_high(const secp256k1_unit *a);
+    static int secp256k1_scalar_is_zero(const secp256k1_unit *a);
+    static int secp256k1_ecdsa_signature_normalize(const secp256k1_signature *sigin);
+    static int secp256k1_ecdsa_signature_normalize(secp256k1_signature *sigout, const secp256k1_signature *sigin);
+    static void secp256k1_ecdsa_recoverable_signature_save(secp256k1_ecdsa_recoverable_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s, int recid);
+    static void secp256k1_ecdsa_recoverable_signature_load(secp256k1_unit *r, secp256k1_unit *s, int *recid, const secp256k1_ecdsa_recoverable_signature *sig);
+    static int secp256k1_ecdsa_recoverable_signature_parse_compact(secp256k1_ecdsa_recoverable_signature *sig, const unsigned char *input64, int recid);
+    static void secp256k1_scalar_negate(secp256k1_unit *r, const secp256k1_unit *a);
+    static unsigned int secp256k1_scalar_get_bits(const secp256k1_unit *a, unsigned int offset, unsigned int count);
+    static unsigned int secp256k1_scalar_get_bits_var(const secp256k1_unit *a, unsigned int offset, unsigned int count);
+    static void secp256k1_ecmult_odd_multiples_table(int n, ecmult::secp256k1_gej *prej, ecmult::secp256k1_fe *zr, const ecmult::secp256k1_gej *a);
+    static int secp256k1_ecmult(ecmult::secp256k1_gej *r, const ecmult::secp256k1_gej *a, const secp256k1_unit *na, const secp256k1_unit *ng);
+    static int secp256k1_ecdsa_sig_recover(const secp256k1_unit *sigr, const secp256k1_unit *sigs, ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message, int recid);
+    static void secp256k1_scalar_sqr_512(uint32_t *l, const secp256k1_unit *a);
+    static void secp256k1_scalar_reduce_512(secp256k1_unit *r, const uint32_t *l);
+    static void secp256k1_scalar_sqr(secp256k1_unit *r, const secp256k1_unit *a);
+    static void secp256k1_scalar_mul_512(uint32_t *l, const secp256k1_unit *a, const secp256k1_unit *b);
+    static void secp256k1_scalar_mul(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b);
+    static void secp256k1_scalar_inverse(secp256k1_unit *r, const secp256k1_unit *x);
+    // static int secp256k1_scalar_is_even(const secp256k1_unit *a);
+    static void secp256k1_scalar_inverse_var(secp256k1_unit *r, const secp256k1_unit *x);
+    static void secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge);
+    static int secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32);
+    static int secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pubkey *pubkey);
+    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed);
+    static int secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags);
+    static int secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
+        //static int secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
+    static int secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsigned char *pub, size_t size);
+        //static int secp256k1_eckey_pubkey_parse_signed(ecmult::secp256k1_ge_signed *elem, const unsigned char *pub, size_t size);
+    static int secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsigned char *tweak);
+    static int secp256k1_eckey_pubkey_tweak_add(ecmult::secp256k1_ge *key, const secp256k1_unit *tweak);
+    static void secp256k1_scalar_set_int(secp256k1_unit *r, unsigned int v);
+    static int secp256k1_ecdsa_verify(const secp256k1_signature *sig, const unsigned char *msg32, const secp256k1_pubkey *pubkey);
+    static int secp256k1_ecdsa_sig_verify(const secp256k1_unit *sigr, const secp256k1_unit *sigs, const ecmult::secp256k1_ge *pubkey, const secp256k1_unit *message);
 #ifdef USE_ENDOMORPHISM
-    static void secp256k1_scalar_cadd_bit(secp256k1_unit *r, unsigned int bit, int flag) noexcept;
-    static void secp256k1_scalar_mul_shift_var(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b, unsigned int shift) noexcept;
-    static int secp256k1_scalar_add(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b) noexcept;
+    static void secp256k1_scalar_cadd_bit(secp256k1_unit *r, unsigned int bit, int flag);
+    static void secp256k1_scalar_mul_shift_var(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b, unsigned int shift);
+    static int secp256k1_scalar_add(secp256k1_unit *r, const secp256k1_unit *a, const secp256k1_unit *b);
 #endif
 
     // Perform ECDSA key recovery (see SEC1 4.1.6) for curves over (mod p)-fields [OpenSSL from only sig to PubKey]
-    static int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned char *msg, int msglen, int recid, int check) noexcept;
+    static int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig, const unsigned char *msg, int msglen, int recid, int check);
 
 private:
     // Just store the serialized data.
@@ -338,7 +338,7 @@ private:
     unsigned char vch_[PUBLIC_KEY_SIZE];
 
     //! Compute the length of a pubkey with a given first byte.
-    static unsigned int GetLen(unsigned char chHeader) noexcept {
+    static unsigned int GetLen(unsigned char chHeader) {
         if (chHeader == 2 || chHeader == 3)
             return COMPRESSED_PUBLIC_KEY_SIZE;
         if (chHeader == 4 || chHeader == 6 || chHeader == 7)
@@ -347,66 +347,66 @@ private:
     }
 
     //! Set this key data to be invalid
-    void Invalidate() noexcept {
+    void Invalidate() {
         vch_[0] = 0xFF;
     }
 
 public:
-    static bool ValidSize(const key_vector &_vch) noexcept {
+    static bool ValidSize(const key_vector &_vch) {
       return _vch.size() > 0 && GetLen(_vch[0]) == _vch.size();
     }
 
     //! Construct an invalid public key.
-    CPubKey() noexcept {
+    CPubKey() {
         Invalidate();
     }
 
     //! Initialize a public key using begin/end iterators to byte data.
     template <typename T>
-    void Set(const T pbegin, const T pend) noexcept {
+    void Set(const T pbegin, const T pend) {
         int len = pend == pbegin ? 0 : CPubKey::GetLen(pbegin[0]);
         if (len && len == (pend - pbegin))
             std::memcpy(vch_, (unsigned char *)&pbegin[0], len);
         else
             Invalidate();
     }
-    void Set(const key_vector &_vch) noexcept {
+    void Set(const key_vector &_vch) {
         Set(_vch.begin(), _vch.end());
     }
 
     //! Construct a public key using begin/end iterators to byte data.
     template <typename T>
-    CPubKey(const T pbegin, const T pend) noexcept {
+    CPubKey(const T pbegin, const T pend) {
         Set(pbegin, pend);
     }
 
     //! Construct a public key from a byte vector.
-    explicit CPubKey(const key_vector &_vch) noexcept {
+    explicit CPubKey(const key_vector &_vch) {
         Set(_vch.begin(), _vch.end());
     }
 
     //! key_vector operator (wallet.cpp)
-    bool operator!=(const key_vector &_vch) noexcept {
+    bool operator!=(const key_vector &_vch) {
         CPubKey _cmp(_vch);
         return *this != _cmp;
     }
 
     //! Simple read-only vector-like interface to the pubkey data.
-    unsigned int size() const noexcept { return CPubKey::GetLen(vch_[0]); }
-    const unsigned char *data() const noexcept { return vch_; }
-    const unsigned char *begin() const noexcept { return vch_; }
-    const unsigned char *end() const noexcept { return vch_ + size(); }
-    const unsigned char &operator[](unsigned int pos) const noexcept { return vch_[pos]; }
+    unsigned int size() const { return CPubKey::GetLen(vch_[0]); }
+    const unsigned char *data() const { return vch_; }
+    const unsigned char *begin() const { return vch_; }
+    const unsigned char *end() const { return vch_ + size(); }
+    const unsigned char &operator[](unsigned int pos) const { return vch_[pos]; }
 
     //! Comparator implementation.
-    friend bool operator==(const CPubKey &a, const CPubKey &b) noexcept {
+    friend bool operator==(const CPubKey &a, const CPubKey &b) {
         return a.vch_[0] == b.vch_[0] &&
                ::memcmp(a.vch_, b.vch_, a.size()) == 0;
     }
-    friend bool operator!=(const CPubKey &a, const CPubKey &b) noexcept {
+    friend bool operator!=(const CPubKey &a, const CPubKey &b) {
         return !(a == b);
     }
-    friend bool operator<(const CPubKey &a, const CPubKey &b) noexcept {
+    friend bool operator<(const CPubKey &a, const CPubKey &b) {
         return a.vch_[0] < b.vch_[0] ||
                (a.vch_[0] == b.vch_[0] && ::memcmp(a.vch_, b.vch_, a.size()) < 0);
     }
@@ -438,57 +438,57 @@ public:
     }
 
     //! Get the KeyID of this public key (hash of its serialization)
-    CKeyID GetID() const noexcept {
+    CKeyID GetID() const {
         return CKeyID(hash_basis::Hash160(begin(), end()));
     }
 
     //! Get the 256-bit hash of this public key.
-    uint256 GetHash() const noexcept {
+    uint256 GetHash() const {
         return hash_basis::Hash(begin(), end());
     }
 
     //! Check syntactic correctness.
     //  Note: this is consensus critical as CheckSig() calls it!
-    bool IsValid() const noexcept;
+    bool IsValid() const;
 
     //! fully validate whether this is a valid public key (more expensive than IsValid()) [OpenSSL, libsecp256k1(BIP66)]
-    bool IsFullyValid() const noexcept;
-    bool IsFullyValid_BIP66() const noexcept;
+    bool IsFullyValid() const;
+    bool IsFullyValid_BIP66() const;
 
     //! Check whether this is a compressed public key.
-    bool IsCompressed() const noexcept {
+    bool IsCompressed() const {
         return size() == COMPRESSED_PUBLIC_KEY_SIZE;
     }
 
     //! Verify a DER signature (~72 bytes). [OpenSSL, libsecp256k1(BIP66)]
     // [OpenSSL] If this public key is not fully valid, the return value will be false.
-    bool Verify(const uint256 &hash, const key_vector &vchSig) const noexcept;
-    bool Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const noexcept;
+    bool Verify(const uint256 &hash, const key_vector &vchSig) const;
+    bool Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const;
 
     // Check whether a signature is normalized (lower-S). [libsecp256k1]
-    static bool CheckLowS(const std::vector<unsigned char> &vchSig) noexcept;
+    static bool CheckLowS(const std::vector<unsigned char> &vchSig);
 
     //! Recover a public key from a compact signature. [libsecp256k1]
-    bool RecoverCompact(const uint256 &hash, const std::vector<unsigned char> &vchSig) noexcept;
+    bool RecoverCompact(const uint256 &hash, const std::vector<unsigned char> &vchSig);
 
     //! Recover a public key from a compact signature. [OpenSSL]
-    bool SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig) noexcept;
+    bool SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig);
 
     // Reserialize to DER [OpenSSL]
-    static bool ReserealizeSignature(key_vector &vchSig) noexcept;
+    static bool ReserealizeSignature(key_vector &vchSig);
 
     //! Turn this public key into an uncompressed public key. [libsecp256k1]
-    bool Decompress() noexcept;
+    bool Decompress();
 
     //! Derive BIP32 child pubkey. [for HD wallet] [libsecp256k1]
-    bool Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const noexcept;
+    bool Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const;
 
     //! Encrypt data [for Random wallet] [OpenSSL ecies cryptogram]
-    bool EncryptData(const key_vector &data, key_vector &encrypted) const noexcept;
+    bool EncryptData(const key_vector &data, key_vector &encrypted) const;
 
     //! CPubKey Callback ERROR and Completion function [libsecp256k1]
-    static int PubKey_ERROR_callback(void (*fn)()=nullptr) noexcept {if(fn) fn(); return 0;}
-    static void PubKey_COMPLETION_callback(void (*fn)()) noexcept {fn();}
+    static int PubKey_ERROR_callback(void (*fn)()=nullptr) {if(fn) fn(); return 0;}
+    static void PubKey_COMPLETION_callback(void (*fn)()) {fn();}
 
     //! vch_ to string
     std::string ToString() const;
@@ -503,7 +503,7 @@ struct CExtPubKey {
     ChainCode chaincode;
     CPubKey pubkey;
 
-    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) noexcept {
+    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) {
         return a.nDepth == b.nDepth &&
                ::memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], sizeof(vchFingerprint)) == 0 &&
                a.nChild == b.nChild &&
@@ -511,12 +511,12 @@ struct CExtPubKey {
                a.pubkey == b.pubkey;
     }
 
-    void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const noexcept {
+    void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const {
         code[0] = 0xFF;
     }
-    void Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const noexcept;
+    void Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const;
     void Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtPubKey &out, unsigned int nChild) const noexcept;
+    bool Derive(CExtPubKey &out, unsigned int nChild) const;
 
     void Serialize(CSizeComputer &s) const {
         // Optimized implementation for ::GetSerializeSize that avoids copying.

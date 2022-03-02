@@ -74,7 +74,7 @@ private:
 #endif
 
 public:
-    explicit cla_thread(unsigned int (T::*_func)(thread_data *pdata)) noexcept {
+    explicit cla_thread(unsigned int (T::*_func)(thread_data *pdata)) {
         param.p = nullptr;
         param.exit_flag = false;
         param.nExit = 0;
@@ -89,7 +89,7 @@ public:
         waitclose();
     }
 
-    bool start(void *_p, T *_self) noexcept {
+    bool start(void *_p, T *_self) {
         waitclose();
 
         param.p = _p;
@@ -110,12 +110,12 @@ public:
 #endif
     }
 
-    void stop(size_t nExitCode=0) noexcept {
+    void stop(size_t nExitCode=0) {
         param.exit_flag = true;
         param.nExit = nExitCode;
     }
 
-    bool signal() const noexcept {
+    bool signal() const {
 #ifdef WIN32
         if(hHandle)
             return (::WaitForSingleObject(hHandle, 0) == WAIT_OBJECT_0) ? true: false;
@@ -126,7 +126,7 @@ public:
 #endif
     }
 
-    void waitclose() noexcept {
+    void waitclose() {
 #ifdef WIN32
         if(hHandle) {
             ::WaitForSingleObject(hHandle, INFINITE);
@@ -145,15 +145,15 @@ public:
  */
 namespace bitthread
 {
-    extern void thread_error(const std::string &e) noexcept;
-    NODISCARD extern bool NewThread(void(*pfn)(void *), void *parg) noexcept;
+    extern void thread_error(const std::string &e);
+    NODISCARD extern bool NewThread(void(*pfn)(void *), void *parg);
 
 #ifdef WIN32
-    static void SetThreadPriority(int nPriority) noexcept {
+    static void SetThreadPriority(int nPriority) {
         ::SetThreadPriority(::GetCurrentThread(), nPriority);
     }
 
-    static void ExitThread(size_t nExitCode) noexcept {
+    static void ExitThread(size_t nExitCode) {
         ::ExitThread(nExitCode);
     }
 #else
@@ -161,7 +161,7 @@ namespace bitthread
 # define THREAD_PRIORITY_BELOW_NORMAL    2
 # define THREAD_PRIORITY_NORMAL          0
 # define THREAD_PRIORITY_ABOVE_NORMAL    0
-    static void SetThreadPriority(int nPriority) noexcept {
+    static void SetThreadPriority(int nPriority) {
         // It's unclear if it's even possible to change thread priorities on Linux,
         // but we really and truly need it for the generation threads.
 # ifdef PRIO_THREAD
@@ -171,12 +171,12 @@ namespace bitthread
 # endif
     }
 
-    static void ExitThread(size_t nExitCode) noexcept {
+    static void ExitThread(size_t nExitCode) {
         ::pthread_exit((void *)nExitCode);
     }
 #endif
 
-    static void RenameThread(const char *name) noexcept {
+    static void RenameThread(const char *name) {
 #if defined(PR_SET_NAME)
         // Only the first 15 characters are used (16 - NUL terminator)
         ::prctl(PR_SET_NAME, name, 0, 0, 0);

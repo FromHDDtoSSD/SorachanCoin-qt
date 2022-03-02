@@ -23,7 +23,7 @@
 # include <crypto/hmac_sha512.h>
 using ChainCode = uint256;
 namespace bip32 {
-    inline void BIP32Hash(const ChainCode &chainCode, unsigned int nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]) noexcept {
+    inline void BIP32Hash(const ChainCode &chainCode, unsigned int nChild, unsigned char header, const unsigned char data[32], unsigned char output[64]) {
         unsigned char num[4];
         num[0] = (nChild >> 24) & 0xFF;
         num[1] = (nChild >> 16) & 0xFF;
@@ -47,8 +47,8 @@ private:
     const int nVersion; // witness
 public:
     CHashWriter_q(int _nType, int _nVersion) : nType(_nType), nVersion(_nVersion) {}
-    int GetType() const noexcept {return nType;}
-    int GetVersion() const noexcept {return nVersion;}
+    int GetType() const {return nType;}
+    int GetVersion() const {return nVersion;}
 
     CHashWriter_q &write(const char *pch, size_t size) {
         ctx.Write((const unsigned char *)pch, size);

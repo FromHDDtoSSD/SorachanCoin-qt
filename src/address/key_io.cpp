@@ -29,9 +29,9 @@ public:
     bool operator()(const CScriptID &id) const           { return addr->Set(id); }
     bool operator()(const CMalleablePubKey &mpk) const   { return addr->Set(mpk); }
     bool operator()(const CNoDestination &id) const      { (void)id; return false; }
-    bool operator()(const WitnessV0KeyHash &id) const    {return false;}
-    bool operator()(const WitnessV0ScriptHash &id) const {return false;}
-    bool operator()(const WitnessUnknown &id) const      {return false;}
+    //bool operator()(const WitnessV0KeyHash &id) const    {return false;}
+    //bool operator()(const WitnessV0ScriptHash &id) const {return false;}
+    //bool operator()(const WitnessUnknown &id) const      {return false;}
 };
 } // namespace
 
@@ -251,6 +251,7 @@ public:
         return base58::manage::EncodeBase58Check(data);
     }
 
+    /*
     std::string operator()(const WitnessV0KeyHash &id) const {
         bech32_vector data; data.clear();
         data.reserve(33);
@@ -275,6 +276,7 @@ public:
         strenc::ConvertBits<8, 5, true>([&](unsigned char c) { data.push_back(c); }, id.program, id.program + id.length);
         return bech32::Encode(m_params.Bech32HRP(), data);
     }
+    */
 
     std::string operator()(const CNoDestination &no) const { (void)no; return {}; }
 };
@@ -316,6 +318,7 @@ static CTxDestination DecodeDestination(const std::string &str, const CChainPara
         data.reserve(((bech.second.size() - 1) * 5) / 8);
         if (strenc::ConvertBits<5, 8, false>([&](unsigned char c) { data.push_back(c); }, bech.second.begin() + 1, bech.second.end())) {
             if (version == 0) {
+                /*
                 {
                     WitnessV0KeyHash keyid;
                     if (data.size() == keyid.size()) {
@@ -330,16 +333,20 @@ static CTxDestination DecodeDestination(const std::string &str, const CChainPara
                         return scriptid;
                     }
                 }
+                */
                 return CNoDestination();
             }
             if (version > 16 || data.size() < 2 || data.size() > 40) {
                 return CNoDestination();
             }
+            /*
             WitnessUnknown unk;
             unk.version = version;
             std::copy(data.begin(), data.end(), unk.program);
             unk.length = data.size();
             return unk;
+            */
+            return CNoDestination();
         }
     }
     return CNoDestination();

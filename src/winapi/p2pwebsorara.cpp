@@ -210,7 +210,7 @@ static LRESULT CALLBACK WindowProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     return ::DefWindowProcW(hWnd, msg, wp, lp);
 }
 
-bool predsystem::CreateSorara() noexcept
+bool predsystem::CreateSorara()
 {
     auto unregister_wc = []{::UnregisterClassW(IDS_SORARA_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr));};
     auto err = []{::UnregisterClassW(IDS_SORARA_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr)); return false;};

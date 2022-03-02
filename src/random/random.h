@@ -30,23 +30,23 @@ private:
     static constexpr bool g_mock_deterministic_tests{false};
 
 private:
-    [[noreturn]] static void RandFailure() noexcept;
+    [[noreturn]] static void RandFailure();
     static int64_t GetPerformanceCounter();
     static void GetCPUID(uint32_t leaf, uint32_t subleaf, uint32_t &a, uint32_t &b, uint32_t &c, uint32_t &d);
     static void ReportHardwareRand();
-    static uint64_t GetRdRand() noexcept;
-    static uint64_t GetRdSeed() noexcept;
-    static void SeedHardwareFast(CSHA512 &hasher) noexcept;
-    static void SeedHardwareSlow(CSHA512 &hasher) noexcept;
+    static uint64_t GetRdRand();
+    static uint64_t GetRdSeed();
+    static void SeedHardwareFast(CSHA512 &hasher);
+    static void SeedHardwareSlow(CSHA512 &hasher);
     static void RandAddSeedPerfmon(CSHA512 &hasher);
 #ifndef WIN32
     static void GetDevURandom(unsigned char *ent32);
 #endif
-    static void SeedTimestamp(CSHA512 &hasher) noexcept;
-    static void SeedFast(CSHA512 &hasher) noexcept;
-    static void SeedSlow(CSHA512 &hasher) noexcept;
+    static void SeedTimestamp(CSHA512 &hasher);
+    static void SeedFast(CSHA512 &hasher);
+    static void SeedSlow(CSHA512 &hasher);
     static void SeedSleep(CSHA512 &hasher);
-    static void SeedStartup(CSHA512 &hasher) noexcept;
+    static void SeedStartup(CSHA512 &hasher);
     static void ProcRand(unsigned char *out, int num, RNGLevel level);
 
     /* Number of random bytes returned by GetOSRand.
@@ -111,14 +111,14 @@ public:
      *
      * Thread-safe.
      */
-    static void GetRandBytes(unsigned char* buf, int num) noexcept { ProcRand(buf, num, RNGLevel::FAST); }
-    static uint64_t GetRand(uint64_t nMax) noexcept {
+    static void GetRandBytes(unsigned char* buf, int num) { ProcRand(buf, num, RNGLevel::FAST); }
+    static uint64_t GetRand(uint64_t nMax) {
         return FastRandomContext(g_mock_deterministic_tests).randrange(nMax);
     }
-    static int GetRandInt(int nMax) noexcept {
+    static int GetRandInt(int nMax) {
         return GetRand(nMax);
     }
-    static uint256 GetRandHash() noexcept {
+    static uint256 GetRandHash() {
         uint256 hash;
         GetRandBytes((unsigned char *)&hash, sizeof(hash));
         return hash;
@@ -132,7 +132,7 @@ public:
      *
      * Thread-safe.
      */
-    static void GetStrongRandBytes(unsigned char *buf, int num) noexcept { ProcRand(buf, num, RNGLevel::SLOW); }
+    static void GetStrongRandBytes(unsigned char *buf, int num) { ProcRand(buf, num, RNGLevel::SLOW); }
 
     /**
      * Sleep for 1ms, gather entropy from various sources, and feed them to the PRNG state.
@@ -162,10 +162,10 @@ public:
         void FillByteBuffer();
         void FillBitBuffer();
     public:
-        explicit FastRandomContext(bool fDeterministic = false) noexcept;
+        explicit FastRandomContext(bool fDeterministic = false);
 
         /** Initialize with explicit seed (only for testing) */
-        explicit FastRandomContext(const uint256 &seed) noexcept;
+        explicit FastRandomContext(const uint256 &seed);
 
         // Do not permit copying a FastRandomContext (move it, or create a new one to get reseeded).
         FastRandomContext(const FastRandomContext &) = delete;
@@ -176,7 +176,7 @@ public:
         FastRandomContext &operator=(FastRandomContext &&from);
 
         /** Generate a random 64-bit integer. */
-        uint64_t rand64() noexcept {
+        uint64_t rand64() {
             if (bytebuf_size < 8) FillByteBuffer();
             uint64_t ret = ReadLE64(bytebuf + 64 - bytebuf_size);
             bytebuf_size -= 8;
@@ -184,7 +184,7 @@ public:
         }
 
         /** Generate a random (bits)-bit integer. */
-        uint64_t randbits(int bits) noexcept {
+        uint64_t randbits(int bits) {
             if (bits == 0) {
                 return 0;
             } else if (bits > 32) {
@@ -199,7 +199,7 @@ public:
         }
 
         /** Generate a random integer in the range [0..range). */
-        uint64_t randrange(uint64_t range) noexcept {
+        uint64_t randrange(uint64_t range) {
             --range;
             int bits = CountBits(range);
             while (true) {
@@ -212,19 +212,19 @@ public:
         std::vector<unsigned char> randbytes(size_t len);
 
         /** Generate a random 32-bit integer. */
-        uint32_t rand32() noexcept { return randbits(32); }
+        uint32_t rand32() { return randbits(32); }
 
         /** generate a random uint256. */
-        uint256 rand256() noexcept;
+        uint256 rand256();
 
         /** Generate a random boolean. */
-        bool randbool() noexcept { return randbits(1); }
+        bool randbool() { return randbits(1); }
 
         // Compatibility with the C++11 UniformRandomBitGenerator concept
         using result_type = uint64_t;
-        static constexpr uint64_t min() noexcept { return 0; }
-        static constexpr uint64_t max() noexcept { return std::numeric_limits<uint64_t>::max(); }
-        inline uint64_t operator()() noexcept { return rand64(); }
+        static constexpr uint64_t min() { return 0; }
+        static constexpr uint64_t max() { return std::numeric_limits<uint64_t>::max(); }
+        inline uint64_t operator()() { return rand64(); }
     };
 
     /** More efficient than using std::shuffle on a FastRandomContext.

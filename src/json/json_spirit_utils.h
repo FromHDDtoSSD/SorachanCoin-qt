@@ -1,7 +1,5 @@
 //          Copyright John W. Wilkinson 2007 - 2009.
 // Distributed under the MIT License, see accompanying file LICENSE.txt
-//
-// Copyright (c) 2018-2021 The SorachanCoin developers
 
 #ifndef JSON_SPIRIT_UTILS
 #define JSON_SPIRIT_UTILS

@@ -24,9 +24,11 @@ using statype = std::vector<std::vector<unsigned char> >;
 bool Script_param::fAcceptDatacarrier = Script_param::DEFAULT_ACCEPT_DATACARRIER;
 unsigned Script_param::nMaxDatacarrierBytes = Script_param::MAX_OP_RETURN_RELAY;
 
+/*
 WitnessV0ScriptHash::WitnessV0ScriptHash(const CScript &in) {
     latest_crypto::CSHA256().Write(in.data(), in.size()).Finalize(begin());
 }
+*/
 
 namespace {
 bool MatchPayToPubkey(const CScript &script, valtype &pubkey) {
@@ -161,22 +163,25 @@ bool latest_script_util::ExtractDestination(const CScript &scriptPubKey, LCTxDes
         addressRet = CScriptID(uint160(vSolutions[0]));
         return true;
     } else if (whichType == TX_WITNESS_V0_KEYHASH) {
-        WitnessV0KeyHash hash;
-        std::copy(vSolutions[0].begin(), vSolutions[0].end(), hash.begin());
-        addressRet = hash;
-        return true;
+        //WitnessV0KeyHash hash;
+        //std::copy(vSolutions[0].begin(), vSolutions[0].end(), hash.begin());
+        //addressRet = hash;
+        //return true;
+        return false;
     } else if (whichType == TX_WITNESS_V0_SCRIPTHASH) {
-        WitnessV0ScriptHash hash;
-        std::copy(vSolutions[0].begin(), vSolutions[0].end(), hash.begin());
-        addressRet = hash;
-        return true;
+        //WitnessV0ScriptHash hash;
+        //std::copy(vSolutions[0].begin(), vSolutions[0].end(), hash.begin());
+        //addressRet = hash;
+        //return true;
+        return false;
     } else if (whichType == TX_WITNESS_UNKNOWN) {
-        WitnessUnknown unk;
-        unk.version = vSolutions[0][0];
-        std::copy(vSolutions[1].begin(), vSolutions[1].end(), unk.program);
-        unk.length = vSolutions[1].size();
-        addressRet = unk;
-        return true;
+        //WitnessUnknown unk;
+        //unk.version = vSolutions[0][0];
+        //std::copy(vSolutions[1].begin(), vSolutions[1].end(), unk.program);
+        //unk.length = vSolutions[1].size();
+        //addressRet = unk;
+        //return true;
+        return false;
     }
     // Multisig txns have more than one address...
     return false;
@@ -244,25 +249,31 @@ public:
         return true;
     }
 
+    /*
     bool operator()(const WitnessV0KeyHash &id) const {
         using namespace ScriptOpcodes;
         script->clear();
         *script << OP_0 << CScript::ToByteVector(id);
         return true;
     }
+    */
 
+    /*
     bool operator()(const WitnessV0ScriptHash &id) const {
         using namespace ScriptOpcodes;
         script->clear();
         *script << OP_0 << CScript::ToByteVector(id);
         return true;
     }
+    */
 
+    /*
     bool operator()(const WitnessUnknown &id) const {
         script->clear();
         *script << CScript::EncodeOP_N(id.version) << valtype(id.program, id.program + id.length);
         return true;
     }
+    */
 };
 } // namespace
 
@@ -286,6 +297,8 @@ CScript latest_script_util::GetScriptForMultisig(int nRequired, const std::vecto
 }
 
 CScript latest_script_util::GetScriptForWitness(const CScript &redeemscript) {
+    return CScript();
+    /*
     using namespace TxnOutputType;
     statype vSolutions;
     txnouttype typ = Solver(redeemscript, vSolutions);
@@ -295,6 +308,7 @@ CScript latest_script_util::GetScriptForWitness(const CScript &redeemscript) {
         return GetScriptForDestination(WitnessV0KeyHash(vSolutions[0]));
     }
     return GetScriptForDestination(WitnessV0ScriptHash(redeemscript));
+    */
 }
 
 bool latest_script_util::IsValidDestination(const LCTxDestination &dest) {

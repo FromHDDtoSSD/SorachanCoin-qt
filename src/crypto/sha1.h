@@ -20,10 +20,10 @@ private:
 public:
     static constexpr size_t OUTPUT_SIZE = 20;
 
-    CSHA1() noexcept;
-    CSHA1& Write(const unsigned char* data, size_t len) noexcept;
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
-    CSHA1& Reset() noexcept;
+    CSHA1();
+    CSHA1& Write(const unsigned char* data, size_t len);
+    void Finalize(unsigned char hash[OUTPUT_SIZE]);
+    CSHA1& Reset();
 };
 
 } // namespace latest_crypto

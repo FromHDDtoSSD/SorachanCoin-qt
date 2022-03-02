@@ -8,120 +8,110 @@
 #include <rpc/bitcoinrpc.h>
 #include <init.h>
 #include <address/base58.h>
-#include <util/strencodings.h>
 
-json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, CBitrpcData &data) {
-    if (data.fHelp() || params.size() != 2) {
-        return data.JSONRPCSuccess(
+json_spirit::Value CRPCTable::encryptdata(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 2) {
+        throw std::runtime_error(
             "encryptdata <public key> <hex data>\n"
             "Encrypt octet stream with provided public key..\n");
     }
 
-    json_spirit::json_flags status;
-    std::string hex = params[0].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CPubKey pubKey(strenc::ParseHex(hex));
-    rpctable_vector vchEncrypted;
-    hex = params[1].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    pubKey.EncryptData(strenc::ParseHex(hex), vchEncrypted);
-    return data.JSONRPCSuccess(util::HexStr(vchEncrypted));
+    CPubKey pubKey(strenc::ParseHex(params[0].get_str()));
+
+    key_vector vchEncrypted;
+    pubKey.EncryptData(strenc::ParseHex(params[1].get_str()), vchEncrypted);
+
+    return util::HexStr(vchEncrypted);
 }
 
-json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, CBitrpcData &data) {
-    if (data.fHelp() || params.size() != 2) {
-        return data.JSONRPCSuccess(
+json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 2) {
+        throw std::runtime_error(
             "decryptdata <coin address or private key> <encrypted stream>\n"
             "Decrypt octet stream.\n");
     }
 
-    json_spirit::Value jv = EnsureWalletIsUnlocked(data);
-    if(! data.fSuccess()) return jv;
+    EnsureWalletIsUnlocked();
     CKey key;
-    json_spirit::json_flags status;
-    std::string str = params[0].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CBitcoinAddress addr(str);
+    CBitcoinAddress addr(params[0].get_str());
     if (addr.IsValid()) {
         CKeyID keyID;
         addr.GetKeyID(keyID);
-        if (! entry::pwalletMain->GetKey(keyID, key))
-            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "We have no private key for this address");
+        if (! entry::pwalletMain->GetKey(keyID, key)) {
+            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "We have no private key for this address");
+        }
     } else {
         CBitcoinSecret vchSecret;
-        str = params[0].get_str(status);
-        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        if (! vchSecret.SetString(str))
-            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Provided private key is inconsistent.");
+        if (! vchSecret.SetString(params[0].get_str())) {
+            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Provided private key is inconsistent.");
+        }
         bool fCompressed;
         CSecret secret = vchSecret.GetSecret(fCompressed);
         key.SetSecret(secret, fCompressed);
     }
 
-    rpctable_vector vchDecrypted;
-    str = params[1].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    key.DecryptData(strenc::ParseHex(str), vchDecrypted);
-    return data.JSONRPCSuccess(util::HexStr(vchDecrypted));
+    key_vector vchDecrypted;
+    key.DecryptData(strenc::ParseHex(params[1].get_str()), vchDecrypted);
+
+    return util::HexStr(vchDecrypted);
 }
 
-json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, CBitrpcData &data) {
-    if (data.fHelp() || params.size() != 2) {
-        return data.JSONRPCSuccess(
+json_spirit::Value CRPCTable::encryptmessage(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 2) {
+        throw std::runtime_error(
             "encryptmessage <public key> <message string>\n"
             "Encrypt message with provided public key.\n");
     }
 
-    json_spirit::json_flags status;
-    std::string hex = params[0].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CPubKey pubKey(strenc::ParseHex(hex));
-    rpctable_vector vchEncrypted;
-    std::string strData = params[1].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    pubKey.EncryptData(rpctable_vector(strData.begin(), strData.end()), vchEncrypted);
-    return data.JSONRPCSuccess(base58::manage::EncodeBase58Check(vchEncrypted));
+    CPubKey pubKey(strenc::ParseHex(params[0].get_str()));
+
+    key_vector vchEncrypted;
+    //std::string strData = params[1].get_str();
+    //pubKey.EncryptData(std::vector<unsigned char>(strData.begin(), strData.end()), vchEncrypted);
+    pubKey.EncryptData(strenc::ParseHex(params[1].get_str()), vchEncrypted);
+
+    return base58::manage::EncodeBase58Check(vchEncrypted);
 }
 
-json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, CBitrpcData &data) {
-    if (data.fHelp() || params.size() != 2) {
-        return data.JSONRPCSuccess(
+json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 2) {
+        throw std::runtime_error(
             "decryptmessage <coin address or private key> <encrypted message>\n"
             "Decrypt message string.\n");
     }
 
-    EnsureWalletIsUnlocked(data);
-    if(! data.fSuccess()) return data.JSONRPCError();
+    EnsureWalletIsUnlocked();
 
     CKey key;
-    json_spirit::json_flags status;
-    std::string str = params[0].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    CBitcoinAddress addr(str);
+    CBitcoinAddress addr(params[0].get_str());
     if (addr.IsValid()) {
         CKeyID keyID;
         addr.GetKeyID(keyID);
-        if (! entry::pwalletMain->GetKey(keyID, key))
-            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "We have no private key for this address");
+        if (! entry::pwalletMain->GetKey(keyID, key)) {
+            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "We have no private key for this address");
+        }
     } else {
         CBitcoinSecret vchSecret;
-        str = params[0].get_str(status);
-        if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-        if (! vchSecret.SetString(str))
-            return data.JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Provided private key is inconsistent.");
+        if (! vchSecret.SetString(params[0].get_str())) {
+            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Provided private key is inconsistent.");
+        }
 
         bool fCompressed;
         CSecret secret = vchSecret.GetSecret(fCompressed);
         key.SetSecret(secret, fCompressed);
     }
 
-    rpctable_vector vchEncrypted;
-    str = params[1].get_str(status);
-    if(! status.fSuccess()) return data.JSONRPCError(RPC_JSON_ERROR, status.e);
-    if (! base58::manage::DecodeBase58Check(str, vchEncrypted))
-        return data.runtime_error("Incorrect string");
+    key_vector vchEncrypted;
+    if (! base58::manage::DecodeBase58Check(params[1].get_str(), vchEncrypted)) {
+        throw std::runtime_error("Incorrect string");
+    }
 
-    rpctable_vector vchDecrypted;
+    key_vector vchDecrypted;
     key.DecryptData(vchEncrypted, vchDecrypted);
-    return data.JSONRPCSuccess(std::string((const char *)&vchDecrypted[0], vchDecrypted.size()));
+
+    return std::string((const char *)&vchDecrypted[0], vchDecrypted.size());
 }

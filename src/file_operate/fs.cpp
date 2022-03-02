@@ -79,9 +79,9 @@ bool file_copy_ap(const fs::path &src, const std::vector<fs::path> &target) {
         AUTOFILE &operator=(const AUTOFILE &)=delete;
         AUTOFILE &operator=(AUTOFILE &&)=delete;
     public:
-        explicit AUTOFILE(FILE *fpIn) noexcept : fp(fpIn) {}
+        explicit AUTOFILE(FILE *fpIn) : fp(fpIn) {}
         ~AUTOFILE() {if(fp) ::fclose(fp);}
-        operator FILE *() noexcept {return fp;}
+        operator FILE *() {return fp;}
     private:
         FILE *fp;
     };

@@ -12,7 +12,7 @@
 
 std::string excep::strMiscWarning;
 
-std::string excep::FormatException(const std::exception *pex, const char *pszThread) noexcept {
+std::string excep::FormatException(const std::exception *pex, const char *pszThread) {
 #ifdef WIN32
     char pszModule[MAX_PATH] = "";
     ::GetModuleFileNameA(nullptr, pszModule, sizeof(pszModule));
@@ -27,7 +27,7 @@ std::string excep::FormatException(const std::exception *pex, const char *pszThr
             "UNKNOWN EXCEPTION       \n%s in %s       \n", pszModule, pszThread);
 }
 
-void excep::LogException(const std::exception *pex, const char *pszThread) noexcept {
+void excep::LogException(const std::exception *pex, const char *pszThread) {
     std::string message = excep::FormatException(pex, pszThread);
     logging::LogPrintf("\n%s", message.c_str());
 }
@@ -37,7 +37,7 @@ void excep::PrintException(const std::exception *pex, const char *pszThread) {
     throw;
 }
 
-void excep::PrintExceptionContinue(const std::exception *pex, const char *pszThread) noexcept {
+void excep::PrintExceptionContinue(const std::exception *pex, const char *pszThread) {
     std::string message = excep::FormatException(pex, pszThread);
     logging::LogPrintf("\n\n************************\n%s\n", message);
     tfm::format(std::cerr, "\n\n************************\n%s\n", message.c_str());

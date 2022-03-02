@@ -25,7 +25,7 @@ const CScriptNum bnFalse(0);
 const CScriptNum bnTrue(1);
 } // namespace
 
-const char *TxnOutputType::GetTxnOutputType(TxnOutputType::txnouttype t) noexcept {
+const char *TxnOutputType::GetTxnOutputType(TxnOutputType::txnouttype t) {
     switch (t)
     {
     case TX_NONSTANDARD: return "nonstandard";
@@ -42,7 +42,7 @@ const char *TxnOutputType::GetTxnOutputType(TxnOutputType::txnouttype t) noexcep
     return nullptr;
 }
 
-const char *ScriptOpcodes::GetOpName(ScriptOpcodes::opcodetype opcode) noexcept {
+const char *ScriptOpcodes::GetOpName(ScriptOpcodes::opcodetype opcode) {
     using namespace ScriptOpcodes;
     switch (opcode)
     {
@@ -2191,11 +2191,11 @@ public:
 
     void operator()(const CNoDestination &none) {}
 
-    void operator()(const WitnessV0KeyHash &id) const {}
+    //void operator()(const WitnessV0KeyHash &id) const {}
 
-    void operator()(const WitnessV0ScriptHash &id) const {}
+    //void operator()(const WitnessV0ScriptHash &id) const {}
 
-    void operator()(const WitnessUnknown &id) const {}
+    //void operator()(const WitnessUnknown &id) const {}
 };
 } // namespace
 
@@ -2478,7 +2478,7 @@ private:
     CScriptVisitor &operator=(CScriptVisitor &&)=delete;
     CScript *script;
 public:
-    explicit CScriptVisitor(CScript *scriptin) noexcept {
+    explicit CScriptVisitor(CScript *scriptin) {
         script = scriptin;
     }
 
@@ -2501,6 +2501,7 @@ public:
         return true;
     }
 
+    /*
     bool operator()(const WitnessV0KeyHash &id) const {
         using namespace ScriptOpcodes;
         script->clear();
@@ -2520,6 +2521,7 @@ public:
         *script << CScript::EncodeOP_N(id.version) << Script_util::valtype(id.program, id.program + id.length);
         return true;
     }
+    */
 };
 } // namespace
 

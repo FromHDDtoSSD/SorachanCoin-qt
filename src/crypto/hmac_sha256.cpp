@@ -8,11 +8,11 @@
 
 namespace latest_crypto {
 
-CHMAC_SHA256::CHMAC_SHA256(const unsigned char *key, size_t keylen) noexcept {
+CHMAC_SHA256::CHMAC_SHA256(const unsigned char *key, size_t keylen) {
     Init(key, keylen);
 }
 
-void CHMAC_SHA256::Init(const unsigned char *key, size_t keylen) noexcept {
+void CHMAC_SHA256::Init(const unsigned char *key, size_t keylen) {
     unsigned char rkey[64];
     if (keylen <= 64) {
         std::memcpy(rkey, key, keylen);
@@ -31,7 +31,7 @@ void CHMAC_SHA256::Init(const unsigned char *key, size_t keylen) noexcept {
     inner.Write(rkey, 64);
 }
 
-void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
+void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
 {
     unsigned char temp[32];
     inner.Finalize(temp);

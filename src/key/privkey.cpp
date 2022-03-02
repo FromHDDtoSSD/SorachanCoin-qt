@@ -37,7 +37,7 @@
 #define ARG_BOOL_CHECK(cond) ARG_BOOL_CHECK_FUNC(cond, nullptr)
 #define ARG_BOOL_CHECK_FUNC(cond, func) do { if(!(cond)) {CFirmKey::PrivKey_ERROR_callback((func)); return false;} } while(0)
 
-bool CFirmKey::ecmult::secp256k1_gej_add_var(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_gej *b, CPubKey::ecmult::secp256k1_fe *rzr) noexcept {
+bool CFirmKey::ecmult::secp256k1_gej_add_var(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_gej *b, CPubKey::ecmult::secp256k1_fe *rzr) {
     /* Operations: 12 mul, 4 sqr, 2 normalize, 12 mul_int/add/negate */
     CPubKey::ecmult::secp256k1_fe z22, z12, u1, u2, s1, s2, h, i, i2, h2, h3, t;
 
@@ -91,7 +91,7 @@ bool CFirmKey::ecmult::secp256k1_gej_add_var(CPubKey::ecmult::secp256k1_gej *r, 
     return true;
 }
 
-void CFirmKey::ecmult::secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a) noexcept {
+void CFirmKey::ecmult::secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a) {
     r->infinity = a->infinity;
     r->x = a->x;
     r->y = a->y;
@@ -100,8 +100,8 @@ void CFirmKey::ecmult::secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, cons
     CPubKey::ecmult::secp256k1_fe_negate(&r->y, &r->y, 1);
 }
 
-bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_ge *r, const CPubKey::ecmult::secp256k1_gej *a, size_t len) noexcept {
-    auto secp256k1_fe_inv_all_var = [](std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, const std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) noexcept {
+bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_ge *r, const CPubKey::ecmult::secp256k1_gej *a, size_t len) {
+    auto secp256k1_fe_inv_all_var = [](std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, const std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) {
         if (len < 1) return true;
         ARG_BOOL_CHECK((&r[0] + len <= &a[0]) || (&a[0] + len <= &r[0]));
         r[0] = a[0];
@@ -149,19 +149,19 @@ bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_g
 }
 
 // hash
-void CFirmKey::hash::secp256k1_hmac_sha256_initialize(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *key, size_t size) noexcept {
+void CFirmKey::hash::secp256k1_hmac_sha256_initialize(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *key, size_t size) {
     hash->Init(key, size);
 }
 
-void CFirmKey::hash::secp256k1_hmac_sha256_write(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *data, size_t size) noexcept {
+void CFirmKey::hash::secp256k1_hmac_sha256_write(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *data, size_t size) {
     hash->Write(data, size);
 }
 
-void CFirmKey::hash::secp256k1_hmac_sha256_finalize(latest_crypto::CHMAC_SHA256 *hash, unsigned char *out32) noexcept {
+void CFirmKey::hash::secp256k1_hmac_sha256_finalize(latest_crypto::CHMAC_SHA256 *hash, unsigned char *out32) {
     hash->Finalize(out32);
 }
 
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen) noexcept {
+void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen) {
     latest_crypto::CHMAC_SHA256 hmac;
     static constexpr unsigned char zero[1] = {0x00};
     static constexpr unsigned char one[1] = {0x01};
@@ -191,7 +191,7 @@ void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_
     rng->retry = 0;
 }
 
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen) noexcept {
+void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen) {
     /* RFC6979 3.2.h. */
     static constexpr unsigned char zero[1] = {0x00};
     if (rng->retry) {
@@ -222,7 +222,7 @@ void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hm
     rng->retry = 1;
 }
 
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng) noexcept {
+void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng) {
     //std::memset(rng->k, 0, 32);
     //std::memset(rng->v, 0, 32);
     cleanse::memory_cleanse(rng->k, 32);
@@ -230,7 +230,7 @@ void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hm
     rng->retry = 0;
 }
 
-void CFirmKey::ecmult::secp256k1_fe_storage_cmov(CPubKey::ecmult::secp256k1_fe_storage *r, const CPubKey::ecmult::secp256k1_fe_storage *a, int flag) noexcept {
+void CFirmKey::ecmult::secp256k1_fe_storage_cmov(CPubKey::ecmult::secp256k1_fe_storage *r, const CPubKey::ecmult::secp256k1_fe_storage *a, int flag) {
     uint32_t mask0, mask1;
     mask0 = flag + ~((uint32_t)0);
     mask1 = ~mask0;
@@ -244,12 +244,12 @@ void CFirmKey::ecmult::secp256k1_fe_storage_cmov(CPubKey::ecmult::secp256k1_fe_s
     r->n[7] = (r->n[7] & mask0) | (a->n[7] & mask1);
 }
 
-void CFirmKey::ecmult::secp256k1_ge_storage_cmov(CPubKey::ecmult::secp256k1_ge_storage *r, const CPubKey::ecmult::secp256k1_ge_storage *a, int flag) noexcept {
+void CFirmKey::ecmult::secp256k1_ge_storage_cmov(CPubKey::ecmult::secp256k1_ge_storage *r, const CPubKey::ecmult::secp256k1_ge_storage *a, int flag) {
     CFirmKey::ecmult::secp256k1_fe_storage_cmov(&r->x, &a->x, flag);
     CFirmKey::ecmult::secp256k1_fe_storage_cmov(&r->y, &a->y, flag);
 }
 
-void CFirmKey::ecmult::secp256k1_fe_cmov(CPubKey::ecmult::secp256k1_fe *r, const CPubKey::ecmult::secp256k1_fe *a, int flag) noexcept {
+void CFirmKey::ecmult::secp256k1_fe_cmov(CPubKey::ecmult::secp256k1_fe *r, const CPubKey::ecmult::secp256k1_fe *a, int flag) {
     uint32_t mask0, mask1;
     mask0 = flag + ~((uint32_t)0);
     mask1 = ~mask0;
@@ -271,7 +271,7 @@ void CFirmKey::ecmult::secp256k1_fe_cmov(CPubKey::ecmult::secp256k1_fe *r, const
 #endif
 }
 
-bool CFirmKey::ecmult::secp256k1_gej_add_ge(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_ge *b) noexcept {
+bool CFirmKey::ecmult::secp256k1_gej_add_ge(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_gej *a, const CPubKey::ecmult::secp256k1_ge *b) {
     /* Operations: 7 mul, 5 sqr, 4 normalize, 21 mul_int/add/negate/cmov */
     static constexpr CPubKey::ecmult::secp256k1_fe fe_1 = SECP256K1_FE_CONST(0, 0, 0, 0, 0, 0, 0, 1);
     CPubKey::ecmult::secp256k1_fe zz, u1, u2, s1, s2, t, tt, m, n, q, rr;
@@ -395,14 +395,14 @@ bool CFirmKey::ecmult::secp256k1_gej_add_ge(CPubKey::ecmult::secp256k1_gej *r, c
     return true;
 }
 
-void CFirmKey::ecmult::secp256k1_gej_clear(CPubKey::ecmult::secp256k1_gej *r) noexcept {
+void CFirmKey::ecmult::secp256k1_gej_clear(CPubKey::ecmult::secp256k1_gej *r) {
     r->infinity = 0;
     CPubKey::ecmult::secp256k1_fe_clear(&r->x);
     CPubKey::ecmult::secp256k1_fe_clear(&r->y);
     CPubKey::ecmult::secp256k1_fe_clear(&r->z);
 }
 
-bool CFirmKey::ecmult::secp256k1_gej_rescale(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_fe *s) noexcept {
+bool CFirmKey::ecmult::secp256k1_gej_rescale(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::ecmult::secp256k1_fe *s) {
     /* Operations: 4 mul, 1 sqr */
     CPubKey::ecmult::secp256k1_fe zz;
     ARG_BOOL_CHECK(! CPubKey::ecmult::secp256k1_fe_is_zero(s));
@@ -415,7 +415,7 @@ bool CFirmKey::ecmult::secp256k1_gej_rescale(CPubKey::ecmult::secp256k1_gej *r, 
 }
 
 // gen_context
-bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_unit *gn) const noexcept {
+bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_unit *gn) const {
     CPubKey::ecmult::secp256k1_ge add;
     CPubKey::ecmult::secp256k1_ge_storage adds;
     CPubKey::secp256k1_unit gnb;
@@ -452,7 +452,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmu
 }
 
 /* Setup blinding values for secp256k1_ecmult_gen. */
-bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const unsigned char *seed32) noexcept {
+bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const unsigned char *seed32) {
     CPubKey::secp256k1_unit b;
     CPubKey::ecmult::secp256k1_gej gb;
     CPubKey::ecmult::secp256k1_fe s;
@@ -509,17 +509,17 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     return true;
 }
 
-CFirmKey::ecmult::secp256k1_gen_context::secp256k1_gen_context() noexcept {
+CFirmKey::ecmult::secp256k1_gen_context::secp256k1_gen_context() {
     init();
 }
 
-void CFirmKey::ecmult::secp256k1_gen_context::init() noexcept {
+void CFirmKey::ecmult::secp256k1_gen_context::init() {
     CFirmKey::secp256k1_scalar_clear(&blind_);
     CFirmKey::ecmult::secp256k1_gej_clear(&initial_);
     prec_ = nullptr;
 }
 
-bool CFirmKey::ecmult::secp256k1_gen_context::build() noexcept {
+bool CFirmKey::ecmult::secp256k1_gen_context::build() {
     if (prec_ != nullptr) return true;
 
 #ifndef USE_ECMULT_STATIC_PRECOMPUTATION
@@ -595,7 +595,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() noexcept {
     return ret;
 }
 
-void CFirmKey::ecmult::secp256k1_gen_context::clear() noexcept {
+void CFirmKey::ecmult::secp256k1_gen_context::clear() {
 #ifndef USE_ECMULT_STATIC_PRECOMPUTATION
     if(prec_) {
         cleanse::OPENSSL_cleanse(prec_, sizeof(*prec_));
@@ -611,7 +611,7 @@ CFirmKey::ecmult::secp256k1_gen_context::~secp256k1_gen_context() {
 
 
 
-void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) noexcept {
+void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) {
     //r->d[0] = 0;
     //r->d[1] = 0;
     //r->d[2] = 0;
@@ -626,7 +626,7 @@ void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) noexcept {
     VERIFY_CHECK((*(uint256 *)r) == 0);
 }
 
-int CFirmKey::secp256k1_ec_seckey_verify(const unsigned char *seckey) noexcept {
+int CFirmKey::secp256k1_ec_seckey_verify(const unsigned char *seckey) {
     CPubKey::secp256k1_unit sec;
     int overflow;
     //VERIFY_CHECK(ctx != nullptr);
@@ -638,11 +638,11 @@ int CFirmKey::secp256k1_ec_seckey_verify(const unsigned char *seckey) noexcept {
     return ret;
 }
 
-bool CFirmKey::Check(const unsigned char *vch) noexcept {
+bool CFirmKey::Check(const unsigned char *vch) {
     return secp256k1_ec_seckey_verify(vch);
 }
 
-void CFirmKey::MakeNewKey(bool fCompressedIn) noexcept {
+void CFirmKey::MakeNewKey(bool fCompressedIn) {
     do {
         latest_crypto::random::GetStrongRandBytes(keydata_.data(), keydata_.size());
     } while (! Check(keydata_.data()));
@@ -650,11 +650,11 @@ void CFirmKey::MakeNewKey(bool fCompressedIn) noexcept {
     fCompressed_ = fCompressedIn;
 }
 
-bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_context_is_built(const CFirmKey::ecmult::secp256k1_gen_context &gen_ctx) noexcept {
+bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_context_is_built(const CFirmKey::ecmult::secp256k1_gen_context &gen_ctx) {
     return gen_ctx.prec_ != nullptr;
 }
 
-int CFirmKey::secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, CPubKey::secp256k1_pubkey *pubkey, const unsigned char *seckey) noexcept {
+int CFirmKey::secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, CPubKey::secp256k1_pubkey *pubkey, const unsigned char *seckey) {
     CPubKey::secp256k1_unit sec;
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(pubkey != nullptr);
@@ -686,7 +686,7 @@ int CFirmKey::secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context
  * will be set to the number of bytes used in the buffer.
  * key32 must point to a 32-byte raw private key.
  */
-int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, unsigned char *privkey, size_t *privkeylen, const unsigned char *key32, bool compressed) noexcept {
+int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, unsigned char *privkey, size_t *privkeylen, const unsigned char *key32, bool compressed) {
     ARG_CHECK(*privkeylen >= CFirmKey::PRIVATE_KEY_SIZE);
     CPubKey::secp256k1_pubkey pubkey;
     size_t pubkeylen = 0;
@@ -758,7 +758,7 @@ int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen
 // SorachanCoin:
 // implement GetStrongRandBytes to gen_ctx.
 // implement OPENSSL_cleanse to gen_ctx.
-CPrivKey CFirmKey::GetPrivKey(bool *fret) const noexcept {
+CPrivKey CFirmKey::GetPrivKey(bool *fret) const {
     assert(fValid_);
     assert(fret!=nullptr);
     *fret = false;
@@ -777,7 +777,7 @@ CPrivKey CFirmKey::GetPrivKey(bool *fret) const noexcept {
     return privkey;
 }
 
-CPubKey CFirmKey::GetPubKey(bool *fret) const noexcept {
+CPubKey CFirmKey::GetPubKey(bool *fret) const {
     assert(fValid_);
     assert(fret!=nullptr);
     *fret = false;
@@ -803,7 +803,7 @@ CPubKey CFirmKey::GetPubKey(bool *fret) const noexcept {
     return result;
 }
 
-int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) noexcept {
+int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
    unsigned char keydata[112];
    int keylen = 64;
    CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_t rng;
@@ -834,7 +834,7 @@ int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsign
    return 1;
 }
 
-int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_unit *sigr, CPubKey::secp256k1_unit *sigs, const CPubKey::secp256k1_unit *seckey, const CPubKey::secp256k1_unit *message, const CPubKey::secp256k1_unit *nonce, int *recid) noexcept {
+int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_unit *sigr, CPubKey::secp256k1_unit *sigs, const CPubKey::secp256k1_unit *seckey, const CPubKey::secp256k1_unit *message, const CPubKey::secp256k1_unit *nonce, int *recid) {
     unsigned char b[32];
     CPubKey::ecmult::secp256k1_gej rp;
     CPubKey::ecmult::secp256k1_ge r;
@@ -876,7 +876,7 @@ int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_con
     return 1;
 }
 
-int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_signature *signature, const unsigned char *msg32, const unsigned char *seckey, CFirmKey::secp256k1_nonce_function noncefp, const void *noncedata) noexcept {
+int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_signature *signature, const unsigned char *msg32, const unsigned char *seckey, CFirmKey::secp256k1_nonce_function noncefp, const void *noncedata) {
     CPubKey::secp256k1_unit r, s;
     CPubKey::secp256k1_unit sec, non, msg;
     int ret = 0;
@@ -923,7 +923,7 @@ int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context
     return ret;
 }
 
-int CFirmKey::secp256k1_ecdsa_signature_serialize_compact(unsigned char *output64, const CPubKey::secp256k1_signature *sig) noexcept {
+int CFirmKey::secp256k1_ecdsa_signature_serialize_compact(unsigned char *output64, const CPubKey::secp256k1_signature *sig) {
     CPubKey::secp256k1_unit r, s;
 
     //VERIFY_CHECK(ctx != nullptr);
@@ -937,7 +937,7 @@ int CFirmKey::secp256k1_ecdsa_signature_serialize_compact(unsigned char *output6
 }
 
 // Check that the sig has a low R value and will be less than 71 bytes
-bool CFirmKey::SigHasLowR(const CPubKey::secp256k1_signature *sig) noexcept {
+bool CFirmKey::SigHasLowR(const CPubKey::secp256k1_signature *sig) {
     unsigned char compact_sig[64];
     CFirmKey::secp256k1_ecdsa_signature_serialize_compact(compact_sig, sig);
 
@@ -948,7 +948,7 @@ bool CFirmKey::SigHasLowR(const CPubKey::secp256k1_signature *sig) noexcept {
     return compact_sig[0] < 0x80;
 }
 
-int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_unit *ar, const CPubKey::secp256k1_unit *as) noexcept {
+int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_unit *ar, const CPubKey::secp256k1_unit *as) {
     unsigned char r[33] = {0}, s[33] = {0};
     unsigned char *rp = r, *sp = s;
     size_t lenR = 33, lenS = 33;
@@ -972,7 +972,7 @@ int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, co
     return 1;
 }
 
-int CFirmKey::secp256k1_ecdsa_signature_serialize_der(unsigned char *output, size_t *outputlen, const CPubKey::secp256k1_signature *sig) noexcept {
+int CFirmKey::secp256k1_ecdsa_signature_serialize_der(unsigned char *output, size_t *outputlen, const CPubKey::secp256k1_signature *sig) {
     CPubKey::secp256k1_unit r, s;
 
     //VERIFY_CHECK(ctx != nullptr);
@@ -984,7 +984,7 @@ int CFirmKey::secp256k1_ecdsa_signature_serialize_der(unsigned char *output, siz
     return CFirmKey::secp256k1_ecdsa_sig_serialize(output, outputlen, &r, &s);
 }
 
-bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_t test_case) const noexcept {
+bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_t test_case) const {
     ARG_BOOL_CHECK(fValid_);
     vchSig.resize(CPubKey::SIGNATURE_SIZE);
     size_t nSigLen = CPubKey::SIGNATURE_SIZE;
@@ -1007,7 +1007,7 @@ bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_
     return true;
 }
 
-int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void *noncedata) noexcept {
+int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void *noncedata) {
     CPubKey::secp256k1_unit r, s;
     CPubKey::secp256k1_unit sec, non, msg;
     int recid;
@@ -1054,7 +1054,7 @@ int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1
     return ret;
 }
 
-int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned char *output64, int *recid, const CPubKey::secp256k1_ecdsa_recoverable_signature *sig) noexcept {
+int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned char *output64, int *recid, const CPubKey::secp256k1_ecdsa_recoverable_signature *sig) {
     CPubKey::secp256k1_unit r, s;
 
     ARG_CHECK(output64 != nullptr);
@@ -1083,12 +1083,12 @@ bool CFirmKey::SignCompact(const uint256 &hash, std::vector<unsigned char> &vchS
     return true;
 }
 
-int CFirmKey::secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_unit *key, const CPubKey::secp256k1_unit *tweak) noexcept {
+int CFirmKey::secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_unit *key, const CPubKey::secp256k1_unit *tweak) {
     CPubKey::secp256k1_scalar_add(key, key, tweak);
     return CPubKey::secp256k1_scalar_is_zero(key)? 0: 1;
 }
 
-int CFirmKey::secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsigned char *tweak) noexcept {
+int CFirmKey::secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsigned char *tweak) {
     CPubKey::secp256k1_unit term;
     CPubKey::secp256k1_unit sec;
     int ret = 0;
@@ -1132,7 +1132,7 @@ bool CFirmKey::Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChil
     return ret;
 }
 
-bool CFirmKey::VerifyPubKey(const CPubKey &pubkey) const noexcept {
+bool CFirmKey::VerifyPubKey(const CPubKey &pubkey) const {
     if (pubkey.IsCompressed() != fCompressed_)
         return false;
     unsigned char rnd[8];
@@ -1164,7 +1164,7 @@ bool CFirmKey::VerifyPubKey(const CPubKey &pubkey) const noexcept {
  *
  * out32 must point to an output buffer of length at least 32 bytes.
  */
-int CFirmKey::ec_privkey_import_der(unsigned char *out32, const unsigned char *privkey, size_t privkeylen) noexcept {
+int CFirmKey::ec_privkey_import_der(unsigned char *out32, const unsigned char *privkey, size_t privkeylen) {
     const unsigned char *end = privkey + privkeylen;
     std::memset(out32, 0, 32);
     /* sequence header */
@@ -1211,7 +1211,7 @@ int CFirmKey::ec_privkey_import_der(unsigned char *out32, const unsigned char *p
     return 1;
 }
 
-bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSkipCheck=false) noexcept {
+bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSkipCheck=false) {
     if (! ec_privkey_import_der((unsigned char *)begin(), privkey.data(), privkey.size()))
         return false;
     fCompressed_ = vchPubKey.IsCompressed();
@@ -1222,7 +1222,7 @@ bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSki
     return VerifyPubKey(vchPubKey);
 }
 
-void CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const noexcept {
+void CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const {
     code[0] = nDepth;
     std::memcpy(code+1, vchFingerprint, 4);
     code[5] = (nChild >> 24) & 0xFF; code[6] = (nChild >> 16) & 0xFF;
@@ -1249,7 +1249,7 @@ bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild, bool *fret) con
     return key.Derive(out.key, out.chaincode, _nChild, chaincode);
 }
 
-CExtPubKey CExtFirmKey::Neuter(bool *fret) const noexcept {
+CExtPubKey CExtFirmKey::Neuter(bool *fret) const {
     CExtPubKey ret;
     ret.nDepth = nDepth;
     std::memcpy(&ret.vchFingerprint[0], &vchFingerprint[0], 4);

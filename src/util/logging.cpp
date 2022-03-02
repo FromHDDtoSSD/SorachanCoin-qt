@@ -11,7 +11,7 @@
 #include <version.h>
 #include <debugcs/debugcs.h>
 
-BCLog::Logger &LogInstance() noexcept {
+BCLog::Logger &LogInstance() {
 /**
  * NOTE: the logger instances is leaked on exit. This is ugly, but will be
  * cleaned up by the OS/libc. Defining a logger as a global object doesn't work
@@ -33,7 +33,7 @@ BCLog::Logger &LogInstance() noexcept {
     return *(BCLog::Logger *)g_logger;
 }
 
-int BCLog::Logger::FileWriteStr(const std::string &str, FILE *fp) noexcept {
+int BCLog::Logger::FileWriteStr(const std::string &str, FILE *fp) {
     return ::fwrite(str.data(), 1, str.size(), fp);
 }
 
@@ -64,22 +64,22 @@ bool BCLog::Logger::OpenDebugLog() {
     return true;
 }
 
-void BCLog::Logger::EnableCategory(BCLog::LogFlags flag) noexcept {
+void BCLog::Logger::EnableCategory(BCLog::LogFlags flag) {
     m_categories |= flag;
 }
 
-bool BCLog::Logger::EnableCategory(const std::string &str) noexcept {
+bool BCLog::Logger::EnableCategory(const std::string &str) {
     BCLog::LogFlags flag;
     if (! GetLogCategory(flag, str)) return false;
     EnableCategory(flag);
     return true;
 }
 
-void BCLog::Logger::DisableCategory(BCLog::LogFlags flag) noexcept {
+void BCLog::Logger::DisableCategory(BCLog::LogFlags flag) {
     m_categories &= ~flag;
 }
 
-bool BCLog::Logger::DisableCategory(const std::string &str) noexcept {
+bool BCLog::Logger::DisableCategory(const std::string &str) {
     BCLog::LogFlags flag;
     if (! GetLogCategory(flag, str)) return false;
     DisableCategory(flag);
@@ -90,7 +90,7 @@ bool BCLog::Logger::WillLogCategory(BCLog::LogFlags category) const {
     return (m_categories.load(std::memory_order_relaxed) & category) != 0;
 }
 
-bool BCLog::Logger::DefaultShrinkDebugFile() const noexcept {
+bool BCLog::Logger::DefaultShrinkDebugFile() const {
     return m_categories == BCLog::NONE;
 }
 
@@ -131,7 +131,7 @@ const CLogCategoryDesc LogCategories[] = {
 
 } // namespace
 
-bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str) noexcept {
+bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str) {
     if (str == "") {
         flag = BCLog::ALL;
         return true;

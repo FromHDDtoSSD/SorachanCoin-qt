@@ -24,7 +24,7 @@ private:
     short state;
     short exceptmask;
 
-    void Init() noexcept {
+    void Init() {
         pvch = nullptr;
         nReadPos = 0;
         state = 0;
@@ -39,7 +39,7 @@ private:
         }
     }
 
-    void Release() noexcept {
+    void Release() {
         if(pvch) delete pvch;
         pvch = nullptr;
     }
@@ -60,7 +60,7 @@ public:
         Alloc();
     }
 
-    CMoveStream(CMoveStream &&robj) noexcept : CTypeVersion(robj.GetType(), robj.GetVersion()) {
+    CMoveStream(CMoveStream &&robj) : CTypeVersion(robj.GetType(), robj.GetVersion()) {
         Init();
         Swap(static_cast<CMoveStream &&>(robj));
     }
@@ -120,7 +120,7 @@ public:
         Release();
     }
 
-    void Swap(CMoveStream &&b) noexcept {
+    void Swap(CMoveStream &&b) {
         this->Release();
         this->pvch = b.pvch;
         this->nReadPos = b.nReadPos;
@@ -128,17 +128,17 @@ public:
         this->exceptmask = b.exceptmask;
         b.Init();
     }
-    void Swap(vector_type &&b) noexcept {
+    void Swap(vector_type &&b) {
         this->Release();
         this->Init();
         this->pvch = &b;
     }
 
-    CMoveStream &operator=(CMoveStream &&b) noexcept {
+    CMoveStream &operator=(CMoveStream &&b) {
         Swap(static_cast<CMoveStream &&>(b));
         return *this;
     }
-    CMoveStream &operator=(vector_type &&b) noexcept {
+    CMoveStream &operator=(vector_type &&b) {
         Swap(static_cast<vector_type &&>(b));
         return *this;
     }
@@ -152,17 +152,17 @@ public:
     }
 
     // Vector subset
-    void clear() noexcept { if(pvch) pvch->clear(); nReadPos = 0; }
-    const_iterator begin() const noexcept { return pvch ? pvch->begin() + nReadPos: const_iterator(0); }
-    iterator begin() noexcept { return pvch ? pvch->begin() + nReadPos: iterator(0); }
-    const_iterator end() const noexcept { return pvch ? pvch->end(): const_iterator(0); }
-    iterator end() noexcept { return pvch ? pvch->end(): iterator(0); }
-    size_type size() const noexcept { return pvch ? pvch->size() - nReadPos: 0; }
-    bool empty() const noexcept { return pvch==nullptr || pvch->size()==nReadPos; }
+    void clear() { if(pvch) pvch->clear(); nReadPos = 0; }
+    const_iterator begin() const { return pvch ? pvch->begin() + nReadPos: const_iterator(0); }
+    iterator begin() { return pvch ? pvch->begin() + nReadPos: iterator(0); }
+    const_iterator end() const { return pvch ? pvch->end(): const_iterator(0); }
+    iterator end() { return pvch ? pvch->end(): iterator(0); }
+    size_type size() const { return pvch ? pvch->size() - nReadPos: 0; }
+    bool empty() const { return pvch==nullptr || pvch->size()==nReadPos; }
     void resize(size_type n, value_type c = 0) { if(pvch) pvch->resize(n + nReadPos, c); }
     void reserve(size_type n) { if(pvch) pvch->reserve(n + nReadPos); }
-    const_reference operator[](size_type pos) const noexcept { return pvch ? (*pvch)[pos + nReadPos]: const_reference(0); }
-    reference operator[](size_type pos) noexcept { char lret=0; return pvch ? (*pvch)[pos + nReadPos]: reference(lret); } // Note: reference() require lvalue.
+    const_reference operator[](size_type pos) const { return pvch ? (*pvch)[pos + nReadPos]: const_reference(0); }
+    reference operator[](size_type pos) { char lret=0; return pvch ? (*pvch)[pos + nReadPos]: reference(lret); } // Note: reference() require lvalue.
     iterator insert(iterator it, const char &x = char()) { return pvch? pvch->insert(it, x): iterator(0); }
     void insert(iterator it, size_type n, const char &x) { if(pvch) pvch->insert(it, n, x); }
     void push_back(const char &x) {if(pvch) pvch->push_back(x);}
@@ -173,7 +173,7 @@ public:
     }
 
 #ifdef _MSC_VER
-    void insert(iterator it, const_iterator first, const_iterator last) noexcept {
+    void insert(iterator it, const_iterator first, const_iterator last) {
         assert(last - first >= 0);
         if(it == pvch->begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -184,7 +184,7 @@ public:
         }
     }
 #else
-    void insert(iterator it, std::vector<char>::const_iterator first, std::vector<char>::const_iterator last) noexcept {
+    void insert(iterator it, std::vector<char>::const_iterator first, std::vector<char>::const_iterator last) {
         assert(last - first >= 0);
         if(it == pvch->begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -197,7 +197,7 @@ public:
 #endif
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1300
-    void insert(iterator it, const char *first, const char *last) noexcept {
+    void insert(iterator it, const char *first, const char *last) {
         assert(last - first >= 0);
         if(it == pvch->begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -209,7 +209,7 @@ public:
     }
 #endif
 
-    iterator erase(iterator it) noexcept {
+    iterator erase(iterator it) {
         if(it == pvch->begin() + nReadPos) {
             // special case for erasing from the front
             if(++nReadPos >= pvch->size()) {
@@ -223,7 +223,7 @@ public:
         }
     }
 
-    iterator erase(iterator first, iterator last) noexcept {
+    iterator erase(iterator first, iterator last) {
         if(first == pvch->begin() + nReadPos) {
             // special case for erasing from the front
             if(last == pvch->end()) {
@@ -238,12 +238,12 @@ public:
         }
     }
 
-    void Compact() noexcept {
+    void Compact() {
         pvch->erase(pvch->begin(), pvch->begin() + nReadPos);
         nReadPos = 0;
     }
 
-    bool Rewind(size_type n) noexcept {
+    bool Rewind(size_type n) {
         // Rewind by n characters if the buffer hasn't been compacted yet
         if(n > nReadPos) {
             return false;
@@ -262,14 +262,14 @@ public:
         }
     }
 
-    bool eof() const noexcept { return size() == 0; }
-    bool fail() const noexcept { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
-    bool good() const noexcept { return !eof() && (state == 0); }
-    void clear(short n) noexcept { state = n; }  // name conflict with vector clear()
-    short exceptions() noexcept { return exceptmask; }
+    bool eof() const { return size() == 0; }
+    bool fail() const { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
+    bool good() const { return !eof() && (state == 0); }
+    void clear(short n) { state = n; }  // name conflict with vector clear()
+    short exceptions() { return exceptmask; }
     short exceptions(short mask) { short prev = exceptmask; exceptmask = mask; setstate(0, "CMoveStream"); return prev; }
-    CMoveStream *rdbuf() noexcept { return this; }
-    int in_avail() noexcept { return (int)(size()); }
+    CMoveStream *rdbuf() { return this; }
+    int in_avail() { return (int)(size()); }
 
     CMoveStream &read(char *pch, int nSize) {
         // Read from the beginning of the buffer
@@ -306,7 +306,7 @@ public:
     }
 
     template<typename Stream>
-    void Serialize(Stream &s) const noexcept {
+    void Serialize(Stream &s) const {
         // Special case: stream << stream concatenates like stream += stream
         if(! pvch->empty()) {
             s.write((char *)&(*pvch)[0], pvch->size() * sizeof((*pvch)[0]));
@@ -314,7 +314,7 @@ public:
     }
 
     template<typename T>
-    unsigned int GetSerializeSize(const T &obj) noexcept {
+    unsigned int GetSerializeSize(const T &obj) {
         // Tells the size of the object if serialized to this stream
         return ::GetSerializeSize(obj, GetVersion());
     }
@@ -334,7 +334,7 @@ public:
         return *this;
     }
 
-    void GetAndClear(CSerializeData &data) noexcept {
+    void GetAndClear(CSerializeData &data) {
         this->pvch->swap(data);
         CSerializeData().swap(*pvch);
     }

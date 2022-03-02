@@ -276,7 +276,7 @@ bool lutil::FileCommit(FILE *file) {
     return true;
 }
 
-bool lutil::TruncateFile(FILE *file, unsigned int length) noexcept {
+bool lutil::TruncateFile(FILE *file, unsigned int length) {
 #if defined(WIN32)
     return ::_chsize(::_fileno(file), length) == 0;
 #else
@@ -288,7 +288,7 @@ bool lutil::TruncateFile(FILE *file, unsigned int length) noexcept {
  * this function tries to raise the file descriptor limit to the requested number.
  * It returns the actual file descriptor limit (which may be more or less than nMinFD)
  */
-int lutil::RaiseFileDescriptorLimit(int nMinFD) noexcept {
+int lutil::RaiseFileDescriptorLimit(int nMinFD) {
 #if defined(WIN32)
     return 2048;
 #else
@@ -357,7 +357,7 @@ void lutil::AllocateFileRange(FILE *file, unsigned int offset, unsigned int leng
 }
 
 #ifdef WIN32
-fs::path lutil::GetSpecialFolderPath(int nFolder, bool fCreate) noexcept {
+fs::path lutil::GetSpecialFolderPath(int nFolder, bool fCreate) {
     char pszPath[MAX_PATH] = {0};
     if(::SHGetSpecialFolderPathA(nullptr, pszPath, nFolder, fCreate)) {
         return fs::path(pszPath);
@@ -415,7 +415,7 @@ void lutil::SetupEnvironment() {
 #endif
 }
 
-bool lutil::SetupNetworking() noexcept {
+bool lutil::SetupNetworking() {
 #ifdef WIN32
     // Initialize Windows Sockets
     WSADATA wsadata;
@@ -469,7 +469,7 @@ int lutil::ScheduleBatchPriority() {
 
 #ifdef WIN32
 // SorachanCoin: std::wstring_convert is no recommended after C++17.
-bool lutil::wchartochar(const wchar_t *source, std::string &dest) noexcept {
+bool lutil::wchartochar(const wchar_t *source, std::string &dest) {
     int nLength = ::WideCharToMultiByte(CP_UTF8, 0, source, -1, nullptr, 0, nullptr, nullptr);
     if (nLength == 0) {
         uint32_t dwError = ::GetLastError();

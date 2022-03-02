@@ -53,7 +53,7 @@
 
 namespace latest_crypto {
 
-[[noreturn]] void random::RandFailure() noexcept {
+[[noreturn]] void random::RandFailure() {
     logging::LogPrintf("Failed to read randomness, aborting\n");
     std::abort();
 }
@@ -125,7 +125,7 @@ void random::ReportHardwareRand() {
  *
  * Must only be called when RdRand is supported.
  */
-uint64_t random::GetRdRand() noexcept {
+uint64_t random::GetRdRand() {
     // RdRand may very rarely fail. Invoke it up to 10 times in a loop to reduce this risk.
 # ifdef __i386__
     uint8_t ok;
@@ -156,7 +156,7 @@ uint64_t random::GetRdRand() noexcept {
  *
  * Must only be called when RdSeed is supported.
  */
-uint64_t random::GetRdSeed() noexcept {
+uint64_t random::GetRdSeed() {
     // RdSeed may fail when the HW RNG is overloaded. Loop indefinitely until enough entropy is gathered,
     // but pause after every failure.
 # ifdef __i386__
@@ -198,7 +198,7 @@ void random::ReportHardwareRand() {}
 #endif // [A] macro
 
 /** Add 64 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */
-void random::SeedHardwareFast(CSHA512 &hasher) noexcept {
+void random::SeedHardwareFast(CSHA512 &hasher) {
 #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)
     if (g_rdrand_supported) {
         uint64_t out = GetRdRand();
@@ -209,7 +209,7 @@ void random::SeedHardwareFast(CSHA512 &hasher) noexcept {
 }
 
 /** Add 256 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */
-void random::SeedHardwareSlow(CSHA512 &hasher) noexcept {
+void random::SeedHardwareSlow(CSHA512 &hasher) {
 #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)
     // When we want 256 bits of entropy, prefer RdSeed over RdRand, as it's
     // guaranteed to produce independent randomness on every call.
@@ -447,7 +447,7 @@ public:
      *
      * If this function has never been called with strong_seed = true, false is returned.
      */
-    bool MixExtract(unsigned char* out, size_t num, CSHA512 &&hasher, bool strong_seed) noexcept {
+    bool MixExtract(unsigned char* out, size_t num, CSHA512 &&hasher, bool strong_seed) {
         assert(num <= 32);
         unsigned char buf[64];
         static_assert(sizeof(buf) == CSHA512::OUTPUT_SIZE, "Buffer needs to have hasher's output size");
@@ -479,7 +479,7 @@ public:
     //! RNGState: Secure allocator
     // OPENSSL_malloc and OPENSSL_free do NOT fill zero or dummy to object
     // when the time of release.
-    void *operator new(size_t size, const std::nothrow_t &) noexcept {
+    void *operator new(size_t size, const std::nothrow_t &) {
         DEBUG_LSYNC_CS("called GetRNGState() new operator");
         unsigned char *p = (unsigned char *)::malloc(size + sizeof(size_t));
         if(! p) return nullptr;
@@ -488,7 +488,7 @@ public:
     }
     void *operator new(size_t size)=delete;
     void *operator new[](size_t size)=delete;
-    void operator delete(void *p) noexcept {
+    void operator delete(void *p) {
         DEBUG_LSYNC_CS("called GetRNGState() delete operator");
         unsigned char *head = (unsigned char *)p - sizeof(size_t);
         const size_t size = *((size_t *)head);
@@ -510,7 +510,7 @@ public:
             ~manage() {
                 if(m_ptr) delete m_ptr;
             }
-            RNGState &get() noexcept {
+            RNGState &get() {
                 return *m_ptr;
             }
         };
@@ -536,7 +536,7 @@ public:
         return obj.get();
     }
 
-    Mutex &GetOpenSSLMutex(int i) noexcept {
+    Mutex &GetOpenSSLMutex(int i) {
         return *(m_ppmutexOpenSSL[i]);
     }
 };
@@ -546,7 +546,7 @@ public:
 static unsigned char g_dummy[10] = {0};
 class OpenSSL_startup {
 public:
-    OpenSSL_startup() noexcept {
+    OpenSSL_startup() {
         unsigned char ch[32] = {0};
         CSHA512 hasher;
         hasher.Write(ch, sizeof(ch));
@@ -575,12 +575,12 @@ OpenSSL_startup dummy_openssl;
  * everything can become noexcept here.
  */
 
-void random::SeedTimestamp(CSHA512 &hasher) noexcept {
+void random::SeedTimestamp(CSHA512 &hasher) {
     int64_t perfcounter = GetPerformanceCounter();
     hasher.Write((const unsigned char *)&perfcounter, sizeof(perfcounter));
 }
 
-void random::SeedFast(CSHA512 &hasher) noexcept {
+void random::SeedFast(CSHA512 &hasher) {
     unsigned char buffer[32];
 
     // Stack pointer to indirectly commit to thread/callstack
@@ -596,7 +596,7 @@ void random::SeedFast(CSHA512 &hasher) noexcept {
     cleanse::OPENSSL_cleanse(buffer, sizeof(buffer));
 }
 
-void random::SeedSlow(CSHA512 &hasher) noexcept {
+void random::SeedSlow(CSHA512 &hasher) {
     unsigned char buffer[32];
 
     // Everything that the 'fast' seeder includes
@@ -637,7 +637,7 @@ void random::SeedSleep(CSHA512 &hasher) {
     RandAddSeedPerfmon(hasher);
 }
 
-void random::SeedStartup(CSHA512 &hasher) noexcept {
+void random::SeedStartup(CSHA512 &hasher) {
 #ifdef WIN32
     // Seed random number generator with screen scrape and other hardware sources
     //::RAND_screen(); // case OpenSSL
@@ -708,7 +708,7 @@ void random::FastRandomContext::FillBitBuffer() {
     bitbuf_size = 64;
 }
 
-uint256 random::FastRandomContext::rand256() noexcept {
+uint256 random::FastRandomContext::rand256() {
     if (bytebuf_size < 32)
         FillByteBuffer();
 
@@ -727,7 +727,7 @@ std::vector<unsigned char> random::FastRandomContext::randbytes(size_t len) {
     return ret;
 }
 
-random::FastRandomContext::FastRandomContext(const uint256 &seed) noexcept : requires_seed(false), bytebuf_size(0), bitbuf_size(0) {
+random::FastRandomContext::FastRandomContext(const uint256 &seed) : requires_seed(false), bytebuf_size(0), bitbuf_size(0) {
     rng.SetKey(seed.begin(), 32);
 }
 
@@ -776,7 +776,7 @@ bool random::Random_SanityCheck() {
     return true;
 }
 
-random::FastRandomContext::FastRandomContext(bool fDeterministic) noexcept : requires_seed(!fDeterministic), bytebuf_size(0), bitbuf_size(0) {
+random::FastRandomContext::FastRandomContext(bool fDeterministic) : requires_seed(!fDeterministic), bytebuf_size(0), bitbuf_size(0) {
     if (! fDeterministic)
         return;
     uint256 seed;

@@ -57,7 +57,7 @@ namespace BCLog {
         FILE *m_fileout = nullptr;
         std::mutex m_file_mutex;
         std::list<std::string> m_msgs_before_open;
-        static int FileWriteStr(const std::string &str, FILE *fp) noexcept;
+        static int FileWriteStr(const std::string &str, FILE *fp);
 
         /**
          * m_started_new_line is a state variable that will suppress printing of
@@ -97,25 +97,25 @@ namespace BCLog {
         void LogPrintStr(const std::string &str);
 
         /** Returns whether logs will be written to any output */
-        bool Enabled() const noexcept { return m_print_to_console || m_print_to_file; }
+        bool Enabled() const { return m_print_to_console || m_print_to_file; }
 
         bool OpenDebugLog();
         bool ShrinkDebugFile();
 
         uint32_t GetCategoryMask() const { return m_categories.load(); }
 
-        void EnableCategory(LogFlags flag) noexcept;
-        bool EnableCategory(const std::string &str) noexcept;
-        void DisableCategory(LogFlags flag) noexcept;
-        bool DisableCategory(const std::string &str) noexcept;
+        void EnableCategory(LogFlags flag);
+        bool EnableCategory(const std::string &str);
+        void DisableCategory(LogFlags flag);
+        bool DisableCategory(const std::string &str);
 
         bool WillLogCategory(LogFlags category) const;
-        bool DefaultShrinkDebugFile() const noexcept;
+        bool DefaultShrinkDebugFile() const;
     };
 
 } // namespace BCLog
 
-BCLog::Logger &LogInstance() noexcept;
+BCLog::Logger &LogInstance();
 
 /** Return true if log accepts specified category */
 static inline bool LogAcceptCategory(BCLog::LogFlags category) {
@@ -129,7 +129,7 @@ std::string ListLogCategories();
 std::vector<CLogCategoryActive> ListActiveLogCategories();
 
 /** Return true if str parses as a log category and set the flag */
-bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str) noexcept;
+bool GetLogCategory(BCLog::LogFlags &flag, const std::string &str);
 
 namespace logging {
 
@@ -137,7 +137,7 @@ namespace logging {
 // unconditionally log to debug.log! It should not be the case that an inbound
 // peer can fill up a user's disk with debug.log entries.
 template <typename... Args>
-static inline void LogPrintf(const char *fmt, const Args&... args) noexcept {
+static inline void LogPrintf(const char *fmt, const Args&... args) {
     if (LogInstance().Enabled()) {
         std::string log_msg;
         try {
@@ -151,7 +151,7 @@ static inline void LogPrintf(const char *fmt, const Args&... args) noexcept {
 }
 
 template <typename... Args>
-static inline void LogPrint(const BCLog::LogFlags &category, const Args&... args) noexcept {
+static inline void LogPrint(const BCLog::LogFlags &category, const Args&... args) {
     if (LogAcceptCategory((category)))
         LogPrintf(args...);
 }

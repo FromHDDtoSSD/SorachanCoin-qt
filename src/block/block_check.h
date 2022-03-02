@@ -293,19 +293,19 @@ public:
 
     void CalcMaskSize(unsigned int &nBytes, unsigned int &nNonzeroBytes) const;
 
-    bool IsCoinBase() const noexcept {
+    bool IsCoinBase() const {
         return fCoinBase;
     }
 
-    bool IsCoinStake() const noexcept {
+    bool IsCoinStake() const {
         return fCoinStake;
     }
 
-    bool IsCoinPoBench() const noexcept {
+    bool IsCoinPoBench() const {
         return fCoinPoBench;
     }
 
-    bool IsCoinMasternode() const noexcept {
+    bool IsCoinMasternode() const {
         return fCoinMasternode;
     }
 

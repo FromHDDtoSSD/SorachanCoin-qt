@@ -16,29 +16,29 @@ namespace latest_crypto {
 #include <cpuid.h>
 namespace sha256_sse4
 {
-void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks) noexcept;
+void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks);
 }
 #endif
 #endif
 
 namespace sha256d64_sse41
 {
-void Transform_4way(unsigned char* out, const unsigned char* in) noexcept;
+void Transform_4way(unsigned char* out, const unsigned char* in);
 }
 
 namespace sha256d64_avx2
 {
-void Transform_8way(unsigned char* out, const unsigned char* in) noexcept;
+void Transform_8way(unsigned char* out, const unsigned char* in);
 }
 
 namespace sha256d64_shani
 {
-void Transform_2way(unsigned char* out, const unsigned char* in) noexcept;
+void Transform_2way(unsigned char* out, const unsigned char* in);
 }
 
 namespace sha256_shani
 {
-void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks) noexcept;
+void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks);
 }
 
 namespace
@@ -47,15 +47,15 @@ namespace
 /// Internal SHA-256 implementation.
 namespace sha256
 {
-uint32_t inline Ch(uint32_t x, uint32_t y, uint32_t z) noexcept { return z ^ (x & (y ^ z)); }
-uint32_t inline Maj(uint32_t x, uint32_t y, uint32_t z) noexcept { return (x & y) | (z & (x | y)); }
-uint32_t inline Sigma0(uint32_t x) noexcept { return (x >> 2 | x << 30) ^ (x >> 13 | x << 19) ^ (x >> 22 | x << 10); }
-uint32_t inline Sigma1(uint32_t x) noexcept { return (x >> 6 | x << 26) ^ (x >> 11 | x << 21) ^ (x >> 25 | x << 7); }
-uint32_t inline sigma0(uint32_t x) noexcept { return (x >> 7 | x << 25) ^ (x >> 18 | x << 14) ^ (x >> 3); }
-uint32_t inline sigma1(uint32_t x) noexcept { return (x >> 17 | x << 15) ^ (x >> 19 | x << 13) ^ (x >> 10); }
+uint32_t inline Ch(uint32_t x, uint32_t y, uint32_t z) { return z ^ (x & (y ^ z)); }
+uint32_t inline Maj(uint32_t x, uint32_t y, uint32_t z) { return (x & y) | (z & (x | y)); }
+uint32_t inline Sigma0(uint32_t x) { return (x >> 2 | x << 30) ^ (x >> 13 | x << 19) ^ (x >> 22 | x << 10); }
+uint32_t inline Sigma1(uint32_t x) { return (x >> 6 | x << 26) ^ (x >> 11 | x << 21) ^ (x >> 25 | x << 7); }
+uint32_t inline sigma0(uint32_t x) { return (x >> 7 | x << 25) ^ (x >> 18 | x << 14) ^ (x >> 3); }
+uint32_t inline sigma1(uint32_t x) { return (x >> 17 | x << 15) ^ (x >> 19 | x << 13) ^ (x >> 10); }
 
 /** One round of SHA-256. */
-void inline Round(uint32_t a, uint32_t b, uint32_t c, uint32_t& d, uint32_t e, uint32_t f, uint32_t g, uint32_t& h, uint32_t k) noexcept
+void inline Round(uint32_t a, uint32_t b, uint32_t c, uint32_t& d, uint32_t e, uint32_t f, uint32_t g, uint32_t& h, uint32_t k)
 {
     uint32_t t1 = h + Sigma1(e) + Ch(e, f, g) + k;
     uint32_t t2 = Sigma0(a) + Maj(a, b, c);
@@ -64,7 +64,7 @@ void inline Round(uint32_t a, uint32_t b, uint32_t c, uint32_t& d, uint32_t e, u
 }
 
 /** Initialize SHA-256 state. */
-void inline Initialize(uint32_t* s) noexcept
+void inline Initialize(uint32_t* s)
 {
     s[0] = 0x6a09e667ul;
     s[1] = 0xbb67ae85ul;
@@ -77,7 +77,7 @@ void inline Initialize(uint32_t* s) noexcept
 }
 
 /** Perform a number of SHA-256 transformations, processing 64-byte chunks. */
-void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks) noexcept
+void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks)
 {
     while (blocks--) {
         uint32_t a = s[0], b = s[1], c = s[2], d = s[3], e = s[4], f = s[5], g = s[6], h = s[7];
@@ -163,7 +163,7 @@ void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks) noexcept
     }
 }
 
-void TransformD64(unsigned char* out, const unsigned char* in) noexcept
+void TransformD64(unsigned char* out, const unsigned char* in)
 {
     // Transform 1
     uint32_t a = 0x6a09e667ul;
@@ -420,7 +420,7 @@ typedef void (*TransformType)(uint32_t*, const unsigned char*, size_t);
 typedef void (*TransformD64Type)(unsigned char*, const unsigned char*);
 
 template<TransformType tr>
-void TransformD64Wrapper(unsigned char* out, const unsigned char* in) noexcept
+void TransformD64Wrapper(unsigned char* out, const unsigned char* in)
 {
     uint32_t s[8];
     static const unsigned char padding1[64] = {
@@ -642,12 +642,12 @@ std::string SHA256AutoDetect()
 
 ////// SHA-256
 
-CSHA256::CSHA256() noexcept : bytes(0)
+CSHA256::CSHA256() : bytes(0)
 {
     sha256::Initialize(s);
 }
 
-CSHA256& CSHA256::Write(const unsigned char* data, size_t len) noexcept
+CSHA256& CSHA256::Write(const unsigned char* data, size_t len)
 {
     const unsigned char* end = data + len;
     size_t bufsize = bytes % 64;
@@ -673,7 +673,7 @@ CSHA256& CSHA256::Write(const unsigned char* data, size_t len) noexcept
     return *this;
 }
 
-void CSHA256::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
+void CSHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
 {
     static const unsigned char pad[64] = {0x80};
     unsigned char sizedesc[8];
@@ -690,14 +690,14 @@ void CSHA256::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
     WriteBE32(hash + 28, s[7]);
 }
 
-CSHA256& CSHA256::Reset() noexcept
+CSHA256& CSHA256::Reset()
 {
     bytes = 0;
     sha256::Initialize(s);
     return *this;
 }
 
-void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks) noexcept
+void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks)
 {
     if (TransformD64_8way) {
         while (blocks >= 8) {

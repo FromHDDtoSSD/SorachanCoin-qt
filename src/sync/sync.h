@@ -119,7 +119,7 @@ private:
     std::unique_lock<M> lock;
 
 public:
-    void Enter(const char *pszName, const char *pszFile, int nLine) noexcept {
+    void Enter(const char *pszName, const char *pszFile, int nLine) {
         if (! lock.owns_lock()) {
             EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()));
 #ifdef DEBUG_LOCKCONTENTION
@@ -133,14 +133,14 @@ public:
         }
     }
 
-    void Leave() noexcept {
+    void Leave() {
         if (lock.owns_lock()) {
             lock.unlock();
             LeaveCritical();
         }
     }
 
-    bool TryEnter(const char *pszName, const char *pszFile, int nLine) noexcept {
+    bool TryEnter(const char *pszName, const char *pszFile, int nLine) {
         if (! lock.owns_lock()) {
             EnterCritical(pszName, pszFile, nLine, (void *)(lock.mutex()), true);
             lock.try_lock();
@@ -151,7 +151,7 @@ public:
         return lock.owns_lock();
     }
 
-    CMutexLock(M &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) noexcept : lock(mutexIn, std::defer_lock) {
+    CMutexLock(M &mutexIn, const char *pszName, const char *pszFile, int nLine, bool fTry = false) : lock(mutexIn, std::defer_lock) {
         if (fTry)
             TryEnter(pszName, pszFile, nLine);
         else
@@ -164,11 +164,11 @@ public:
         }
     }
 
-    operator bool() const noexcept {
+    operator bool() const {
         return lock.owns_lock();
     }
 
-    std::unique_lock<M> &GetLock() noexcept {
+    std::unique_lock<M> &GetLock() {
         return lock;
     }
 };

@@ -59,7 +59,7 @@ namespace block_transaction
         static void setnull_pblockindexFBBHLast() { pblockindexFBBHLast = nullptr; } // New Block
         static bool GetTransaction(const T &hash, CTransaction &tx, T &hashBlock);
         static CBlockIndex *FindBlockByHeight(int nHeight);
-        static bool MoneyRange(int64_t nValue) noexcept {
+        static bool MoneyRange(int64_t nValue) {
             return (nValue >= 0 && nValue <= block_params::MAX_MONEY);
         }
     };
@@ -85,9 +85,9 @@ private:
     CTransaction *ptx;
     uint32_t n;
 public:
-    const CTransaction *get_ptx() const noexcept {return ptx;}
-    CTransaction *get_ptx() noexcept {return ptx;}
-    uint32_t get_n() const noexcept {return n;}
+    const CTransaction *get_ptx() const {return ptx;}
+    CTransaction *get_ptx() {return ptx;}
+    uint32_t get_n() const {return n;}
 
     CInPoint() {
         SetNull();
@@ -117,35 +117,35 @@ private:
     uint256 hash;
     uint32_t n;
 public:
-    uint32_t get_n() const noexcept {return n;}
-    const uint256 &get_hash() const noexcept {return hash;}
+    uint32_t get_n() const {return n;}
+    const uint256 &get_hash() const {return hash;}
 
-    COutPoint() noexcept {
+    COutPoint() {
         SetNull();
     }
-    COutPoint(uint256 hashIn, unsigned int nIn) noexcept {
+    COutPoint(uint256 hashIn, unsigned int nIn) {
         hash = hashIn;
         n = nIn;
     }
-    void SetNull() noexcept {
+    void SetNull() {
         hash = 0;
         n = std::numeric_limits<uint32_t>::max();
     }
-    bool IsNull() const noexcept {
+    bool IsNull() const {
         return (hash == 0 && n == std::numeric_limits<uint32_t>::max());
     }
 
-    friend bool operator<(const COutPoint &a, const COutPoint &b) noexcept {
+    friend bool operator<(const COutPoint &a, const COutPoint &b) {
         return (a.hash < b.hash || (a.hash == b.hash && a.n < b.n));
     }
-    friend bool operator==(const COutPoint &a, const COutPoint &b) noexcept {
+    friend bool operator==(const COutPoint &a, const COutPoint &b) {
         return (a.hash == b.hash && a.n == b.n);
     }
-    friend bool operator!=(const COutPoint &a, const COutPoint &b) noexcept {
+    friend bool operator!=(const COutPoint &a, const COutPoint &b) {
         return !(a == b);
     }
 
-    std::string ToString() const noexcept;
+    std::string ToString() const;
     void print() const {
         logging::LogPrintf("%s\n", ToString().c_str());
     }
@@ -169,39 +169,39 @@ private:
     uint32_t nBlockPos;
     uint32_t nTxPos;
 public:
-    uint32_t get_nFile() const noexcept {return nFile;}
-    uint32_t get_nBlockPos() const noexcept {return nBlockPos;}
-    uint32_t get_nTxPos() const noexcept {return nTxPos;}
+    uint32_t get_nFile() const {return nFile;}
+    uint32_t get_nBlockPos() const {return nBlockPos;}
+    uint32_t get_nTxPos() const {return nTxPos;}
 
-    CDiskTxPos() noexcept {
+    CDiskTxPos() {
         SetNull();
     }
-    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn) noexcept {
+    CDiskTxPos(unsigned int nFileIn, unsigned int nBlockPosIn, unsigned int nTxPosIn) {
         nFile = nFileIn;
         nBlockPos = nBlockPosIn;
         nTxPos = nTxPosIn;
     }
 
-    void SetNull() noexcept {
+    void SetNull() {
         nFile = std::numeric_limits<uint32_t>::max();
         nBlockPos = 0;
         nTxPos = 0;
     }
-    bool IsNull() const noexcept {
+    bool IsNull() const {
         return (nFile == std::numeric_limits<uint32_t>::max());
     }
 
-    friend bool operator==(const CDiskTxPos &a, const CDiskTxPos &b) noexcept {
+    friend bool operator==(const CDiskTxPos &a, const CDiskTxPos &b) {
         return (a.nFile     == b.nFile &&
                 a.nBlockPos == b.nBlockPos &&
                 a.nTxPos    == b.nTxPos);
     }
-    friend bool operator!=(const CDiskTxPos &a, const CDiskTxPos &b) noexcept {
+    friend bool operator!=(const CDiskTxPos &a, const CDiskTxPos &b) {
         return !(a == b);
     }
 
-    std::string ToString() const noexcept;
-    void print() const noexcept {
+    std::string ToString() const;
+    void print() const {
         logging::LogPrintf("%s", ToString().c_str());
     }
 
@@ -224,12 +224,12 @@ private:
     CDiskTxPos pos;
     std::vector<CDiskTxPos> vSpent;
 public:
-    const CDiskTxPos &get_pos() const noexcept {return pos;}
-    const std::vector<CDiskTxPos> &get_vSpent() const noexcept {return vSpent;}
-    const CDiskTxPos &get_vSpent(int index) const noexcept {return vSpent[index];}
+    const CDiskTxPos &get_pos() const {return pos;}
+    const std::vector<CDiskTxPos> &get_vSpent() const {return vSpent;}
+    const CDiskTxPos &get_vSpent(int index) const {return vSpent[index];}
 
-    std::vector<CDiskTxPos> &set_vSpent() noexcept {return vSpent;}
-    CDiskTxPos &set_vSpent(int index) noexcept {return vSpent[index];}
+    std::vector<CDiskTxPos> &set_vSpent() {return vSpent;}
+    CDiskTxPos &set_vSpent(int index) {return vSpent[index];}
 
     CTxIndex() {
         SetNull();
@@ -245,19 +245,19 @@ public:
         vSpent.clear();
     }
 
-    bool IsNull() const noexcept {
+    bool IsNull() const {
         return pos.IsNull();
     }
 
-    friend bool operator==(const CTxIndex &a, const CTxIndex &b) noexcept {
+    friend bool operator==(const CTxIndex &a, const CTxIndex &b) {
         return (a.pos    == b.pos &&
                 a.vSpent == b.vSpent);
     }
-    friend bool operator!=(const CTxIndex &a, const CTxIndex &b) noexcept {
+    friend bool operator!=(const CTxIndex &a, const CTxIndex &b) {
         return !(a == b);
     }
 
-    int GetDepthInMainChain() const noexcept;
+    int GetDepthInMainChain() const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -314,14 +314,14 @@ private:
     CScriptWitness scriptWitness; //!< Only serialized through CTransaction
 
 public:
-    const COutPoint &get_prevout() const noexcept {return prevout;}
-    const CScript &get_scriptSig() const noexcept {return scriptSig;}
-    uint32_t get_nSequence() const noexcept {return nSequence;}
-    const CScriptWitness &get_scriptWitness() const noexcept {return scriptWitness;}
+    const COutPoint &get_prevout() const {return prevout;}
+    const CScript &get_scriptSig() const {return scriptSig;}
+    uint32_t get_nSequence() const {return nSequence;}
+    const CScriptWitness &get_scriptWitness() const {return scriptWitness;}
 
-    COutPoint &set_prevout() noexcept {return prevout;}
-    CScript &set_scriptSig() noexcept {return scriptSig;}
-    void set_nSequence(uint32_t _seq) noexcept {nSequence = _seq;}
+    COutPoint &set_prevout() {return prevout;}
+    CScript &set_scriptSig() {return scriptSig;}
+    void set_nSequence(uint32_t _seq) {nSequence = _seq;}
     void set_scriptSig(const CScript &_sig) {scriptSig = _sig;}
     CScriptWitness &set_scriptWitness() {return scriptWitness;}
 
@@ -332,7 +332,7 @@ public:
         return *this;
     }
 
-    CTxIn() noexcept {
+    CTxIn() {
         //nSequence = std::numeric_limits<unsigned int>::max();
         nSequence = SEQUENCE_FINAL;
     }
@@ -349,17 +349,17 @@ public:
         nSequence = nSequenceIn;
     }
 
-    bool IsFinal() const noexcept {
+    bool IsFinal() const {
         //return (nSequence == std::numeric_limits<unsigned int>::max());
         return (nSequence == SEQUENCE_FINAL);
     }
 
-    friend bool operator==(const CTxIn &a, const CTxIn &b) noexcept {
+    friend bool operator==(const CTxIn &a, const CTxIn &b) {
         return (a.prevout   == b.prevout &&
                 a.scriptSig == b.scriptSig &&
                 a.nSequence == b.nSequence);
     }
-    friend bool operator!=(const CTxIn &a, const CTxIn &b) noexcept {
+    friend bool operator!=(const CTxIn &a, const CTxIn &b) {
         return !(a == b);
     }
 
@@ -391,13 +391,13 @@ private:
     CScript scriptPubKey;
 
 public:
-    int64_t get_nValue() const noexcept {return nValue;}
-    const CScript &get_scriptPubKey() const noexcept {return scriptPubKey;}
+    int64_t get_nValue() const {return nValue;}
+    const CScript &get_scriptPubKey() const {return scriptPubKey;}
 
-    void set_nValue(int64_t _InValue) noexcept {assert(_InValue >= 0); nValue = _InValue;}
-    void add_nValue(int64_t _InValue) noexcept {assert(! IsNull()); nValue += _InValue;}
-    void sub_nValue(int64_t _InValue) noexcept {nValue -= _InValue; assert(nValue >= 0);}
-    CScript &set_scriptPubKey() noexcept {return scriptPubKey;}
+    void set_nValue(int64_t _InValue) {assert(_InValue >= 0); nValue = _InValue;}
+    void add_nValue(int64_t _InValue) {assert(! IsNull()); nValue += _InValue;}
+    void sub_nValue(int64_t _InValue) {nValue -= _InValue; assert(nValue >= 0);}
+    CScript &set_scriptPubKey() {return scriptPubKey;}
 
     CTxOut() {
         SetNull();
@@ -411,14 +411,14 @@ public:
         nValue = -1;
         scriptPubKey.clear();
     }
-    bool IsNull() const noexcept {
+    bool IsNull() const {
         return (this->nValue == -1);
     }
     void SetEmpty() {
         nValue = 0;
         scriptPubKey.clear();
     }
-    bool IsEmpty() const noexcept {
+    bool IsEmpty() const {
         return (nValue == 0 && scriptPubKey.empty());
     }
     uint256 GetHash() const {
@@ -429,11 +429,11 @@ public:
         return !scriptPubKey.empty() && scriptPubKey.IsZerocoinMint();
     }
 
-    friend bool operator==(const CTxOut &a, const CTxOut &b) noexcept {
+    friend bool operator==(const CTxOut &a, const CTxOut &b) {
         return (a.nValue       == b.nValue &&
                 a.scriptPubKey == b.scriptPubKey);
     }
-    friend bool operator!=(const CTxOut &a, const CTxOut &b) noexcept {
+    friend bool operator!=(const CTxOut &a, const CTxOut &b) {
         return !(a == b);
     }
 
@@ -821,7 +821,7 @@ public:
     template <typename Stream>
     CTransaction(deserialize_type, Stream &s) : CTransaction(CMutableTransaction(deserialize, s)) {}
 
-    const uint256 &GetHash() const noexcept {
+    const uint256 &GetHash() const {
         if(CTransaction::CURRENT_VERSION == 1) {
             hash_v1 = hash_basis::SerializeHash(*this);
             return hash_v1;
@@ -833,9 +833,9 @@ public:
             return hash_v1;
         }
     }
-    const uint256 &GetWitnessHash() const noexcept { return m_witness_hash; }
+    const uint256 &GetWitnessHash() const { return m_witness_hash; }
 
-    bool HasWitness() const noexcept {
+    bool HasWitness() const {
         for (size_t i = 0; i < vin.size(); i++) {
             if (! vin[i].get_scriptWitness().IsNull()) {
                 return true;
@@ -915,8 +915,8 @@ private:
     unsigned int nTransactionsUpdated;
 public:
     static CTxMemPool mempool;
-    CCriticalSection &get_cs() const noexcept {return cs;}
-    const std::map<uint256, CTransaction> &get_mapTx() const noexcept {return mapTx;}
+    CCriticalSection &get_cs() const {return cs;}
+    const std::map<uint256, CTransaction> &get_mapTx() const {return mapTx;}
     const CTransaction &get_mapTx(uint256 hash) const {return mapTx[hash];}
 
     std::map<uint256, CTransaction> &set_mapTx() {return mapTx;}
@@ -928,11 +928,11 @@ public:
     void queryHashes(std::vector<uint256> &vtxid);
     bool IsFromMe(CTransaction &tx);
     void EraseFromWallets(uint256 hash);
-    size_t size() const noexcept {
+    size_t size() const {
         LOCK(cs);
         return mapTx.size();
     }
-    bool exists(uint256 hash) const noexcept {
+    bool exists(uint256 hash) const {
         return (mapTx.count(hash) != 0);
     }
     CTransaction &lookup(uint256 hash) {
@@ -1008,7 +1008,7 @@ struct CMutableTransaction {
     // fly, as opposed to GetHash() in CTransaction, which uses a cached result.
     uint256 GetHash() const;
 
-    bool HasWitness() const noexcept {
+    bool HasWitness() const {
         for (size_t i = 0; i < vin.size(); i++) {
             if (! vin[i].get_scriptWitness().IsNull()) {
                 return true;

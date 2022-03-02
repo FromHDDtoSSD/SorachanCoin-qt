@@ -29,8 +29,8 @@ public:
     static std::string PREDICTION() {return "prediction";}
     static std::string PREDICTIONTEST() {return "predictiontest";}
 
-    const std::string &DataDir() const noexcept { return strDataDir_; }
-    int RPCPort() const noexcept { return nRPCPort_; }
+    const std::string &DataDir() const { return strDataDir_; }
+    int RPCPort() const { return nRPCPort_; }
 
     CBaseChainParams()=delete;
     CBaseChainParams(const CBaseChainParams &)=delete;
@@ -38,7 +38,7 @@ public:
     CBaseChainParams &operator=(const CBaseChainParams &)=delete;
     CBaseChainParams &operator=(CBaseChainParams &&)=delete;
 
-    CBaseChainParams(const std::string &data_dir, int rpc_port) noexcept :
+    CBaseChainParams(const std::string &data_dir, int rpc_port) :
         nRPCPort_(rpc_port), strDataDir_(data_dir) {}
 
 private:
@@ -62,7 +62,7 @@ void SetupChainParamsBaseOptions();
  * Return the currently selected parameters. This won't change after app
  * startup, except for unit tests.
  */
-const CBaseChainParams &BaseParams() noexcept;
+const CBaseChainParams &BaseParams();
 
 /** Sets the params returned by Params() to those for the given network. */
 void SelectBaseParams(const std::string &chain);

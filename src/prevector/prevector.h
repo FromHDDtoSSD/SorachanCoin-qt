@@ -56,49 +56,49 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        iterator() noexcept : ptr(nullptr) {}
-        iterator(T *ptr_) noexcept : ptr(ptr_) {}
-        T &operator*() const noexcept { return *ptr; }
-        T *operator->() const noexcept { return ptr; }
-        T &operator[](size_type pos) noexcept { return ptr[pos]; }
-        const T &operator[](size_type pos) const noexcept { return ptr[pos]; }
-        iterator &operator++() noexcept {
+        iterator() : ptr(nullptr) {}
+        iterator(T *ptr_) : ptr(ptr_) {}
+        T &operator*() const { return *ptr; }
+        T *operator->() const { return ptr; }
+        T &operator[](size_type pos) { return ptr[pos]; }
+        const T &operator[](size_type pos) const { return ptr[pos]; }
+        iterator &operator++() {
             ++ptr;
             return *this;
         }
-        iterator &operator--() noexcept {
+        iterator &operator--() {
             --ptr;
             return *this;
         }
-        iterator operator++(int) noexcept {
+        iterator operator++(int) {
             iterator copy(*this);
             ++(*this);
             return copy;
         }
-        iterator operator--(int) noexcept {
+        iterator operator--(int) {
             iterator copy(*this);
             --(*this);
             return copy;
         }
-        difference_type friend operator-(iterator a, iterator b) noexcept {
+        difference_type friend operator-(iterator a, iterator b) {
             return (&(*a) - &(*b));
         }
-        iterator operator+(size_type n) noexcept { return iterator(ptr + n); }
-        iterator &operator+=(size_type n) noexcept {
+        iterator operator+(size_type n) { return iterator(ptr + n); }
+        iterator &operator+=(size_type n) {
             ptr += n;
             return *this;
         }
-        iterator operator-(size_type n) noexcept { return iterator(ptr - n); }
-        iterator &operator-=(size_type n) noexcept {
+        iterator operator-(size_type n) { return iterator(ptr - n); }
+        iterator &operator-=(size_type n) {
             ptr -= n;
             return *this;
         }
-        bool operator==(iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(iterator x) const noexcept { return ptr != x.ptr; }
-        bool operator>=(iterator x) const noexcept { return ptr >= x.ptr; }
-        bool operator<=(iterator x) const noexcept { return ptr <= x.ptr; }
-        bool operator>(iterator x) const noexcept { return ptr > x.ptr; }
-        bool operator<(iterator x) const noexcept { return ptr < x.ptr; }
+        bool operator==(iterator x) const { return ptr == x.ptr; }
+        bool operator!=(iterator x) const { return ptr != x.ptr; }
+        bool operator>=(iterator x) const { return ptr >= x.ptr; }
+        bool operator<=(iterator x) const { return ptr <= x.ptr; }
+        bool operator>(iterator x) const { return ptr > x.ptr; }
+        bool operator<(iterator x) const { return ptr < x.ptr; }
     };
 
     class reverse_iterator {
@@ -110,32 +110,32 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        reverse_iterator() noexcept : ptr(nullptr) {}
-        reverse_iterator(T *ptr_) noexcept : ptr(ptr_) {}
-        T &operator*() noexcept { return *ptr; }
-        const T &operator*() const noexcept { return *ptr; }
-        T *operator->() noexcept { return ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        reverse_iterator &operator--() noexcept {
+        reverse_iterator() : ptr(nullptr) {}
+        reverse_iterator(T *ptr_) : ptr(ptr_) {}
+        T &operator*() { return *ptr; }
+        const T &operator*() const { return *ptr; }
+        T *operator->() { return ptr; }
+        const T *operator->() const { return ptr; }
+        reverse_iterator &operator--() {
             ++ptr;
             return *this;
         }
-        reverse_iterator &operator++() noexcept {
+        reverse_iterator &operator++() {
             --ptr;
             return *this;
         }
-        reverse_iterator operator++(int) noexcept {
+        reverse_iterator operator++(int) {
             reverse_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        reverse_iterator operator--(int) noexcept {
+        reverse_iterator operator--(int) {
             reverse_iterator copy(*this);
             --(*this);
             return copy;
         }
-        bool operator==(reverse_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(reverse_iterator x) const noexcept { return ptr != x.ptr; }
+        bool operator==(reverse_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(reverse_iterator x) const { return ptr != x.ptr; }
     };
 
     class const_iterator {
@@ -147,53 +147,53 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        const_iterator() noexcept : ptr(nullptr) {}
-        const_iterator(const T *ptr_) noexcept : ptr(ptr_) {}
-        const_iterator(iterator x) noexcept : ptr(&(*x)) {}
-        const T &operator*() const noexcept { return *ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        const T &operator[](size_type pos) const noexcept { return ptr[pos]; }
-        const_iterator &operator++() noexcept {
+        const_iterator() : ptr(nullptr) {}
+        const_iterator(const T *ptr_) : ptr(ptr_) {}
+        const_iterator(iterator x) : ptr(&(*x)) {}
+        const T &operator*() const { return *ptr; }
+        const T *operator->() const { return ptr; }
+        const T &operator[](size_type pos) const { return ptr[pos]; }
+        const_iterator &operator++() {
             ++ptr;
             return *this;
         }
-        const_iterator &operator--() noexcept {
+        const_iterator &operator--() {
             --ptr;
             return *this;
         }
-        const_iterator operator++(int) noexcept {
+        const_iterator operator++(int) {
             const_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        const_iterator operator--(int) noexcept {
+        const_iterator operator--(int) {
             const_iterator copy(*this);
             --(*this);
             return copy;
         }
-        difference_type friend operator-(const_iterator a, const_iterator b) noexcept {
+        difference_type friend operator-(const_iterator a, const_iterator b) {
             return (&(*a) - &(*b));
         }
-        const_iterator operator+(size_type n) noexcept {
+        const_iterator operator+(size_type n) {
             return const_iterator(ptr + n);
         }
-        const_iterator &operator+=(size_type n) noexcept {
+        const_iterator &operator+=(size_type n) {
             ptr += n;
             return *this;
         }
-        const_iterator operator-(size_type n) noexcept {
+        const_iterator operator-(size_type n) {
             return const_iterator(ptr - n);
         }
-        const_iterator &operator-=(size_type n) noexcept {
+        const_iterator &operator-=(size_type n) {
             ptr -= n;
             return *this;
         }
-        bool operator==(const_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(const_iterator x) const noexcept { return ptr != x.ptr; }
-        bool operator>=(const_iterator x) const noexcept { return ptr >= x.ptr; }
-        bool operator<=(const_iterator x) const noexcept { return ptr <= x.ptr; }
-        bool operator>(const_iterator x) const noexcept { return ptr > x.ptr; }
-        bool operator<(const_iterator x) const noexcept { return ptr < x.ptr; }
+        bool operator==(const_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(const_iterator x) const { return ptr != x.ptr; }
+        bool operator>=(const_iterator x) const { return ptr >= x.ptr; }
+        bool operator<=(const_iterator x) const { return ptr <= x.ptr; }
+        bool operator>(const_iterator x) const { return ptr > x.ptr; }
+        bool operator<(const_iterator x) const { return ptr < x.ptr; }
     };
 
     class const_reverse_iterator {
@@ -205,31 +205,31 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        const_reverse_iterator() noexcept : ptr(nullptr) {}
-        const_reverse_iterator(T *ptr_) noexcept : ptr(ptr_) {}
-        const_reverse_iterator(reverse_iterator x) noexcept : ptr(&(*x)) {}
-        const T &operator*() const noexcept { return *ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        const_reverse_iterator &operator--() noexcept {
+        const_reverse_iterator() : ptr(nullptr) {}
+        const_reverse_iterator(T *ptr_) : ptr(ptr_) {}
+        const_reverse_iterator(reverse_iterator x) : ptr(&(*x)) {}
+        const T &operator*() const { return *ptr; }
+        const T *operator->() const { return ptr; }
+        const_reverse_iterator &operator--() {
             ++ptr;
             return *this;
         }
-        const_reverse_iterator &operator++() noexcept {
+        const_reverse_iterator &operator++() {
             --ptr;
             return *this;
         }
-        const_reverse_iterator operator++(int) noexcept {
+        const_reverse_iterator operator++(int) {
             const_reverse_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        const_reverse_iterator operator--(int) noexcept {
+        const_reverse_iterator operator--(int) {
             const_reverse_iterator copy(*this);
             --(*this);
             return copy;
         }
-        bool operator==(const_reverse_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(const_reverse_iterator x) const noexcept { return ptr != x.ptr; }
+        bool operator==(const_reverse_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(const_reverse_iterator x) const { return ptr != x.ptr; }
     };
 
 private:
@@ -243,19 +243,19 @@ private:
         } _s;
     } _union;
 
-    T *direct_ptr(difference_type pos) noexcept {
+    T *direct_ptr(difference_type pos) {
         return reinterpret_cast<T *>(_union.direct) + pos;
     }
-    const T *direct_ptr(difference_type pos) const noexcept {
+    const T *direct_ptr(difference_type pos) const {
         return reinterpret_cast<const T *>(_union.direct) + pos;
     }
-    T *indirect_ptr(difference_type pos) noexcept {
+    T *indirect_ptr(difference_type pos) {
         return reinterpret_cast<T *>(_union._s.indirect) + pos;
     }
-    const T *indirect_ptr(difference_type pos) const noexcept {
+    const T *indirect_ptr(difference_type pos) const {
         return reinterpret_cast<const T *>(_union._s.indirect) + pos;
     }
-    bool is_direct() const noexcept { return _size <= N; }
+    bool is_direct() const { return _size <= N; }
 
     void change_capacity(size_type new_capacity) {
         DEBUGCS_OUTPUT("prevector: void change_capacity(size_type new_capacity)");
@@ -298,15 +298,15 @@ private:
         }
     }
 
-    T *item_ptr(difference_type pos) noexcept {
+    T *item_ptr(difference_type pos) {
         return is_direct() ? direct_ptr(pos) : indirect_ptr(pos);
     }
-    const T *item_ptr(difference_type pos) const noexcept {
+    const T *item_ptr(difference_type pos) const {
         return is_direct() ? direct_ptr(pos) : indirect_ptr(pos);
     }
 
     template <typename InputIterator>
-    void copy(size_type pcur, InputIterator first, InputIterator last, size_type n) noexcept {
+    void copy(size_type pcur, InputIterator first, InputIterator last, size_type n) {
         if (IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             std::memcpy(item_ptr(pcur), &(*first), n * sizeof(T));
             _size += n;
@@ -320,7 +320,7 @@ private:
         }
     }
 
-    void fill(size_type pcur, const T &val, size_type n) noexcept {
+    void fill(size_type pcur, const T &val, size_type n) {
         if (IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             const int *_val = reinterpret_cast<const int *>(&val);
             std::memset(item_ptr(pcur), *_val, n * sizeof(T));
@@ -355,8 +355,8 @@ public:
         copy(size(), first, last, n);
     }
 
-    prevector() noexcept : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector prevector() noexcept");
+    prevector() : _size(0), _invch(nullptr) {
+        DEBUGCS_OUTPUT("prevector prevector()");
     }
 
     explicit prevector(size_type n) : _size(0), _invch(nullptr) {
@@ -385,8 +385,8 @@ public:
         copy(size(), other.begin(), other.end(), other.size());
     }
 
-    prevector(prevector<N, T, Size, Diff> &&other) noexcept : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector: prevector(prevector<N, T, Size, Diff> &&other) noexcept");
+    prevector(prevector<N, T, Size, Diff> &&other) : _size(0), _invch(nullptr) {
+        DEBUGCS_OUTPUT("prevector: prevector(prevector<N, T, Size, Diff> &&other)");
         swap(other);
     }
 
@@ -401,58 +401,58 @@ public:
         return *this;
     }
 
-    prevector &operator=(prevector<N, T, Size, Diff> &&other) noexcept {
-        DEBUGCS_OUTPUT("prevector: prevector &prevector=(prevector<N, T, Size, Diff> &&other) noexcept");
+    prevector &operator=(prevector<N, T, Size, Diff> &&other) {
+        DEBUGCS_OUTPUT("prevector: prevector &prevector=(prevector<N, T, Size, Diff> &&other)");
         swap(other);
         return *this;
     }
 
-    size_type size() const noexcept {
-        DEBUGCS_OUTPUT("prevector: size_type size() const noexcept");
+    size_type size() const {
+        DEBUGCS_OUTPUT("prevector: size_type size() const");
         return is_direct() ? _size : _size - N - 1;
     }
 
-    bool empty() const noexcept {
-        DEBUGCS_OUTPUT("prevector: bool empty() const noexcept");
+    bool empty() const {
+        DEBUGCS_OUTPUT("prevector: bool empty() const");
         return (size() == 0);
     }
 
-    iterator begin() noexcept {
-        DEBUGCS_OUTPUT("prevector: iterator begin() noexcept");
+    iterator begin() {
+        DEBUGCS_OUTPUT("prevector: iterator begin()");
         return iterator(item_ptr(0));
     }
-    const_iterator begin() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const_iterator begin() const noexcept");
+    const_iterator begin() const {
+        DEBUGCS_OUTPUT("prevector: const_iterator begin() const");
         return const_iterator(item_ptr(0));
     }
-    iterator end() noexcept {
-        DEBUGCS_OUTPUT("prevector: iterator end() noexcept");
+    iterator end() {
+        DEBUGCS_OUTPUT("prevector: iterator end()");
         return iterator(item_ptr(size()));
     }
-    const_iterator end() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const_iterator end() const noexcept");
+    const_iterator end() const {
+        DEBUGCS_OUTPUT("prevector: const_iterator end() const");
         return const_iterator(item_ptr(size()));
     }
 
-    reverse_iterator rbegin() noexcept {
-        DEBUGCS_OUTPUT("prevector: reverse_iterator rbegin() noexcept");
+    reverse_iterator rbegin() {
+        DEBUGCS_OUTPUT("prevector: reverse_iterator rbegin()");
         return reverse_iterator(item_ptr(size() - 1));
     }
-    const_reverse_iterator rbegin() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rbegin() const noexcept");
+    const_reverse_iterator rbegin() const {
+        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rbegin() const");
         return const_reverse_iterator(item_ptr(size() - 1));
     }
-    reverse_iterator rend() noexcept {
-        DEBUGCS_OUTPUT("prevector: reverse_iterator rend() noexcept");
+    reverse_iterator rend() {
+        DEBUGCS_OUTPUT("prevector: reverse_iterator rend()");
         return reverse_iterator(item_ptr(-1));
     }
-    const_reverse_iterator rend() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rend() const noexcept");
+    const_reverse_iterator rend() const {
+        DEBUGCS_OUTPUT("prevector: const_reverse_iterator rend() const");
         return const_reverse_iterator(item_ptr(-1));
     }
 
-    size_t capacity() const noexcept {
-        DEBUGCS_OUTPUT("prevector: size_t capacity() const noexcept");
+    size_t capacity() const {
+        DEBUGCS_OUTPUT("prevector: size_t capacity() const");
         if (is_direct()) {
             return N;
         } else {
@@ -460,13 +460,13 @@ public:
         }
     }
 
-    T &operator[](size_type pos) noexcept {
-        DEBUGCS_OUTPUT("prevector: T &operator[](size_type pos) noexcept");
+    T &operator[](size_type pos) {
+        DEBUGCS_OUTPUT("prevector: T &operator[](size_type pos)");
         return *item_ptr(pos);
     }
 
-    const T &operator[](size_type pos) const noexcept {
-        DEBUGCS_OUTPUT("prevector: const T &operator[](size_type pos) const noexcept");
+    const T &operator[](size_type pos) const {
+        DEBUGCS_OUTPUT("prevector: const T &operator[](size_type pos) const");
         return *item_ptr(pos);
     }
 
@@ -541,13 +541,13 @@ public:
         copy(p, first, last, count);
     }
 
-    iterator erase(iterator pos) noexcept {
-        DEBUGCS_OUTPUT("prevector: iterator erase(iterator pos) noexcept");
+    iterator erase(iterator pos) {
+        DEBUGCS_OUTPUT("prevector: iterator erase(iterator pos)");
         return erase(pos, pos + 1);
     }
 
-    iterator erase(iterator first, iterator last) noexcept {
-        DEBUGCS_OUTPUT("prevector: iterator erase(iterator first, iterator last) noexcept");
+    iterator erase(iterator first, iterator last) {
+        DEBUGCS_OUTPUT("prevector: iterator erase(iterator first, iterator last)");
         iterator p = first;
         char *endp = (char *)&(*end());
         if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
@@ -574,40 +574,40 @@ public:
         ++_size;
     }
 
-    void pop_back() noexcept {
-        DEBUGCS_OUTPUT("prevector: void pop_back() noexcept");
+    void pop_back() {
+        DEBUGCS_OUTPUT("prevector: void pop_back()");
         erase(end() - 1, end());
     }
 
-    T &front() noexcept {
-        DEBUGCS_OUTPUT("prevector: T &front() noexcept");
+    T &front() {
+        DEBUGCS_OUTPUT("prevector: T &front()");
         return *item_ptr(0);
     }
 
-    const T &front() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const T &front() const noexcept");
+    const T &front() const {
+        DEBUGCS_OUTPUT("prevector: const T &front() const");
         return *item_ptr(0);
     }
 
-    T &back() noexcept {
-        DEBUGCS_OUTPUT("prevector: T &back() noexcept");
+    T &back() {
+        DEBUGCS_OUTPUT("prevector: T &back()");
         return *item_ptr(size() - 1);
     }
 
-    const T &back() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const T &back() const noexcept");
+    const T &back() const {
+        DEBUGCS_OUTPUT("prevector: const T &back() const");
         return *item_ptr(size() - 1);
     }
 
-    void swap(prevector<N, T, Size, Diff> &other) noexcept {
-        DEBUGCS_OUTPUT("prevector: void swap(prevector<N, T, Size, Diff> &other) noexcept");
+    void swap(prevector<N, T, Size, Diff> &other) {
+        DEBUGCS_OUTPUT("prevector: void swap(prevector<N, T, Size, Diff> &other)");
         std::swap(_invch, other._invch);
         std::swap(_union, other._union);
         std::swap(_size, other._size);
     }
 
     ~prevector() {
-        DEBUGCS_OUTPUT("prevector: ~prevector() noexcept");
+        DEBUGCS_OUTPUT("prevector: ~prevector()");
         if (! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             clear();
         }
@@ -618,8 +618,8 @@ public:
         }
     }
 
-    bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector: bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator==(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector: bool operator==(const prevector<N, T, Size, Diff> &other) const");
         if (other.size() != size()) {
             return false;
         }
@@ -637,13 +637,13 @@ public:
         return true;
     }
 
-    bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector: bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator!=(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector: bool operator!=(const prevector<N, T, Size, Diff> &other) const");
         return !(*this == other);
     }
 
-    bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector: bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator<(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector: bool operator<(const prevector<N, T, Size, Diff> &other) const");
         if (size() < other.size()) {
             return true;
         }
@@ -667,13 +667,13 @@ public:
         return false;
     }
 
-    bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector: bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator>(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector: bool operator>(const prevector<N, T, Size, Diff> &other) const");
         return ((!operator<(other)) && (!operator==(other)));
     }
 
-    size_t allocated_memory() const noexcept {
-        DEBUGCS_OUTPUT("prevector: size_t allocated_memory() const noexcept");
+    size_t allocated_memory() const {
+        DEBUGCS_OUTPUT("prevector: size_t allocated_memory() const");
         if (is_direct()) {
             return 0;
         } else {
@@ -681,23 +681,23 @@ public:
         }
     }
 
-    value_type *data() noexcept {
-        DEBUGCS_OUTPUT("prevector: value_type *data() noexcept");
+    value_type *data() {
+        DEBUGCS_OUTPUT("prevector: value_type *data()");
         return item_ptr(0);
     }
 
-    const value_type *data() const noexcept {
-        DEBUGCS_OUTPUT("prevector: const value_type *data() const noexcept");
+    const value_type *data() const {
+        DEBUGCS_OUTPUT("prevector: const value_type *data() const");
         return item_ptr(0);
     }
 
-    const value_type &at(int pos) const noexcept {
-        DEBUGCS_OUTPUT("prevector: const value_type &at(int pos) const noexcept");
+    const value_type &at(int pos) const {
+        DEBUGCS_OUTPUT("prevector: const value_type &at(int pos) const");
         return operator[](pos);
     }
 
-    value_type &at(int pos) noexcept {
-        DEBUGCS_OUTPUT("prevector: value_type &at(int pos) noexcept");
+    value_type &at(int pos) {
+        DEBUGCS_OUTPUT("prevector: value_type &at(int pos)");
         return operator[](pos);
     }
 
@@ -705,20 +705,20 @@ public:
     // The following operator isn't used because their interpretation is ambiguous.
     //
     // template <typename A = std::allocator<T> >
-    // operator std::vector<T, A>() const noexcept {
-    //     DEBUGCS_OUTPUT("prevector: cast overload std::vector<T, A>() const noexcept");
+    // operator std::vector<T, A>() const {
+    //     DEBUGCS_OUTPUT("prevector: cast overload std::vector<T, A>() const");
     //     std::vector<T, A> obj(data(), data() + size());
     //     return obj;
     // }
 
-    template <typename A = std::allocator<T> > std::vector<T, A> get_std_vector() const noexcept {
-        DEBUGCS_OUTPUT("prevector: std::vector<T, A> get_std_vector() const noexcept");
+    template <typename A = std::allocator<T> > std::vector<T, A> get_std_vector() const {
+        DEBUGCS_OUTPUT("prevector: std::vector<T, A> get_std_vector() const");
         std::vector<T, A> obj(data(), data() + size());
         return obj;
     }
 
     template <typename A = std::allocator<T> >
-    static prevector<N, T, Size, Diff> get_prevector(const std::vector<T, A> &v) noexcept {
+    static prevector<N, T, Size, Diff> get_prevector(const std::vector<T, A> &v) {
         DEBUGCS_OUTPUT("prevector: prevector<N, T, Size, Diff> get_prevector(const std::vector<T, A> &v)");
         prevector<N, T, Size, Diff> obj(v.data(), v.data() + v.size());
         return obj;

@@ -13,7 +13,7 @@ extern "C" {
 
 namespace latest_crypto {
 
-AES128Encrypt::AES128Encrypt(const unsigned char key[16]) noexcept
+AES128Encrypt::AES128Encrypt(const unsigned char key[16])
 {
     AES128_init(&ctx, key);
 }
@@ -23,27 +23,27 @@ AES128Encrypt::~AES128Encrypt()
     std::memset(&ctx, 0, sizeof(ctx));
 }
 
-void AES128Encrypt::Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const noexcept
+void AES128Encrypt::Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const
 {
     AES128_encrypt(&ctx, 1, ciphertext, plaintext);
 }
 
-AES128Decrypt::AES128Decrypt(const unsigned char key[16]) noexcept
+AES128Decrypt::AES128Decrypt(const unsigned char key[16])
 {
     AES128_init(&ctx, key);
 }
 
-AES128Decrypt::~AES128Decrypt() noexcept
+AES128Decrypt::~AES128Decrypt()
 {
     std::memset(&ctx, 0, sizeof(ctx));
 }
 
-void AES128Decrypt::Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const noexcept
+void AES128Decrypt::Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const
 {
     AES128_decrypt(&ctx, 1, plaintext, ciphertext);
 }
 
-AES256Encrypt::AES256Encrypt(const unsigned char key[32]) noexcept
+AES256Encrypt::AES256Encrypt(const unsigned char key[32])
 {
     AES256_init(&ctx, key);
 }
@@ -53,12 +53,12 @@ AES256Encrypt::~AES256Encrypt()
     std::memset(&ctx, 0, sizeof(ctx));
 }
 
-void AES256Encrypt::Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const noexcept
+void AES256Encrypt::Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const
 {
     AES256_encrypt(&ctx, 1, ciphertext, plaintext);
 }
 
-AES256Decrypt::AES256Decrypt(const unsigned char key[32]) noexcept
+AES256Decrypt::AES256Decrypt(const unsigned char key[32])
 {
     AES256_init(&ctx, key);
 }
@@ -68,7 +68,7 @@ AES256Decrypt::~AES256Decrypt()
     std::memset(&ctx, 0, sizeof(ctx));
 }
 
-void AES256Decrypt::Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const noexcept
+void AES256Decrypt::Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const
 {
     AES256_decrypt(&ctx, 1, plaintext, ciphertext);
 }
@@ -77,7 +77,7 @@ namespace
 {
 
 template <typename T>
-int CBCEncrypt(const T& enc, const unsigned char iv[AES_BLOCKSIZE], const unsigned char* data, int size, bool pad, unsigned char* out) noexcept
+int CBCEncrypt(const T& enc, const unsigned char iv[AES_BLOCKSIZE], const unsigned char* data, int size, bool pad, unsigned char* out)
 {
     int written = 0;
     int padsize = size % AES_BLOCKSIZE;
@@ -113,7 +113,7 @@ int CBCEncrypt(const T& enc, const unsigned char iv[AES_BLOCKSIZE], const unsign
 }
 
 template <typename T>
-int CBCDecrypt(const T& dec, const unsigned char iv[AES_BLOCKSIZE], const unsigned char* data, int size, bool pad, unsigned char* out) noexcept
+int CBCDecrypt(const T& dec, const unsigned char iv[AES_BLOCKSIZE], const unsigned char* data, int size, bool pad, unsigned char* out)
 {
     int written = 0;
     bool fail = false;
@@ -155,13 +155,13 @@ int CBCDecrypt(const T& dec, const unsigned char iv[AES_BLOCKSIZE], const unsign
 
 } // namespace
 
-AES256CBCEncrypt::AES256CBCEncrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept
+AES256CBCEncrypt::AES256CBCEncrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn)
     : enc(key), pad(padIn)
 {
     std::memcpy(iv, ivIn, AES_BLOCKSIZE);
 }
 
-int AES256CBCEncrypt::Encrypt(const unsigned char* data, int size, unsigned char* out) const noexcept
+int AES256CBCEncrypt::Encrypt(const unsigned char* data, int size, unsigned char* out) const
 {
     return CBCEncrypt(enc, iv, data, size, pad, out);
 }
@@ -171,14 +171,14 @@ AES256CBCEncrypt::~AES256CBCEncrypt()
     std::memset(iv, 0, sizeof(iv));
 }
 
-AES256CBCDecrypt::AES256CBCDecrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept
+AES256CBCDecrypt::AES256CBCDecrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn)
     : dec(key), pad(padIn)
 {
     std::memcpy(iv, ivIn, AES_BLOCKSIZE);
 }
 
 
-int AES256CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char* out) const noexcept
+int AES256CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char* out) const
 {
     return CBCDecrypt(dec, iv, data, size, pad, out);
 }
@@ -188,7 +188,7 @@ AES256CBCDecrypt::~AES256CBCDecrypt()
     std::memset(iv, 0, sizeof(iv));
 }
 
-AES128CBCEncrypt::AES128CBCEncrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept
+AES128CBCEncrypt::AES128CBCEncrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn)
     : enc(key), pad(padIn)
 {
     std::memcpy(iv, ivIn, AES_BLOCKSIZE);
@@ -199,12 +199,12 @@ AES128CBCEncrypt::~AES128CBCEncrypt()
     std::memset(iv, 0, AES_BLOCKSIZE);
 }
 
-int AES128CBCEncrypt::Encrypt(const unsigned char* data, int size, unsigned char* out) const noexcept
+int AES128CBCEncrypt::Encrypt(const unsigned char* data, int size, unsigned char* out) const
 {
     return CBCEncrypt(enc, iv, data, size, pad, out);
 }
 
-AES128CBCDecrypt::AES128CBCDecrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept
+AES128CBCDecrypt::AES128CBCDecrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn)
     : dec(key), pad(padIn)
 {
     std::memcpy(iv, ivIn, AES_BLOCKSIZE);
@@ -215,7 +215,7 @@ AES128CBCDecrypt::~AES128CBCDecrypt()
     std::memset(iv, 0, AES_BLOCKSIZE);
 }
 
-int AES128CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char* out) const noexcept
+int AES128CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char* out) const
 {
     return CBCDecrypt(dec, iv, data, size, pad, out);
 }

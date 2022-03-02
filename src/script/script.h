@@ -133,7 +133,7 @@ namespace TxnOutputType
         TX_WITNESS_UNKNOWN, //!< Only for Witness versions not already defined above
     };
     /** Get the name of a txnouttype as a C string, or nullptr if unknown. */
-    const char *GetTxnOutputType(TxnOutputType::txnouttype t) noexcept;
+    const char *GetTxnOutputType(TxnOutputType::txnouttype t);
 }
 
 //
@@ -297,7 +297,7 @@ namespace ScriptOpcodes
     // Maximum value that an opcode can be
     static constexpr unsigned int MAX_OPCODE = OP_PUBKEY;
 
-    const char *GetOpName(ScriptOpcodes::opcodetype opcode) noexcept;
+    const char *GetOpName(ScriptOpcodes::opcodetype opcode);
 }
 
 //

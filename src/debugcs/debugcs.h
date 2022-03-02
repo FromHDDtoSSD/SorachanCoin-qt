@@ -41,11 +41,11 @@ class debugcs final {
     mutable CRITICAL_SECTION cs;
 #endif
 public:
-    static debugcs &instance() noexcept {
+    static debugcs &instance() {
         static debugcs obj;
         return obj;
     }
-    const debugcs &operator<<(const std::wstring &obj) const noexcept {
+    const debugcs &operator<<(const std::wstring &obj) const {
 #if defined(WIN32) && defined(DEBUG)
         ::EnterCriticalSection(&cs);
         std::wostringstream stream;
@@ -58,7 +58,7 @@ public:
         return *this;
     }
     template <typename T>
-    const debugcs &operator<<(const T &obj) const noexcept {
+    const debugcs &operator<<(const T &obj) const {
 #if defined(WIN32) && defined(DEBUG)
         ::EnterCriticalSection(&cs);
         std::ostringstream stream;
@@ -70,12 +70,12 @@ public:
 #endif
         return *this;
     }
-    static const char *endl() noexcept {
+    static const char *endl() {
         return "\n";
     }
 
 private:
-    debugcs() noexcept {
+    debugcs() {
 #if defined(WIN32) && defined(DEBUG)
         FILE *fp = nullptr;
         ::AllocConsole();

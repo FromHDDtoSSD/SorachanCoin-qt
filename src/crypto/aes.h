@@ -23,9 +23,9 @@ class AES128Encrypt
 private:
     AES128_ctx ctx;
 public:
-    explicit AES128Encrypt(const unsigned char key[16]) noexcept;
+    explicit AES128Encrypt(const unsigned char key[16]);
     ~AES128Encrypt();
-    void Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const noexcept;
+    void Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const;
 };
 
 /** A decryption class for AES-128. */
@@ -34,9 +34,9 @@ class AES128Decrypt
 private:
     AES128_ctx ctx;
 public:
-    explicit AES128Decrypt(const unsigned char key[16]) noexcept;
+    explicit AES128Decrypt(const unsigned char key[16]);
     ~AES128Decrypt();
-    void Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const noexcept;
+    void Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const;
 };
 
 /** An encryption class for AES-256. */
@@ -45,9 +45,9 @@ class AES256Encrypt
 private:
     AES256_ctx ctx;
 public:
-    explicit AES256Encrypt(const unsigned char key[32]) noexcept;
+    explicit AES256Encrypt(const unsigned char key[32]);
     ~AES256Encrypt();
-    void Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const noexcept;
+    void Encrypt(unsigned char ciphertext[16], const unsigned char plaintext[16]) const;
 };
 
 /** A decryption class for AES-256. */
@@ -56,17 +56,17 @@ class AES256Decrypt
 private:
     AES256_ctx ctx;
 public:
-    explicit AES256Decrypt(const unsigned char key[32]) noexcept;
+    explicit AES256Decrypt(const unsigned char key[32]);
     ~AES256Decrypt();
-    void Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const noexcept;
+    void Decrypt(unsigned char plaintext[16], const unsigned char ciphertext[16]) const;
 };
 
 class AES256CBCEncrypt
 {
 public:
-    AES256CBCEncrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept;
+    AES256CBCEncrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn);
     ~AES256CBCEncrypt();
-    int Encrypt(const unsigned char* data, int size, unsigned char* out) const noexcept;
+    int Encrypt(const unsigned char* data, int size, unsigned char* out) const;
 private:
     const AES256Encrypt enc;
     const bool pad;
@@ -76,9 +76,9 @@ private:
 class AES256CBCDecrypt
 {
 public:
-    AES256CBCDecrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept;
+    AES256CBCDecrypt(const unsigned char key[AES256_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn);
     ~AES256CBCDecrypt();
-    int Decrypt(const unsigned char* data, int size, unsigned char* out) const noexcept;
+    int Decrypt(const unsigned char* data, int size, unsigned char* out) const;
 private:
     const AES256Decrypt dec;
     const bool pad;
@@ -88,9 +88,9 @@ private:
 class AES128CBCEncrypt
 {
 public:
-    AES128CBCEncrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept;
+    AES128CBCEncrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn);
     ~AES128CBCEncrypt();
-    int Encrypt(const unsigned char* data, int size, unsigned char* out) const noexcept;
+    int Encrypt(const unsigned char* data, int size, unsigned char* out) const;
 private:
     const AES128Encrypt enc;
     const bool pad;
@@ -100,9 +100,9 @@ private:
 class AES128CBCDecrypt
 {
 public:
-    AES128CBCDecrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn) noexcept;
+    AES128CBCDecrypt(const unsigned char key[AES128_KEYSIZE], const unsigned char ivIn[AES_BLOCKSIZE], bool padIn);
     ~AES128CBCDecrypt();
-    int Decrypt(const unsigned char* data, int size, unsigned char* out) const noexcept;
+    int Decrypt(const unsigned char* data, int size, unsigned char* out) const;
 private:
     const AES128Decrypt dec;
     const bool pad;

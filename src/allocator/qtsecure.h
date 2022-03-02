@@ -62,7 +62,7 @@ private:
     QtSecureAllocator &operator=(QtSecureAllocator &&)=delete;
 
 public:
-    void *alloc(size_t size) noexcept { // NG: nullptr
+    void *alloc(size_t size) { // NG: nullptr
         auto LockedCounter = [](const std::map<void *, SecureStatus> &mapused) {
             size_t counter=0;
             for(const std::pair<void *, SecureStatus> &obj: mapused) {
@@ -100,7 +100,7 @@ public:
         return (void *)(mp+sizeof(size_t));
     }
 
-    void free(void *p) noexcept {
+    void free(void *p) {
         LOCK(cs_);
         if(mapused_.count(p))
             mapused_[p] = SecureBlank;
@@ -113,7 +113,7 @@ public:
         }
     }
 
-    static QtSecureAllocator &instance() noexcept {
+    static QtSecureAllocator &instance() {
         static QtSecureAllocator obj;
         return obj;
     }
@@ -121,19 +121,19 @@ public:
 
 class QString_s : public QString {
 public:
-    void *operator new(size_t size) noexcept {
+    void *operator new(size_t size) {
         debugcs::instance() << "QString_s new size: " << size << debugcs::endl();
         return QtSecureAllocator::instance().alloc(size);
     }
-    void *operator new[](size_t size) noexcept {
+    void *operator new[](size_t size) {
         debugcs::instance() << "QString_s new[] size: " << size << debugcs::endl();
         return QtSecureAllocator::instance().alloc(size);
     }
-    void operator delete(void *p) noexcept {
+    void operator delete(void *p) {
         debugcs::instance() << "QString_s delete p: " << p << debugcs::endl();
         QtSecureAllocator::instance().free(p);
     }
-    void operator delete[](void *p) noexcept {
+    void operator delete[](void *p) {
         debugcs::instance() << "QString_s delete[] p: " << p << debugcs::endl();
         QtSecureAllocator::instance().free(p);
     }

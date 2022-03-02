@@ -47,7 +47,7 @@ class allocators_basis
     allocators_basis &operator=(allocators_basis &&)=delete;
 private:
     /** Determine system page size in bytes */
-    static size_t GetSystemPageSize() noexcept {
+    static size_t GetSystemPageSize() {
         size_t page_size;
 
 #if defined(WIN32)
@@ -81,14 +81,14 @@ public:
         MemoryPageLocker &operator=(MemoryPageLocker &&)=delete;
 
     public:
-        MemoryPageLocker() noexcept {}
+        MemoryPageLocker() {}
         ~MemoryPageLocker() {}
 
         //
         // Lock memory pages.
         // addr and len must be a multiple of the system page size
         //
-        bool Lock(const void *addr, size_t len) noexcept {
+        bool Lock(const void *addr, size_t len) {
 #ifdef WIN32
             return ::VirtualLock(const_cast<void *>(addr), len) != 0;
 #else
@@ -100,7 +100,7 @@ public:
         // Unlock memory pages.
         // addr and len must be a multiple of the system page size
         //
-        bool Unlock(const void *addr, size_t len) noexcept {
+        bool Unlock(const void *addr, size_t len) {
 #ifdef WIN32
             return ::VirtualUnlock(const_cast<void *>(addr), len) != 0;
 #else
@@ -139,7 +139,7 @@ public:
         size_t page_size, page_mask;
 
     public:
-        LockedPageManagerBase(size_t page_size) noexcept : page_size(page_size) {
+        LockedPageManagerBase(size_t page_size) : page_size(page_size) {
             // Determine bitmask for extracting page from address
             assert(! (page_size & (page_size - 1))); // size must be power of two
             page_mask = ~(page_size - 1);
@@ -147,7 +147,7 @@ public:
         ~LockedPageManagerBase() {}
 
         // For all pages in affected range, increase lock count
-        void LockRange(void *p, size_t size) noexcept {
+        void LockRange(void *p, size_t size) {
             std::lock_guard<std::mutex> lock(mtx);
             if (! size) return;
 
@@ -167,7 +167,7 @@ public:
         }
 
         // For all pages in affected range, decrease lock count
-        void UnlockRange(void *p, size_t size) noexcept {
+        void UnlockRange(void *p, size_t size) {
             std::lock_guard<std::mutex> lock(mtx);
             if (! size) return;
 
@@ -189,7 +189,7 @@ public:
         }
 
         // Get number of locked pages for diagnostics
-        int GetLockedPageCount() const noexcept {
+        int GetLockedPageCount() const {
             std::lock_guard<std::mutex> lock(mtx);
             return histogram.size();
         }
@@ -294,11 +294,11 @@ public:
     SecureString(const SecureString &obj) {
         *this = obj;
     }
-    SecureString(const SecureString &&obj) noexcept {
+    SecureString(const SecureString &&obj) {
         this->str_ = std::move(obj.str_);
     }
 
-    const char *c_str() const noexcept {
+    const char *c_str() const {
         return str_.c_str();
     }
     SecureString &operator=(const SecureString &obj) {
@@ -307,21 +307,21 @@ public:
     }
     SecureString &operator=(const std::string &)=delete;
     SecureString &operator=(const char *)=delete;
-    bool operator==(const SecureString &obj) const noexcept {
+    bool operator==(const SecureString &obj) const {
         return (this->str_ == obj.str_);
     }
 
-    std::size_t size() const noexcept {
+    std::size_t size() const {
         return str_.size();
     }
-    std::size_t length() const noexcept {
+    std::size_t length() const {
         return str_.length();
     }
     void reserve(std::size_t size) {
         str_.reserve(size);
     }
     void resize(std::size_t)=delete; // must be used reserve(size_t).
-    bool empty() const noexcept {
+    bool empty() const {
         return str_.empty();
     }
     SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
@@ -331,7 +331,7 @@ public:
     SecureString &assign(const char *)=delete;
 
     // insert [] or ()
-    char &operator[](std::size_t pos) const noexcept { // insert string directly
+    char &operator[](std::size_t pos) const { // insert string directly
         assert(0 <= pos && pos < str_.size());
         return *(const_cast<char *>(str_.c_str()) + pos);
     }

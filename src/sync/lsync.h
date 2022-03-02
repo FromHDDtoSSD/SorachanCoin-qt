@@ -7,7 +7,7 @@
 #ifndef BITCOIN_LSYNC_H
 #define BITCOIN_LSYNC_H
 
-#define LSYNC_DISABLED // using sync.h
+//#define LSYNC_DISABLED // using sync.h
 
 #ifdef LSYNC_DISABLED
 #include <sync/sync.h>

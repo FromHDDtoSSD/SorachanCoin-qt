@@ -25,18 +25,18 @@ class bool_arg {
 private:
     bool flag;
 public:
-    explicit bool_arg() noexcept : flag(false) {}
-    explicit bool_arg(bool b) noexcept : flag(b) {}
-    bool_arg(const bool_arg &obj) noexcept : flag(obj.flag) {}
-    bool_arg &operator=(const bool &obj) noexcept {
+    explicit bool_arg() : flag(false) {}
+    explicit bool_arg(bool b) : flag(b) {}
+    bool_arg(const bool_arg &obj) : flag(obj.flag) {}
+    bool_arg &operator=(const bool &obj) {
         flag = obj;
         return *this;
     }
-    bool_arg &operator=(const bool_arg &obj) noexcept {
+    bool_arg &operator=(const bool_arg &obj) {
         flag = obj.flag;
         return *this;
     }
-    operator bool() const noexcept {
+    operator bool() const {
         return flag;
     }
 };
@@ -242,16 +242,16 @@ public:
     /**
      * interface
      */
-    CCriticalSection &get_cs_args() const noexcept {return cs_args;}
-    std::map<std::string, std::vector<std::string>> &get_override_args() const noexcept {return m_override_args;}
-    std::map<std::string, std::vector<std::string>> &get_config_args() const noexcept {return m_config_args;}
-    std::string &get_network() const noexcept {return m_network;}
-    std::set<std::string> &get_network_only_args() const noexcept {return m_network_only_args;}
+    CCriticalSection &get_cs_args() const {return cs_args;}
+    std::map<std::string, std::vector<std::string>> &get_override_args() const {return m_override_args;}
+    std::map<std::string, std::vector<std::string>> &get_config_args() const {return m_config_args;}
+    std::string &get_network() const {return m_network;}
+    std::set<std::string> &get_network_only_args() const {return m_network_only_args;}
 
     /**
      * instance
      */
-    static ArgsManager &get_instance() noexcept {
+    static ArgsManager &get_instance() {
         static ArgsManager obj;
         return obj;
     }

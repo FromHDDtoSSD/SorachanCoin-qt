@@ -21,13 +21,13 @@ private:
 public:
     static constexpr size_t OUTPUT_SIZE = 64;
 
-    CSHA512() noexcept;
-    CSHA512& Write(const unsigned char* data, size_t len) noexcept;
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
-    CSHA512& Reset() noexcept;
+    CSHA512();
+    CSHA512& Write(const unsigned char* data, size_t len);
+    void Finalize(unsigned char hash[OUTPUT_SIZE]);
+    CSHA512& Reset();
 
-    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
-    void Clean() noexcept {
+    static constexpr size_t Size() {return OUTPUT_SIZE;}
+    void Clean() {
         cleanse::OPENSSL_cleanse(s, sizeof(s));
         cleanse::OPENSSL_cleanse(buf, sizeof(buf));
     }

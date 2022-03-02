@@ -41,12 +41,12 @@
 namespace lutil { // old core: uilt, latest core: lutil
 
 // Application startup time (used for uptime calculation)
-inline int64_t GetStartupTime() noexcept {
+inline int64_t GetStartupTime() {
     const static int64_t nStartupTime = util::GetTime();
     return nStartupTime;
 }
 
-inline std::string BITCOIN_CONF_FILENAME() noexcept {
+inline std::string BITCOIN_CONF_FILENAME() {
     return "SorachanCoin.conf";
 }
 
@@ -57,22 +57,22 @@ const extern std::function<std::string(const char *)> G_TRANSLATION_FUN;
  * Translation function.
  * If no translation function is set, simply return the input.
  */
-inline std::string _(const char *psz) noexcept {
+inline std::string _(const char *psz) {
     return G_TRANSLATION_FUN ? (G_TRANSLATION_FUN)(psz) : psz;
 }
 
 void SetupEnvironment();
-bool SetupNetworking() noexcept;
+bool SetupNetworking();
 
 template<typename... Args>
-bool error(const char* fmt, const Args&... args) noexcept {
+bool error(const char* fmt, const Args&... args) {
     logging::LogPrintf("ERROR: %s\n", tfm::format(fmt, args...));
     return false;
 }
 
 bool FileCommit(FILE *file);
-bool TruncateFile(FILE *file, unsigned int length) noexcept;
-int RaiseFileDescriptorLimit(int nMinFD) noexcept;
+bool TruncateFile(FILE *file, unsigned int length);
+int RaiseFileDescriptorLimit(int nMinFD);
 void AllocateFileRange(FILE *file, unsigned int offset, unsigned int length);
 bool RenameOver(fs::path src, fs::path dest);
 bool LockDirectory(const fs::path &directory, const std::string lockfile_name, bool probe_only=false);
@@ -92,7 +92,7 @@ const fs::path &GetBlocksDir();
 const fs::path &GetDataDir(bool fNetSpecific = true);
 void ClearDatadirCache();
 #ifdef WIN32
-fs::path GetSpecialFolderPath(int nFolder, bool fCreate = true) noexcept;
+fs::path GetSpecialFolderPath(int nFolder, bool fCreate = true);
 #endif
 void runCommand(const std::string &strCommand);
 
@@ -111,7 +111,7 @@ inline bool IsSwitchChar(char c)
  */
 int GetNumCores();
 
-//std::string CopyrightHolders(const std::string &strPrefix) noexcept;
+//std::string CopyrightHolders(const std::string &strPrefix);
 
 /**
  * On platforms that support it, tell the kernel the calling thread is
@@ -133,7 +133,7 @@ inline void insert(std::set<TsetT> &dst, const Tsrc &src) {
 }
 
 #ifdef WIN32
-bool wchartochar(const wchar_t *source, std::string &dest) noexcept;
+bool wchartochar(const wchar_t *source, std::string &dest);
 class WinCmdLineArgs
 {
 public:

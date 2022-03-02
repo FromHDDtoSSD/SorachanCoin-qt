@@ -232,7 +232,7 @@ void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
 }
 
 namespace quantum_hash {
-void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept {
+void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) {
     static constexpr size_t buffer_length = 32768;
     blake2s_hash::blake2s_state S;
     blake2s_hash::blake2s_init(&S, size_hash);
@@ -253,7 +253,7 @@ void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t
     blake2s_hash::blake2s_final(&S, hash, size_hash);
 }
 
-void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) noexcept {
+void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) {
     assert(latest_crypto::Lamport::BLAKE2KeyHash::Size()==CBLAKE2S::Size());
     CBLAKE2S ctx;
     ctx.Write(data, size_data);
@@ -290,19 +290,19 @@ void util::alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_
     //debugcs::instance() << "ALLOC_SECURE SIZE: " << sizeIn << debugcs::endl();
 }
 
-void util::release(byte *&data) noexcept {
+void util::release(byte *&data) {
     //debugcs::instance() << "ALLOC FREE" << debugcs::endl();
     if (data) delete[] data;
     data = nullptr;
 }
 
-void util::release(CSecureSegment<byte> *&secure) noexcept {
+void util::release(CSecureSegment<byte> *&secure) {
     //debugcs::instance() << "ALLOC_SECURE FREE" << debugcs::endl();
     if (secure) delete secure;
     secure = nullptr;
 }
 
-std::shared_ptr<CPublicKey> CPrivateKey::derivePublicKey() const noexcept {
+std::shared_ptr<CPublicKey> CPrivateKey::derivePublicKey() const {
     CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(true);
     std::shared_ptr<CPublicKey> generatedKey = std::make_shared<CPublicKey>(kRandomNumbersCount * kRandomNumberSize);
 
@@ -321,25 +321,25 @@ std::shared_ptr<CPublicKey> CPrivateKey::derivePublicKey() const noexcept {
     return generatedKey; // Note: Segment(gurde) Called destructor => Read Lock
 }
 
-BLAKE2KeyHash::BLAKE2KeyHash(const CPrivateKey &key) noexcept {
+BLAKE2KeyHash::BLAKE2KeyHash(const CPrivateKey &key) {
     CSecureSegmentRW<byte> guard = key.get_secure()->unlockAndInitRW(true);
     quantum_hash::blake2_hash(data, guard.get_addr(), key.get_size());
 }
 
-BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) noexcept {
+BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) {
     CSecureSegmentRW<byte> guard = key->get_secure()->unlockAndInitRW(true);
     quantum_hash::blake2_hash(data, guard.get_addr(), key->get_size());
 }
 
-BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) noexcept {
+BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) {
     quantum_hash::blake2_hash(data, key->get_addr(), key->get_size());
 }
 
-BLAKE2KeyHash::BLAKE2KeyHash(byte *buffer) noexcept {
+BLAKE2KeyHash::BLAKE2KeyHash(byte *buffer) {
     std::memcpy(data, buffer, kBytesSize);
 }
 
-void CSignature::collectSignature(byte *signature, const byte *key, const byte *messageHash) const noexcept {
+void CSignature::collectSignature(byte *signature, const byte *key, const byte *messageHash) const {
     byte *signatureOffset = signature;
     const byte *numbersPairOffset = key;
     for (size_t i = 0; i < hashSize; ++i) {
@@ -354,7 +354,7 @@ void CSignature::collectSignature(byte *signature, const byte *key, const byte *
     }
 }
 
-bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept {
+bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const {
     if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr)
         return false;
 
@@ -388,7 +388,7 @@ bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<cons
     return (::memcmp(pubKeySignature, hashedSignature, kSize) == 0) ? true : false;
 }
 
-std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
+std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) {
     if(pKey->is_ok()) {
         std::shared_ptr<CPublicKey> nullKey = nullptr;
         return nullKey;
@@ -416,7 +416,7 @@ std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size
     return pubKey;
 }
 
-void CSignature::createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept {
+void CSignature::createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) {
     using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
 
     byte previous[sizeof(data)];
@@ -443,23 +443,23 @@ CLamport::CLamport(const CLamport &obj) : privKey(obj.privKey.get_addr(), obj.pr
     std::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
 }
 
-CLamport &CLamport::operator=(const CLamport &obj) noexcept {
+CLamport &CLamport::operator=(const CLamport &obj) {
     privKey.operator=(obj.privKey);
     std::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
     return *this;
 }
 
-CLamport::CLamport() noexcept : privKey(), CSignature() {} // Automatically, set random to privKey.
+CLamport::CLamport() : privKey(), CSignature() {} // Automatically, set random to privKey.
 CLamport::CLamport(const byte *dataIn, size_t _size_check_) : privKey(dataIn, _size_check_), CSignature() {} // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
 CLamport::~CLamport() {}
 
-std::shared_ptr<CPublicKey> CLamport::create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept {
+std::shared_ptr<CPublicKey> CLamport::create_pubkey(const std::uint8_t *dataIn, size_t dataSize) {
     // std::shared_ptr<CPublicKey> debugKey = privKey.derivePublicKey();
     // Note: Call to CSignature::derivePublicKey
     return this->derivePublicKey(dataIn, dataSize, &privKey);
 }
 
-void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept {
+void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) {
     this->createHash(dataIn, dataSize, &privKey);
 }
 
@@ -497,7 +497,7 @@ private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;
 
-    static void sanity_check() noexcept {
+    static void sanity_check() {
         bool a = test_sanity::glibc_sanity_test();
         bool b = test_sanity::glibcxx_sanity_test();
         assert(a && b);
@@ -505,7 +505,7 @@ private:
     }
 
     template <int rsv, typename T>
-    static void prevector_check(int n, int m) noexcept {
+    static void prevector_check(int n, int m) {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the vector testing ..." << debugcs::endl();
 
         _bench_func("[vector] prevector_check() Des Tri", &check_prevector::PrevectorDestructorTrivial, 3, 3);
@@ -546,7 +546,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked vector" << debugcs::endl();
     }
 
-    static void aes_check() noexcept {
+    static void aes_check() {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the crypto testing ..." << debugcs::endl();
 
         _bench_func("[crypto] AES128_check()", &latest_crypto::bench_AES128, 1, 1);
@@ -557,7 +557,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked crypto" << debugcs::endl();
     }
 
-    static void memory_check() noexcept {
+    static void memory_check() {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the memory testing ..." << debugcs::endl();
 
         assert(1);
@@ -565,7 +565,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked memory" << debugcs::endl();
     }
 
-    static void hash_check() noexcept {
+    static void hash_check() {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the hash testing ..." << debugcs::endl();
 
         _bench_func("[hash] Ripemd160_check()", &latest_crypto::Ripemd160Assertcheck);
@@ -577,7 +577,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked blake2 and lamport" << debugcs::endl();
     }
 
-    static void json_check() noexcept {
+    static void json_check() {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the JSON testing ..." << debugcs::endl();
 
         _bench_func("[JSON] json_check()", &latest_json::JsonAssertcheck, 1, 1);
@@ -586,7 +586,7 @@ private:
     }
 
 #ifdef WIN32
-    static unsigned int __stdcall benchmark(void *) noexcept {
+    static unsigned int __stdcall benchmark(void *) {
         for(int i = 0; i < _test_count; ++i)
         {
 #ifdef SANITY_TEST
@@ -612,7 +612,7 @@ private:
     }
 #endif
 private:
-    Quantum_startup() noexcept {
+    Quantum_startup() {
 #if defined(DEBUG)
         //
         // Lamport benchmark [Thread Safe]

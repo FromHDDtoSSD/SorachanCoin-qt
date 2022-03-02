@@ -120,6 +120,10 @@ namespace util // used json-RPC
         return util::HexStr(vch.begin(), vch.end(), fSpaces);
     }
 
+    inline std::string HexStr(const std::vector<unsigned char> &vch, bool fSpaces = false) {
+        return util::HexStr(vch.begin(), vch.end(), fSpaces);
+    }
+
     template<typename T>
     inline void PrintHex(const T pbegin, const T pend, const char *pszFormat = "%s", bool fSpaces = true) {
         logging::LogPrintf(pszFormat, util::HexStr(pbegin, pend, fSpaces).c_str());

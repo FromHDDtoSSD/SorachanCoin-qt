@@ -322,7 +322,7 @@ static LRESULT CALLBACK HideProc(HWND hWnd, UINT msg, WPARAM wp, LPARAM lp)
     return ::DefWindowProcW(hWnd, msg, wp, lp);
 }
 
-bool predsystem::CreateMiniwindow(bool *restart) noexcept
+bool predsystem::CreateMiniwindow(bool *restart)
 {
     auto unregister_wc = []{
         ::UnregisterClassW(IDS_MINIW_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr));

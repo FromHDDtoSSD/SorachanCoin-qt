@@ -68,7 +68,7 @@ private:
         manage &operator=(const manage &)=delete;
         manage &operator=(manage &&)=delete;
     public:
-        explicit manage(void *ptrIn, size_t sizeIn) noexcept : ptr(ptrIn), size(sizeIn), fUnlock(false) {}
+        explicit manage(void *ptrIn, size_t sizeIn) : ptr(ptrIn), size(sizeIn), fUnlock(false) {}
         bool readonly() const;
         bool readwrite() const;
         bool noaccess() const;
@@ -96,8 +96,8 @@ public:
 //
 namespace quantum_hash
 {
-    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) noexcept;
-    void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) noexcept;
+    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data);
+    void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data);
 }
 
 //
@@ -115,14 +115,14 @@ private:
     //CSecureSegmentRW &operator=(CSecureSegmentRW &&)=delete;
     CSecureSegment<T> *segment;
 public:
-    //explicit CSecureSegmentRW(CSecureSegment<T> &obj, bool readonly) noexcept : segment(&obj) {
+    //explicit CSecureSegmentRW(CSecureSegment<T> &obj, bool readonly) : segment(&obj) {
     //    readonly ? unlock_readonly(): unlock();
     //}
-    explicit CSecureSegmentRW(const CSecureSegment<T> *p, bool readonly) noexcept : segment(nullptr) {
+    explicit CSecureSegmentRW(const CSecureSegment<T> *p, bool readonly) : segment(nullptr) {
         segment = const_cast<CSecureSegment<T> *>(p);
         readonly ? unlock_readonly() : unlock();
     }
-    CSecureSegmentRW(const CSecureSegmentRW<T> &obj) noexcept : segment(nullptr) {
+    CSecureSegmentRW(const CSecureSegmentRW<T> &obj) : segment(nullptr) {
         *this = obj;
     }
     ~CSecureSegmentRW() {
@@ -142,13 +142,13 @@ public:
             throw std::runtime_error("CSecureSegmentRW: failed to lock memory");
     }
 
-    size_t get_size() const noexcept {
+    size_t get_size() const {
         return segment->get_size();
     }
-    const T *get_addr() const noexcept {
+    const T *get_addr() const {
         return segment->get_addr();
     }
-    T *get_addr() noexcept {
+    T *get_addr() {
         return segment->get_addr();
     }
 };
@@ -166,13 +166,13 @@ private:
 
     size_t size;
     T *data;
-    size_t get_size() const noexcept {
+    size_t get_size() const {
         return size;
     }
-    const T *get_addr() const noexcept {
+    const T *get_addr() const {
         return data;
     }
-    T *get_addr() noexcept {
+    T *get_addr() {
         return data;
     }
 public:
@@ -186,7 +186,7 @@ public:
         release();
     }
 
-    void release() noexcept {
+    void release() {
         if (data) quantum_lib::secure_free(data);
         data = nullptr;
         size = 0;
@@ -195,7 +195,7 @@ public:
     //
     // access to memory.
     //
-    CSecureSegmentRW<T> unlockAndInitRW(bool readonly) const noexcept {
+    CSecureSegmentRW<T> unlockAndInitRW(bool readonly) const {
         return CSecureSegmentRW<T>(this, readonly);
     }
 };
@@ -213,8 +213,8 @@ namespace secure_segment
         typedef typename std::allocator<T>::pointer pointer;
         typedef typename std::allocator<T>::const_pointer const_pointer;
         typedef typename std::allocator<T>::size_type size_type;
-        secure_protect_allocator() noexcept {}
-        secure_protect_allocator(const secure_protect_allocator &) noexcept {}
+        secure_protect_allocator() {}
+        secure_protect_allocator(const secure_protect_allocator &) {}
 
 #ifdef _MSC_VER
         pointer allocate(size_type sizeIn) {
@@ -224,7 +224,7 @@ namespace secure_segment
             void *ptr = quantum_lib::secure_malloc(sizeIn);
             return static_cast<pointer>(ptr);
         }
-        void deallocate(pointer ptr, size_type) noexcept {
+        void deallocate(pointer ptr, size_type) {
             quantum_lib::secure_free(ptr);
         }
 
@@ -261,7 +261,7 @@ namespace secure_segment
                 throw std::runtime_error("secure vector: failed to noaccess");
         }
     public:
-        vector() noexcept : vec() {
+        vector() : vec() {
             noaccess();
         }
         explicit vector(const T *begin, const T *end) : vec(begin, end) {
@@ -328,8 +328,8 @@ namespace Lamport {
         static void alloc(byte *&dest, const byte *dataIn, size_t size);
         static void alloc_secure_random(CSecureSegment<byte> *&secure, size_t kRandomNumbersCountIn, size_t kRandomNumberSizeIn);
         static void alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_t sizeIn);
-        static void release(byte *&data) noexcept;
-        static void release(CSecureSegment<byte> *&secure) noexcept;
+        static void release(byte *&data);
+        static void release(CSecureSegment<byte> *&secure);
     };
 
     class CKeyBase : protected util
@@ -392,27 +392,27 @@ namespace Lamport {
         // * @returns size if bytes of Lamport Key.
         // * Both PrivateKey and PublicKey are 16K long.
         //
-        static const size_t get_size() noexcept {
+        static const size_t get_size() {
             return Lamport::kRandomNumbersCount * Lamport::kRandomNumberSize;
         }
 
         //
         // Normal memory
         //
-        const byte *get_addr() const noexcept {
+        const byte *get_addr() const {
             return data;
         }
-        byte *get_addr() noexcept {
+        byte *get_addr() {
             return data;
         }
 
         //
         // Secure memory
         //
-        const CSecureSegment<byte> *get_secure() const noexcept {
+        const CSecureSegment<byte> *get_secure() const {
             return secure;
         }
-        CSecureSegment<byte> *get_secure() noexcept {
+        CSecureSegment<byte> *get_secure() {
             return secure;
         }
     };
@@ -427,7 +427,7 @@ namespace Lamport {
         CPublicKey &operator=(const CPublicKey &)=delete;
         CPublicKey &operator=(CPublicKey &&)=delete;
     public:
-        explicit CPublicKey(size_t _size_check_) noexcept : CKeyBase(_size_check_) {}
+        explicit CPublicKey(size_t _size_check_) : CKeyBase(_size_check_) {}
         explicit CPublicKey(const byte *dataIn, size_t _size_check_) : CKeyBase(dataIn, _size_check_, false) {} // Note: disable secure_alloc (dataIn, _size_check_, false).
         ~CPublicKey() {}
     };
@@ -452,10 +452,10 @@ namespace Lamport {
 
         CPrivateKey() : isCropped(false), CKeyBase(kRandomNumbersCount, kRandomNumberSize) {} // Note: generate random private key and enable secure_alloc.
         explicit CPrivateKey(const byte *dataIn, size_t _size_check_) : isCropped(false), CKeyBase(dataIn, _size_check_, true) {} // Note: enable secure_alloc (dataIn, _size_check_, true).
-        bool is_ok() const noexcept {
+        bool is_ok() const {
             return isCropped;
         }
-        void set_cropped() noexcept {
+        void set_cropped() {
             isCropped = true;
         }
 
@@ -463,7 +463,7 @@ namespace Lamport {
         // private: Call to CSignature only.
         //
     private:
-        std::shared_ptr<CPublicKey> derivePublicKey() const noexcept;
+        std::shared_ptr<CPublicKey> derivePublicKey() const;
     };
 
     /**
@@ -483,11 +483,11 @@ namespace Lamport {
         byte data[BLAKE2KeyHash::kBytesSize];
     public:
         constexpr static size_t Size() {return kBytesSize;}
-        explicit BLAKE2KeyHash(const CPrivateKey &key) noexcept;
-        explicit BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) noexcept;
-        explicit BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) noexcept;
-        explicit BLAKE2KeyHash(byte *buffer) noexcept;
-        const byte *get_addr() const noexcept {
+        explicit BLAKE2KeyHash(const CPrivateKey &key);
+        explicit BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key);
+        explicit BLAKE2KeyHash(std::shared_ptr<CPublicKey> key);
+        explicit BLAKE2KeyHash(byte *buffer);
+        const byte *get_addr() const {
             return data;
         }
         friend bool operator==(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
@@ -511,29 +511,29 @@ namespace Lamport {
         CSignature(const CSignature &&)=delete;
         CSignature operator=(const CSignature &)=delete;
         CSignature operator=(const CSignature &&)=delete;
-        void collectSignature(byte *signature, const byte *key, const byte *messageHash) const noexcept;
+        void collectSignature(byte *signature, const byte *key, const byte *messageHash) const;
     public:
-        CSignature() noexcept {
+        CSignature() {
             std::memset(data, 0x00, get_size());
         }
-        explicit CSignature(const byte *dataIn, size_t _size_check_) noexcept {
+        explicit CSignature(const byte *dataIn, size_t _size_check_) {
             assert(_size_check_ == get_size());
             std::memcpy(data, dataIn, get_size());
         }
         virtual ~CSignature() {}
 
-        size_t get_size() const noexcept {
+        size_t get_size() const {
             // signature has 8KB
             return kSize;
         }
 
-        const byte *get_addr() const noexcept {return data;}
-        byte *get_addr() noexcept {return data;}
-        void clean() noexcept {quantum_lib::secure_memzero(data, get_size());}
-        bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const noexcept;
+        const byte *get_addr() const {return data;}
+        byte *get_addr() {return data;}
+        void clean() {quantum_lib::secure_memzero(data, get_size());}
+        bool check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const;
     protected:
-        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept;
-        void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) noexcept;
+        std::shared_ptr<CPublicKey> derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey);
+        void createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey);
     };
 
     class CLamport : public CSignature
@@ -546,13 +546,13 @@ namespace Lamport {
         //CLamport &operator=(CLamport &&)=delete;
     public:
         CLamport(const CLamport &obj);
-        CLamport &operator=(const CLamport &obj) noexcept;
-        CLamport() noexcept; // Automatically, set random to privKey.
+        CLamport &operator=(const CLamport &obj);
+        CLamport(); // Automatically, set random to privKey.
         explicit CLamport(const byte *dataIn, size_t _size_check_); // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
         ~CLamport();
 
-        std::shared_ptr<CPublicKey> create_pubkey(const std::uint8_t *dataIn, size_t dataSize) noexcept;
-        void create_hashonly(const std::uint8_t *dataIn, size_t dataSize) noexcept;
+        std::shared_ptr<CPublicKey> create_pubkey(const std::uint8_t *dataIn, size_t dataSize);
+        void create_hashonly(const std::uint8_t *dataIn, size_t dataSize);
     };
 
 } // namespace Lamport

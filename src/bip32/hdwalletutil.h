@@ -24,14 +24,14 @@ class WalletLocation final
     fs::path m_path;
 
 public:
-    explicit WalletLocation() noexcept {}
+    explicit WalletLocation() {}
     explicit WalletLocation(const std::string &name);
 
     //! Get wallet name.
-    const std::string &GetName() const noexcept { return m_name; }
+    const std::string &GetName() const { return m_name; }
 
     //! Get wallet absolute path.
-    const fs::path &GetPath() const noexcept { return m_path; }
+    const fs::path &GetPath() const { return m_path; }
 
     //! Return whether the wallet exists.
     bool Exists() const;

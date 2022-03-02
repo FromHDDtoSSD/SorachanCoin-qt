@@ -365,15 +365,15 @@ protected:
     size_t nSize;
     const int nVersion;
 public:
-    explicit CSizeComputer(int nVersionIn) noexcept : nSize(0), nVersion(nVersionIn) {}
+    explicit CSizeComputer(int nVersionIn) : nSize(0), nVersion(nVersionIn) {}
 
-    void write(const char *psz, size_t _nSize) noexcept {
+    void write(const char *psz, size_t _nSize) {
         (void)psz;
         this->nSize += _nSize;
     }
 
     /** Pretend _nSize bytes are written, without specifying them. */
-    void seek(size_t _nSize) noexcept {
+    void seek(size_t _nSize) {
         this->nSize += _nSize;
     }
 
@@ -383,11 +383,11 @@ public:
         return (*this);
     }
 
-    size_t size() const noexcept {
+    size_t size() const {
         return nSize;
     }
 
-    int GetVersion() const noexcept { return nVersion; }
+    int GetVersion() const { return nVersion; }
 };
 
 template <typename T>
@@ -408,7 +408,7 @@ namespace compact_size
     class manage : private no_instance
     {
     public:
-        static unsigned int GetSizeOfCompactSize(uint64_t nSize) noexcept {
+        static unsigned int GetSizeOfCompactSize(uint64_t nSize) {
             if(nSize < 253) {
                 return sizeof(unsigned char);
             } else if(nSize <= (std::numeric_limits<unsigned short>::max)()) {
@@ -489,14 +489,14 @@ private:
     char *pbegin;
     const char *pend;
 public:
-    CFlatData(void *pbeginIn, void *pendIn) noexcept : pbegin((char *)pbeginIn), pend((const char *)pendIn) {}
+    CFlatData(void *pbeginIn, void *pendIn) : pbegin((char *)pbeginIn), pend((const char *)pendIn) {}
     ~CFlatData() {}
 
-    char *begin() noexcept { return pbegin; }
-    const char *begin() const noexcept { return pbegin; }
-    const char *end() const noexcept { return pend; }
+    char *begin() { return pbegin; }
+    const char *begin() const { return pbegin; }
+    const char *end() const { return pend; }
 
-    unsigned int GetSerializeSize() const noexcept {
+    unsigned int GetSerializeSize() const {
         return (unsigned int)(pend - pbegin);
     }
 
@@ -963,25 +963,25 @@ private:
     int nType;
     int nVersion;
 protected:
-    explicit CTypeVersion(int nTypeIn, int nVersionIn) noexcept : nType(nTypeIn), nVersion(nVersionIn) {}
+    explicit CTypeVersion(int nTypeIn, int nVersionIn) : nType(nTypeIn), nVersion(nVersionIn) {}
     ~CTypeVersion() {}
 public:
-    void SetType(int n) noexcept { nType = n; }
-    void AddType(int n) noexcept { nType |= n; }
-    int GetType() const noexcept { return nType; }
-    void SetVersion(int n) noexcept { nVersion = n; }
-    int GetVersion() const noexcept { return nVersion; }
+    void SetType(int n) { nType = n; }
+    void AddType(int n) { nType |= n; }
+    int GetType() const { return nType; }
+    void SetVersion(int n) { nVersion = n; }
+    int GetVersion() const { return nVersion; }
 };
 
 class CTypeVersionBehave
 {
 public:
-    CTypeVersionBehave() noexcept : nType(0), nVersion(0) {}
+    CTypeVersionBehave() : nType(0), nVersion(0) {}
     int nType;
     int nVersion;
-    void AddType(int) noexcept {}
-    void SetType(int) noexcept {}
-    void SetVersion(int) noexcept {}
+    void AddType(int) {}
+    void SetType(int) {}
+    void SetVersion(int) {}
 };
 
 /**
@@ -1231,7 +1231,7 @@ public:
     typedef vector_type::const_iterator   const_iterator;
     typedef vector_type::reverse_iterator reverse_iterator;
 
-    CDataStream(int nType=0, int nVersion=0) noexcept : CTypeVersion(nType, nVersion) {
+    CDataStream(int nType=0, int nVersion=0) : CTypeVersion(nType, nVersion) {
         Init();
     }
 
@@ -1274,7 +1274,7 @@ public:
         Init();
     }
 
-    void Init() noexcept {
+    void Init() {
         nReadPos = 0;
         state = 0;
         exceptmask = std::ios::badbit | std::ios::failbit;
@@ -1285,27 +1285,27 @@ public:
         return *this;
     }
 
-    std::string str() const noexcept {
+    std::string str() const {
         return (std::string(begin(), end()));
     }
 
     // Vector subset
-    void clear() noexcept { vch.clear(); nReadPos = 0; }
-    const_iterator begin() const noexcept { return vch.begin() + nReadPos; }
-    iterator begin() noexcept { return vch.begin() + nReadPos; }
-    const_iterator end() const noexcept { return vch.end(); }
-    iterator end() noexcept { return vch.end(); }
-    size_type size() const noexcept { return vch.size() - nReadPos; }
-    bool empty() const noexcept { return vch.size() == nReadPos; }
+    void clear() { vch.clear(); nReadPos = 0; }
+    const_iterator begin() const { return vch.begin() + nReadPos; }
+    iterator begin() { return vch.begin() + nReadPos; }
+    const_iterator end() const { return vch.end(); }
+    iterator end() { return vch.end(); }
+    size_type size() const { return vch.size() - nReadPos; }
+    bool empty() const { return vch.size() == nReadPos; }
     void resize(size_type n, value_type c = 0) { vch.resize(n + nReadPos, c); }
     void reserve(size_type n) { vch.reserve(n + nReadPos); }
-    const_reference operator[](size_type pos) const noexcept { return vch[pos + nReadPos]; }
-    reference operator[](size_type pos) noexcept { return vch[pos + nReadPos]; }
+    const_reference operator[](size_type pos) const { return vch[pos + nReadPos]; }
+    reference operator[](size_type pos) { return vch[pos + nReadPos]; }
     iterator insert(iterator it, const char &x = char()) { return vch.insert(it, x); }
     void insert(iterator it, size_type n, const char &x) { vch.insert(it, n, x); }
 
 #ifdef _MSC_VER
-    void insert(iterator it, const_iterator first, const_iterator last) noexcept {
+    void insert(iterator it, const_iterator first, const_iterator last) {
         assert(last - first >= 0);
         if(it == vch.begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -1316,7 +1316,7 @@ public:
         }
     }
 #else
-    void insert(iterator it, std::vector<char>::const_iterator first, std::vector<char>::const_iterator last) noexcept {
+    void insert(iterator it, std::vector<char>::const_iterator first, std::vector<char>::const_iterator last) {
         assert(last - first >= 0);
         if(it == vch.begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -1329,7 +1329,7 @@ public:
 #endif
 
 #if !defined(_MSC_VER) || _MSC_VER >= 1300
-    void insert(iterator it, const char *first, const char *last) noexcept {
+    void insert(iterator it, const char *first, const char *last) {
         assert(last - first >= 0);
         if(it == vch.begin() + nReadPos && (unsigned int)(last - first) <= nReadPos) {
             // special case for inserting at the front when there's room
@@ -1341,7 +1341,7 @@ public:
     }
 #endif
 
-    iterator erase(iterator it) noexcept {
+    iterator erase(iterator it) {
         if(it == vch.begin() + nReadPos) {
             // special case for erasing from the front
             if(++nReadPos >= vch.size()) {
@@ -1355,7 +1355,7 @@ public:
         }
     }
 
-    iterator erase(iterator first, iterator last) noexcept {
+    iterator erase(iterator first, iterator last) {
         if(first == vch.begin() + nReadPos) {
             // special case for erasing from the front
             if(last == vch.end()) {
@@ -1370,12 +1370,12 @@ public:
         }
     }
 
-    void Compact() noexcept {
+    void Compact() {
         vch.erase(vch.begin(), vch.begin() + nReadPos);
         nReadPos = 0;
     }
 
-    bool Rewind(size_type n) noexcept {
+    bool Rewind(size_type n) {
         // Rewind by n characters if the buffer hasn't been compacted yet
         if(n > nReadPos) {
             return false;
@@ -1394,14 +1394,14 @@ public:
         }
     }
 
-    bool eof() const noexcept { return size() == 0; }
-    bool fail() const noexcept { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
-    bool good() const noexcept { return !eof() && (state == 0); }
-    void clear(short n) noexcept { state = n; }  // name conflict with vector clear()
-    short exceptions() noexcept { return exceptmask; }
+    bool eof() const { return size() == 0; }
+    bool fail() const { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
+    bool good() const { return !eof() && (state == 0); }
+    void clear(short n) { state = n; }  // name conflict with vector clear()
+    short exceptions() { return exceptmask; }
     short exceptions(short mask) { short prev = exceptmask; exceptmask = mask; setstate(0, "CDataStream"); return prev; }
-    CDataStream *rdbuf() noexcept { return this; }
-    int in_avail() noexcept { return (int)(size()); }
+    CDataStream *rdbuf() { return this; }
+    int in_avail() { return (int)(size()); }
 
     CDataStream &read(char *pch, int nSize) {
         // Read from the beginning of the buffer
@@ -1438,7 +1438,7 @@ public:
     }
 
     template<typename Stream>
-    void Serialize(Stream &s) const noexcept {
+    void Serialize(Stream &s) const {
         // Special case: stream << stream concatenates like stream += stream
         if(! vch.empty()) {
             s.write((char *)&vch[0], vch.size() * sizeof(vch[0]));
@@ -1446,7 +1446,7 @@ public:
     }
 
     template<typename T>
-    unsigned int GetSerializeSize(const T &obj) noexcept {
+    unsigned int GetSerializeSize(const T &obj) {
         // Tells the size of the object if serialized to this stream
         return ::GetSerializeSize(obj, GetVersion());
     }
@@ -1466,7 +1466,7 @@ public:
         return *this;
     }
 
-    void GetAndClear(CSerializeData &data) noexcept {
+    void GetAndClear(CSerializeData &data) {
         this->vch.swap(data);
         CSerializeData().swap(vch);
     }
@@ -1583,12 +1583,12 @@ public:
     }
 
     // check whether no error occurred
-    bool good() const noexcept {
+    bool good() const {
         return state == 0;
     }
 
     // check whether we're at the end of the source file
-    bool eof() const noexcept {
+    bool eof() const {
         return nReadPos == nSrcPos && ::feof(this->src);
     }
 
@@ -1624,12 +1624,12 @@ public:
     }
 
     // return the current reading position
-    uint64_t GetPos() const noexcept {
+    uint64_t GetPos() const {
         return nReadPos;
     }
 
     // rewind to a given reading position
-    bool SetPos(uint64_t nPos) noexcept {
+    bool SetPos(uint64_t nPos) {
         nReadPos = nPos;
         if(nReadPos + nRewind < nSrcPos) {
             nReadPos = nSrcPos - nRewind;
@@ -1642,7 +1642,7 @@ public:
         }
     }
 
-    bool Seek(uint64_t nPos) noexcept {
+    bool Seek(uint64_t nPos) {
         long nLongPos = (long)nPos;
         if(nPos != (uint64_t)nLongPos) {    // If nPos variable type size is larger than long, it is invalid(false).
             return false;
@@ -1660,7 +1660,7 @@ public:
 
     // prevent reading beyond a certain position
     // no argument removes the limit
-    bool SetLimit(uint64_t nPos = (std::numeric_limits<uint64_t>::max)()) noexcept {
+    bool SetLimit(uint64_t nPos = (std::numeric_limits<uint64_t>::max)()) {
         if(nPos < nReadPos) {
             return false;
         }
@@ -1676,7 +1676,7 @@ public:
     }
 
     // search for a given byte in the stream, and remain positioned on it
-    void FindByte(char ch) noexcept {
+    void FindByte(char ch) {
         for( ; ; )
         {
             if(nReadPos == nSrcPos) {
@@ -1708,7 +1708,7 @@ private:
     std::string path;
     size_t size;
 public:
-    CAutoFile(FILE *filenew, int nType=0, int nVersion=0) noexcept : buffer(filenew), CTypeVersion(nType, nVersion) {
+    CAutoFile(FILE *filenew, int nType=0, int nVersion=0) : buffer(filenew), CTypeVersion(nType, nVersion) {
         file = filenew;
         state = 0;
         exceptmask = std::ios::badbit | std::ios::failbit;
@@ -1716,7 +1716,7 @@ public:
         size = 0;
     }
 
-    CAutoFile(const fs::path &pathIn, const char *mode, int nType=0, int nVersion=0) noexcept : buffer(nullptr), CTypeVersion(nType, nVersion) {
+    CAutoFile(const fs::path &pathIn, const char *mode, int nType=0, int nVersion=0) : buffer(nullptr), CTypeVersion(nType, nVersion) {
         path = pathIn.string();
         file = ::fopen(path.c_str(), mode);
         if(! file) return;
@@ -1732,7 +1732,7 @@ public:
         fclose();
     }
 
-    const std::string &getpath() const noexcept {
+    const std::string &getpath() const {
         return path;
     }
 
@@ -1743,19 +1743,19 @@ public:
         return size;
     }
 
-    void fclose() noexcept {
+    void fclose() {
         if(file != nullptr && file != stdin && file != stdout && file != stderr) {
             ::fclose(file);
         }
         file = nullptr;
     }
 
-    FILE *release() noexcept { FILE *ret = file; file = nullptr; return ret; }
-    operator FILE *() noexcept { return file; }
-    FILE *operator->() noexcept { return file; }
-    FILE &operator*() noexcept { return *file; }
-    FILE **operator&() noexcept { return &file; }
-    FILE *operator=(FILE *pnew) noexcept { return file = pnew; }
+    FILE *release() { FILE *ret = file; file = nullptr; return ret; }
+    operator FILE *() { return file; }
+    FILE *operator->() { return file; }
+    FILE &operator*() { return *file; }
+    FILE **operator&() { return &file; }
+    FILE *operator=(FILE *pnew) { return file = pnew; }
     bool operator!() {
         if(path == "")
             return (file == nullptr);
@@ -1771,11 +1771,11 @@ public:
         }
     }
 
-    bool fail() const noexcept { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
-    bool good() const noexcept { return state == 0; }
-    void clear(short n = 0) noexcept { state = n; }
-    short exceptions() const noexcept { return exceptmask; }
-    short exceptions(short mask) noexcept { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
+    bool fail() const { return (state & (std::ios::badbit | std::ios::failbit)) != 0; }
+    bool good() const { return state == 0; }
+    void clear(short n = 0) { state = n; }
+    short exceptions() const { return exceptmask; }
+    short exceptions(short mask) { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
 
     CAutoFile &read(char *pch, size_t nSize) {
         // debugcs::instance() << "CAutoFile: CAutoFile &read(char *pch, size_t nSize) nSize: " << nSize << debugcs::endl();
@@ -1801,7 +1801,7 @@ public:
     }
 
     template<typename T>
-    unsigned int GetSerializeSize(const T &obj) const noexcept {
+    unsigned int GetSerializeSize(const T &obj) const {
         // Tells the size of the object if serialized to this stream
         return ::GetSerializeSize(obj);
     }

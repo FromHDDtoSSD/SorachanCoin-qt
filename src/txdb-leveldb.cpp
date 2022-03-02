@@ -323,16 +323,16 @@ class CmapBlockIndex final {
         iterator &operator=(const iterator &)=delete;
         iterator &operator=(iterator &&)=delete;
      public:
-        iterator() noexcept : pidb(nullptr), pmap(nullptr) { // end iterator
+        iterator() : pidb(nullptr), pmap(nullptr) { // end iterator
             fNotfound=true;
         }
-        explicit iterator(IDB::DbIterator *pidbIn, typename std::map<uint256, CBlockIndex *> *pmapIn, typename std::map<uint256, CBlockIndex *>::iterator imapIn) noexcept {
+        explicit iterator(IDB::DbIterator *pidbIn, typename std::map<uint256, CBlockIndex *> *pmapIn, typename std::map<uint256, CBlockIndex *>::iterator imapIn) {
             this->pidb = pidbIn;
             this->pmap = pmapIn;
             this->imap = imapIn;
             this->fNotfound = false;
         }
-        iterator(iterator &&obj) noexcept {
+        iterator(iterator &&obj) {
             this->pidb = obj.pidb;
             this->pmap = obj.pmap;
             this->imap = std::move(obj.imap);

@@ -886,7 +886,7 @@ LRESULT CALLBACK ProgressProc(HWND hProgress, UINT msg, WPARAM wp, LPARAM lp)
     return ret;
 }
 
-predsystem::result predsystem::CreateBenchmark() noexcept
+predsystem::result predsystem::CreateBenchmark()
 {
     result ret;
     auto unregister_wc = []{::UnregisterClassW(IDS_APP_WINDOWCLASSNAME, ::GetModuleHandleW(nullptr));};

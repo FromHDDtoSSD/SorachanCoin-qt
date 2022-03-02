@@ -84,9 +84,9 @@ namespace predsystem {
         }
     };
 
-    extern result CreateBenchmark() noexcept;
-    extern bool CreateMiniwindow(bool *restart) noexcept;
-    extern bool CreateSorara() noexcept;
+    extern result CreateBenchmark();
+    extern bool CreateMiniwindow(bool *restart);
+    extern bool CreateSorara();
 } // namespace predsystem
 
 #endif

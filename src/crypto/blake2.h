@@ -143,13 +143,13 @@ private:
 public:
     static constexpr size_t OUTPUT_SIZE = 32;
 
-    CBLAKE2S() noexcept;
-    CBLAKE2S& Write(const unsigned char* data, size_t len) noexcept;
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
-    CBLAKE2S& Reset() noexcept;
+    CBLAKE2S();
+    CBLAKE2S& Write(const unsigned char* data, size_t len);
+    void Finalize(unsigned char hash[OUTPUT_SIZE]);
+    CBLAKE2S& Reset();
 
-    static constexpr size_t Size() noexcept {return OUTPUT_SIZE;}
-    void Clean() noexcept;
+    static constexpr size_t Size() {return OUTPUT_SIZE;}
+    void Clean();
 };
 
 } // latest_crypto

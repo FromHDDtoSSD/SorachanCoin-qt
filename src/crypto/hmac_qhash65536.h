@@ -19,7 +19,7 @@ private:
     using pbkdf2 = pbkdf2_impl<BASE>;
 public:
     using byte = uint8_t;
-    static uint131072 CalculateDigest(const byte *input, size_t length) noexcept;
+    static uint131072 CalculateDigest(const byte *input, size_t length);
 };
 using HMAC_LAMPORT_PRIVATE_HASH = HMAC_LAMPORT_PRIVATE_HASH_impl<latest_crypto::CSHA256>;
 

@@ -42,6 +42,8 @@ using hex_vector = std::vector<uint8_t>;
 std::string SanitizeString(const std::string &str, int rule = SAFE_CHARS_DEFAULT);
 hex_vector ParseHex(const char *psz);
 hex_vector ParseHex(const std::string &str);
+std::vector<unsigned char> ParseHexCh(const char *psz);
+std::vector<unsigned char> ParseHexCh(const std::string &str);
 
 /* Returns true if each character in str is a hex character, and has an even
  * number of hex digits.*/
@@ -87,7 +89,7 @@ constexpr bool IsDigit(char c)
  * @param[in] c     character to test
  * @return          true if the argument is a whitespace character; otherwise false
  */
-constexpr inline bool IsSpace(char c) noexcept {
+constexpr inline bool IsSpace(char c) {
     return c == ' ' || c == '\f' || c == '\n' || c == '\r' || c == '\t' || c == '\v';
 }
 

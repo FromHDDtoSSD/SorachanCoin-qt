@@ -47,13 +47,13 @@ static void TraceThread2(Callable func) {
     }
 }
 
-void bitthread::thread_error(const std::string &e) noexcept {
+void bitthread::thread_error(const std::string &e) {
     std::string err(e);
     err += " :thread_error";
     logging::LogPrintf(err.c_str());
 }
 
-bool bitthread::NewThread(void(*pfn)(void *), void *parg) noexcept {
+bool bitthread::NewThread(void(*pfn)(void *), void *parg) {
     try {
         boost::thread(pfn, parg); // thread detaches when out of scope
     } catch (boost::thread_resource_error &e) {

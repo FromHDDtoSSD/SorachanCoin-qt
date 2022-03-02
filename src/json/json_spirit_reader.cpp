@@ -1,10 +1,10 @@
 //          Copyright John W. Wilkinson 2007 - 2009.
 // Distributed under the MIT License, see accompanying file LICENSE.txt
 
-// Copyright (c) 2018-2020 The SorachanCoin developers
+#include <json/json_spirit_reader.h>
+#include <json/json_spirit_reader_template.h>
 
-#include "json_spirit_reader.h"
-#include "json_spirit_reader_template.h"
+using namespace json_spirit;
 
 bool json_spirit::read(const std::string &s, Value &value)
 {

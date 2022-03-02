@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.31.11
+VERSION = 3.32.11
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -737,16 +737,16 @@ HEADERS += \
     src/masternode/masternode.h \
     src/masternode/masternode_sync.h \
     src/masternode/masternode_config.h \
-    src/noexcept/throw.hpp \
-    src/noexcept/try.hpp \
-    src/noexcept/noexcept_detail/ceh.hpp \
-    src/noexcept/noexcept_detail/eh.hpp \
-    src/noexcept/noexcept_detail/error.hpp \
-    src/noexcept/noexcept_config/assert.hpp \
-    src/noexcept/noexcept_config/inline.hpp \
-    src/noexcept/noexcept_config/rtti.hpp \
-    src/noexcept/noexcept_config/thread_local.hpp \
-    src/noexcept/noexcept_config/throw_exception.hpp \
+    #src/noexcept/throw.hpp \
+    #src/noexcept/try.hpp \
+    #src/noexcept/noexcept_detail/ceh.hpp \
+    #src/noexcept/noexcept_detail/eh.hpp \
+    #src/noexcept/noexcept_detail/error.hpp \
+    #src/noexcept/noexcept_config/assert.hpp \
+    #src/noexcept/noexcept_config/inline.hpp \
+    #src/noexcept/noexcept_config/rtti.hpp \
+    #src/noexcept/noexcept_config/thread_local.hpp \
+    #src/noexcept/noexcept_config/throw_exception.hpp \
     src/nvme/nvme.h \
     src/nvme/nvme_internal.h \
     src/nvme/nvme_common.h \
@@ -898,10 +898,12 @@ SOURCES += \
     src/masternode/masternode.cpp \
     src/masternode/masternode_sync.cpp \
     src/masternode/masternode_config.cpp \
-    src/noexcept/noexcept_detail/eh.cpp \
-    src/noexcept/noexcept_detail/error.cpp \
+    #src/noexcept/noexcept_detail/eh.cpp \
+    #src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp \
     src/json/json_spirit_writer.cpp \
+    src/json/json_spirit_reader.cpp \
+    src/json/json_spirit_value.cpp \
     src/nvme/nvme.cpp \
     src/nvme/nvme_common.cpp \
     src/nvme/nvme_pci.cpp \

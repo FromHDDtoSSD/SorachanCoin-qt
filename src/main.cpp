@@ -86,7 +86,7 @@ bool CWalletTx::AcceptWalletTransaction()
     return AcceptWalletTransaction(txdb);
 }
 
-int CTxIndex::GetDepthInMainChain() const noexcept
+int CTxIndex::GetDepthInMainChain() const
 {
     // Read block header
     CBlock block;

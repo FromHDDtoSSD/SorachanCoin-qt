@@ -409,24 +409,24 @@ int blake2s_hash::blake2s_final( blake2s_state *S, void *out, size_t outlen )
 
 namespace latest_crypto {
 
-CBLAKE2S::CBLAKE2S() noexcept {
+CBLAKE2S::CBLAKE2S() {
     Reset();
 }
 
-CBLAKE2S& CBLAKE2S::Write(const unsigned char* data, size_t len) noexcept {
+CBLAKE2S& CBLAKE2S::Write(const unsigned char* data, size_t len) {
     blake2s_hash::blake2s_update(&S, data, len);
     return *this;
 }
 
-void CBLAKE2S::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept {
+void CBLAKE2S::Finalize(unsigned char hash[OUTPUT_SIZE]) {
     blake2s_hash::blake2s_final(&S, hash, OUTPUT_SIZE);
 }
 
-CBLAKE2S& CBLAKE2S::Reset() noexcept {
+CBLAKE2S& CBLAKE2S::Reset() {
     blake2s_hash::blake2s_init(&S, OUTPUT_SIZE); return *this;
 }
 
-void CBLAKE2S::Clean() noexcept {
+void CBLAKE2S::Clean() {
     cleanse::OPENSSL_cleanse(&S, sizeof(S));
 }
 

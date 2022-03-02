@@ -104,11 +104,11 @@ std::string CTransaction::ToString() const {
     return str;
 }
 
-std::string COutPoint::ToString() const noexcept {
+std::string COutPoint::ToString() const {
     return tfm::format("COutPoint(%s, %u)", hash.ToString().substr(0,10).c_str(), n);
 }
 
-std::string CDiskTxPos::ToString() const noexcept {
+std::string CDiskTxPos::ToString() const {
     if (IsNull())
         return "null";
     else

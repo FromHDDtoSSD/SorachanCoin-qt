@@ -29,7 +29,7 @@
  * Commit: ad1907fe73334d6c696c8539646c21b11178f20f
  * BoringSSL (LICENSE: ISC)
  */
-void cleanse::memory_cleanse(void *ptr, size_t len) noexcept // overwrite: 0x00
+void cleanse::memory_cleanse(void *ptr, size_t len) // overwrite: 0x00
 {
     /* As best as we can tell, this is sufficient to break any optimisations that
        might try to eliminate "superfluous" memsets. If there's an easy way to
@@ -42,7 +42,7 @@ void cleanse::memory_cleanse(void *ptr, size_t len) noexcept // overwrite: 0x00
 #endif
 }
 
-void cleanse::OPENSSL_cleanse(void *ptr, size_t len) noexcept // overwrite: dummy
+void cleanse::OPENSSL_cleanse(void *ptr, size_t len) // overwrite: dummy
 {
     ::OPENSSL_cleanse(ptr, len);
 }

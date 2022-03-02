@@ -20,14 +20,14 @@ private:
 public:
     static constexpr size_t OUTPUT_SIZE = 32;
 
-    CHMAC_SHA256() noexcept {}
-    CHMAC_SHA256(const unsigned char *key, size_t keylen) noexcept;
-    void Init(const unsigned char *key, size_t keylen) noexcept;
-    CHMAC_SHA256 &Write(const unsigned char *data, size_t len) noexcept {
+    CHMAC_SHA256() {}
+    CHMAC_SHA256(const unsigned char *key, size_t keylen);
+    void Init(const unsigned char *key, size_t keylen);
+    CHMAC_SHA256 &Write(const unsigned char *data, size_t len) {
         inner.Write(data, len);
         return *this;
     }
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept;
+    void Finalize(unsigned char hash[OUTPUT_SIZE]);
 };
 
 } // namespace latest_crypto

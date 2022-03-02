@@ -87,7 +87,7 @@ public:
 using index_t = int32_t;
 class CMString {
 private:
-    void setnull() noexcept {
+    void setnull() {
         m_lpBuf = nullptr;
         m_cBuf = nullptr;
         m_dwLength = 0;
@@ -95,7 +95,7 @@ private:
         m_mask_index = 0;
         m_fcbufchange = false;
     }
-    void release() noexcept {
+    void release() {
         if(m_lpBuf) delete [] m_lpBuf;
         if(m_cBuf) delete [] m_cBuf;
         setnull();
@@ -170,7 +170,7 @@ private:
     }
 public:
     constexpr static int undef_value = -1;
-    static LPWSTR wcscasestr(LPCWSTR lpStrA, LPCWSTR lpStrB) noexcept {
+    static LPWSTR wcscasestr(LPCWSTR lpStrA, LPCWSTR lpStrB) {
         const size_t lengthA = ::wcslen(lpStrA);
         const size_t lengthB = ::wcslen(lpStrB);
         std::unique_ptr<WCHAR []> lpBufA(new(std::nothrow) WCHAR[lengthA+1]);
@@ -280,12 +280,12 @@ public:
 #endif
     }
 
-    int replace(WCHAR chOld, WCHAR chNew) noexcept {
+    int replace(WCHAR chOld, WCHAR chNew) {
         WCHAR strOld[] = {chOld, L'\0'};
         WCHAR strNew[] = {chNew, L'\0'};
         return replace(strOld, strNew);
     }
-    int replace(LPCWSTR lpOld, LPCWSTR lpNew) noexcept {
+    int replace(LPCWSTR lpOld, LPCWSTR lpNew) {
         size_t old_size=::wcslen( lpOld );
         CMString obj;
         if (old_size==0) return undef_value;
@@ -311,7 +311,7 @@ public:
             return rep_num;
         }
     }
-    int replace_case(LPCWSTR lpOld, LPCWSTR lpNew) noexcept {
+    int replace_case(LPCWSTR lpOld, LPCWSTR lpNew) {
         size_t old_size=::wcslen(lpOld);
         CMString obj;
         if (old_size==0) return undef_value;
@@ -337,12 +337,12 @@ public:
             return rep_num;
         }
     }
-    int replace_safe(WCHAR chOld, WCHAR chNew, size_t length) noexcept {
+    int replace_safe(WCHAR chOld, WCHAR chNew, size_t length) {
         WCHAR strOld[] = {chOld, L'\0'};
         WCHAR strNew[] = {chNew, L'\0'};
         return replace_safe(strOld, strNew, length);
     }
-    int replace_safe(LPCWSTR lpOld, LPCWSTR lpNew, size_t length) noexcept {
+    int replace_safe(LPCWSTR lpOld, LPCWSTR lpNew, size_t length) {
         size_t old_size=::wcslen(lpOld);
         CMString obj;
         if (old_size==0) return undef_value;
@@ -370,7 +370,7 @@ public:
         }
     }
 
-    CMString tokenize(LPCWSTR pszTokens, int &iStart) const noexcept {
+    CMString tokenize(LPCWSTR pszTokens, int &iStart) const {
         size_t size=::wcslen(pszTokens);
         CMString obj;
         obj.clear();
@@ -398,7 +398,7 @@ public:
             return obj;
         }
     }
-    CMString tokenize(const char *pszTokens, int &iStart) const noexcept {
+    CMString tokenize(const char *pszTokens, int &iStart) const {
         return tokenize(CMString(pszTokens).w_str(), iStart);
     }
     CMString right(int nCount) const {
@@ -428,7 +428,7 @@ public:
             }
         }
     }
-    bool empty() const noexcept {
+    bool empty() const {
         return m_lpBuf==nullptr || m_lpBuf[0]==L'\0';
     }
 
@@ -649,7 +649,7 @@ public:
             return m_cBuf;
         }
     }
-    LPCWSTR w_str() const noexcept {
+    LPCWSTR w_str() const {
         if (m_lpBuf==nullptr) return L"";
         else return m_lpBuf;
     }
@@ -665,7 +665,7 @@ public:
         *this = str.get();
     }
 
-    size_t bytes(bool fwide) const noexcept {
+    size_t bytes(bool fwide) const {
         if (m_lpBuf==nullptr) return 0;
         if(fwide) {
             c_str();
@@ -703,12 +703,12 @@ public:
         }
     }
 
-    wchar_t operator[](index_t index) noexcept {
+    wchar_t operator[](index_t index) {
         assert(m_lpBuf && index>=0 && m_dwLength>index);
         //if(m_lpBuf==nullptr) return L'\0';
         return m_lpBuf[index];
     }
-    wchar_t operator[](index_t index) const noexcept {
+    wchar_t operator[](index_t index) const {
         assert(m_lpBuf && index>=0 && m_dwLength>index);
         if(m_lpBuf==nullptr) return L'\0';
         return m_lpBuf[index];
@@ -738,7 +738,7 @@ public:
         operator+=(tfm::format(lpType, args...));
     }
 
-    void tolower() const noexcept {
+    void tolower() const {
         if (m_lpBuf) {
             LPWSTR p = m_lpBuf;
             while (*p!=L'\0') {
@@ -747,7 +747,7 @@ public:
             }
         }
     }
-    void toupper() const noexcept {
+    void toupper() const {
         if (m_lpBuf) {
             LPWSTR p = m_lpBuf;
             while (*p!=L'\0') {
@@ -785,18 +785,18 @@ public:
         }
     }
 
-    size_t size() const noexcept {
+    size_t size() const {
         return (m_lpBuf==nullptr)? 0: ::wcslen(m_lpBuf);
     }
-    size_t length() const noexcept {
+    size_t length() const {
         return size();
     }
 
-    bool operator==(const CMString &obj) const noexcept {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)==0;}
-    bool operator<(const CMString &obj) const noexcept  {return 0<::wcscmp((LPCWSTR)obj, (LPCWSTR)*this);}
-    bool operator!=(const CMString &obj) const noexcept {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)!=0;}
-    bool operator==(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)==0;}
-    bool operator!=(LPCWSTR str) const noexcept         {return ::wcscmp((LPCWSTR)*this, str)!=0;}
+    bool operator==(const CMString &obj) const {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)==0;}
+    bool operator<(const CMString &obj) const  {return 0<::wcscmp((LPCWSTR)obj, (LPCWSTR)*this);}
+    bool operator!=(const CMString &obj) const {return ::wcscmp((LPCWSTR)*this, (LPCWSTR)obj)!=0;}
+    bool operator==(LPCWSTR str) const         {return ::wcscmp((LPCWSTR)*this, str)==0;}
+    bool operator!=(LPCWSTR str) const         {return ::wcscmp((LPCWSTR)*this, str)!=0;}
     bool operator==(LPCSTR str) const                   {return ::strcmp((LPCSTR)*this, str)==0;}
     bool operator!=(LPCSTR str) const                   {return ::strcmp((LPCSTR)*this, str)!=0;}
     bool operator==(char c) const {
@@ -806,11 +806,11 @@ public:
     bool operator!=(char c) const {
         return !(operator==(c));
     }
-    bool operator==(wchar_t c) const noexcept {
+    bool operator==(wchar_t c) const {
         const wchar_t str[] = {c, L'\0'};
         return ::wcscmp((LPCWSTR)*this, str)==0;
     }
-    bool operator!=(wchar_t c) const noexcept {
+    bool operator!=(wchar_t c) const {
         return !(operator==(c));
     }
     bool operator==(int16_t i) const {
@@ -869,34 +869,34 @@ public:
     bool operator!=(double d) const {
         return !(operator==(d));
     }
-    bool operator==(const uint160 &obj) const noexcept {
+    bool operator==(const uint160 &obj) const {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
     }
-    bool operator!=(const uint160 &obj) const noexcept {
+    bool operator!=(const uint160 &obj) const {
         return !(operator==(obj));
     }
-    bool operator==(const uint256 &obj) const noexcept {
+    bool operator==(const uint256 &obj) const {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
     }
-    bool operator!=(const uint256 &obj) const noexcept {
+    bool operator!=(const uint256 &obj) const {
         return !(operator==(obj));
     }
-    bool operator==(const uint512 &obj) const noexcept {
+    bool operator==(const uint512 &obj) const {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
     }
-    bool operator!=(const uint512 &obj) const noexcept {
+    bool operator!=(const uint512 &obj) const {
         return !(operator==(obj));
     }
-    bool operator==(const uint65536 &obj) const noexcept {
+    bool operator==(const uint65536 &obj) const {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
     }
-    bool operator!=(const uint65536 &obj) const noexcept {
+    bool operator!=(const uint65536 &obj) const {
         return !(operator==(obj));
     }
-    bool operator==(const uint131072 &obj) const noexcept {
+    bool operator==(const uint131072 &obj) const {
         return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
     }
-    bool operator!=(const uint131072 &obj) const noexcept {
+    bool operator!=(const uint131072 &obj) const {
         return !(operator==(obj));
     }
 
@@ -909,7 +909,7 @@ public:
     void splitlast(CMString *pstr, wchar_t delim, bool *p_exists) const {
         (pstr)? splitfast(*pstr, delim, 0, 0, lastadd_delim_count(delim)-1, p_exists): (void)0;
     }
-    int delim_count(wchar_t delim) const noexcept {
+    int delim_count(wchar_t delim) const {
         if (m_lpBuf==nullptr) return 0;
         else {
             int count=0;
@@ -919,7 +919,7 @@ public:
             return count;
         }
     }
-    int lastadd_delim_count(wchar_t delim) const noexcept {
+    int lastadd_delim_count(wchar_t delim) const {
         if (m_lpBuf==nullptr) return 0;
         else {
             int count=0;
@@ -932,23 +932,23 @@ public:
         }
     }
 
-    void mask_set(index_t index, wchar_t wch) noexcept {
+    void mask_set(index_t index, wchar_t wch) {
         assert(size()>index && index>=0 && m_mask_data==L'\0');
         if (m_lpBuf==nullptr) return;
         m_mask_data = m_lpBuf[index];
         m_mask_index = index;
         m_lpBuf[index] = wch;
     }
-    void mask_release() noexcept {
+    void mask_release() {
         if (m_lpBuf==nullptr || m_mask_index<0) return;
         m_lpBuf[m_mask_index] = m_mask_data;
         m_mask_data = L'\0';
     }
-    index_t mask_index() const noexcept {
+    index_t mask_index() const {
         return m_mask_index;
     }
 
-    void clear() noexcept {
+    void clear() {
         if(m_lpBuf) m_lpBuf[0] = L'\0';
     }
     void mem_clear() {
@@ -968,7 +968,7 @@ public:
         m_mask_index = 0;
     }
 
-    CMString() noexcept {
+    CMString() {
         setnull();
     }
     CMString(const wchar_t *lpStr) {
@@ -1056,7 +1056,7 @@ public:
     //
     // return object
     //
-    operator LPCWSTR() const noexcept {
+    operator LPCWSTR() const {
         return w_str();
     }
     operator const char *() const {
@@ -1188,7 +1188,7 @@ public:
         setnull();
         operator=(obj);
     }
-    CMString(CMString &&obj) noexcept {
+    CMString(CMString &&obj) {
         swap(static_cast<CMString &&>(obj));
     }
     CMString &operator=(const CMString &obj) {
@@ -1213,7 +1213,7 @@ public:
     //
     // rvalue operator
     //
-    void swap(CMString &&robj) noexcept {
+    void swap(CMString &&robj) {
         release();
         setnull();
         std::swap(m_lpBuf, robj.m_lpBuf);
@@ -1221,7 +1221,7 @@ public:
         std::swap(m_mask_data, robj.m_mask_data);
         std::swap(m_mask_index, robj.m_mask_index);
     }
-    CMString &operator=(CMString &&robj) noexcept {
+    CMString &operator=(CMString &&robj) {
         swap(static_cast<CMString &&>(robj));
         return *this;
     }

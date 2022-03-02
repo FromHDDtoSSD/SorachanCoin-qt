@@ -53,7 +53,7 @@ class CWalletTx;
 struct Db {intptr_t unused;};
 struct Dbc {
     intptr_t unused;
-    void close() const noexcept {}
+    void close() const {}
 };
 #endif
 #ifndef USE_LEVELDB
@@ -195,7 +195,7 @@ public:
         DbIterator(const DbIterator &)=delete;
         DbIterator &operator=(const DbIterator &)=delete;
     public:
-        DbIterator &operator=(DbIterator &&obj) noexcept {
+        DbIterator &operator=(DbIterator &&obj) {
             this->cs = obj.cs;
             obj.cs = nullptr;
             this->cs_ite = obj.cs_ite;
@@ -211,21 +211,21 @@ public:
             return *this;
         }
 
-        DbIterator(DbIterator &&obj) noexcept {
+        DbIterator(DbIterator &&obj) {
             operator=(std::move(obj));
         }
-        DbIterator() noexcept : bp(nullptr), lp(nullptr), cs(nullptr), cs_ite(nullptr), fUsingIterator(nullptr) {}
-        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) noexcept :
+        DbIterator() : bp(nullptr), lp(nullptr), cs(nullptr), cs_ite(nullptr), fUsingIterator(nullptr) {}
+        explicit DbIterator(Dbc *&&p, CCriticalSection *csIn) :
             bp(p), lp(nullptr), qp(nullptr), cs(csIn), cs_ite(nullptr), fUsingIterator(nullptr) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) noexcept :
+        explicit DbIterator(leveldb::Iterator *&&p, CCriticalSection *csIn) :
             bp(nullptr), lp(p), qp(nullptr), cs(csIn), cs_ite(nullptr), fUsingIterator(nullptr) {
             assert(cs);
             p = nullptr;
         }
-        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn, CCriticalSection *cs_iteIn, bool *fUsingIterator_In) noexcept :
+        explicit DbIterator(sqlite3_stmt *&&p, CCriticalSection *csIn, CCriticalSection *cs_iteIn, bool *fUsingIterator_In) :
             bp(nullptr), lp(nullptr), qp(p), cs(csIn), cs_ite(cs_iteIn), fUsingIterator(fUsingIterator_In) {
             assert(cs);
             p = nullptr;
@@ -242,37 +242,37 @@ public:
             }
         }
 
-        bool is_bdb() const noexcept {
+        bool is_bdb() const {
             return bp != nullptr;
         }
-        bool is_leveldb() const noexcept {
+        bool is_leveldb() const {
             return lp != nullptr;
         }
-        bool is_sqlite() const noexcept {
+        bool is_sqlite() const {
             return qp != nullptr;
         }
-        bool is_error() const noexcept {
+        bool is_error() const {
             return (lp == nullptr && bp == nullptr && qp == nullptr);
         }
-        bool is_ok() const noexcept {
+        bool is_ok() const {
             return !is_error();
         }
-        CCriticalSection &get_cs() const noexcept {
+        CCriticalSection &get_cs() const {
             return *cs;
         }
 
-        operator Dbc *() const noexcept {
+        operator Dbc *() const {
             return bp;
         }
-        operator leveldb::Iterator *() const noexcept {
+        operator leveldb::Iterator *() const {
             return lp;
         }
-        operator sqlite3_stmt *() const noexcept {
+        operator sqlite3_stmt *() const {
             return qp;
         }
 
         // call CloseDB before setnull().
-        void setnull() noexcept {
+        void setnull() {
             bp=nullptr;
             lp=nullptr;
             qp=nullptr;
@@ -314,7 +314,7 @@ public:
         void clear() {
             buf.clear();
         }
-        size_t size() const noexcept {
+        size_t size() const {
             return buf.size();
         }
 
@@ -324,7 +324,7 @@ public:
                                                  std::move(std::make_pair(std::vector<char, secure_allocator<char>>(&ssKey[0], &ssKey[0]+ssKey.size()),
                                                                           std::vector<char, secure_allocator<char>>(&ssValue[0], &ssValue[0]+ssValue.size()))))));
         }
-        const std::pair<txn_method, secure_keyvalue> &get(int index) const noexcept {
+        const std::pair<txn_method, secure_keyvalue> &get(int index) const {
             return buf[index];
         }
 
@@ -455,7 +455,7 @@ public:
     void Flush(bool fShutdown);
     void CheckpointLSN(std::string strFile);
 
-    void SetDetach(bool fDetachDB_) noexcept {fDetachDB = fDetachDB_;}
+    void SetDetach(bool fDetachDB_) {fDetachDB = fDetachDB_;}
     bool GetDetach() const {return fDetachDB;}
 
     void CloseDb(const std::string &strFile);
@@ -729,10 +729,10 @@ class CDBStream
     CDBStream &operator=(const CDBStream &)=delete;
     CDBStream &operator=(CDBStream &&)=delete;
 public:
-    explicit CDBStream(char *beginIn, uint32_t sizeIn) noexcept : wpos(0), rpos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize iterator init
+    explicit CDBStream(char *beginIn, uint32_t sizeIn) : wpos(0), rpos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize iterator init
         assert(pbegin!=pend);
     }
-    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) noexcept : wpos(0), rpos(0), pend(nullptr), pvch(vch) { // Serialize object to bytearray, Unserialize bytearray to object
+    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) : wpos(0), rpos(0), pend(nullptr), pvch(vch) { // Serialize object to bytearray, Unserialize bytearray to object
         vch->reserve(vch_reserve);
         vch->resize(128);
         pbegin = vch->data();
@@ -759,15 +759,15 @@ public:
         return (std::string(pbegin, pend));
     }
 
-    const char *data() const noexcept {
+    const char *data() const {
         return pbegin;
     }
 
-    uint32_t size() const noexcept {
+    uint32_t size() const {
         return wpos;
     }
 
-    void ignore() noexcept {
+    void ignore() {
         uint32_t size = (uint32_t)pbegin[rpos];
         rpos += size + 1;
     }
@@ -795,8 +795,8 @@ class CDBStreamInvalid {
     CDBStreamInvalid &operator=(CDBStreamInvalid &)=delete;
     CDBStreamInvalid &operator=(const CDBStreamInvalid &&)=delete;
 public:
-    CDBStreamInvalid() noexcept : dbinvalid((char *)0, 1) {}
-    operator CDBStream &() noexcept {
+    CDBStreamInvalid() : dbinvalid((char *)0, 1) {}
+    operator CDBStream &() {
         return dbinvalid;
     }
 private:
@@ -1005,22 +1005,22 @@ public:
         const_iterator(const const_iterator &)=delete;
         const_iterator &operator=(const const_iterator &)=delete;
     public:
-        const_iterator &operator=(const_iterator &&obj) noexcept {
+        const_iterator &operator=(const_iterator &&obj) {
             this->p = obj.p;
             obj.p = nullptr;
             this->cs = obj.cs;
             obj.cs = nullptr;
             return *this;
         }
-        const_iterator(const_iterator &&obj) noexcept {
+        const_iterator(const_iterator &&obj) {
             operator=(std::move(obj));
         }
 
-        const_iterator() noexcept {
+        const_iterator() {
             p = nullptr;
             cs = nullptr;
         }
-        explicit const_iterator(leveldb::Iterator *&&pIn, CCriticalSection *csIn) noexcept : p(pIn), cs(csIn) {
+        explicit const_iterator(leveldb::Iterator *&&pIn, CCriticalSection *csIn) : p(pIn), cs(csIn) {
             assert(pIn && csIn);
             pIn = nullptr;
         }
@@ -1031,7 +1031,7 @@ public:
             }
         }
 
-        void operator++() noexcept {
+        void operator++() {
             assert(p && cs);
             p->Next();
             if(p->Valid()==false) {
@@ -1041,20 +1041,20 @@ public:
                 cs = nullptr;
             }
         }
-        void operator++(int) noexcept {
+        void operator++(int) {
             operator++();
         }
-        bool operator==(const const_iterator &obj) const noexcept {
+        bool operator==(const const_iterator &obj) const {
             return p == obj.p;
         }
-        bool operator!=(const const_iterator &obj) const noexcept {
+        bool operator!=(const const_iterator &obj) const {
             return p != obj.p;
         }
-        leveldb::Iterator &operator*() const noexcept {
+        leveldb::Iterator &operator*() const {
             assert(p);
             return *p;
         }
-        leveldb::Iterator *operator->() const noexcept {
+        leveldb::Iterator *operator->() const {
             assert(p);
             return p;
         }
@@ -1064,7 +1064,7 @@ public:
     };
 
     template <typename KEY, typename VALUE>
-    NODISCARD bool seek(const KEY &key, const VALUE &val) const noexcept {
+    NODISCARD bool seek(const KEY &key, const VALUE &val) const {
         LOCK(cs_db);
         delete p;
         p = pdb->NewIterator(leveldb::ReadOptions());
@@ -1076,7 +1076,7 @@ public:
         return true;
     }
 
-    const_iterator begin() const noexcept {
+    const_iterator begin() const {
         assert(p);
         assert(fSecure==false);
         ENTER_CRITICAL_SECTION(cs_db);
@@ -1088,7 +1088,7 @@ public:
         }
         return std::move(const_iterator(std::move(p), &cs_db));
     }
-    const_iterator end() const noexcept {
+    const_iterator end() const {
         return std::move(const_iterator());
     }
 

@@ -15,20 +15,20 @@ namespace
 namespace sha1
 {
 /** One round of SHA-1. */
-void inline Round(uint32_t a, uint32_t& b, uint32_t c, uint32_t d, uint32_t& e, uint32_t f, uint32_t k, uint32_t w) noexcept
+void inline Round(uint32_t a, uint32_t& b, uint32_t c, uint32_t d, uint32_t& e, uint32_t f, uint32_t k, uint32_t w)
 {
     e += ((a << 5) | (a >> 27)) + f + k + w;
     b = (b << 30) | (b >> 2);
 }
 
-uint32_t inline f1(uint32_t b, uint32_t c, uint32_t d) noexcept { return d ^ (b & (c ^ d)); }
-uint32_t inline f2(uint32_t b, uint32_t c, uint32_t d) noexcept { return b ^ c ^ d; }
-uint32_t inline f3(uint32_t b, uint32_t c, uint32_t d) noexcept { return (b & c) | (d & (b | c)); }
+uint32_t inline f1(uint32_t b, uint32_t c, uint32_t d) { return d ^ (b & (c ^ d)); }
+uint32_t inline f2(uint32_t b, uint32_t c, uint32_t d) { return b ^ c ^ d; }
+uint32_t inline f3(uint32_t b, uint32_t c, uint32_t d) { return (b & c) | (d & (b | c)); }
 
-uint32_t inline left(uint32_t x) noexcept { return (x << 1) | (x >> 31); }
+uint32_t inline left(uint32_t x) { return (x << 1) | (x >> 31); }
 
 /** Initialize SHA-1 state. */
-void inline Initialize(uint32_t* s) noexcept
+void inline Initialize(uint32_t* s)
 {
     s[0] = 0x67452301ul;
     s[1] = 0xEFCDAB89ul;
@@ -43,7 +43,7 @@ constexpr uint32_t k3 = 0x8F1BBCDCul;
 constexpr uint32_t k4 = 0xCA62C1D6ul;
 
 /** Perform a SHA-1 transformation, processing a 64-byte chunk. */
-void Transform(uint32_t* s, const unsigned char* chunk) noexcept
+void Transform(uint32_t* s, const unsigned char* chunk)
 {
     uint32_t a = s[0], b = s[1], c = s[2], d = s[3], e = s[4];
     uint32_t w0, w1, w2, w3, w4, w5, w6, w7, w8, w9, w10, w11, w12, w13, w14, w15;
@@ -146,12 +146,12 @@ void Transform(uint32_t* s, const unsigned char* chunk) noexcept
 
 ////// SHA1
 
-CSHA1::CSHA1() noexcept : bytes(0)
+CSHA1::CSHA1() : bytes(0)
 {
     sha1::Initialize(s);
 }
 
-CSHA1& CSHA1::Write(const unsigned char* data, size_t len) noexcept
+CSHA1& CSHA1::Write(const unsigned char* data, size_t len)
 {
     const unsigned char* end = data + len;
     size_t bufsize = bytes % 64;
@@ -177,7 +177,7 @@ CSHA1& CSHA1::Write(const unsigned char* data, size_t len) noexcept
     return *this;
 }
 
-void CSHA1::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
+void CSHA1::Finalize(unsigned char hash[OUTPUT_SIZE])
 {
     static const unsigned char pad[64] = {0x80};
     unsigned char sizedesc[8];
@@ -191,7 +191,7 @@ void CSHA1::Finalize(unsigned char hash[OUTPUT_SIZE]) noexcept
     WriteBE32(hash + 16, s[4]);
 }
 
-CSHA1& CSHA1::Reset() noexcept
+CSHA1& CSHA1::Reset()
 {
     bytes = 0;
     sha1::Initialize(s);

@@ -160,28 +160,28 @@ struct BIGNUM_NEKONABE {
 class CNekoNum : public BIGNUM_NEKONABE
 {
 public:
-    CNekoNum() noexcept {
+    CNekoNum() {
         SetNull();
     }
 
-    explicit CNekoNum(const int64_t &n) noexcept {
+    explicit CNekoNum(const int64_t &n) {
         SetNull();
         set_int64(n);
     }
 
-    inline bool operator==(const int64_t& rhs) const noexcept  { return get_int64() == rhs; }
-    inline bool operator!=(const int64_t& rhs) const noexcept  { return get_int64() != rhs; }
-    inline bool operator<=(const int64_t& rhs) const noexcept  { return get_int64() <= rhs; }
-    inline bool operator< (const int64_t& rhs) const noexcept  { return get_int64() <  rhs; }
-    inline bool operator>=(const int64_t& rhs) const noexcept  { return get_int64() >= rhs; }
-    inline bool operator> (const int64_t& rhs) const noexcept  { return get_int64() >  rhs; }
+    inline bool operator==(const int64_t& rhs) const { return get_int64() == rhs; }
+    inline bool operator!=(const int64_t& rhs) const { return get_int64() != rhs; }
+    inline bool operator<=(const int64_t& rhs) const { return get_int64() <= rhs; }
+    inline bool operator< (const int64_t& rhs) const { return get_int64() <  rhs; }
+    inline bool operator>=(const int64_t& rhs) const { return get_int64() >= rhs; }
+    inline bool operator> (const int64_t& rhs) const { return get_int64() >  rhs; }
 
-    inline bool operator==(const CNekoNum& rhs) const noexcept { return is_equal(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
-    inline bool operator!=(const CNekoNum& rhs) const noexcept { return !operator==(rhs); }
-    inline bool operator<=(const CNekoNum& rhs) const noexcept { return is_elt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
-    inline bool operator< (const CNekoNum& rhs) const noexcept { return is_lt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
-    inline bool operator>=(const CNekoNum& rhs) const noexcept { return !operator<(rhs); }
-    inline bool operator> (const CNekoNum& rhs) const noexcept { return !operator<=(rhs); }
+    inline bool operator==(const CNekoNum& rhs) const { return is_equal(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator!=(const CNekoNum& rhs) const { return !operator==(rhs); }
+    inline bool operator<=(const CNekoNum& rhs) const { return is_elt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator< (const CNekoNum& rhs) const { return is_lt(static_cast<const BIGNUM_NEKONABE &>(rhs)); }
+    inline bool operator>=(const CNekoNum& rhs) const { return !operator<(rhs); }
+    inline bool operator> (const CNekoNum& rhs) const { return !operator<=(rhs); }
 
     // CNekoNum method
     int getint() const;

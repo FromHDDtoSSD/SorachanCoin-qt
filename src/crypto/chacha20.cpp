@@ -11,7 +11,7 @@
 
 namespace latest_crypto {
 
-constexpr static inline uint32_t rotl32(uint32_t v, int c) noexcept { return (v << c) | (v >> (32 - c)); }
+constexpr static inline uint32_t rotl32(uint32_t v, int c) { return (v << c) | (v >> (32 - c)); }
 
 #define QUARTERROUND(a,b,c,d) \
   a += b; d = rotl32(d ^ a, 16); \
@@ -22,7 +22,7 @@ constexpr static inline uint32_t rotl32(uint32_t v, int c) noexcept { return (v 
 static const unsigned char sigma[] = "expand 32-byte k";
 static const unsigned char tau[] = "expand 16-byte k";
 
-void ChaCha20::SetKey(const unsigned char* k, size_t keylen) noexcept
+void ChaCha20::SetKey(const unsigned char* k, size_t keylen)
 {
     const unsigned char *constants;
 
@@ -50,29 +50,29 @@ void ChaCha20::SetKey(const unsigned char* k, size_t keylen) noexcept
     input[15] = 0;
 }
 
-ChaCha20::ChaCha20() noexcept
+ChaCha20::ChaCha20()
 {
     std::memset(input, 0, sizeof(input));
 }
 
-ChaCha20::ChaCha20(const unsigned char* k, size_t keylen) noexcept
+ChaCha20::ChaCha20(const unsigned char* k, size_t keylen)
 {
     SetKey(k, keylen);
 }
 
-void ChaCha20::SetIV(uint64_t iv) noexcept
+void ChaCha20::SetIV(uint64_t iv)
 {
     input[14] = iv;
     input[15] = iv >> 32;
 }
 
-void ChaCha20::Seek(uint64_t pos) noexcept
+void ChaCha20::Seek(uint64_t pos)
 {
     input[12] = pos;
     input[13] = pos >> 32;
 }
 
-void ChaCha20::Output(unsigned char* c, size_t bytes) noexcept
+void ChaCha20::Output(unsigned char* c, size_t bytes)
 {
     uint32_t x0, x1, x2, x3, x4, x5, x6, x7, x8, x9, x10, x11, x12, x13, x14, x15;
     uint32_t j0, j1, j2, j3, j4, j5, j6, j7, j8, j9, j10, j11, j12, j13, j14, j15;

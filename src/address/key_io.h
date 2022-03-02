@@ -31,11 +31,11 @@ protected:
 
     virtual void SetData(int nVersionIn, const void *pdata, size_t nSize)=0;
     virtual void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend)=0;
-    unsigned int getVersion() const noexcept { return nVersion; }
-    const base58_vector &getvchData() const noexcept { return vchData; }
+    unsigned int getVersion() const { return nVersion; }
+    const base58_vector &getvchData() const { return vchData; }
     void setvchData(const unsigned char &in) { vchData.push_back(in); }
     const unsigned char *getvchArray() const { return &vchData[0]; }
-    bool Set(const IKeyData &dest) noexcept {
+    bool Set(const IKeyData &dest) {
         nVersion = dest.nVersion;
         vchData = dest.vchData;
         return true;
@@ -57,22 +57,22 @@ protected:
     }
 
 public:
-    const base58_vector &GetData() const noexcept {
+    const base58_vector &GetData() const {
         return vchData;
     }
 
-    int CompareTo(const IKeyData &b58) const noexcept {
+    int CompareTo(const IKeyData &b58) const {
         if (nVersion < b58.nVersion) { return -1; }
         if (nVersion > b58.nVersion) { return  1; }
         if (vchData < b58.vchData)   { return -1; }
         if (vchData > b58.vchData)   { return  1; }
         return 0;
     }
-    bool operator==(const IKeyData &b58) const noexcept { return CompareTo(b58) == 0; }
-    bool operator<=(const IKeyData &b58) const noexcept { return CompareTo(b58) <= 0; }
-    bool operator>=(const IKeyData &b58) const noexcept { return CompareTo(b58) >= 0; }
-    bool operator< (const IKeyData &b58) const noexcept { return CompareTo(b58) <  0; }
-    bool operator> (const IKeyData &b58) const noexcept { return CompareTo(b58) >  0; }
+    bool operator==(const IKeyData &b58) const { return CompareTo(b58) == 0; }
+    bool operator<=(const IKeyData &b58) const { return CompareTo(b58) <= 0; }
+    bool operator>=(const IKeyData &b58) const { return CompareTo(b58) >= 0; }
+    bool operator< (const IKeyData &b58) const { return CompareTo(b58) <  0; }
+    bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
 };
 
 class CBase58Data : public IKeyData {

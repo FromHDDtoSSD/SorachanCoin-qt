@@ -13,19 +13,19 @@
 class excep : private no_instance
 {
 public:
-    static std::string &get_strMiscWarning() noexcept {
+    static std::string &get_strMiscWarning() {
         return excep::strMiscWarning;
     }
     static void set_strMiscWarning(const std::string &str) {
         strMiscWarning = str;
     }
-    static void LogException(const std::exception *pex, const char *pszThread) noexcept;
+    static void LogException(const std::exception *pex, const char *pszThread);
     static void PrintException(const std::exception *pex, const char *pszThread);
-    static void PrintExceptionContinue(const std::exception *pex, const char *pszThread) noexcept;
+    static void PrintExceptionContinue(const std::exception *pex, const char *pszThread);
 
 private:
     static std::string strMiscWarning;
-    static std::string FormatException(const std::exception *pex, const char *pszThread) noexcept;
+    static std::string FormatException(const std::exception *pex, const char *pszThread);
 };
 
 #endif // BITCOIN_EXCEPTION_H

@@ -28,11 +28,11 @@ class stack_ptr {
     stack_ptr &operator=(stack_ptr &&)=delete;
     T *ptr;
 public:
-    explicit stack_ptr(T *pIn) noexcept : ptr(pIn) {}
-    operator T &() const noexcept {
+    explicit stack_ptr(T *pIn) : ptr(pIn) {}
+    operator T &() const {
         return *ptr;
     }
-    T *operator->() const noexcept {
+    T *operator->() const {
         return ptr;
     }
     ~stack_ptr() {
@@ -136,49 +136,49 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        iterator(std::shared_ptr<memory> &pmem_) noexcept : ptr(nullptr), pmem(pmem_) {}
-        iterator(T *ptr_, std::shared_ptr<memory> &pmem_) noexcept : ptr(ptr_), pmem(pmem_) {}
-        T &operator*() const noexcept { return *ptr; }
-        T *operator->() const noexcept { return ptr; }
-        T &operator[](size_type pos) noexcept { return ptr[pos]; }
-        const T &operator[](size_type pos) const noexcept { return ptr[pos]; }
-        iterator &operator++() noexcept {
+        iterator(std::shared_ptr<memory> &pmem_) : ptr(nullptr), pmem(pmem_) {}
+        iterator(T *ptr_, std::shared_ptr<memory> &pmem_) : ptr(ptr_), pmem(pmem_) {}
+        T &operator*() const { return *ptr; }
+        T *operator->() const { return ptr; }
+        T &operator[](size_type pos) { return ptr[pos]; }
+        const T &operator[](size_type pos) const { return ptr[pos]; }
+        iterator &operator++() {
             ++ptr;
             return *this;
         }
-        iterator &operator--() noexcept {
+        iterator &operator--() {
             --ptr;
             return *this;
         }
-        iterator operator++(int) noexcept {
+        iterator operator++(int) {
             iterator copy(*this);
             ++(*this);
             return copy;
         }
-        iterator operator--(int) noexcept {
+        iterator operator--(int) {
             iterator copy(*this);
             --(*this);
             return copy;
         }
-        difference_type friend operator-(iterator a, iterator b) noexcept {
+        difference_type friend operator-(iterator a, iterator b) {
             return (&(*a) - &(*b));
         }
-        iterator operator+(size_type n) noexcept { return iterator(ptr + n, pmem); }
-        iterator &operator+=(size_type n) noexcept {
+        iterator operator+(size_type n) { return iterator(ptr + n, pmem); }
+        iterator &operator+=(size_type n) {
             ptr += n;
             return *this;
         }
-        iterator operator-(size_type n) noexcept { return iterator(ptr - n, pmem); }
-        iterator &operator-=(size_type n) noexcept {
+        iterator operator-(size_type n) { return iterator(ptr - n, pmem); }
+        iterator &operator-=(size_type n) {
             ptr -= n;
             return *this;
         }
-        bool operator==(iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(iterator x) const noexcept { return ptr != x.ptr; }
-        bool operator>=(iterator x) const noexcept { return ptr >= x.ptr; }
-        bool operator<=(iterator x) const noexcept { return ptr <= x.ptr; }
-        bool operator>(iterator x) const noexcept { return ptr > x.ptr; }
-        bool operator<(iterator x) const noexcept { return ptr < x.ptr; }
+        bool operator==(iterator x) const { return ptr == x.ptr; }
+        bool operator!=(iterator x) const { return ptr != x.ptr; }
+        bool operator>=(iterator x) const { return ptr >= x.ptr; }
+        bool operator<=(iterator x) const { return ptr <= x.ptr; }
+        bool operator>(iterator x) const { return ptr > x.ptr; }
+        bool operator<(iterator x) const { return ptr < x.ptr; }
     };
 
     class reverse_iterator {
@@ -191,32 +191,32 @@ public:
         typedef T *pointer;
         typedef T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        reverse_iterator(std::shared_ptr<memory> pmem_) noexcept : ptr(nullptr), pmem(pmem_) {}
-        reverse_iterator(T *ptr_, std::shared_ptr<memory> pmem_) noexcept : ptr(ptr_), pmem(pmem_) {}
-        T &operator*() noexcept { return *ptr; }
-        const T &operator*() const noexcept { return *ptr; }
-        T *operator->() noexcept { return ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        reverse_iterator &operator--() noexcept {
+        reverse_iterator(std::shared_ptr<memory> pmem_) : ptr(nullptr), pmem(pmem_) {}
+        reverse_iterator(T *ptr_, std::shared_ptr<memory> pmem_) : ptr(ptr_), pmem(pmem_) {}
+        T &operator*() { return *ptr; }
+        const T &operator*() const { return *ptr; }
+        T *operator->() { return ptr; }
+        const T *operator->() const { return ptr; }
+        reverse_iterator &operator--() {
             ++ptr;
             return *this;
         }
-        reverse_iterator &operator++() noexcept {
+        reverse_iterator &operator++() {
             --ptr;
             return *this;
         }
-        reverse_iterator operator++(int) noexcept {
+        reverse_iterator operator++(int) {
             reverse_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        reverse_iterator operator--(int) noexcept {
+        reverse_iterator operator--(int) {
             reverse_iterator copy(*this);
             --(*this);
             return copy;
         }
-        bool operator==(reverse_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(reverse_iterator x) const noexcept { return ptr != x.ptr; }
+        bool operator==(reverse_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(reverse_iterator x) const { return ptr != x.ptr; }
     };
 
     class const_iterator {
@@ -229,53 +229,53 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::random_access_iterator_tag iterator_category;
-        const_iterator(std::shared_ptr<memory> pmem_) noexcept : ptr(nullptr), pmem(pmem_) {}
-        const_iterator(const T *ptr_, std::shared_ptr<memory> pmem_) noexcept : ptr(ptr_), pmem(pmem_) {}
-        const_iterator(iterator x, std::shared_ptr<memory> pmem_) noexcept : ptr(&(*x)), pmem(pmem_) {}
-        const T &operator*() const noexcept { return *ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        const T &operator[](size_type pos) const noexcept { return ptr[pos]; }
-        const_iterator &operator++() noexcept {
+        const_iterator(std::shared_ptr<memory> pmem_) : ptr(nullptr), pmem(pmem_) {}
+        const_iterator(const T *ptr_, std::shared_ptr<memory> pmem_) : ptr(ptr_), pmem(pmem_) {}
+        const_iterator(iterator x, std::shared_ptr<memory> pmem_) : ptr(&(*x)), pmem(pmem_) {}
+        const T &operator*() const { return *ptr; }
+        const T *operator->() const { return ptr; }
+        const T &operator[](size_type pos) const { return ptr[pos]; }
+        const_iterator &operator++() {
             ++ptr;
             return *this;
         }
-        const_iterator &operator--() noexcept {
+        const_iterator &operator--() {
             --ptr;
             return *this;
         }
-        const_iterator operator++(int) noexcept {
+        const_iterator operator++(int) {
             const_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        const_iterator operator--(int) noexcept {
+        const_iterator operator--(int) {
             const_iterator copy(*this);
             --(*this);
             return copy;
         }
-        difference_type friend operator-(const_iterator a, const_iterator b) noexcept {
+        difference_type friend operator-(const_iterator a, const_iterator b) {
             return (&(*a) - &(*b));
         }
-        const_iterator operator+(size_type n) noexcept {
+        const_iterator operator+(size_type n) {
             return const_iterator(ptr + n);
         }
-        const_iterator &operator+=(size_type n) noexcept {
+        const_iterator &operator+=(size_type n) {
             ptr += n;
             return *this;
         }
-        const_iterator operator-(size_type n) noexcept {
+        const_iterator operator-(size_type n) {
             return const_iterator(ptr - n);
         }
-        const_iterator &operator-=(size_type n) noexcept {
+        const_iterator &operator-=(size_type n) {
             ptr -= n;
             return *this;
         }
-        bool operator==(const_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(const_iterator x) const noexcept { return ptr != x.ptr; }
-        bool operator>=(const_iterator x) const noexcept { return ptr >= x.ptr; }
-        bool operator<=(const_iterator x) const noexcept { return ptr <= x.ptr; }
-        bool operator>(const_iterator x) const noexcept { return ptr > x.ptr; }
-        bool operator<(const_iterator x) const noexcept { return ptr < x.ptr; }
+        bool operator==(const_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(const_iterator x) const { return ptr != x.ptr; }
+        bool operator>=(const_iterator x) const { return ptr >= x.ptr; }
+        bool operator<=(const_iterator x) const { return ptr <= x.ptr; }
+        bool operator>(const_iterator x) const { return ptr > x.ptr; }
+        bool operator<(const_iterator x) const { return ptr < x.ptr; }
     };
 
     class const_reverse_iterator {
@@ -288,31 +288,31 @@ public:
         typedef const T *pointer;
         typedef const T &reference;
         typedef std::bidirectional_iterator_tag iterator_category;
-        const_reverse_iterator(std::shared_ptr<memory> pmem_) noexcept : ptr(nullptr), pmem(pmem_) {}
-        const_reverse_iterator(T *ptr_, std::shared_ptr<memory> pmem_) noexcept : ptr(ptr_), pmem(pmem_) {}
-        const_reverse_iterator(reverse_iterator x, std::shared_ptr<memory> pmem_) noexcept : ptr(&(*x)), pmem(pmem_) {}
-        const T &operator*() const noexcept { return *ptr; }
-        const T *operator->() const noexcept { return ptr; }
-        const_reverse_iterator &operator--() noexcept {
+        const_reverse_iterator(std::shared_ptr<memory> pmem_) : ptr(nullptr), pmem(pmem_) {}
+        const_reverse_iterator(T *ptr_, std::shared_ptr<memory> pmem_) : ptr(ptr_), pmem(pmem_) {}
+        const_reverse_iterator(reverse_iterator x, std::shared_ptr<memory> pmem_) : ptr(&(*x)), pmem(pmem_) {}
+        const T &operator*() const { return *ptr; }
+        const T *operator->() const { return ptr; }
+        const_reverse_iterator &operator--() {
             ++ptr;
             return *this;
         }
-        const_reverse_iterator &operator++() noexcept {
+        const_reverse_iterator &operator++() {
             --ptr;
             return *this;
         }
-        const_reverse_iterator operator++(int) noexcept {
+        const_reverse_iterator operator++(int) {
             const_reverse_iterator copy(*this);
             ++(*this);
             return copy;
         }
-        const_reverse_iterator operator--(int) noexcept {
+        const_reverse_iterator operator--(int) {
             const_reverse_iterator copy(*this);
             --(*this);
             return copy;
         }
-        bool operator==(const_reverse_iterator x) const noexcept { return ptr == x.ptr; }
-        bool operator!=(const_reverse_iterator x) const noexcept { return ptr != x.ptr; }
+        bool operator==(const_reverse_iterator x) const { return ptr == x.ptr; }
+        bool operator!=(const_reverse_iterator x) const { return ptr != x.ptr; }
     };
 
     typedef class raw_pointer {
@@ -324,8 +324,8 @@ public:
         //raw_pointer &operator=(raw_pointer &&)=delete;
 
     public:
-        explicit raw_pointer(char *pIn) noexcept : ptr(pIn) {}
-        explicit raw_pointer(unsigned char *pIn) noexcept : ptr((char *)pIn) {}
+        explicit raw_pointer(char *pIn) : ptr(pIn) {}
+        explicit raw_pointer(unsigned char *pIn) : ptr((char *)pIn) {}
         template <typename R> operator R *() const {
             if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(ptr))
                 throw std::runtime_error("prevector_s raw_pointer: failed to raw_pointer");
@@ -346,8 +346,8 @@ public:
         //raw_ref &operator=(raw_ref &&)=delete;
 
     public:
-        explicit raw_ref(char *pIn, size_type posIn) noexcept : ptr(pIn), pos(posIn) {}
-        explicit raw_ref(unsigned char *pIn, size_type posIn) noexcept : ptr((char *)pIn), pos(posIn) {}
+        explicit raw_ref(char *pIn, size_type posIn) : ptr(pIn), pos(posIn) {}
+        explicit raw_ref(unsigned char *pIn, size_type posIn) : ptr((char *)pIn), pos(posIn) {}
         template <typename R> operator R &() const {
             if(! latest_crypto::quantum_lib::secure_mprotect_readwrite(ptr))
                 throw std::runtime_error("prevector_s raw_ref: failed to readwrite");
@@ -368,8 +368,8 @@ public:
         //const_raw_pointer &operator=(const_raw_pointer &&)=delete;
 
     public:
-        explicit const_raw_pointer(const char *pIn) noexcept : ptr(pIn) {}
-        explicit const_raw_pointer(const unsigned char *pIn) noexcept : ptr((const char *)pIn) {}
+        explicit const_raw_pointer(const char *pIn) : ptr(pIn) {}
+        explicit const_raw_pointer(const unsigned char *pIn) : ptr((const char *)pIn) {}
         template <typename R> operator const R *() const {
             if(! latest_crypto::quantum_lib::secure_mprotect_readonly(ptr))
                 throw std::runtime_error("prevector_s const_raw_pointer: failed to readonly");
@@ -390,8 +390,8 @@ public:
         //const_raw_ref &operator=(const_raw_ref &&)=delete;
 
     public:
-        explicit const_raw_ref(const char *pIn, size_type posIn) noexcept : ptr(pIn), pos(posIn) {}
-        explicit const_raw_ref(const unsigned char *pIn, size_type posIn) noexcept : ptr((const char *)pIn), pos(posIn) {}
+        explicit const_raw_ref(const char *pIn, size_type posIn) : ptr(pIn), pos(posIn) {}
+        explicit const_raw_ref(const unsigned char *pIn, size_type posIn) : ptr((const char *)pIn), pos(posIn) {}
         template <typename R> operator const R &() const {
             if(! latest_crypto::quantum_lib::secure_mprotect_readonly(ptr))
                 throw std::runtime_error("prevector_s const_raw_ref: failed to readonly");
@@ -412,7 +412,7 @@ private:
             size_type capacity;
             unsigned char *indirect;
         } _s;
-        direct_or_indirect() noexcept {
+        direct_or_indirect() {
             direct = nullptr;
         }
     } _union;
@@ -424,26 +424,26 @@ private:
         if(! latest_crypto::quantum_lib::secure_mprotect_noaccess(_union.direct))
             throw std::runtime_error("prevector_s::direct_alloc : Failed to noaccess");
     }
-    void direct_free() noexcept {
+    void direct_free() {
         if(latest_crypto::quantum_lib::secure_mprotect_readwrite(_union.direct)) {
             latest_crypto::quantum_lib::secure_free(_union.direct);
             _union.direct = nullptr;
         }
     }
 
-    T *direct_ptr(difference_type pos) noexcept {
+    T *direct_ptr(difference_type pos) {
         return reinterpret_cast<T *>(_union.direct) + pos;
     }
-    const T *direct_ptr(difference_type pos) const noexcept {
+    const T *direct_ptr(difference_type pos) const {
         return reinterpret_cast<const T *>(_union.direct) + pos;
     }
-    T *indirect_ptr(difference_type pos) noexcept {
+    T *indirect_ptr(difference_type pos) {
         return reinterpret_cast<T *>(_union._s.indirect) + pos;
     }
-    const T *indirect_ptr(difference_type pos) const noexcept {
+    const T *indirect_ptr(difference_type pos) const {
         return reinterpret_cast<const T *>(_union._s.indirect) + pos;
     }
-    bool is_direct() const noexcept { return _size <= N; }
+    bool is_direct() const { return _size <= N; }
 
     void change_capacity(size_type new_capacity) {
         DEBUGCS_OUTPUT("prevector_s: void change_capacity(size_type new_capacity)");
@@ -500,15 +500,15 @@ private:
         }
     }
 
-    T *item_ptr(difference_type pos) noexcept {
+    T *item_ptr(difference_type pos) {
         return is_direct() ? direct_ptr(pos) : indirect_ptr(pos);
     }
-    const T *item_ptr(difference_type pos) const noexcept {
+    const T *item_ptr(difference_type pos) const {
         return is_direct() ? direct_ptr(pos) : indirect_ptr(pos);
     }
 
     template <typename InputIterator>
-    void copy(size_type pcur, InputIterator first, InputIterator last, size_type n) noexcept {
+    void copy(size_type pcur, InputIterator first, InputIterator last, size_type n) {
         //IMPLEMENT_MEMORY_READWRITE
         if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             std::memcpy(item_ptr(pcur), &(*first), n * sizeof(T));
@@ -523,7 +523,7 @@ private:
         }
     }
 
-    void fill(size_type pcur, const T &val, size_type n) noexcept {
+    void fill(size_type pcur, const T &val, size_type n) {
         //IMPLEMENT_MEMORY_READWRITE
         if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             const int *_val = reinterpret_cast<const int *>(&val);
@@ -609,8 +609,8 @@ public:
         }
     }
 
-    prevector_s(prevector_s<N, T, Size, Diff> &&other) noexcept : _size(0), _invch(nullptr) {
-        DEBUGCS_OUTPUT("prevector_s: prevector_s(prevector_s<N, T, Size, Diff> &&other) noexcept");
+    prevector_s(prevector_s<N, T, Size, Diff> &&other) : _size(0), _invch(nullptr) {
+        DEBUGCS_OUTPUT("prevector_s: prevector_s(prevector_s<N, T, Size, Diff> &&other)");
         direct_alloc();
         swap(other);
     }
@@ -630,18 +630,18 @@ public:
         return *this;
     }
 
-    prevector_s &operator=(prevector_s<N, T, Size, Diff> &&other) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: prevector_s &operator=(prevector_s<N, T, Size, Diff> &&other) noexcept");
+    prevector_s &operator=(prevector_s<N, T, Size, Diff> &&other) {
+        DEBUGCS_OUTPUT("prevector_s: prevector_s &operator=(prevector_s<N, T, Size, Diff> &&other)");
         swap(other);
         return *this;
     }
 
-    size_type size() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s:size_type size() const noexcept");
+    size_type size() const {
+        DEBUGCS_OUTPUT("prevector_s:size_type size() const");
         return is_direct() ? _size : _size - N - 1;
     }
 
-    bool empty() const noexcept {
+    bool empty() const {
         DEBUGCS_OUTPUT("prevector_s: bool empty() const");
         return (size() == 0);
     }
@@ -656,13 +656,13 @@ public:
         IMPLEMENT_MEMORY_SHARED_READONLY
         return const_iterator(item_ptr(0), pmem);
     }
-    iterator end() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: iterator end() noexcept");
+    iterator end() {
+        DEBUGCS_OUTPUT("prevector_s: iterator end()");
         IMPLEMENT_MEMORY_SHARED_NONE_READWRITE
         return iterator(item_ptr(size()), unused);
     }
-    const_iterator end() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_iterator end() const noexcept");
+    const_iterator end() const {
+        DEBUGCS_OUTPUT("prevector_s: const_iterator end() const");
         IMPLEMENT_MEMORY_SHARED_NONE_READWRITE
         return const_iterator(item_ptr(size()), unused);
     }
@@ -677,19 +677,19 @@ public:
         IMPLEMENT_MEMORY_SHARED_READONLY
         return const_reverse_iterator(item_ptr(size() - 1), pmem);
     }
-    reverse_iterator rend() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: rend() noexcept");
+    reverse_iterator rend() {
+        DEBUGCS_OUTPUT("prevector_s: rend()");
         IMPLEMENT_MEMORY_SHARED_NONE_READWRITE
         return reverse_iterator(item_ptr(-1), unused);
     }
-    const_reverse_iterator rend() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_reverse_iterator rend() const noexcept");
+    const_reverse_iterator rend() const {
+        DEBUGCS_OUTPUT("prevector_s: const_reverse_iterator rend() const");
         IMPLEMENT_MEMORY_SHARED_NONE_READWRITE
         return const_reverse_iterator(item_ptr(-1), unused);
     }
 
-    size_t capacity() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: size_t capacity() const noexcept");
+    size_t capacity() const {
+        DEBUGCS_OUTPUT("prevector_s: size_t capacity() const");
         if(is_direct()) {
             return N;
         } else {
@@ -697,14 +697,14 @@ public:
         }
     }
 
-    raw_ref operator[](size_type pos) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: ref_raw operator[](size_type pos) noexcept");
+    raw_ref operator[](size_type pos) {
+        DEBUGCS_OUTPUT("prevector_s: ref_raw operator[](size_type pos)");
         IMPLEMENT_MEMORY_RAW_REF(pos)
         return ref;
     }
 
-    const_raw_ref operator[](size_type pos) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_raw_ref operator[](size_type pos) const noexcept");
+    const_raw_ref operator[](size_type pos) const {
+        DEBUGCS_OUTPUT("prevector_s: const_raw_ref operator[](size_type pos) const");
         IMPLEMENT_MEMORY_CONST_RAW_REF(pos)
         return ref;
     }
@@ -795,13 +795,13 @@ public:
         }
     }
 
-    iterator erase(iterator pos) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: iterator erase(iterator pos) noexcept");
+    iterator erase(iterator pos) {
+        DEBUGCS_OUTPUT("prevector_s: iterator erase(iterator pos)");
         return erase(pos, pos + 1);
     }
 
-    iterator erase(iterator first, iterator last) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: iterator erase(iterator first, iterator last) noexcept");
+    iterator erase(iterator first, iterator last) {
+        DEBUGCS_OUTPUT("prevector_s: iterator erase(iterator first, iterator last)");
         iterator p = first;
         char *endp = (char *)&(*end());
         if(!IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
@@ -834,36 +834,36 @@ public:
         ++_size;
     }
 
-    void pop_back() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: void pop_back() noexcept");
+    void pop_back() {
+        DEBUGCS_OUTPUT("prevector_s: void pop_back()");
         erase(end() - 1, end());
     }
 
-    raw_ref front() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: raw_ref front() noexcept");
+    raw_ref front() {
+        DEBUGCS_OUTPUT("prevector_s: raw_ref front()");
         IMPLEMENT_MEMORY_RAW_REF(0)
         return ref;
     }
 
-    const_raw_ref front() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_raw_ref front() const noexcept");
+    const_raw_ref front() const {
+        DEBUGCS_OUTPUT("prevector_s: const_raw_ref front() const");
         IMPLEMENT_MEMORY_CONST_RAW_REF(0)
         return ref;
     }
 
-    raw_ref back() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: raw_ref back() noexcept");
+    raw_ref back() {
+        DEBUGCS_OUTPUT("prevector_s: raw_ref back()");
         IMPLEMENT_MEMORY_RAW_REF(size() - 1)
         return ref;
     }
 
-    const_raw_ref back() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_raw_ref back() const noexcept");
+    const_raw_ref back() const {
+        DEBUGCS_OUTPUT("prevector_s: const_raw_ref back() const");
         IMPLEMENT_MEMORY_CONST_RAW_REF(size() - 1)
         return ref;
     }
 
-    void swap(prevector<N, T, Size, Diff> &other) noexcept {
+    void swap(prevector<N, T, Size, Diff> &other) {
         DEBUGCS_OUTPUT("prevector_s: swap(prevector<N, T, Size, Diff> &other)");
         std::swap(_union, other._invch);
         std::swap(_union, other._union);
@@ -871,7 +871,7 @@ public:
     }
 
     ~prevector_s() {
-        DEBUGCS_OUTPUT("prevector_s: ~prevector_s() noexcept");
+        DEBUGCS_OUTPUT("prevector_s: ~prevector_s()");
         if(! IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             clear();
         }
@@ -885,8 +885,8 @@ public:
         direct_free();
     }
 
-    bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: bool operator==(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator==(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector_s: bool operator==(const prevector<N, T, Size, Diff> &other) const");
         if(other.size() != size()) {
             return false;
         }
@@ -904,13 +904,13 @@ public:
         return true;
     }
 
-    bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: bool operator!=(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator!=(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector_s: bool operator!=(const prevector<N, T, Size, Diff> &other) const");
         return !(*this == other);
     }
 
-    bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: bool operator<(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator<(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector_s: bool operator<(const prevector<N, T, Size, Diff> &other) const");
         if(size() < other.size()) {
             return true;
         }
@@ -934,13 +934,13 @@ public:
         return false;
     }
 
-    bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: bool operator>(const prevector<N, T, Size, Diff> &other) const noexcept");
+    bool operator>(const prevector<N, T, Size, Diff> &other) const {
+        DEBUGCS_OUTPUT("prevector_s: bool operator>(const prevector<N, T, Size, Diff> &other) const");
         return ((!operator<(other)) && (!operator==(other)));
     }
 
-    size_t allocated_memory() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: size_t allocated_memory() const noexcept");
+    size_t allocated_memory() const {
+        DEBUGCS_OUTPUT("prevector_s: size_t allocated_memory() const");
         if(is_direct()) {
             return 0;
         } else {
@@ -948,25 +948,25 @@ public:
         }
     }
 
-    raw_pointer data() noexcept {
-        DEBUGCS_OUTPUT("prevector_s: raw_pointer data() noexcept");
+    raw_pointer data() {
+        DEBUGCS_OUTPUT("prevector_s: raw_pointer data()");
         IMPLEMENT_MEMORY_RAW_POINTER
         return ptr;
     }
 
-    const_raw_pointer data() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: const_raw_pointer data() const noexcept");
+    const_raw_pointer data() const {
+        DEBUGCS_OUTPUT("prevector_s: const_raw_pointer data() const");
         IMPLEMENT_MEMORY_CONST_RAW_POINTER
         return ptr;
     }
 
-    const value_type &at(int pos) const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: value_type &at(int pos) const noexcept");
+    const value_type &at(int pos) const {
+        DEBUGCS_OUTPUT("prevector_s: value_type &at(int pos) const");
         return operator[](pos);
     }
 
-    value_type &at(int pos) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: velue_type &at(int pos) noexcept");
+    value_type &at(int pos) {
+        DEBUGCS_OUTPUT("prevector_s: velue_type &at(int pos)");
         return operator[](pos);
     }
 
@@ -974,23 +974,23 @@ public:
     // The following operator isn't used because their interpretation is ambiguous.
     //
     // template <typename SA = secure_allocator<T> >
-    // operator std::vector<T, SA>() const noexcept {
-    //     DEBUGCS_OUTPUT("prevector_s: cast overload std::vector<T, SA>() const noexcept");
+    // operator std::vector<T, SA>() const {
+    //     DEBUGCS_OUTPUT("prevector_s: cast overload std::vector<T, SA>() const");
     //     std::vector<T, SA> obj(data(), data() + size());
     //     return obj;
     // }
 
     template <typename SA = secure_allocator<T> >
-    std::vector<T, SA> get_std_vector() const noexcept {
-        DEBUGCS_OUTPUT("prevector_s: std::vector<T, SA> get_std_vector() const noexcept");
+    std::vector<T, SA> get_std_vector() const {
+        DEBUGCS_OUTPUT("prevector_s: std::vector<T, SA> get_std_vector() const");
         raw_pointer _data = data();
         std::vector<T, SA> obj(_data, _data + size());
         return obj;
     }
 
     template <typename SA = secure_allocator<T> >
-    static prevector_s<N, T, Size, Diff> get_prevector(const std::vector<T, SA> &v) noexcept {
-        DEBUGCS_OUTPUT("prevector_s: prevector<N, T, Size, Diff> get_prevector(const std::vector<T, SA> &v) noexcept");
+    static prevector_s<N, T, Size, Diff> get_prevector(const std::vector<T, SA> &v) {
+        DEBUGCS_OUTPUT("prevector_s: prevector<N, T, Size, Diff> get_prevector(const std::vector<T, SA> &v)");
         prevector_s<N, T, Size, Diff> obj(v.data(), v.data() + v.size());
         return obj;
     }

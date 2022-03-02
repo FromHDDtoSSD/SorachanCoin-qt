@@ -162,66 +162,48 @@ bool parseCommandLine(std::vector<std::string> &args, const std::string &strComm
     }
 }
 
-void RPCExecutor::request(const QString &command) {
-    auto cleanse_qstring = [](const QString &str) {
-        QString &era = const_cast<QString &>(str);
-        cleanse::OPENSSL_cleanse(era.data(), era.size());
-    };
-    //debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
-    // Note: QString command includes passphrase.
-
-    // [OK] test
-    //cleanse_qstring(command);
-    //debugcs::instance() << "RPCExecutor command: " << command.toStdString().c_str() << debugcs::endl();
-
+void RPCExecutor::request(const QString &command)
+{
     std::vector<std::string> args;
     if(! parseCommandLine(args, command.toStdString())) {
         emit reply(RPCConsole::CMD_ERROR, QString("Parse error: unbalanced ' or \""));
-        cleanse_qstring(command);
         return;
     }
     if(args.empty()) {
-        cleanse_qstring(command);
-        return;
+        return; // Nothing to do
     }
 
-    std::string strPrint;
-    CBitrpcData data;
-    data.param = CBitrpcData::BITRPC_PARAM_EXEC;
-    json_spirit::Value result = QtConsoleRPC::execute(args[0], bitrpc::RPCConvertValues(data, args[0], std::vector<std::string>(args.begin() + 1, args.end())), data);
+    try {
+        std::string strPrint;
+        // Convert argument list to JSON objects in method-dependent way,
+        // and pass it along with the method name to the dispatcher.
+        json_spirit::Value result = CRPCTable::execute(
+            args[0],
+            bitrpc::RPCConvertValues(args[0], std::vector<std::string>(args.begin() + 1, args.end())));
 
-    // Format result reply
-    if(data.fSuccess()) {
-        json_spirit::json_flags status;
-        if (result.type() == json_spirit::null_type)
+        // Format result reply
+        if (result.type() == json_spirit::null_type) {
             strPrint = "";
-        else if (result.type() == json_spirit::str_type) {
-            strPrint = result.get_str(status);
-            if(! status.fSuccess()) {
-                emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(status.e));
-                cleanse_qstring(command);
-                return;
-            }
+        } else if (result.type() == json_spirit::str_type) {
+            strPrint = result.get_str();
         } else {
-            strPrint = write_string(result, true, status);
-            if(! status.fSuccess()) {
-                emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(status.e));
-                cleanse_qstring(command);
-                return;
-            }
+            strPrint = write_string(result, true);
         }
+
         emit reply(RPCConsole::CMD_REPLY, QString::fromStdString(strPrint));
-    } else {
-        if(data.ret == CBitrpcData::BITRPC_STATUS_ERROR) {
+    } catch (json_spirit::Object &objError) {
+        try {
             // Nice formatting for standard-format error
-            emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(data.e) + " (code " + QString::number(data.code) + ")");
-        } else {
-            // raised when converting to invalid type, i.e. missing code or message
+            int code = find_value(objError, "code").get_int();
+            std::string message = find_value(objError, "message").get_str();
+            emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(message) + " (code " + QString::number(code) + ")");
+        } catch(const std::runtime_error &) {   // raised when converting to invalid type, i.e. missing code or message
             // Show raw JSON object
-            emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(data.e));
+            emit reply(RPCConsole::CMD_ERROR, QString::fromStdString(write_string(json_spirit::Value(objError), false)));
         }
+    } catch (const std::exception &e) {
+        emit reply(RPCConsole::CMD_ERROR, QString("Error: ") + QString::fromStdString(e.what()));
     }
-    cleanse_qstring(command);
 }
 
 RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(new (std::nothrow) Ui::RPCConsole), historyPtr(0) {

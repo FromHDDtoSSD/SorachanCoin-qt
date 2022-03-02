@@ -8,7 +8,7 @@
 namespace latest_crypto {
 
 template <typename BASE>
-uint131072 HMAC_LAMPORT_PRIVATE_HASH_impl<BASE>::CalculateDigest(const byte *input, size_t length) noexcept {
+uint131072 HMAC_LAMPORT_PRIVATE_HASH_impl<BASE>::CalculateDigest(const byte *input, size_t length) {
     unsigned char X[BASE::Size()];
     uint131072 result=0;
     BASE CTX;

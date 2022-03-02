@@ -22,7 +22,7 @@ void chainparamsbase::SetupChainParamsBaseOptions() {
 
 static std::unique_ptr<chainparamsbase::CBaseChainParams> globalChainBaseParams;
 
-const chainparamsbase::CBaseChainParams &chainparamsbase::BaseParams() noexcept {
+const chainparamsbase::CBaseChainParams &chainparamsbase::BaseParams() {
     assert(globalChainBaseParams);
     return *globalChainBaseParams;
 }
