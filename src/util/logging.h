@@ -55,7 +55,7 @@ namespace BCLog {
     {
     private:
         FILE *m_fileout = nullptr;
-        std::mutex m_file_mutex;
+        std::recursive_mutex m_file_mutex;
         std::list<std::string> m_msgs_before_open;
         static int FileWriteStr(const std::string &str, FILE *fp);
 

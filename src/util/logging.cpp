@@ -38,7 +38,7 @@ int BCLog::Logger::FileWriteStr(const std::string &str, FILE *fp) {
 }
 
 bool BCLog::Logger::OpenDebugLog() {
-    std::lock_guard<std::mutex> scoped_lock(m_file_mutex);
+    std::lock_guard<std::recursive_mutex> scoped_lock(m_file_mutex);
 
     assert(m_fileout == nullptr);
     // if(m_fileout) ::fclose(m_fileout);
@@ -232,7 +232,7 @@ void BCLog::Logger::LogPrintStr(const std::string &str) {
         ::fflush(stdout);
     }
     if (m_print_to_file) {
-        std::lock_guard<std::mutex> scoped_lock(m_file_mutex);
+        std::lock_guard<std::recursive_mutex> scoped_lock(m_file_mutex);
 
         // buffer if we haven't opened the log yet
         if (m_fileout == nullptr) {

@@ -1119,7 +1119,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
             // Parse request
             json_spirit::Value valRequest;
             if (! read_string(strRequest, valRequest)) {
-                //logging::LogPrintf("ThreadRPCServer3 JSON ParseError\n");
+                logging::LogPrintf("ThreadRPCServer3 JSON ParseError\n");
                 throw bitjson::JSONRPCError(RPC_PARSE_ERROR, "Parse error");
             }
 
@@ -1144,11 +1144,11 @@ void bitrpc::ThreadRPCServer3(void *parg)
 
             conn->stream() << http::HTTPReply(HTTP_OK, strReply, fRun) << std::flush;
         } catch (const json_spirit::Object &objError) {
-            //logging::LogPrintf("ThreadRPCServer3 JSON Error1\n");
+            logging::LogPrintf("ThreadRPCServer3 JSON Error1\n");
             json::ErrorReply(conn->stream(), objError, jreq.id);
             break;
         } catch (const std::exception &e) {
-            //logging::LogPrintf("ThreadRPCServer3 JSON Error2\n");
+            logging::LogPrintf("ThreadRPCServer3 JSON Error2\n");
             json::ErrorReply(conn->stream(), bitjson::JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);
             break;
         }
