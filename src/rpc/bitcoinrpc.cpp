@@ -1062,12 +1062,15 @@ std::string bitrpc::JSONRPCExecBatch(const json_spirit::Array &vReq)
 
 void bitrpc::ThreadRPCServer3(void *parg)
 {
-    LOCK(cs_THREAD_RPCHANDLER);
-    logging::LogPrintf("ThreadRPCServer3 started\n");
+    //LOCK(cs_THREAD_RPCHANDLER);
+    //logging::LogPrintf("ThreadRPCServer3 started\n");
 
     // Make this thread recognisable as the RPC handler
     bitthread::RenameThread((std::string(strCoinName) + "-rpchand").c_str());
-    ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+        ++net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+    }
 
     AcceptedConnection *conn = (AcceptedConnection *)parg;
     bool fRun = true;
@@ -1076,14 +1079,17 @@ void bitrpc::ThreadRPCServer3(void *parg)
         if (args_bool::fShutdown || !fRun) {
             conn->close();
             delete conn;
-            --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+            {
+                LOCK(cs_THREAD_RPCHANDLER);
+                --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+            }
             return;
         }
         std::map<std::string, std::string> mapHeaders;
         std::string strRequest;
 
         http::ReadHTTP(conn->stream(), mapHeaders, strRequest);
-        logging::LogPrintf("ThreadRPCServer3 strRequest %s\n", strRequest.c_str());
+        //logging::LogPrintf("ThreadRPCServer3 strRequest %s\n", strRequest.c_str());
 
         //
         // Check authorization
@@ -1113,7 +1119,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
             // Parse request
             json_spirit::Value valRequest;
             if (! read_string(strRequest, valRequest)) {
-                logging::LogPrintf("ThreadRPCServer3 JSON ParseError\n");
+                //logging::LogPrintf("ThreadRPCServer3 JSON ParseError\n");
                 throw bitjson::JSONRPCError(RPC_PARSE_ERROR, "Parse error");
             }
 
@@ -1123,7 +1129,7 @@ void bitrpc::ThreadRPCServer3(void *parg)
             if (valRequest.type() == json_spirit::obj_type) {
                 jreq.parse(valRequest);
 
-                logging::LogPrintf("ThreadRPCServer3 JSON EXE %s\n", jreq.strMethod.c_str());
+                //logging::LogPrintf("ThreadRPCServer3 JSON EXE %s\n", jreq.strMethod.c_str());
                 json_spirit::Value result = CRPCTable::tableRPC.execute(jreq.strMethod, jreq.params);
 
                 // Send reply
@@ -1138,18 +1144,21 @@ void bitrpc::ThreadRPCServer3(void *parg)
 
             conn->stream() << http::HTTPReply(HTTP_OK, strReply, fRun) << std::flush;
         } catch (const json_spirit::Object &objError) {
-            logging::LogPrintf("ThreadRPCServer3 JSON Error1\n");
+            //logging::LogPrintf("ThreadRPCServer3 JSON Error1\n");
             json::ErrorReply(conn->stream(), objError, jreq.id);
             break;
         } catch (const std::exception &e) {
-            logging::LogPrintf("ThreadRPCServer3 JSON Error2\n");
+            //logging::LogPrintf("ThreadRPCServer3 JSON Error2\n");
             json::ErrorReply(conn->stream(), bitjson::JSONRPCError(RPC_PARSE_ERROR, e.what()), jreq.id);
             break;
         }
     }
 
     delete conn;
-    --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+    {
+        LOCK(cs_THREAD_RPCHANDLER);
+        --net_node::vnThreadsRunning[THREAD_RPCHANDLER];
+    }
 }
 
 json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_spirit::Array &params)
