@@ -596,11 +596,14 @@ void CSqliteDBEnv::Close() {
 }
 
 bool CSqliteDBEnv::Flush(const std::string &strFile) {
-    LOCK3(cs_sqlite, sqlobj[strFile]->cs_sql, sqlobj[strFile]->cs_iterator);
+    //LOCK3(cs_sqlite, sqlobj[strFile]->cs_sql, sqlobj[strFile]->cs_iterator);
     //if(args_bool::fShutdown)
     //    return true;
 
+    LOCK2(cs_sqlite, sqlobj[strFile]->cs_sql);
     ::sqlite3_db_cacheflush(sqlobj[strFile]->psql); // this is bool, therefore exactly due to flush, database stopped then resume (except using iterator).
+
+    /*
     if(sqlobj[strFile]->fUsingIterator)
         return true;
 
@@ -612,6 +615,7 @@ bool CSqliteDBEnv::Flush(const std::string &strFile) {
         EnvShutdown();
         throw std::runtime_error("CSqliteDBEnv::Flush Sqlite Object open failure");
     }
+    */
     return true;
 }
 
