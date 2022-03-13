@@ -329,6 +329,7 @@ private:
     //
 public:
     static CCriticalSection cs_nWalletUnlockTime;
+    static CCriticalSection cs_getwork;
     static int64_t nWalletUnlockTime;
 
 private:
