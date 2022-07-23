@@ -5,6 +5,7 @@
 #ifndef SORACHANCOIN_QUANTUM_H
 #define SORACHANCOIN_QUANTUM_H
 
+#include <stdexcept>
 #include <memory>
 #include <assert.h>
 #include <cstdint>
