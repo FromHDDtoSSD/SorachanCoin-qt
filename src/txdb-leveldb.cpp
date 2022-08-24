@@ -544,13 +544,14 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
 #ifdef BLK_SQL_MODE
 
     // Seek to start blockhashtype.
-    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockhashtype%"));
+    IDB::DbIterator iterator1 = this->GetIteCursor(std::string("%blockhashtype%"));
 
     // Now read each blockhashtype.
-    int ret;
-    std::vector<char> vchValue;
-    CDBStream ssValue(&vchValue, 10000);
-    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid(), ssValue))!=DB_NOTFOUND)
+    int ret=DB_NOTFOUND;
+    std::vector<char> vchBuffer;
+    CDBStream ssData(&vchBuffer, 10000);
+
+    while((ret=CSqliteDB::ReadAtCursor(iterator1, CDBStreamInvalid(), ssData))!=DB_NOTFOUND)
     {
         if(ret>0)
             return logging::error("LoadBlockIndex() : sql read failure");
@@ -559,27 +560,26 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
         if (args_bool::fRequestShutdown)
             break;
 
-        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
-        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
-        ssKey.ignore();
+        //CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        //CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
+        //ssKey.ignore();
+        ssData.ignore();
 
         uint256 hash;
-        ::Unserialize(ssKey, hash);
+        ::Unserialize(ssData, hash);
         BLOCK_HASH_MODIFIER data;
-        ::Unserialize(ssValue, data);
+        ::Unserialize(ssData, data);
 
         block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
         //debugcs::instance() << "LoadBlockIndex height: " << data.nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
     }
 
     // Seek to start key.
-    IDB::DbIterator ite = this->GetIteCursor(std::string("%blockindex%"));
+    IDB::DbIterator iterator2 = this->GetIteCursor(std::string("%blockindex%"));
 
     // Now read each entry.
-    int ret;
-    std::vector<char> vchValue;
-    CDBStream ssValue(&vchValue, 10000);
-    while((ret=CSqliteDB::ReadAtCursor(ite, CDBStreamInvalid(), ssValue))!=DB_NOTFOUND)
+    ret=DB_NOTFOUND;
+    while((ret=CSqliteDB::ReadAtCursor(iterator2, CDBStreamInvalid(), ssData))!=DB_NOTFOUND)
     {
         if(ret>0)
             return logging::error("LoadBlockIndex() : sql read failure");
@@ -589,7 +589,7 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
             break;
 
         CDiskBlockIndex diskindex;
-        ::Unserialize(ssValue, diskindex);
+        ::Unserialize(ssData, diskindex);
 
         uint256 blockHash = diskindex.GetBlockHash();
         //debugcs::instance() << "CTxDB ReadAtCursor hash: " << blockHash.ToString().c_str() << debugcs::endl();
