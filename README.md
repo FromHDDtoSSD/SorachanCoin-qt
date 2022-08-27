@@ -1,7 +1,8 @@
 
-Welcome to SORA Network  
+Welcome to SORA Network [SORA/Web3.0/NFTs]<br>
 
-SorachanCoin - a hybrid scrypt PoW + PoS based cryptocurrency, scan analysis repair recovery on Blockchain [HDD/SSD/NVMe/RAID].
+SorachanCoin [SORA] - a hybrid scrypt PoW/PoS based cryptocurrency + Web3.0/NFTs supported.<br>
+FromHDDtoSSD [SORA] - HDD/SSD/NVMe S.M.A.R.T. stat-scan data-recovery by SORA Network.<br>
 
 ![SorachanCoin](https://raw.githubusercontent.com/FromHDDtoSSD/SorachanCoin-qt/master/src/qt/res/images/splash2.png)
 
@@ -9,6 +10,7 @@ What is SORA Network?
 ===========================
 Official site:  
 https://www.junkhdd.com/<br>
+https://de.junkhdd.com/<br>
 https://www.fromhddtossd.com/
 
 Bitcointalk:  
@@ -24,14 +26,11 @@ Blog:
 https://www.iuec-recovery.jp/
 
 Download:  
-https://github.com/FromHDDtoSSD/SorachanCoin-qt/releases<br>
 https://www.fromhddtossd.com/drive/
 
 How to use?
 ===========================
-https://www.junkhdd.com/download/usage.html<br>
 https://www.fromhddtossd.com/<br >
-https://xn--gmzw8s.jp/
 
 How to build?
 ===========================
@@ -39,17 +38,10 @@ How to build?
 ./configure<br>
 make<br>
 <br>
-"SorachanCoind" will be generated under ./src<br>
-<br>
-Require library: autoconf, unzip<br>
-(sudo apt-get install autoconf, unzip)<br>
+generate under ./src, "SorachanCoind"<br>
 
 BlockExplorer
 ===========================
-mainnet:<br>
+https://de.junkhdd.com:7350<br>
 https://www.junkhdd.com:7350/<br>
 https://sora.junkhdd.com:7350/<br>
-<br>
-testnet:<br>
-https://www.night-rescue.com/
-
