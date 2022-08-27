@@ -7,9 +7,9 @@
 PROGNAME=$(basename $0)
 CMD_MAKE="make"
 (! command -v gmake >/dev/null) || CMD_MAKE="gmake"
-command -v autoreconf >/dev/null || \
+command -V autoreconf >/dev/null || \
  (echo "configuration failed, please install autoreconf first" && exit 1)
-command -v autoconf >/dev/null || \
+command -V autoconf >/dev/null || \
   (echo "configuration failed, please install autoconf first" && exit 1)
 
 usage() {

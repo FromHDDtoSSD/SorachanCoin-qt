@@ -30,6 +30,8 @@ CTxDBHybrid::CTxDBHybrid(const char *pszMode) : CLevelDB(CLevelDBEnv::getname_ma
 CTxDBHybrid::~CTxDBHybrid() {}
 
 static void oldblockindex_remove(bool fRemoveOld) {
+    return;
+
     unsigned int nFile = 1;
     for (;;) {
         fs::path strBlockFile = iofs::GetDataDir() / tfm::format("blk%04u.dat", nFile);
