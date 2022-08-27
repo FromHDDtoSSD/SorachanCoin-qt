@@ -12,11 +12,19 @@ command -V autoreconf >/dev/null || \
 command -V autoconf >/dev/null || \
   (echo "configuration failed, please install autoconf first" && exit 1)
 
+#usage() {
+# echo "Usage: SorachanCoin ${PROGNAME}"
+# echo ""
+# echo "Options:"
+# echo "-h, --help: this help"
+#}
 usage() {
  echo "Usage: SorachanCoin ${PROGNAME}"
- echo ""
  echo "Options:"
- echo "-h, --help: this help"
+ echo "-h, --help: View usage"
+## echo "--prefix: --prefix=[install path] (e.g. --prefix=/opt/SorachanCoin)"
+ echo "--build-unix: Build a UNIX system (e.g. FreeBSD)."
+ echo "--with-no-build-library: Use the package without building the necessary libraries."
 }
 
 PREFIX=""
@@ -49,21 +57,21 @@ cd "$srcdir"
 mkdir -p "$WORK_DIR"
 mkdir -p "$LIBRARY_DIR"
 
-#build_bdb() {
-# bdb_wget="https://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz"
-# cd "$srcdir"/"$WORK_DIR"
-# mkdir -p "$bdb_dir"
-# cd "$bdb_dir"
-# wget "$bdb_wget"
-# tar zxvf db-4.8.30.NC.tar.gz
-# cd db-4.8.30.NC/dbinc
-# chmod +w atomic.h
-# sed -i -e 's/__atomic_compare_exchange/__db_atomic_compare_exchange/g' atomic.h
-# cd ../build_unix/
-# ../dist/configure --enable-cxx --disable-shared --with-pic --prefix="$srcdir"/"$LIBRARY_DIR"/"$bdb_dir"
-# ${CMD_MAKE}
-# ${CMD_MAKE} install
-#}
+build_bdb() {
+ bdb_wget="https://download.oracle.com/berkeley-db/db-4.8.30.NC.tar.gz"
+ cd "$srcdir"/"$WORK_DIR"
+ mkdir -p "$bdb_dir"
+ cd "$bdb_dir"
+ wget --no-check-certificate "$bdb_wget"
+ tar zxvf db-4.8.30.NC.tar.gz
+ cd db-4.8.30.NC/dbinc
+ chmod +w atomic.h
+ sed -i -e 's/__atomic_compare_exchange/__db_atomic_compare_exchange/g' atomic.h
+ cd ../build_unix/
+ ../dist/configure --enable-cxx --disable-shared --with-pic --prefix="$srcdir"/"$LIBRARY_DIR"/"$bdb_dir"
+ ${CMD_MAKE}
+ ${CMD_MAKE} install
+}
 
 build_boost() {
  boost_wget="https://sourceforge.net/projects/boost/files/boost/1.68.0/boost_1_68_0.tar.gz/download"
@@ -105,28 +113,28 @@ build_libressl() {
 # ${CMD_MAKE} install
 #}
 
-build_sqlite() {
- sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
- cd "$srcdir"/"$WORK_DIR"
- mkdir -p "$sqlite_dir"
- cd "$sqlite_dir"
- wget --no-check-certificate "$sqlite_wget"
- tar zxvf sqlite-autoconf-3350300.tar.gz
- unlink sqlite-autoconf-3350300.tar.gz
- cd sqlite-autoconf-3350300
- ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"
- ${CMD_MAKE}
- ${CMD_MAKE} install
- cd "$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"/include
- mkdir sqlite
- cp sqlite3.h sqlite/sqlite3.h
-}
+#build_sqlite() {
+# sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
+# cd "$srcdir"/"$WORK_DIR"
+# mkdir -p "$sqlite_dir"
+# cd "$sqlite_dir"
+# wget --no-check-certificate "$sqlite_wget"
+# tar zxvf sqlite-autoconf-3350300.tar.gz
+# unlink sqlite-autoconf-3350300.tar.gz
+# cd sqlite-autoconf-3350300
+# ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"
+# ${CMD_MAKE}
+# ${CMD_MAKE} install
+# cd "$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"/include
+# mkdir sqlite
+# cp sqlite3.h sqlite/sqlite3.h
+#}
 
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
-# cd "$srcdir"/"$LIBRARY_DIR"
-# if [ ! -d ${bdb_dir} ]; then
-#  build_bdb
-# fi
+ cd "$srcdir"/"$LIBRARY_DIR"
+ if [ ! -d ${bdb_dir} ]; then
+  build_bdb
+ fi
  cd "$srcdir"/"$LIBRARY_DIR"
  if [ ! -d ${boost_dir} ]; then
   build_boost
@@ -139,10 +147,10 @@ if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
 # if [ ! -d ${blake2_dir} ]; then
 #  build_blake2
 # fi
- cd "$srcdir"/"$LIBRARY_DIR"
- if [ ! -d ${sqlite_dir} ]; then
-  build_sqlite
- fi
+# cd "$srcdir"/"$LIBRARY_DIR"
+# if [ ! -d ${sqlite_dir} ]; then
+#  build_sqlite
+# fi
 fi
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE"  ]; then
  mv "$srcdir"/src/Makefile.am.library "$srcdir"/src/Makefile.am
@@ -153,17 +161,17 @@ cd "$srcdir"
 autoreconf --install
 chmod 700 configure
 ## ./configure ${PREFIX}
-#if [ ${BUILD_UNIX} = "FALSE" ]; then
-# ${CMD_MAKE} -C src/leveldb
-# ${CMD_MAKE} -C src/leveldb memenv_test
-#else
-# cd ./src/leveldb
-# chmod +x ./build_detect_platform
-# ./build_detect_platform build_config.mk ./
-# make -f makefile.unix-freebsd
-# make memenv_test -f makefile.unix-freebsd
-# cd ../
-#fi
+if [ ${BUILD_UNIX} = "FALSE" ]; then
+ ${CMD_MAKE} -C src/leveldb
+ ${CMD_MAKE} -C src/leveldb memenv_test
+else
+ cd ./src/leveldb
+ chmod +x ./build_detect_platform
+ ./build_detect_platform build_config.mk ./
+ make -f makefile.unix-freebsd
+ make memenv_test -f makefile.unix-freebsd
+ cd ../
+fi
 
 echo "Completely SorachanCoin [SORA] is ready."
 
