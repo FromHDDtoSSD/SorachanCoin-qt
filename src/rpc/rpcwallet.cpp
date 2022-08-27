@@ -1828,7 +1828,7 @@ json_spirit::Value CRPCTable::encryptwallet(const json_spirit::Array &params, bo
     // slack space in .dat files; that is bad if the old data is
     // unencrypted private keys. So:
     //
-    entry::StartShutdown();
+    boot::StartShutdown();
     return (std::string(strCoinName) + " wallet encrypted; server stopping, restart to run with encrypted wallet.  The keypool has been flushed, you need to make a new backup.").c_str();
 #endif
 }

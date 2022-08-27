@@ -113,22 +113,22 @@ build_libressl() {
 # ${CMD_MAKE} install
 #}
 
-#build_sqlite() {
-# sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
-# cd "$srcdir"/"$WORK_DIR"
-# mkdir -p "$sqlite_dir"
-# cd "$sqlite_dir"
-# wget --no-check-certificate "$sqlite_wget"
-# tar zxvf sqlite-autoconf-3350300.tar.gz
-# unlink sqlite-autoconf-3350300.tar.gz
-# cd sqlite-autoconf-3350300
-# ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"
-# ${CMD_MAKE}
-# ${CMD_MAKE} install
-# cd "$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"/include
-# mkdir sqlite
-# cp sqlite3.h sqlite/sqlite3.h
-#}
+build_sqlite() {
+ sqlite_wget="https://www.sqlite.org/2021/sqlite-autoconf-3350300.tar.gz"
+ cd "$srcdir"/"$WORK_DIR"
+ mkdir -p "$sqlite_dir"
+ cd "$sqlite_dir"
+ wget --no-check-certificate "$sqlite_wget"
+ tar zxvf sqlite-autoconf-3350300.tar.gz
+ unlink sqlite-autoconf-3350300.tar.gz
+ cd sqlite-autoconf-3350300
+ ./configure --prefix="$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"
+ ${CMD_MAKE}
+ ${CMD_MAKE} install
+ cd "$srcdir"/"$LIBRARY_DIR"/"$sqlite_dir"/include
+ mkdir sqlite
+ cp sqlite3.h sqlite/sqlite3.h
+}
 
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
  cd "$srcdir"/"$LIBRARY_DIR"
@@ -147,10 +147,10 @@ if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE" ]; then
 # if [ ! -d ${blake2_dir} ]; then
 #  build_blake2
 # fi
-# cd "$srcdir"/"$LIBRARY_DIR"
-# if [ ! -d ${sqlite_dir} ]; then
-#  build_sqlite
-# fi
+ cd "$srcdir"/"$LIBRARY_DIR"
+ if [ ! -d ${sqlite_dir} ]; then
+  build_sqlite
+ fi
 fi
 if [ ${WITH_NO_BUILD_LIBRARY} = "FALSE"  ]; then
  mv "$srcdir"/src/Makefile.am.library "$srcdir"/src/Makefile.am
