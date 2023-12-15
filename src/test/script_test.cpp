@@ -9,5 +9,5 @@ public:
     }
 };
 #ifdef DEBUG
-script_test script_test_obj;
+//script_test script_test_obj;
 #endif

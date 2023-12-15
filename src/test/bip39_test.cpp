@@ -14,5 +14,5 @@ public:
     ~bip39_test() {}
 };
 #ifdef DEBUG
-bip39_test bip39_test_obj;
+//bip39_test bip39_test_obj;
 #endif

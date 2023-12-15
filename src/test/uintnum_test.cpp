@@ -24,5 +24,5 @@ public:
     }
 };
 #ifdef DEBUG
-uintnum_test uintnum_test_obj;
+//uintnum_test uintnum_test_obj;
 #endif

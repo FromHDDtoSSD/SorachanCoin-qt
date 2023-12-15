@@ -38,7 +38,7 @@ static constexpr int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
 namespace block_transaction
 {
     constexpr unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS = 96;
-    constexpr unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS_TESTNET = 4800;
+    constexpr unsigned int DONOT_ACCEPT_BLOCKS_ADMIT_HOURS_TESTNET = 35040;
 
     constexpr unsigned int MAX_ORPHAN_SERIALIZESIZE = 5000; // send-big-orphans memory exhaustion attack. 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
 
@@ -774,7 +774,12 @@ public:
         logging::LogPrintf("%s", ToString().c_str());
     }
 
+#ifdef VSTREAM_INMEMORY_MODE
+    bool ReadFromDisk(CDiskTxPos pos);
+    bool ReadFromVStream(CDiskTxPos pos, vstream **pfileRet);
+#else
     bool ReadFromDisk(CDiskTxPos pos, FILE **pfileRet=nullptr);
+#endif
     bool ReadFromDisk(CTxDB &txdb, COutPoint prevout, CTxIndex &txindexRet);
     bool ReadFromDisk(CTxDB &txdb, COutPoint prevout);
     bool ReadFromDisk(COutPoint prevout);

@@ -564,10 +564,17 @@ bool CSqliteDBEnv::Open(fs::path pathEnv_) {
             EnvShutdown();
             throw std::runtime_error("CSqliteDBEnv::Open memory allocate failure");
         }
+#ifdef VSTREAM_INMEMORY_MODE
+        if(::sqlite3_open(":memory:", &sobj->psql)!=SQLITE_OK) {
+            EnvShutdown();
+            throw std::runtime_error("CSqliteDBEnv::Open Sqlite Object open failure");
+        }
+#else
         if(::sqlite3_open(path_.string().c_str(), &sobj->psql)!=SQLITE_OK) {
             EnvShutdown();
             throw std::runtime_error("CSqliteDBEnv::Open Sqlite Object open failure");
         }
+#endif
 
         sqlobj.insert(std::make_pair(ite, sobj));
         if(is_table_exists(ite, std::string("key_value"))==false) {

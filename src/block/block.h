@@ -20,7 +20,7 @@
 
 #ifndef SWITCH_LYRE2RE_BLOCK
 # define SWITCH_LYRE2RE_BLOCK (84950000) // hardfork: to Lyra2REv2
-# define SWITCH_LYRE2RE_BLOCK_TESTNET (1495000)
+# define SWITCH_LYRE2RE_BLOCK_TESTNET (84950000)
 #endif
 
 /** Capture information about block/transaction validation */

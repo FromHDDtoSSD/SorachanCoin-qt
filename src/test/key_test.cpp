@@ -459,5 +459,5 @@ public:
     }
 };
 #ifdef DEBUG
-key_test key_test_obj;
+//key_test key_test_obj;
 #endif

@@ -1507,6 +1507,67 @@ public:
     }
 };
 
+#ifdef VSTREAM_INMEMORY_MODE
+struct vstream {
+    std::vector<unsigned char> _buf;
+    size_t pos;
+    std::vector<unsigned char> &buf() {
+        //debugcs::instance() << "buf size: " << _buf.size() << debugcs::endl();
+        return _buf;
+    }
+    vstream() {
+        pos = 0;
+    }
+};
+
+inline size_t vread(void *inbuf, size_t count, size_t size, vstream *_fin) {
+    vstream &fin = *_fin;
+    size_t remain = count * size;
+    if(remain > fin.buf().size() - fin.pos)
+        remain = fin.buf().size() - fin.pos;
+    ::memcpy(inbuf, fin.buf().data() + fin.pos, remain);
+    fin.pos += remain;
+    //debugcs::instance() << "vread: " << remain << debugcs::endl();
+    return remain;
+}
+
+inline size_t vwrite(const void *outbuf, size_t count, size_t size, vstream *_fout) {
+    vstream &fout = *_fout;
+    const size_t dsize = count * size;
+    const size_t vsize = fout.buf().size() + dsize;
+    fout.buf().resize(vsize);
+    ::memcpy(&fout.buf().front() + fout.pos, outbuf, dsize);
+    fout.pos += dsize;
+    return dsize;
+}
+
+inline int vseek(vstream *src, long nLongPos, int flags) {
+    if(flags==SEEK_SET) {
+        //debugcs::instance() << "SEEK_SET pos: " << src->pos << " nLongPos: " << nLongPos << debugcs::endl();
+        src->pos = nLongPos;
+    }
+    else if (flags==SEEK_CUR) {
+        //debugcs::instance() << "SEEK_CUR pos: " << src->pos << " nLongPos: " << nLongPos << debugcs::endl();
+        src->pos += nLongPos;
+    }
+    else if (flags==SEEK_END)
+        src->pos = src->buf().size();
+    else
+        return 1;
+    return 0;
+}
+
+inline long vtell(vstream *src) {
+    return src->pos;
+}
+
+inline void vflush(vstream *) {}
+
+inline void vappend(vstream *src) {
+    src->pos = src->buf().size();
+}
+#endif
+
 // RAII wrapper for FILE *.
 // Wrapper around a FILE * that implements a ring buffer to deserialize from.
 // It guarantees the ability to rewind a given number of bytes.
@@ -1528,7 +1589,11 @@ private:
     // CBufferedFile &operator=(const CBufferedFile &)=delete;
     // CBufferedFile &operator=(CBufferedFile &&)=delete;
 
-    FILE *src;                  // source file
+#ifndef VSTREAM_INMEMORY_MODE
+    FILE *src;
+#else
+    vstream *src;               // source file
+#endif
     uint64_t nSrcPos;           // how many bytes have been read from source
     uint64_t nReadPos;          // how many bytes have been read from this
     uint64_t nReadLimit;        // up to which position we're allowed to read
@@ -1546,6 +1611,7 @@ private:
     }
 
     // read data from the source to fill the buffer
+#ifndef VSTREAM_INMEMORY_MODE
     bool Fill() {
         unsigned int pos = (unsigned int)(nSrcPos % vchBuf.size());
         unsigned int readNow = (unsigned int)(vchBuf.size() - pos);
@@ -1566,21 +1632,56 @@ private:
             return true;
         }
     }
+#else
+    bool Fill() {
+        unsigned int pos = (unsigned int)(nSrcPos % vchBuf.size());
+        unsigned int readNow = (unsigned int)(vchBuf.size() - pos);
+        unsigned int nAvail = (unsigned int)(vchBuf.size() - (nSrcPos - nReadPos) - nRewind);
+        if(nAvail < readNow) {
+            readNow = nAvail;
+        }
+        if(readNow == 0) {
+            return false;
+        }
+
+        size_t read = vread((void *)&vchBuf[pos], sizeof(char), readNow, src) * sizeof(char);
+        if(read == 0) {
+            return false;
+        } else {
+            nSrcPos += read;
+            return true;
+        }
+    }
+#endif
 
 public:
+#ifndef VSTREAM_INMEMORY_MODE
     CBufferedFile(FILE *fileIn, uint64_t nBufSize = PREVECTOR_BUFFER_N, uint64_t nRewindIn = 0) :
         src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit((std::numeric_limits<uint64_t>::max)()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
         state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
+#else
+    CBufferedFile(vstream *fileIn, uint64_t nBufSize = PREVECTOR_BUFFER_N, uint64_t nRewindIn = 0) :
+        src(fileIn), nSrcPos(0), nReadPos(0), nReadLimit((std::numeric_limits<uint64_t>::max)()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
+        state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
+#endif
 
     //CBufferedFile(uint64_t nBufSize = PREVECTOR_BUFFER_N, uint64_t nRewindIn = 0) :
     //    src(nullptr), nSrcPos(0), nReadPos(0), nReadLimit((std::numeric_limits<uint64_t>::max)()), nRewind(nRewindIn), vchBuf(nBufSize, 0),
     //    state(0), exceptmask(std::ios_base::badbit | std::ios_base::failbit) {}
 
+#ifndef VSTREAM_INMEMORY_MODE
     void setfile(FILE *fileIn) {
         if(src)
             throw std::ios_base::failure("setfile only using if the src is nullptr");
         src = fileIn;
     }
+#else
+    void setfile(vstream *fileIn) {
+        if(src)
+            throw std::ios_base::failure("setfile only using if the src is nullptr");
+        src = fileIn;
+    }
+#endif
 
     // check whether no error occurred
     bool good() const {
@@ -1588,9 +1689,15 @@ public:
     }
 
     // check whether we're at the end of the source file
+#ifndef VSTREAM_INMEMORY_MODE
     bool eof() const {
         return nReadPos == nSrcPos && ::feof(this->src);
     }
+#else
+    bool eof() const {
+        return nReadPos == nSrcPos;
+    }
+#endif
 
     // read a number of bytes
     CBufferedFile &read(char *pch, size_t nSize) {
@@ -1642,6 +1749,7 @@ public:
         }
     }
 
+#ifndef VSTREAM_INMEMORY_MODE
     bool Seek(uint64_t nPos) {
         long nLongPos = (long)nPos;
         if(nPos != (uint64_t)nLongPos) {    // If nPos variable type size is larger than long, it is invalid(false).
@@ -1657,6 +1765,23 @@ public:
         state = 0;
         return true;
     }
+#else
+    bool Seek(uint64_t nPos) {
+        long nLongPos = (long)nPos;
+        if(nPos != (uint64_t)nLongPos) {    // If nPos variable type size is larger than long, it is invalid(false).
+            return false;
+        }
+
+        if(vseek(src, nLongPos, SEEK_SET)) {
+            return false;
+        }
+        nLongPos = vtell(src);
+        nSrcPos = nLongPos;
+        nReadPos = nLongPos;
+        state = 0;
+        return true;
+    }
+#endif
 
     // prevent reading beyond a certain position
     // no argument removes the limit
@@ -1698,7 +1823,11 @@ private:
     //CAutoFile(CAutoFile &&)=delete;
     //CAutoFile &operator=(const CAutoFile &)=delete;
     //CAutoFile &operator=(CAutoFile &&)=delete;
+#ifndef VSTREAM_INMEMORY_MODE
     FILE *file;
+#else
+    vstream *file;
+#endif
     short state;
     short exceptmask;
     CBufferedFile buffer;
@@ -1708,6 +1837,7 @@ private:
     std::string path;
     size_t size;
 public:
+#ifndef VSTREAM_INMEMORY_MODE
     CAutoFile(FILE *filenew, int nType=0, int nVersion=0) : buffer(filenew), CTypeVersion(nType, nVersion) {
         file = filenew;
         state = 0;
@@ -1715,7 +1845,17 @@ public:
         path = "";
         size = 0;
     }
+#else
+    CAutoFile(vstream *filenew, int nType=0, int nVersion=0) : buffer(filenew), CTypeVersion(nType, nVersion) {
+        file = filenew;
+        state = 0;
+        exceptmask = std::ios::badbit | std::ios::failbit;
+        path = "";
+        size = 0;
+    }
+#endif
 
+#ifndef VSTREAM_INMEMORY_MODE
     CAutoFile(const fs::path &pathIn, const char *mode, int nType=0, int nVersion=0) : buffer(nullptr), CTypeVersion(nType, nVersion) {
         path = pathIn.string();
         file = ::fopen(path.c_str(), mode);
@@ -1727,6 +1867,16 @@ public:
             size = 0;
         }
     }
+#else
+    CAutoFile(vstream *pathIn, const char *mode, int nType=0, int nVersion=0) : buffer(nullptr), CTypeVersion(nType, nVersion) {
+        buffer.setfile(pathIn);
+        state = 0;
+        exceptmask = std::ios::badbit | std::ios::failbit;
+        if(! fsbridge::file_size(path.c_str(), &size)) {
+            size = 0;
+        }
+    }
+#endif
 
     ~CAutoFile() {
         fclose();
@@ -1743,19 +1893,34 @@ public:
         return size;
     }
 
+#ifndef VSTREAM_INMEMORY_MODE
     void fclose() {
         if(file != nullptr && file != stdin && file != stdout && file != stderr) {
             ::fclose(file);
         }
         file = nullptr;
     }
+#else
+    void fclose() {
+        file = nullptr;
+    }
+#endif
 
+#ifndef VSTREAM_INMEMORY_MODE
     FILE *release() { FILE *ret = file; file = nullptr; return ret; }
     operator FILE *() { return file; }
     FILE *operator->() { return file; }
     FILE &operator*() { return *file; }
     FILE **operator&() { return &file; }
     FILE *operator=(FILE *pnew) { return file = pnew; }
+#else
+    vstream *release() { vstream *ret = file; file = nullptr; return ret; }
+    operator vstream *() { return file; }
+    vstream *operator->() { return file; }
+    vstream &operator*() { return *file; }
+    vstream **operator&() { return &file; }
+    vstream *operator=(vstream *pnew) { return file = pnew; }
+#endif
     bool operator!() {
         if(path == "")
             return (file == nullptr);
@@ -1777,6 +1942,7 @@ public:
     short exceptions() const { return exceptmask; }
     short exceptions(short mask) { short prev = exceptmask; exceptmask = mask; setstate(0, "CAutoFile"); return prev; }
 
+#ifndef VSTREAM_INMEMORY_MODE
     CAutoFile &read(char *pch, size_t nSize) {
         // debugcs::instance() << "CAutoFile: CAutoFile &read(char *pch, size_t nSize) nSize: " << nSize << debugcs::endl();
         if(! file) {
@@ -1788,7 +1954,21 @@ public:
         }
         return *this;
     }
+#else
+    CAutoFile &read(char *pch, size_t nSize) {
+        // debugcs::instance() << "CAutoFile: CAutoFile &read(char *pch, size_t nSize) nSize: " << nSize << debugcs::endl();
+        if(! file) {
+            throw std::ios_base::failure("CAutoFile::read : file handle is nullptr");
+        }
+        size_t _nSize = nSize / sizeof(char);
+        if(vread(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
+            //setstate(std::ios::failbit, ::feof(file) ? "CAutoFile::read : end of file" : "CAutoFile::read : fread failed");
+        }
+        return *this;
+    }
+#endif
 
+#ifndef VSTREAM_INMEMORY_MODE
     CAutoFile &write(const char *pch, size_t nSize) {
         if(! file) {
             throw std::ios_base::failure("CAutoFile::write : file handle is nullptr");
@@ -1799,6 +1979,18 @@ public:
         }
         return *this;
     }
+#else
+    CAutoFile &write(const char *pch, size_t nSize) {
+        if(! file) {
+            throw std::ios_base::failure("CAutoFile::write : file handle is nullptr");
+        }
+        size_t _nSize = nSize / sizeof(char);
+        if(vwrite(pch, sizeof(char), _nSize, file) != _nSize * sizeof(char)) {
+            //setstate(std::ios::failbit, "CAutoFile::write : write failed");
+        }
+        return *this;
+    }
+#endif
 
     template<typename T>
     unsigned int GetSerializeSize(const T &obj) const {

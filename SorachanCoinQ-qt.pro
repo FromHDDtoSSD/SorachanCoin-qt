@@ -26,6 +26,11 @@ RELEASE=1
 GUI_MODE=1
 
 #
+# IN MEMORY VSTREAM test (when enabled, ver 5)
+#
+DEBUG_IN_MEMORY_VSTREAM=0
+
+#
 # Proof Of Masternode (src/masternode)
 # 0: Disable
 # 1: Enable
@@ -58,7 +63,7 @@ DEBUG_ALGO_CS_OUTPUT=0
 # Build mode
 #
 USE_DBUS=0
-USE_BERKELEYDB=1
+USE_BERKELEYDB=0
 USE_LEVELDB=1
 USE_LEBRESSL=1
 USE_AUTOCHECKPOINTS=1
@@ -131,6 +136,12 @@ contains(RELEASE, 0) {
     DEBUG_RUNTIME_TEST=0
     DEBUG_ALGO_CHECK=0
     DEBUG_ALGO_CS_OUTPUT=0
+}
+
+contains(DEBUG_IN_MEMORY_VSTREAM, 0) {
+    # do nothing
+} else {
+    DEFINES += VSTREAM_INMEMORY_MODE
 }
 
 #

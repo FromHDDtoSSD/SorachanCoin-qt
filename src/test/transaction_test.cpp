@@ -10,5 +10,5 @@ public:
     }
 };
 #ifdef DEBUG
-transaction_test transaction_test_obj;
+//transaction_test transaction_test_obj;
 #endif

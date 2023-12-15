@@ -94,5 +94,5 @@ public:
     }
 };
 #ifdef DEBUG
-CMString_test CMString_test_obj;
+//CMString_test CMString_test_obj;
 #endif

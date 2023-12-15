@@ -33,5 +33,5 @@ public:
     }
 };
 #ifdef DEBUG
-quantum_test quantum_test_obj;
+//quantum_test quantum_test_obj;
 #endif

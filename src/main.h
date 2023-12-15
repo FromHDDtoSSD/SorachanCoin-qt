@@ -20,6 +20,9 @@ class CTransaction;
 //
 namespace block_load
 {
+#ifdef VSTREAM_INMEMORY_MODE
+    extern vstream inmemory;
+#endif
     void UnloadBlockIndex();
     bool LoadBlockIndex(bool fAllowNew=true);    // start
     bool LoadExternalBlockFile(FILE *fileIn);    // bootstrap

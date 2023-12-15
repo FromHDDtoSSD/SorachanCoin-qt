@@ -600,14 +600,32 @@ int64_t CTransaction::GetMinFee(unsigned int nBlockSize/*=1*/, bool fAllowFree/*
     return nMinFee;
 }
 
+#ifdef VSTREAM_INMEMORY_MODE
+bool CTransaction::ReadFromDisk(CDiskTxPos pos) {
+    return ReadFromVStream(pos, nullptr);
+}
+
+bool CTransaction::ReadFromVStream(CDiskTxPos pos, vstream **pfileRet) {
+#else
 bool CTransaction::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
+#endif
+//bool CTransaction::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
     //debugcs::instance() << "CTransaction ReadFromDisk pos: " << pos.get_nTxPos() << " pfileRet: " << (intptr_t)pfileRet << debugcs::endl();
 
+#ifdef VSTREAM_INMEMORY_MODE
+    CAutoFile filein = CAutoFile(&block_load::inmemory, SER_DISK, version::CLIENT_VERSION);
+    ::vseek(&block_load::inmemory, 0, SEEK_SET);
+#else
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(pos.get_nFile(), 0, pfileRet ? "rb+" : "rb"), SER_DISK, version::CLIENT_VERSION);
+#endif
     if (! filein) return logging::error("CTransaction::ReadFromDisk() : file_open::OpenBlockFile failed");
 
     // Read transaction
+#ifdef VSTREAM_INMEMORY_MODE
+    if (vseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction::ReadFromDisk() : fseek failed");
+#else
     if (fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction::ReadFromDisk() : fseek failed");
+#endif
     try {
         filein >> *this;
     } catch (const std::exception &) {
@@ -616,8 +634,13 @@ bool CTransaction::ReadFromDisk(CDiskTxPos pos, FILE **pfileRet/*=nullptr*/) {
 
     // Return file pointer
     if (pfileRet) {
+#ifdef VSTREAM_INMEMORY_MODE
+        if (::vseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction::ReadFromDisk() : second fseek failed");
+        *pfileRet = filein.release();
+#else
         if (::fseek(filein, pos.get_nTxPos(), SEEK_SET) != 0) return logging::error("CTransaction::ReadFromDisk() : second fseek failed");
         *pfileRet = filein.release();
+#endif
     }
     return true;
     //return CBlockDataDB().Read(*this, pos.get_nFile(), pos.get_nBlockPos(), pos.get_nTxPos());

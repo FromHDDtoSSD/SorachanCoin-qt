@@ -313,6 +313,9 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
     return true;
 }
 
+#ifdef VSTREAM_INMEMORY_MODE
+vstream block_load::inmemory;
+#endif
 bool block_load::LoadExternalBlockFile(FILE *fileIn)
 {
     int64_t nStart = util::GetTimeMillis();
@@ -321,15 +324,27 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
     {
         LOCK(block_process::cs_main);
         try {
+#ifdef VSTREAM_INMEMORY_MODE
+            CAutoFile blkdat(&block_load::inmemory, SER_DISK, version::CLIENT_VERSION);
+#else
             CAutoFile blkdat(fileIn, SER_DISK, version::CLIENT_VERSION);
+#endif
             unsigned int nPos = 0;
             while (nPos != std::numeric_limits<uint32_t>::max() && blkdat.good() && !args_bool::fRequestShutdown)
             {
                 unsigned char pchData[65536];
                 do
                 {
+#ifdef VSTREAM_INMEMORY_MODE
+                    ::vseek(blkdat, nPos, SEEK_SET);
+#else
                     ::fseek(blkdat, nPos, SEEK_SET);
+#endif
+#ifdef VSTREAM_INMEMORY_MODE
+                    size_t nRead = ::vread(pchData, 1, sizeof(pchData), blkdat);
+#else
                     size_t nRead = ::fread(pchData, 1, sizeof(pchData), blkdat);
+#endif
                     if (nRead <= 8) {
                         nPos = std::numeric_limits<uint32_t>::max();
                         break;
@@ -351,7 +366,11 @@ bool block_load::LoadExternalBlockFile(FILE *fileIn)
                     break;
                 }
 
+#ifdef VSTREAM_INMEMORY_MODE
+                ::vseek(blkdat, nPos, SEEK_SET);
+#else
                 ::fseek(blkdat, nPos, SEEK_SET);
+#endif
                 unsigned int nSize;
                 blkdat >> nSize;
                 if (nSize > 0 && nSize <= block_params::MAX_BLOCK_SIZE) {

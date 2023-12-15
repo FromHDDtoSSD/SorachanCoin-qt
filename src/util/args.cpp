@@ -99,8 +99,34 @@ std::string config::randomStrGen(int length) {
     return result;
 }
 
+#ifdef VSTREAM_INMEMORY_MODE
+const std::vector<std::string> soraconf_vstream = {
+        "rpcuser","sora",
+        "rpcpassword","K3qdcr753qhjwqAscwLacwbnm9q52KgwA4J",
+        "daemon","0",
+        "server","1",
+        "testnet","0",
+        "listen","1",
+        "irc","0",
+        "rpcallowip","127.0.0.1",
+        "addnode","160.16.110.231",
+        "addnode","167.179.108.146",
+        };
+#endif
+
 bool config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, std::map<std::string, std::vector<std::string> > &mapMultiSettingsRet) {
     LOCK(cs_args);
+#ifdef VSTREAM_INMEMORY_MODE
+    for(int i=0; i<soraconf_vstream.size(); i+=2) {
+        std::string key = std::string("-") + soraconf_vstream[i];
+        std::string value = soraconf_vstream[i+1];
+        if(mapSettingsRet.count(key)==0) {
+            mapSettingsRet[key] = value;
+            init::InterpretNegativeSetting(key, mapSettingsRet);
+        }
+        mapMultiSettingsRet[key].push_back(value);
+    }
+#else
     fs::ifstream streamConfig(iofs::GetConfigFile());
     if (! streamConfig.good()) {
         config::createConf();
@@ -123,6 +149,13 @@ bool config::ReadConfigFile(std::map<std::string, std::string> &mapSettingsRet, 
         }
         mapMultiSettingsRet[strKey].push_back(it->value[0]);
     }
+#endif
+
+    debugcs::instance() << "args: " << debugcs::endl();
+    for(auto ref: mapSettingsRet) {
+        debugcs::instance() << ref.first << " " << ref.second << debugcs::endl();
+    }
+
     return true;
 }
 
@@ -805,6 +838,11 @@ bool ArgsManager::ReadConfigStream(std::istream &stream, std::string &error, boo
     if (! ::GetConfigOptions(stream, error, options, m_config_sections)) {
         return false;
     }
+
+    //debugcs::instance() << "args: " << debugcs::endl();
+    //for(auto ref: options) {
+    //    debugcs::instance() << ref.first.c_str() << " : " << ref.second.c_str() << debugcs::endl();
+    //}
 
     ARGS_DEBUG_CS("OK: GetConfigOptions");
 

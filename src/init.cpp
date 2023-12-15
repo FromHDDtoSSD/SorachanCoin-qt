@@ -736,10 +736,12 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     // ********************************************************* open log and remove old blockchain
     I_DEBUG_CS("log open")
+#ifndef VSTREAM_INMEMORY_MODE
     if(restart==false) {
         InitLogging();
         OpenDebugFile();
     }
+#endif
 
 #ifndef USE_LEVELDB
     //CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] migrate from LevelDB to SQLite, Blockchain database ..."));
@@ -843,6 +845,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // Lock File
     // Make sure only a single Bitcoin process is using the data directory
     //
+#ifndef VSTREAM_INMEMORY_MODE
     fs::path pathLockFile = iofs::GetDataDir() / ".lock";
     FILE *file = fopen(pathLockFile.string().c_str(), "a"); // empty lock file; created if it doesn't exist.
     if (file) {
@@ -853,6 +856,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         if(restart==false)
             return InitError(tfm::format(_("Cannot obtain a lock on data directory %s. %s is probably already running."), strDataDir.c_str(), strCoinName));
     }
+#endif
 
 #if !defined(WIN32) && !defined(QT_GUI)
     if (args_bool::fDaemon) {

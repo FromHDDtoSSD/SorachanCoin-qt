@@ -629,28 +629,60 @@ public:
     }
 
     static std::string getname_mainchain() { // mainchain
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "blkmainchain.dat";
+#endif
     }
     static std::string getname_autocheckpoints() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "blkautocheckpoints.dat";
+#endif
     }
     static std::string getname_headeronlychain() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "blkheaderonlychain.dat";
+#endif
     }
     static std::string getname_peers() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "peers_sql.dat";
+#endif
     }
     static std::string getname_banlist() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "banlist.dat";
+#endif
     }
     static std::string getname_soraradb() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "soraradb.dat";
+#endif
     }
     static std::string getname_pospacedb() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "pospacedb.dat";
+#endif
     }
     static std::string getname_wallet() {
+#ifdef VSTREAM_INMEMORY_MODE
+        return ":memory:";
+#else
         return "walletsql.dat";
+#endif
     }
 
     sqlite3 *&get_psqldb(const std::string &name) const {

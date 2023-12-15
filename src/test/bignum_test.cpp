@@ -46,5 +46,5 @@ public:
     }
 };
 #ifdef DEBUG
-bignum_test bignum_test_obj;
+//bignum_test bignum_test_obj;
 #endif

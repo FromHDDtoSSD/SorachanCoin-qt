@@ -1030,7 +1030,12 @@ bool CBlock::SetBestChainInner(CTxDB &txdb, CBlockIndex *pindexNew)
 
 bool CBlock::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet) {
     // Open history file to append
+#ifdef VSTREAM_INMEMORY_MODE
+    CAutoFile fileout = CAutoFile(&block_load::inmemory, SER_DISK, version::CLIENT_VERSION);
+    ::vappend(&block_load::inmemory);
+#else
     CAutoFile fileout = CAutoFile(file_open::AppendBlockFile(nFileRet), SER_DISK, version::CLIENT_VERSION);
+#endif
     if (! fileout) return logging::error("CBlock::WriteToDisk() : file_open::AppendBlockFile failed");
 
     // Write index header
@@ -1038,15 +1043,25 @@ bool CBlock::WriteToDisk(unsigned int &nFileRet, unsigned int &nBlockPosRet) {
     fileout << FLATDATA(block_info::gpchMessageStart) << nSize;
 
     // Write block
+#ifdef VSTREAM_INMEMORY_MODE
+    long fileOutPos = ::vtell(fileout);
+#else
     long fileOutPos = ::ftell(fileout);
+#endif
     if (fileOutPos < 0) return logging::error("CBlock::WriteToDisk() : ftell failed");
     nBlockPosRet = fileOutPos;
     fileout << *this;
 
     // Flush stdio buffers and commit to disk before returning
+#ifdef VSTREAM_INMEMORY_MODE
+    ::vflush(fileout);
+#else
     ::fflush(fileout);
+#endif
+#ifndef VSTREAM_INMEMORY_MODE
     if (!block_notify::IsInitialBlockDownload() || (block_info::nBestHeight+1)%500==0)
         iofs::FileCommit(fileout);
+#endif
 
     return true;
 }
@@ -1055,7 +1070,12 @@ bool CBlock::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fRead
     SetNull();
 
     // Open history file to read
+#ifdef VSTREAM_INMEMORY_MODE
+    CAutoFile filein = CAutoFile(&block_load::inmemory, SER_DISK, version::CLIENT_VERSION);
+    ::vseek(&block_load::inmemory, nBlockPos, SEEK_SET);
+#else
     CAutoFile filein = CAutoFile(file_open::OpenBlockFile(nFile, nBlockPos, "rb"), SER_DISK, version::CLIENT_VERSION);
+#endif
     if (! filein) return logging::error("CBlock::ReadFromDisk() : file_open::OpenBlockFile failed");
     if (! fReadTransactions) filein.AddType(SER_BLOCKHEADERONLY);
 
