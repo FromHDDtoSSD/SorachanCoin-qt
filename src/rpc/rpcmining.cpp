@@ -426,6 +426,8 @@ json_spirit::Value CRPCTable::getwork(const json_spirit::Array &params, bool fHe
     }
 }
 
+using mapGbtNewBlock_t = std::map<uint256, std::pair<CBlock *, CScript> >;
+static mapGbtNewBlock_t mapGbtNewBlock;
 json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params, bool fHelp) {
     if (fHelp || params.size() > 1) {
         throw std::runtime_error(
@@ -458,6 +460,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     // ref: https://en.bitcoin.it/wiki/Getblocktemplate
     // ref: https://en.bitcoin.it/wiki/BIP_0023
     //
+    /*
     auto is_bip0023 = [&](){
         const json_spirit::Object &oparam = params[0].get_obj();
         for(const auto &od: oparam) { // checking ... capabilities [bip0023: "coinbasetxn", "workid"]
@@ -475,10 +478,13 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         }
         return false;
     };
+    */
+
     if(params.size()==0)
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Getblocktemplate params[0] is NULL.");
-    bool fBip0023 = is_bip0023(); // if false, bip0022
-    debugcs::instance() << "Bip0023 flag: " << (int)fBip0023 << debugcs::endl();
+    //bool fBip0023 = is_bip0023(); // if false, bip0022
+    const bool fBip0023 = true;
+    //debugcs::instance() << "Bip0023 flag: " << (int)fBip0023 << debugcs::endl();
 
     std::string strMode = "template";
     if (params.size() > 0) { // json_spirit::null_type do nothing
@@ -500,7 +506,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     if (block_notify::IsInitialBlockDownload())
         throw bitjson::JSONRPCError(RPC_CLIENT_IN_INITIAL_DOWNLOAD, strCoinName " is downloading blocks...");
 
-    static CReserveKey reservekey(entry::pwalletMain);
+    //static CReserveKey reservekey(entry::pwalletMain);
 
     // Update block
     static unsigned int nTransactionsUpdatedLast = 0;
@@ -518,6 +524,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
 
         // Create new block
         if(pblock) {
+            mapGbtNewBlock.clear();
             delete pblock;
             pblock = nullptr;
         }
@@ -533,6 +540,13 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     // Update nTime
     pblock->UpdateTime(pindexPrev);
     pblock->set_nNonce(0);
+
+    // Update nExtraNonce
+    static unsigned int nExtraNonce = 0;
+    miner::IncrementExtraNonce(pblock, pindexPrev, nExtraNonce);
+
+    // Save
+    mapGbtNewBlock[pblock->get_hashMerkleRoot()] = std::make_pair(pblock, pblock->get_vtx(0).get_vin(0).get_scriptSig());
 
     json_spirit::Array transactions;
     {
@@ -578,6 +592,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
         CTxDB txdb("r");
         for (CTransaction &tx: pblock->set_vtx()) {
             if(tx.IsCoinBase()){
+                debugcs::instance() << "bip23 coinbase tx" << debugcs::endl();
                 uint256 txHash = tx.GetHash();
                 setTxIndex[txHash] = j++;
 
@@ -596,6 +611,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
                 std::map<uint256, CTxIndex> mapUnused;
                 bool fInvalid = false;
                 if (tx.FetchInputs(txdb, mapUnused, false, false, mapInputs, fInvalid)) {
+                    debugcs::instance() << "bip23 coinbase tx FetchInputs" << debugcs::endl();
                     entry.push_back(json_spirit::Pair("fee", (int64_t)(tx.GetValueIn(mapInputs) - tx.GetValueOut())));
 
                     int64_t nSigOps = tx.GetLegacySigOpCount();
@@ -636,7 +652,7 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     result.push_back(json_spirit::Pair("height", (int64_t)(pindexPrev->get_nHeight()+1)));
 
     if(fBip0023) {
-        result.push_back(json_spirit::Pair("coinbasetxn", coinbasetxn[0]));
+        result.push_back(json_spirit::Pair("coinbasetxn", coinbasetxn[0])); // coinbase is only [0]
     }
 
     return result;
@@ -652,45 +668,71 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
     }
 
     LOCK(CRPCTable::cs_getwork);
-    std::string hex = params[0].get_str();
-    strenc::hex_vector pach = strenc::ParseHex(hex.c_str());
-    rpctable_vector blockData(pach.begin(), pach.end());
-    CDataStream ssBlock(blockData, SER_NETWORK, version::PROTOCOL_VERSION);
-    CBlock block;
-    try {
-        ssBlock >> block;
-    } catch (const std::exception &) {
-        throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+
+    if(! args_bool::fTestNet) {
+        return false; // checking testnet
     }
 
+    std::string hex = params[0].get_str();
+    if(hex.size() < 2*80) {
+        return false;
+        //throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+        //throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "invalid size");
+    }
+
+    std::string header_hex = hex.substr(0, 2*80);
+    CDataStream ssBlockHeader(strenc::ParseHex(header_hex), SER_NETWORK, version::PROTOCOL_VERSION);
+    CBlockHeader blockheader;
+    try {
+        ssBlockHeader >> blockheader;
+    } catch (const std::exception &) {
+        return false;
+        //throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+        //throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "BlockHeader decode failed");
+    }
+
+    CBlockHeader *pdata = &blockheader;
+
+    // debug
+    debugcs::instance() << pdata->get_hashMerkleRoot().GetHex() << debugcs::endl();
+    for(const auto &d: mapGbtNewBlock)
+        debugcs::instance() << d.second.first->get_hashMerkleRoot().GetHex() << debugcs::endl();
+
+    // Get saved block
+    if (! mapGbtNewBlock.count(pdata->get_hashMerkleRoot())) {
+        return false;
+        //throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+    }
+
+    CBlock *pblock = mapGbtNewBlock[pdata->get_hashMerkleRoot()].first;
+    pblock->set_nTime(pdata->get_nTime());
+    pblock->set_nNonce(pdata->get_nNonce());
+    pblock->set_vtx(0).set_vin(0).set_scriptSig(mapGbtNewBlock[pdata->get_hashMerkleRoot()].second);
+    pblock->set_hashMerkleRoot(pblock->BuildMerkleTree());
+
     // reward (coinbase)
-    /*
-    if(block.get_vtx(0).get_vout().size()==0) {
-        CBlockIndex *index = block_info::mapBlockIndex[block.get_hashPrevBlock()];
-        int nHeight = index->get_nHeight();
-        debugcs::instance() << "PoW submitblock coinbase nHeight: " << nHeight << debugcs::endl();
+    if(pblock->get_vtx(0).get_vout().size()==0) {
         CTransaction txCoinBase;
         txCoinBase.set_vin().resize(1);
         txCoinBase.set_vin(0).set_prevout().SetNull();
         txCoinBase.set_vout().resize(1);
         CReserveKey reservekey(entry::pwalletMain);
         txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
-        block.set_vtx().clear();
-        block.set_vtx().push_back(txCoinBase);
-        block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
-        throw bitjson::JSONRPCError("rejected");
+        pblock->set_vtx().clear();
+        pblock->set_vtx().push_back(txCoinBase);
+        pblock->set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(pblock->get_nBits(), 0));
+        return false;
+        //throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
     }
-    */
 
-    // debug ...
-    throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+    static CReserveKey reservekey(entry::pwalletMain);
+    bool fAccepted = miner::CheckWork(pblock, *entry::pwalletMain, reservekey);
+    if (! fAccepted) {
+        return false;
+        //throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+    }
 
-    bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
-    //static CReserveKey reservekey(entry::pwalletMain);
-    //bool fAccepted = miner::CheckWork(&block, *entry::pwalletMain, reservekey);
-    if (! fAccepted)
-        throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
-
+    //debugcs::instance() << "submitblock: accepted" << debugcs::endl();
     return json_spirit::Value::null;
 }
 

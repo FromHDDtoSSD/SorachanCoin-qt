@@ -1,6 +1,6 @@
 TEMPLATE = app
 TARGET = SorachanCoinQ-qt
-VERSION = 3.32.13
+VERSION = 3.35.13
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
