@@ -669,9 +669,9 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
 
     LOCK(CRPCTable::cs_getwork);
 
-    if(! args_bool::fTestNet) {
-        return false; // checking testnet
-    }
+    //if(! args_bool::fTestNet) {
+    //    return false; // checking testnet
+    //}
 
     std::string hex = params[0].get_str();
     if(hex.size() < 2*80) {
