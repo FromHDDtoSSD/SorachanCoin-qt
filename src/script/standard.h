@@ -13,7 +13,7 @@ class CKeyID;
 class CScriptID;
 class CScript;
 
-/** both old and latest
+/*
  * Mandatory script verification flags that all new blocks must comply with for
  * them to be valid. (but old blocks may not comply with) Currently just P2SH,
  * but in the future other flags may be added, such as a soft-fork to enforce
@@ -27,24 +27,19 @@ struct CNoDestination {
     friend bool operator<(const CNoDestination &a, const CNoDestination &b) { return true; }
 };
 
-/*
 struct WitnessV0ScriptHash : public uint256 {
     WitnessV0ScriptHash() : uint256(0) {}
     explicit WitnessV0ScriptHash(const uint256 &hash) : uint256(hash) {}
     explicit WitnessV0ScriptHash(const CScript &in);
     using uint256::uint256;
 };
-*/
 
-/*
 struct WitnessV0KeyHash : public uint160 {
     WitnessV0KeyHash() : uint160(0) {}
     explicit WitnessV0KeyHash(const uint160 &hash) : uint160(hash) {}
     using uint160::uint160;
 };
-*/
 
-/*
 struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness version
     unsigned int version;
     unsigned int length;
@@ -64,41 +59,25 @@ struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness 
         return std::lexicographical_compare(w1.program, w1.program + w1.length, w2.program, w2.program + w2.length);
     }
 };
-*/
 
-/** old core:
-  * A txout script template with a specific destination. It is either:
-  * CNoDestination: no destination set
-  * CKeyID: TX_PUBKEYHASH destination
-  * CScriptID: TX_SCRIPTHASH destination
-  *
-  * A CTxDestination is the internal data type encoded in a CBitcoinAddress.
-  */
-using CTxDestination = boost::variant<
-                       CNoDestination,
-                       CKeyID, // pubkey.h
-                       CScriptID>; // key.h
-                       //WitnessV0ScriptHash,
-                       //WitnessV0KeyHash,
-                       //WitnessUnknown>;
-
-/** latest core:
+/*
  * A txout script template with a specific destination. It is either:
  *  * CNoDestination: no destination set
+ *  * CPubKeyVch: TX_PUBKEY (P2PK)
  *  * CKeyID: TX_PUBKEYHASH destination (P2PKH)
  *  * CScriptID: TX_SCRIPTHASH destination (P2SH)
  *  * WitnessV0ScriptHash: TX_WITNESS_V0_SCRIPTHASH destination (P2WSH)
  *  * WitnessV0KeyHash: TX_WITNESS_V0_KEYHASH destination (P2WPKH)
  *  * WitnessUnknown: TX_WITNESS_UNKNOWN destination (P2W???)
  *  A CTxDestination is the internal data type encoded in a bitcoin address
- */
-using LCTxDestination = boost::variant<
-                        CNoDestination,
-                        CKeyID, // pubkey.h
-                        CScriptID>; // key.h
-                        //WitnessV0ScriptHash,
-                        //WitnessV0KeyHash,
-                        //WitnessUnknown>;
+  */
+using CTxDestination = boost::variant<
+                       CNoDestination,
+                       CKeyID, // pubkey.h
+                       CScriptID, // key.h
+                       WitnessV0ScriptHash,
+                       WitnessV0KeyHash,
+                       WitnessUnknown>;
 
 namespace Script_param {
     static constexpr bool DEFAULT_ACCEPT_DATACARRIER = true;

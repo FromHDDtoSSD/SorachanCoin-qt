@@ -986,10 +986,18 @@ private:
 
 /** A mutable version of CTransaction. */
 struct CMutableTransaction {
+private:
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     int32_t nVersion;
     uint32_t nLockTime;
+
+public:
+    const std::vector<CTxIn> &get_vin() const {return vin;}
+    const CTxIn &get_vin(int index) const {return vin[index];}
+    const std::vector<CTxOut> &get_vout() const {return vout;}
+    const CTxOut &get_vout(int index) const {return vout[index];}
+    uint32_t get_nLockTime() const {return nLockTime;}
 
     CMutableTransaction();
     explicit CMutableTransaction(const CTransaction &tx);
@@ -1028,10 +1036,6 @@ struct CMutableTransaction {
         assert(!"CMutableTransaction no member nTime.");
         return 0;
     }
-    const std::vector<CTxIn> &get_vin() const {return vin;}
-    const std::vector<CTxOut> &get_vout() const {return vout;}
-    const CTxIn &get_vin(size_t index) const {return vin[index];}
-    uint32_t get_nLockTime() const {return nLockTime;}
 };
 
 #endif // BITCOIN_TRANSACTION_H

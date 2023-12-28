@@ -22,8 +22,6 @@ class CPubKey;
 class CScript;
 class uint256;
 
-// old core: Script_util
-// script.cpp
 class Script_util : private no_instance {
 public:
 #ifdef CSCRIPT_PREVECTOR_ENABLE
@@ -34,8 +32,6 @@ public:
     using statype = std::vector<std::vector<uint8_t> >;
 #endif
 private:
-    static bool CastToBool(const valtype &vch);
-    static void popstack(statype &stack);
 
     static uint256 SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
     static bool CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
@@ -51,7 +47,6 @@ private:
 
     static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2);
 
-    static bool CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetype opcode);
 public:
     static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
     static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
@@ -63,8 +58,6 @@ public:
     static isminetype IsMine(const CKeyStore &keystore, const CScript &scriptPubKey);
     static void ExtractAffectedKeys(const CKeyStore &keystore, const CScript &scriptPubKey, std::vector<CKeyID> &vKeys);
 
-    static bool ExtractDestination(const CScript &scriptPubKey, CTxDestination &addressRet);
-    static bool ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<CTxDestination> &addressRet, int &nRequiredRet);
     static bool ExtractAddress(const CKeyStore &keystore, const CScript &scriptPubKey, CBitcoinAddress &addressRet);
 
     static bool SignSignature(const CKeyStore &keystore, const CScript &fromPubKey, CTransaction &txTo, unsigned int nIn, int nHashType=Script_param::SIGHASH_ALL);
@@ -74,30 +67,21 @@ public:
     // Given two sets of signatures for scriptPubKey, possibly with OP_0 placeholders,
     // combine them intelligently and return the result.
     static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const CScript &scriptSig1, const CScript &scriptSig2);
-};
 
-// latest core: with witness Script
-// interpreter.cpp, standard.cpp
-class latest_script_util : private no_instance {
 public:
-#ifdef CSCRIPT_PREVECTOR_ENABLE
-    using valtype = prevector<PREVECTOR_N, unsigned char>;
-    using statype = prevector<PREVECTOR_N, prevector<PREVECTOR_N, unsigned char> >;
-#else
-    using valtype = std::vector<uint8_t>;
-    using statype = std::vector<std::vector<uint8_t> >;
-#endif
     enum class SigVersion {
         BASE = 0,
         WITNESS_V0 = 1,
     };
+
     class BaseSignatureChecker {
     public:
-        virtual bool CheckSig(const std::vector<unsigned char> &scriptSig, const std::vector<unsigned char> &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const = 0;
+        virtual bool CheckSig(const valtype &scriptSig, const valtype &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const = 0;
         virtual bool CheckLockTime(const CScriptNum &nLockTime) const = 0;
         virtual bool CheckSequence(const CScriptNum &nSequence) const = 0;
         virtual ~BaseSignatureChecker() {}
     };
+
 private:
     /** Signature hash types/flags */
     enum
@@ -197,12 +181,13 @@ private:
         //
         SCRIPT_VERIFY_CONST_SCRIPTCODE = (1U << 16),
     };
+
 private:
     static bool set_success(ScriptError *ret);
     static bool set_error(ScriptError *ret, const ScriptError serror);
     static bool CastToBool(const valtype &vch);
 
-    static void popstack(std::vector<valtype> &stack);
+    static void popstack(statype &stack);
     static bool IsCompressedOrUncompressedPubKey(const valtype &vchPubKey);
     static bool IsCompressedPubKey(const valtype &vchPubKey);
 
@@ -214,19 +199,19 @@ private:
     static bool CheckMinimalPush(const valtype &data, ScriptOpcodes::opcodetype opcode);
 
     template <class T>
-    uint256 GetPrevoutHash(const T &txTo);
+    static uint256 GetPrevoutHash(const T &txTo);
     template <class T>
-    uint256 GetSequenceHash(const T &txTo);
+    static uint256 GetSequenceHash(const T &txTo);
     template <class T>
-    uint256 GetOutputsHash(const T &txTo);
+    static uint256 GetOutputsHash(const T &txTo);
 
     // witness program
-    static bool VerifyWitnessProgram(const CScriptWitness &witness, int witversion, const std::vector<unsigned char> &program, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror);
-    static size_t WitnessSigOps(int witversion, const std::vector<unsigned char> &witprogram, const CScriptWitness &witness);
+    static bool VerifyWitnessProgram(const CScriptWitness &witness, int witversion, const valtype &program, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror);
+    static size_t WitnessSigOps(int witversion, const valtype &witprogram, const CScriptWitness &witness);
 public:
-    static bool CheckSignatureEncoding(const std::vector<unsigned char> &vchSig, unsigned int flags, ScriptError *serror);
+    static bool CheckSignatureEncoding(const valtype &vchSig, unsigned int flags, ScriptError *serror);
     static int FindAndDelete(CScript &script, const CScript &b);
-    static bool EvalScript(std::vector<std::vector<unsigned char> > &stack, const CScript &script, unsigned int flags, const BaseSignatureChecker &checker, SigVersion sigversion, ScriptError *error = nullptr);
+    static bool EvalScript(statype &stack, const CScript &script, unsigned int flags, const BaseSignatureChecker &checker, SigVersion sigversion, ScriptError *error = nullptr);
 
     struct PrecomputedTransactionData {
         PrecomputedTransactionData()=delete;
@@ -239,8 +224,9 @@ public:
         template <class T>
         explicit PrecomputedTransactionData(const T &tx);
     };
+
     template <class T>
-    uint256 SignatureHash(const CScript &scriptCode, const T &txTo, unsigned int nIn, int nHashType, const CAmount &amount, SigVersion sigversion, const PrecomputedTransactionData *cache = nullptr);
+    static uint256 SignatureHash(const CScript &scriptCode, const T &txTo, unsigned int nIn, int nHashType, const CAmount &amount, SigVersion sigversion, const PrecomputedTransactionData *cache = nullptr);
 
     /** Signature hash sizes */
     static constexpr size_t WITNESS_V0_SCRIPTHASH_SIZE = 32;
@@ -255,11 +241,11 @@ public:
         const CAmount amount;
         const PrecomputedTransactionData* txdata;
     protected:
-        virtual bool VerifySignature(const std::vector<unsigned char>& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
+        virtual bool VerifySignature(const valtype& vchSig, const CPubKey& vchPubKey, const uint256& sighash) const;
     public:
         GenericTransactionSignatureChecker(const T *txToIn, unsigned int nInIn, const CAmount &amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(nullptr) {}
         GenericTransactionSignatureChecker(const T *txToIn, unsigned int nInIn, const CAmount &amountIn, const PrecomputedTransactionData& txdataIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(&txdataIn) {}
-        bool CheckSig(const std::vector<unsigned char> &scriptSig, const std::vector<unsigned char> &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const override;
+        bool CheckSig(const valtype &scriptSig, const valtype &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const override;
         bool CheckLockTime(const CScriptNum &nLockTime) const override;
         bool CheckSequence(const CScriptNum &nSequence) const override;
     };
@@ -287,7 +273,7 @@ public:
      * scripts, instead use ExtractDestinations. Currently only works for P2PK,
      * P2PKH, P2SH, P2WPKH, and P2WSH scripts.
      */
-    static bool ExtractDestination(const CScript &scriptPubKey, LCTxDestination &addressRet);
+    static bool ExtractDestination(const CScript &scriptPubKey, CTxDestination &addressRet);
 
     /**
      * Parse a standard scriptPubKey with one or more destination addresses. For
@@ -301,14 +287,14 @@ public:
      * encodable as an address) with key identifiers (of keys involved in a
      * CScript), and its use should be phased out.
      */
-    static bool ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<LCTxDestination> &addressRet, int &nRequiredRet);
+    static bool ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<CTxDestination> &addressRet, int &nRequiredRet);
 
     /**
-     * Generate a Bitcoin scriptPubKey for the given LCTxDestination. Returns a P2PKH
+     * Generate a Bitcoin scriptPubKey for the given CTxDestination. Returns a P2PKH
      * script for a CKeyID destination, a P2SH script for a CScriptID, and an empty
      * script for CNoDestination.
      */
-    static CScript GetScriptForDestination(const LCTxDestination &dest);
+    static CScript GetScriptForDestination(const CTxDestination &dest);
 
     /** Generate a P2PK script for the given pubkey. */
     static CScript GetScriptForRawPubKey(const CPubKey &pubkey);
@@ -322,12 +308,12 @@ public:
      * P2WSH script.
      *
      * TODO: replace calls to GetScriptForWitness with GetScriptForDestination using
-     * the various witness-specific LCTxDestination subtypes.
+     * the various witness-specific CTxDestination subtypes.
      */
     static CScript GetScriptForWitness(const CScript &redeemscript);
 
-    /** Check whether a LCTxDestination is a CNoDestination. */
-    static bool IsValidDestination(const LCTxDestination &dest);
+    /** Check whether a CTxDestination is a CNoDestination. */
+    static bool IsValidDestination(const CTxDestination &dest);
 };
 
 #endif // BITCOIN_SCRIPT_INTERPRETER_H

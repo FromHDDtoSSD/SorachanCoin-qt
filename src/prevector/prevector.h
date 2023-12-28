@@ -745,6 +745,7 @@ constexpr int PREVECTOR_BLOCK_N = 32;
 // PREVECTOR mode
 // Note: Macro ON: PREVECTOR, Macro OFF: std::vector
 //
+/*
 #ifdef USE_PREVECTOR
 # ifdef BUILD64BIT
 #  define DATASTREAM_PREVECTOR_ENABLE
@@ -758,5 +759,6 @@ constexpr int PREVECTOR_BLOCK_N = 32;
 //#  define BLOCK_PREVECTOR_ENABLE
 # endif
 #endif
+*/
 
 #endif

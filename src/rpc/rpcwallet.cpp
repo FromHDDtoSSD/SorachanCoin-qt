@@ -1884,6 +1884,12 @@ public:
         }
         return obj;
     }
+
+    json_spirit::Object operator()(const WitnessV0ScriptHash &dest) const {return json_spirit::Object();}
+
+    json_spirit::Object operator()(const WitnessV0KeyHash &dest) const {return json_spirit::Object();}
+
+    json_spirit::Object operator()(const WitnessUnknown &dest) const {return json_spirit::Object();}
 };
 
 json_spirit::Value CRPCTable::validateaddress(const json_spirit::Array &params, bool fHelp)

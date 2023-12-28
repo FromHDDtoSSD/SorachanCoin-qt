@@ -7,12 +7,20 @@
 
 #include <vector>
 #include <string>
+#include <prevector/prevector.h>
 
 struct CScriptWitness
 {
+#ifdef CSCRIPT_PREVECTOR_ENABLE
+    using valtype = prevector<PREVECTOR_N, uint8_t>;
+    using statype = prevector<PREVECTOR_N, prevector<PREVECTOR_N, uint8_t> >;
+#else
+    using valtype = std::vector<uint8_t>;
+    using statype = std::vector<std::vector<uint8_t> >;
+#endif
     // Note that this encodes the data elements being pushed, rather than
     // encoding them as a CScript that pushes them.
-    std::vector<std::vector<unsigned char> > stack;
+    statype stack;
 
     // Some compilers complain without a default constructor
     CScriptWitness() { }

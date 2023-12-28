@@ -274,6 +274,32 @@ public:
     }
 };
 
+/** A hasher class for Bitcoin PublicKey Address (SHA-256 and RIPEMD160). */
+class CHash160 {
+private:
+    CSHA256 sha;
+    CRIPEMD160 rip;
+public:
+    //static constexpr size_t OUTPUT_SIZE = CRIPEMD160::OUTPUT_SIZE;
+
+    void Finalize(unsigned char hash[CRIPEMD160::OUTPUT_SIZE]) {
+        unsigned char buf[CSHA256::OUTPUT_SIZE];
+        sha.Finalize(buf);
+        rip.Reset().Write(buf, CSHA256::OUTPUT_SIZE).Finalize(hash);
+    }
+
+    CHash160& Write(const unsigned char *data, size_t len) {
+        sha.Write(data, len);
+        return *this;
+    }
+
+    CHash160& Reset() {
+        sha.Reset();
+        rip.Reset();
+        return *this;
+    }
+};
+
 } // namespace latest_crypto
 
 #endif // BITCOIN_HASH_H

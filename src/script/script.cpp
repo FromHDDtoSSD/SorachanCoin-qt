@@ -2097,6 +2097,7 @@ isminetype Script_util::IsMine(const CKeyStore &keystore, const CScript &scriptP
     return MINE_NO;
 }
 
+/*
 bool Script_util::ExtractDestination(const CScript &scriptPubKey, CTxDestination &addressRet) {
     statype vSolutions;
     TxnOutputType::txnouttype whichType;
@@ -2118,6 +2119,7 @@ bool Script_util::ExtractDestination(const CScript &scriptPubKey, CTxDestination
     // Multisig txns have more than one address...
     return false;
 }
+*/
 
 bool Script_util::ExtractAddress(const CKeyStore &keystore, const CScript &scriptPubKey, CBitcoinAddress &addressRet) {
     statype vSolutions;
@@ -2191,11 +2193,11 @@ public:
 
     void operator()(const CNoDestination &none) {}
 
-    //void operator()(const WitnessV0KeyHash &id) const {}
+    void operator()(const WitnessV0KeyHash &id) const {}
 
-    //void operator()(const WitnessV0ScriptHash &id) const {}
+    void operator()(const WitnessV0ScriptHash &id) const {}
 
-    //void operator()(const WitnessUnknown &id) const {}
+    void operator()(const WitnessUnknown &id) const {}
 };
 } // namespace
 
@@ -2203,6 +2205,7 @@ void Script_util::ExtractAffectedKeys(const CKeyStore &keystore, const CScript &
     CAffectedKeysVisitor(keystore, vKeys).Process(scriptPubKey);
 }
 
+/*
 bool Script_util::ExtractDestinations(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, std::vector<CTxDestination> &addressRet, int &nRequiredRet) {
     addressRet.clear();
 
@@ -2238,6 +2241,7 @@ bool Script_util::ExtractDestinations(const CScript &scriptPubKey, TxnOutputType
 
     return true;
 }
+*/
 
 bool Script_util::VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) {
     statype stack, stackCopy;
@@ -2501,7 +2505,6 @@ public:
         return true;
     }
 
-    /*
     bool operator()(const WitnessV0KeyHash &id) const {
         using namespace ScriptOpcodes;
         script->clear();
@@ -2521,7 +2524,6 @@ public:
         *script << CScript::EncodeOP_N(id.version) << Script_util::valtype(id.program, id.program + id.length);
         return true;
     }
-    */
 };
 } // namespace
 
