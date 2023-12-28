@@ -7,6 +7,7 @@
 #ifndef BITCOIN_KEY_IO_H
 #define BITCOIN_KEY_IO_H
 
+#include <util/strencodings.h>
 #include <address/base58.h>
 #include <address/bech32.h>
 #include <const/chainparams.h>
@@ -14,7 +15,6 @@
 #include <script/interpreter.h>
 #include <string>
 
-// old core
 /** Base class for all base58-encoded or bech32-encoded data */
 class IKeyData {
 private:
@@ -41,9 +41,9 @@ protected:
         return true;
     }
 
-    virtual bool SetString(const char *psz)=0;
-    virtual bool SetString(const std::string &str)=0;
-    virtual std::string ToString() const=0;
+    virtual bool SetString(const char *psz)=0; // address to vch
+    virtual bool SetString(const std::string &str)=0; // address to vch
+    virtual std::string ToString() const=0; // vch to address
 
     IKeyData() {
         nVersion = 0;
@@ -73,6 +73,56 @@ public:
     bool operator>=(const IKeyData &b58) const { return CompareTo(b58) >= 0; }
     bool operator< (const IKeyData &b58) const { return CompareTo(b58) <  0; }
     bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
+};
+
+class CHexAddress : public IKeyData {
+protected:
+    CHexAddress() {}
+    virtual ~CHexAddress() {}
+
+    void SetData(int nVersionIn, const void *pdata, size_t nSize) {
+        nVersion = nVersionIn;
+        vchData.resize(nSize);
+        if (! vchData.empty()) {
+            std::memcpy(&vchData[0], pdata, nSize);
+        }
+    }
+    void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend) {
+        SetData(nVersionIn, (void *)pbegin, pend - pbegin);
+    }
+
+public:
+    bool SetString(const char *psz) {
+        return SetString(std::string(psz));
+    }
+
+    bool SetString(const std::string &str) {
+        if(str.empty())
+            return false;
+        vchData = strenc::ParseHex(str);
+        return true;
+    }
+
+    std::string ToString() const {
+        std::string str = std::string("0x");
+        str += strenc::HexStr(vchData);
+        return str;
+    }
+};
+
+class VERHexAddress {
+public:
+    enum {
+        PUBKEY_PAIR_ADDRESS = 1,
+        PUBKEY_ADDRESS = 63,
+        SCRIPT_ADDRESS = 20,
+        PUBKEY_PAIR_ADDRESS_TEST = 6,
+        PUBKEY_ADDRESS_TEST = 145,
+        SCRIPT_ADDRESS_TEST = 196,
+
+        PUBKEY_COMPRESSED_DIRECT = 333,
+        PUBKEY_DIRECT = 353
+    };
 };
 
 class CBase58Data : public IKeyData {
@@ -128,7 +178,10 @@ public:
         SCRIPT_ADDRESS = 20,
         PUBKEY_PAIR_ADDRESS_TEST = 6,
         PUBKEY_ADDRESS_TEST = 145,
-        SCRIPT_ADDRESS_TEST = 196
+        SCRIPT_ADDRESS_TEST = 196,
+
+        PUBKEY_COMPRESSED_DIRECT = 333,
+        PUBKEY_DIRECT = 353
     };
 };
 
@@ -208,7 +261,10 @@ public:
         SCRIPT_ADDRESS = 53,
         PUBKEY_PAIR_ADDRESS_TEST = 66,
         PUBKEY_ADDRESS_TEST = 233,
-        SCRIPT_ADDRESS_TEST = 253
+        SCRIPT_ADDRESS_TEST = 253,
+
+        PUBKEY_COMPRESSED_DIRECT = 333,
+        PUBKEY_DIRECT = 353
     };
 };
 
@@ -246,6 +302,7 @@ public:
     }
 
     bool Set(const CTxDestination &dest);
+    bool Set(const CPubKeyVch &vch);
     bool Set(const CKeyID &id);
     bool Set(const CScriptID &id);
     bool Set(const CMalleablePubKey &mpk);
@@ -257,8 +314,11 @@ public:
     bool IsPubKey() const;
     bool IsPair() const;
 };
-using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data, VERBase58>;
-using CWitnessAddress = CBitcoinAddress_impl<CBech32Data, VERBech32>;
+using CBitcoinPubkey  = CBitcoinAddress_impl<CHexAddress, VERHexAddress>; // P2PK '0x'
+using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data, VERBase58>; // P2PKH 'S'
+using CScriptAddress  = CBitcoinAddress_impl<CBase58Data, VERBase58>; // P2SH 'A'
+using CWitnessAddress = CBitcoinAddress_impl<CBech32Data, VERBech32>; // P2WPKH 'sora'
+using CDaoAddress     = CBitcoinAddress_impl<CHexAddress, VERHexAddress>; // atomic swap custom op_code '0x'
 
 /** A base58-encoded secret key */
 template <typename ENC, typename VER>
@@ -312,11 +372,10 @@ public:
         return SetString(strSecret.c_str());
     }
 };
+using CBitcoinSecHex = CBitcoinSecret_impl<CHexAddress, VERHexAddress>;
 using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data, VERBase58>;
 using CWitnessSecret = CBitcoinSecret_impl<CBech32Data, VERBech32>;
 
-
-// latest core
 namespace key_io {
 
 CFirmKey DecodeSecret(const std::string &str);

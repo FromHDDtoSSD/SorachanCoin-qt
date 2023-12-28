@@ -1804,8 +1804,17 @@ bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype 
             }
 
             if (opcode2 == ScriptOpcodes::OP_PUBKEY) {
-                if (vch1.size() < 33 || vch1.size() > 120) {
+                if (vch1.size() < 33 || vch1.size() > 120)
                     break;
+                if(vch1[0] == CPubKey::PUBLIC_KEY_SIZE) {
+                    valtype pubkey = valtype(vch1.begin() + 1, vch1.begin() + CPubKey::PUBLIC_KEY_SIZE + 1);
+                    if(! CPubKey::ValidSize(pubkey))
+                        break;
+                }
+                if(vch1[0] == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {
+                    valtype pubkey = valtype(vch1.begin() + 1, vch1.begin() + CPubKey::COMPRESSED_PUBLIC_KEY_SIZE + 1);
+                    if(! CPubKey::ValidSize(pubkey))
+                        break;
                 }
                 vSolutionsRet.push_back(vch1);
             } else if (opcode2 == ScriptOpcodes::OP_PUBKEYHASH) {
@@ -2178,6 +2187,15 @@ public:
         }
     }
 
+    void operator()(const CPubKeyVch &vch) {
+        CPubKey pubkey;
+        pubkey.Set(key_vector(vch.begin(), vch.end()));
+        CKeyID keyID = pubkey.GetID();
+        if(keystore.HaveKey(keyID)) {
+            vKeys.push_back(keyID);
+        }
+    }
+
     void operator()(const CKeyID &keyId) {
         if (keystore.HaveKey(keyId)) {
             vKeys.push_back(keyId);
@@ -2489,6 +2507,13 @@ public:
     bool operator()(const CNoDestination &dest) const {
         script->clear();
         return false;
+    }
+
+    bool operator()(const CPubKeyVch &vch) const {
+        using namespace ScriptOpcodes;
+        script->clear();
+        *script << vch << OP_CHECKSIG;
+        return true;
     }
 
     bool operator()(const CKeyID &keyID) const {

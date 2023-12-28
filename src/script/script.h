@@ -422,6 +422,12 @@ public:
         return *this;
     }
 
+    CScript &operator<<(const CPubKeyVch &b) {
+        insert(end(), b.GetSerializeSize());
+        insert(end(), (uint8_t *)b.begin(), (uint8_t *)b.begin() + b.GetSerializeSize());
+        return *this;
+    }
+
     CScript &operator<<(const uint160 &b) {
         insert(end(), sizeof(b));
         insert(end(), (uint8_t *)&b, (uint8_t *)&b + sizeof(b));

@@ -24,6 +24,8 @@ private:
     CBitcoinAddress_impl<ENC, VER> *addr;
 public:
     CBitcoinAddressVisitor(CBitcoinAddress_impl<ENC, VER> *addrIn) : addr(addrIn) {}
+
+    bool operator()(const CPubKeyVch &vch) const         { return addr->Set(vch); }
     bool operator()(const CKeyID &id) const              { return addr->Set(id); }
     bool operator()(const CScriptID &id) const           { return addr->Set(id); }
     bool operator()(const CMalleablePubKey &mpk) const   { return addr->Set(mpk); }
@@ -37,6 +39,12 @@ public:
 template <typename ENC, typename VER>
 bool CBitcoinAddress_impl<ENC, VER>::Set(const CTxDestination &dest) {
     return boost::apply_visitor(CBitcoinAddressVisitor<ENC, VER>(this), dest);
+}
+
+template <typename ENC, typename VER>
+bool CBitcoinAddress_impl<ENC, VER>::Set(const CPubKeyVch &vch) {
+    ENC::SetData((vch.GetSerializeSize() == 33) ? VER::PUBKEY_COMPRESSED_DIRECT : VER::PUBKEY_DIRECT, &vch, vch.GetSerializeSize());
+    return true;
 }
 
 template <typename ENC, typename VER>
@@ -70,6 +78,14 @@ bool CBitcoinAddress_impl<ENC, VER>::IsValid() const {
         nExpectedSize = 68; // Serialized pair of public keys
         fExpectTestNet = false;
         fSimple = false;
+        break;
+    case VER::PUBKEY_COMPRESSED_DIRECT:
+        nExpectedSize = 33;
+        fExpectTestNet = false;
+        break;
+    case VER::PUBKEY_DIRECT:
+        nExpectedSize = 65;
+        fExpectTestNet = false;
         break;
     case VER::PUBKEY_ADDRESS:
         nExpectedSize = 20; // Hash of public key
@@ -227,8 +243,6 @@ template class CBitcoinSecret_impl<CBase58Data, VERBase58>;
 template class CBitcoinSecret_impl<CBech32Data, VERBech32>;
 
 
-
-// latest core logic
 namespace {
 class DestinationEncoder : public boost::static_visitor<std::string>
 {
@@ -237,6 +251,10 @@ private:
 
 public:
     explicit DestinationEncoder(const CChainParams &params) : m_params(params) {}
+
+    std::string operator()(const CPubKeyVch &vch) const {
+        return strenc::HexStr(vch);
+    }
 
     std::string operator()(const CKeyID &id) const {
         base58_vector data = m_params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);

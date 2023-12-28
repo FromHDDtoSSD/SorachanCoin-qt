@@ -557,6 +557,55 @@ struct CExtPubKey {
     }
 };
 
+class CPubKeyVch {
+public:
+    CPubKeyVch() : fcompressed(false) {
+        ::memset(&vch[0], 0x00, CPubKey::PUBLIC_KEY_SIZE);
+    }
+    CPubKeyVch(const CPubKey &in) {
+        if(! in.IsFullyValid_BIP66())
+            return;
+
+        if(in.IsCompressed()) {
+            fcompressed = true;
+            ::memcpy(&vch[0], in.data(), CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+        } else {
+            fcompressed = false;
+            ::memcpy(&vch[0], in.data(), CPubKey::PUBLIC_KEY_SIZE);
+        }
+    }
+
+    bool operator==(const CPubKeyVch &obj) const {
+        return ::memcmp(this->vch, obj.vch, CPubKey::PUBLIC_KEY_SIZE) == 0;
+    }
+
+    unsigned int GetSerializeSize() const {
+        return fcompressed ? CPubKey::COMPRESSED_PUBLIC_KEY_SIZE: CPubKey::PUBLIC_KEY_SIZE;
+    }
+
+    template<typename Stream>
+    void Serialize(Stream &s) const {
+        s.write((char *)&vch[0], GetSerializeSize());
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream &s) {
+        s.read((char *)&vch[0], GetSerializeSize());
+    }
+
+    const unsigned char *begin() const {
+        return &vch[0];
+    }
+
+    const unsigned char *end() const {
+        return &vch[0] + GetSerializeSize();
+    }
+
+private:
+    bool fcompressed;
+    unsigned char vch[CPubKey::PUBLIC_KEY_SIZE];
+};
+
 // SorachanCoin Sora neko
 // secp256k1 signed negate operator
 using s256k1_fe = CPubKey::ecmult::secp256k1_fe;
