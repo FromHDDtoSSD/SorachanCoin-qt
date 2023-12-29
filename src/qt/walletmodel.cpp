@@ -170,6 +170,8 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return OK;
     }
 
+    //debugcs::instance() << "Qt Wallet SendCoins" << debugcs::endl();
+
     // Pre-check input data for validity
     foreach(const SendCoinsRecipient &rcp, recipients)
     {
@@ -214,6 +216,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         std::vector<std::pair<CScript, int64_t> > vecSend;
         foreach(const SendCoinsRecipient &rcp, recipients)
         {
+            debugcs::instance() << "wallet address: " << rcp.address.toStdString() << debugcs::endl();
             CScript scriptPubKey;
             scriptPubKey.SetAddress(CBitcoinAddress(rcp.address.toStdString()));
             vecSend.push_back(std::make_pair(scriptPubKey, rcp.amount));

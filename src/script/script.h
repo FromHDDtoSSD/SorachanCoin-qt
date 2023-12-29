@@ -122,14 +122,15 @@ namespace TxnOutputType
     {
         TX_NONSTANDARD,
         // 'standard' transaction types:
-        TX_PUBKEY,
-        TX_PUBKEY_DROP, // old core
-        TX_PUBKEYHASH,
-        TX_SCRIPTHASH,
+        TX_PUBKEY, // P2PK
+        TX_PUBKEYVCH, // P2PKB (DAO: Pay to PublicKey Bridge)
+        TX_PUBKEY_DROP,
+        TX_PUBKEYHASH, // P2PKH
+        TX_SCRIPTHASH, // P2SH
         TX_MULTISIG,
         TX_NULL_DATA, //!< unspendable OP_RETURN script that carries data
-        TX_WITNESS_V0_SCRIPTHASH,
-        TX_WITNESS_V0_KEYHASH,
+        TX_WITNESS_V0_SCRIPTHASH, // P2WSH
+        TX_WITNESS_V0_KEYHASH, // P2WPKH
         TX_WITNESS_UNKNOWN, //!< Only for Witness versions not already defined above
     };
     /** Get the name of a txnouttype as a C string, or nullptr if unknown. */
@@ -423,9 +424,7 @@ public:
     }
 
     CScript &operator<<(const CPubKeyVch &b) {
-        insert(end(), b.GetSerializeSize());
-        insert(end(), (uint8_t *)b.begin(), (uint8_t *)b.begin() + b.GetSerializeSize());
-        return *this;
+        return operator<<(script_vector(b.begin(), b.end()));
     }
 
     CScript &operator<<(const uint160 &b) {

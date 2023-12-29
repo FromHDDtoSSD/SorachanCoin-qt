@@ -2194,6 +2194,8 @@ bool CWallet::SelectCoinsSimple(int64_t nTargetValue, int64_t nMinValue, int64_t
 
 bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
 {
+    debugcs::instance() << "called CreateTransaction vecSend: " << vecSend.size() << debugcs::endl();
+
     int64_t nValue = 0;
     for(const std::pair<CScript, int64_t> &s: vecSend)
     {
@@ -2228,6 +2230,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                 for(const std::pair<CScript, int64_t> &s: vecSend)
                 {
                     wtxNew.set_vout().push_back(CTxOut(s.second, s.first));
+                    debugcs::instance() << "CScript: " << s.first.ToString() << debugcs::endl();
                 }
 
                 // Choose coins to use

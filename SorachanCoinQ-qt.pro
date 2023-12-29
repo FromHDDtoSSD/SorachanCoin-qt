@@ -681,6 +681,7 @@ HEADERS += \
     src/crypto/qhash65536.h \
     src/crypto/blake2.h \
     src/crypto/hmac_qhash65536.h \
+    src/crypto/keccak256.h \
     src/univalue/univalue.h \
     src/univalue/univalue_escapes.h \
     src/univalue/univalue_utffilter.h \
@@ -857,6 +858,7 @@ SOURCES += \
     src/crypto/qhash65536.cpp \
     src/crypto/blake2.cpp \
     src/crypto/hmac_qhash65536.cpp \
+    src/crypto/keccak256.cpp \
     src/univalue/univalue.cpp \
     src/univalue/univalue_get.cpp \
     src/univalue/univalue_read.cpp \

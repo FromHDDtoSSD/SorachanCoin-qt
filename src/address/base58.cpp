@@ -159,7 +159,7 @@ std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
     return EncodeBase58(vch);
 }
 
-bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) {
+bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) { // psz is base58
     if (!DecodeBase58(psz, vchRet) || (vchRet.size() < 4)) {
         vchRet.clear();
         return false;
@@ -178,3 +178,118 @@ bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vc
     return DecodeBase58Check(str.c_str(), vchRet);
 }
 
+/*
+std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
+    // add 4-byte hash check to the end
+    base58_vector vch(vchIn);
+    if(g_fbase58_bitcoin_1)
+        vch[0] = 0x00;
+    else if (g_fbase58_bitcoin_3)
+        vch[0] = 0x05;
+    else if(g_fbase58_bitcoin_3_b)
+        vch[0] = 0x06;
+    else if (g_fbase58_dogecoin_D)
+        vch[0] = 30;
+    else if (g_fbase58_dogecoin_D_b)
+        vch[0] = 31;
+    else if(g_fbase58_monacoin_M)
+        vch[0] = 50;
+    else if(g_fbase58_monacoin_M_b)
+        vch[0] = 51;
+    else if(g_fbase58_litecoin_L)
+        vch[0] = 48;
+    else if(g_fbase58_tron_T)
+        vch[0] = 65;
+    else if(g_fbase58_tron_T_b)
+        vch[0] = 66;
+    else if(g_fbase58_Z)
+        vch[0] = 80;
+    else if(g_fbase58_Z_b)
+        vch[0] = 81;
+    else if(g_fbase58_X)
+        vch[0] = 75;
+    else if(g_fbase58_X_b)
+        vch[0] = 76;
+    else if(g_fbase58_V)
+        vch[0] = 70;
+    else if(g_fbase58_V_b)
+        vch[0] = 71;
+    else if(g_fbase58_N)
+        vch[0] = 53;
+    else if(g_fbase58_W)
+        vch[0] = 73;
+    else if(g_fbase58_R)
+        vch[0] = 60;
+    else if(g_fbase58_F)
+        vch[0] = 35;
+    else if(g_fbase58_K)
+        vch[0] = 45;
+    else if(g_fbase58_R_b)
+        vch[0] = 61;
+    else if(g_fbase58_F_b)
+        vch[0] = 36;
+    else if(g_fbase58_K_b)
+        vch[0] = 46;
+    else if(g_fbase58_5)
+        vch[0] = 10;
+    else if(g_fbase58_B)
+        vch[0] = 25;
+    else if(g_fbase58_C)
+        vch[0] = 28;
+    else if(g_fbase58_5_b)
+        vch[0] = 11;
+    else if(g_fbase58_B_b)
+        vch[0] = 26;
+    else if(g_fbase58_P)
+        vch[0] = 55;
+    else if(g_fbase58_7)
+        vch[0] = 15;
+    else if(g_fbase58_9)
+        vch[0] = 20;
+    else if(g_fbase58_P_b)
+        vch[0] = 56;
+    else if(g_fbase58_7_b)
+        vch[0] = 16;
+    else if(g_fbase58_9_b)
+        vch[0] = 21;
+    else if(g_fbase58_Q)
+        vch[0] = 58;
+    else if(g_fbase58_A)
+        vch[0] = 23;
+    else if(g_fbase58_E)
+        vch[0] = 33;
+    else if(g_fbase58_G)
+        vch[0] = 38;
+    else if(g_fbase58_H)
+        vch[0] = 40;
+    else if(g_fbase58_J)
+        vch[0] = 43;
+    else if(g_fbase58_L)
+        vch[0] = 48;
+    else if(g_fbase58_U)
+        vch[0] = 68;
+    else if(g_fbase58_Y)
+        vch[0] = 78;
+    else if(g_fbase58_S)
+        vch[0] = 91;
+    else if(g_fbase58_H_b)
+        vch[0] = 41;
+
+    uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
+    vch.insert(vch.end(), (unsigned char*)&hash, (unsigned char*)&hash + 4);
+
+#ifdef DEBUG
+    ::printf("base58 prefix: %d\n", vchIn[0]);
+    ::printf("base58 vchIn size: %d\n", (int)vchIn.size());
+
+    //bech32_vector bc32_vch;
+    //bc32_vch.reserve(20);
+    //for(int i=0; i < 20; ++i)
+    //    bc32_vch.push_back(vchIn[i+1]);
+    //std::string bc32_address = bech32::Encode(std::string("bc"), bc32_vch);
+    //::printf("bech32 address length: %I64d: %s\n", bc32_address.size(), bc32_address.c_str());
+#endif
+
+    return EncodeBase58(vch);
+}
+*/

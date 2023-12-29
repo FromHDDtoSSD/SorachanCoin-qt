@@ -100,6 +100,14 @@ bool CBitcoinAddress_impl<ENC, VER>::IsValid() const {
         fExpectTestNet = true;
         fSimple = false;
         break;
+    case VER::PUBKEY_COMPRESSED_DIRECT_TEST:
+        nExpectedSize = 33;
+        fExpectTestNet = true;
+        break;
+    case VER::PUBKEY_DIRECT_TEST:
+        nExpectedSize = 65;
+        fExpectTestNet = true;
+        break;
     case VER::PUBKEY_ADDRESS_TEST:
         nExpectedSize = 20;
         fExpectTestNet = true;
