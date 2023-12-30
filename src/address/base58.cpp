@@ -160,6 +160,7 @@ std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
 }
 
 bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) { // psz is base58
+    debugcs::instance() << "address: " << std::string(psz) << debugcs::endl();
     if (!DecodeBase58(psz, vchRet) || (vchRet.size() < 4)) {
         vchRet.clear();
         return false;
@@ -183,11 +184,11 @@ std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
     // add 4-byte hash check to the end
     base58_vector vch(vchIn);
     if(g_fbase58_bitcoin_1)
-        vch[0] = 0x00;
+        vch[0] = 0;
     else if (g_fbase58_bitcoin_3)
-        vch[0] = 0x05;
+        vch[0] = 5;
     else if(g_fbase58_bitcoin_3_b)
-        vch[0] = 0x06;
+        vch[0] = 6;
     else if (g_fbase58_dogecoin_D)
         vch[0] = 30;
     else if (g_fbase58_dogecoin_D_b)
@@ -270,8 +271,10 @@ std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
         vch[0] = 68;
     else if(g_fbase58_Y)
         vch[0] = 78;
-    else if(g_fbase58_S)
+    else if(g_fbase58_2)
         vch[0] = 91;
+    else if(g_fbase58_S)
+        vch[0] = 63;
     else if(g_fbase58_H_b)
         vch[0] = 41;
 

@@ -12,107 +12,106 @@
 #include <algorithm>
 
 namespace {
-template <typename ENC, typename VER>
+template <typename ENC>
 class CBitcoinAddressVisitor : public boost::static_visitor<bool>
 {
 private:
-    CBitcoinAddressVisitor();
-    CBitcoinAddressVisitor(const CBitcoinAddressVisitor &);
-    CBitcoinAddressVisitor(CBitcoinAddressVisitor &&);
-    CBitcoinAddressVisitor &operator=(const CBitcoinAddressVisitor &);
-    CBitcoinAddressVisitor &operator=(CBitcoinAddressVisitor &&);
-    CBitcoinAddress_impl<ENC, VER> *addr;
+    CBitcoinAddress_impl<ENC> *addr;
+
 public:
-    CBitcoinAddressVisitor(CBitcoinAddress_impl<ENC, VER> *addrIn) : addr(addrIn) {}
+    CBitcoinAddressVisitor(CBitcoinAddress_impl<ENC> *addrIn) : addr(addrIn) {}
 
     bool operator()(const CPubKeyVch &vch) const         { return addr->Set(vch); }
     bool operator()(const CKeyID &id) const              { return addr->Set(id); }
     bool operator()(const CScriptID &id) const           { return addr->Set(id); }
     bool operator()(const CMalleablePubKey &mpk) const   { return addr->Set(mpk); }
     bool operator()(const CNoDestination &id) const      { (void)id; return false; }
+
     bool operator()(const WitnessV0KeyHash &id) const    {return false;}
-    bool operator()(const WitnessV0ScriptHash &id) const {return false;}
-    bool operator()(const WitnessUnknown &id) const      {return false;}
+    bool operator()(const WitnessV0ScriptHash &id) const {return addr->Set(id);}
+    bool operator()(const WitnessUnknown &id) const      {(void)id; return false;}
 };
 } // namespace
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::Set(const CTxDestination &dest) {
-    return boost::apply_visitor(CBitcoinAddressVisitor<ENC, VER>(this), dest);
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::Set(const CTxDestination &dest) {
+    return boost::apply_visitor(CBitcoinAddressVisitor<ENC>(this), dest);
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::Set(const CPubKeyVch &vch) {
-    ENC::SetData((vch.GetSerializeSize() == 33) ? VER::PUBKEY_COMPRESSED_DIRECT : VER::PUBKEY_DIRECT, &vch, vch.GetSerializeSize());
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::Set(const CPubKeyVch &vch) {
+    if(vch.GetSerializeSize() != 33)
+        return false;
+    ENC::SetData(key_io::PUBKEY_DIRECT, &vch, vch.GetSerializeSize());
     return true;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::Set(const CKeyID &id) {
-    ENC::SetData(args_bool::fTestNet ? VER::PUBKEY_ADDRESS_TEST : VER::PUBKEY_ADDRESS, &id, 20);
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::Set(const CKeyID &id) {
+    ENC::SetData(args_bool::fTestNet ? key_io::PUBKEY_ADDRESS_TEST : key_io::PUBKEY_ADDRESS, &id, 20);
     return true;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::Set(const CScriptID &id) {
-    ENC::SetData(args_bool::fTestNet ? VER::SCRIPT_ADDRESS_TEST : VER::SCRIPT_ADDRESS, &id, 20);
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::Set(const CScriptID &id) {
+    ENC::SetData(args_bool::fTestNet ? key_io::SCRIPT_ADDRESS_TEST : key_io::SCRIPT_ADDRESS, &id, 20);
     return true;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::Set(const CMalleablePubKey &mpk) {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::Set(const CMalleablePubKey &mpk) {
     key_vector vchPubkeyPair = mpk.Raw();
-    ENC::SetData(args_bool::fTestNet ? VER::PUBKEY_PAIR_ADDRESS_TEST : VER::PUBKEY_PAIR_ADDRESS, &vchPubkeyPair[0], 68);
+    ENC::SetData(args_bool::fTestNet ? key_io::PUBKEY_PAIR_ADDRESS_TEST : key_io::PUBKEY_PAIR_ADDRESS, &vchPubkeyPair[0], 68);
     return true;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::IsValid() const {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsValid() const {
     unsigned int nExpectedSize = 20;
     bool fExpectTestNet = false;
     bool fSimple = true;
 
     switch(ENC::getVersion())
     {
-    case VER::PUBKEY_PAIR_ADDRESS:
+    case key_io::PUBKEY_PAIR_ADDRESS:
         nExpectedSize = 68; // Serialized pair of public keys
         fExpectTestNet = false;
         fSimple = false;
         break;
-    case VER::PUBKEY_COMPRESSED_DIRECT:
-        nExpectedSize = 33;
+    case key_io::PUBKEY_DIRECT:
+        nExpectedSize = 33; // compressed of public key
         fExpectTestNet = false;
         break;
-    case VER::PUBKEY_DIRECT:
-        nExpectedSize = 65;
-        fExpectTestNet = false;
-        break;
-    case VER::PUBKEY_ADDRESS:
+    case key_io::PUBKEY_ADDRESS:
         nExpectedSize = 20; // Hash of public key
         fExpectTestNet = false;
         break;
-    case VER::SCRIPT_ADDRESS:
+    case key_io::SCRIPT_ADDRESS:
         nExpectedSize = 20; // Hash of CScript
         fExpectTestNet = false;
         break;
-    case VER::PUBKEY_PAIR_ADDRESS_TEST:
+    case key_io::PUBKEY_ETH_ADDRESS:
+        nExpectedSize = 20; // Hash of public key
+        fExpectTestNet = false;
+        break;
+    case key_io::PUBKEY_PAIR_ADDRESS_TEST:
         nExpectedSize = 68;
         fExpectTestNet = true;
         fSimple = false;
         break;
-    case VER::PUBKEY_COMPRESSED_DIRECT_TEST:
+    case key_io::PUBKEY_DIRECT_TEST:
         nExpectedSize = 33;
         fExpectTestNet = true;
         break;
-    case VER::PUBKEY_DIRECT_TEST:
-        nExpectedSize = 65;
-        fExpectTestNet = true;
-        break;
-    case VER::PUBKEY_ADDRESS_TEST:
+    case key_io::PUBKEY_ADDRESS_TEST:
         nExpectedSize = 20;
         fExpectTestNet = true;
         break;
-    case VER::SCRIPT_ADDRESS_TEST:
+    case key_io::SCRIPT_ADDRESS_TEST:
+        nExpectedSize = 20;
+        fExpectTestNet = true;
+        break;
+    case key_io::PUBKEY_ETH_ADDRESS_TEST:
         nExpectedSize = 20;
         fExpectTestNet = true;
         break;
@@ -134,24 +133,24 @@ bool CBitcoinAddress_impl<ENC, VER>::IsValid() const {
     }
 }
 
-template <typename ENC, typename VER>
-CTxDestination CBitcoinAddress_impl<ENC, VER>::Get() const {
+template <typename ENC>
+CTxDestination CBitcoinAddress_impl<ENC>::Get() const {
     if (! IsValid()) {
         return CNoDestination();
     }
 
     switch (ENC::getVersion())
     {
-    case VER::PUBKEY_ADDRESS:
-    case VER::PUBKEY_ADDRESS_TEST:
+    case key_io::PUBKEY_ADDRESS:
+    case key_io::PUBKEY_ADDRESS_TEST:
         {
             uint160 id;
             std::memcpy(&id, ENC::getvchArray(), 20);
             return CKeyID(id);
         }
         break;
-    case VER::SCRIPT_ADDRESS:
-    case VER::SCRIPT_ADDRESS_TEST:
+    case key_io::SCRIPT_ADDRESS:
+    case key_io::SCRIPT_ADDRESS_TEST:
         {
             uint160 id;
             std::memcpy(&id, ENC::getvchArray(), 20);
@@ -164,16 +163,16 @@ CTxDestination CBitcoinAddress_impl<ENC, VER>::Get() const {
     return CNoDestination();
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::GetKeyID(CKeyID &keyID) const {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::GetKeyID(CKeyID &keyID) const {
     if (! IsValid()) {
         return false;
     }
 
     switch (ENC::getVersion())
     {
-    case VER::PUBKEY_ADDRESS:
-    case VER::PUBKEY_ADDRESS_TEST:
+    case key_io::PUBKEY_ADDRESS:
+    case key_io::PUBKEY_ADDRESS_TEST:
         {
             uint160 id;
             std::memcpy(&id, ENC::getvchArray(), 20);
@@ -181,8 +180,8 @@ bool CBitcoinAddress_impl<ENC, VER>::GetKeyID(CKeyID &keyID) const {
             return true;
         }
         break;
-    case VER::PUBKEY_PAIR_ADDRESS:
-    case VER::PUBKEY_PAIR_ADDRESS_TEST:
+    case key_io::PUBKEY_PAIR_ADDRESS:
+    case key_io::PUBKEY_PAIR_ADDRESS_TEST:
         {
             CMalleablePubKey mPubKey;
             mPubKey.setvch(ENC::getvchData());
@@ -195,16 +194,16 @@ bool CBitcoinAddress_impl<ENC, VER>::GetKeyID(CKeyID &keyID) const {
     }
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::IsScript() const {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsScript() const {
     if (! IsValid()) {
         return false;
     }
 
     switch (ENC::getVersion())
     {
-    case VER::SCRIPT_ADDRESS:
-    case VER::SCRIPT_ADDRESS_TEST:
+    case key_io::SCRIPT_ADDRESS:
+    case key_io::SCRIPT_ADDRESS_TEST:
         return true;
     default:
         return false;
@@ -212,16 +211,16 @@ bool CBitcoinAddress_impl<ENC, VER>::IsScript() const {
     return false;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::IsPubKey() const {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsPubKey() const {
     if (! IsValid()) {
         return false;
     }
 
     switch (ENC::getVersion())
     {
-    case VER::PUBKEY_ADDRESS:
-    case VER::PUBKEY_ADDRESS_TEST:
+    case key_io::PUBKEY_ADDRESS:
+    case key_io::PUBKEY_ADDRESS_TEST:
         return true;
     default:
         return false;
@@ -229,26 +228,26 @@ bool CBitcoinAddress_impl<ENC, VER>::IsPubKey() const {
     return false;
 }
 
-template <typename ENC, typename VER>
-bool CBitcoinAddress_impl<ENC, VER>::IsPair() const {
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsPair() const {
     if (! IsValid()) {
         return false;
     }
 
     switch (ENC::getVersion())
     {
-    case VER::PUBKEY_PAIR_ADDRESS:
-    case VER::PUBKEY_PAIR_ADDRESS_TEST:
+    case key_io::PUBKEY_PAIR_ADDRESS:
+    case key_io::PUBKEY_PAIR_ADDRESS_TEST:
         return true;
     default:
         return false;
     }
 }
 
-template class CBitcoinAddress_impl<CBase58Data, VERBase58>;
-template class CBitcoinAddress_impl<CBech32Data, VERBech32>;
-template class CBitcoinSecret_impl<CBase58Data, VERBase58>;
-template class CBitcoinSecret_impl<CBech32Data, VERBech32>;
+template class CBitcoinAddress_impl<CBase58Data>;
+template class CBitcoinAddress_impl<CBech32Data>;
+template class CBitcoinSecret_impl<CBase58Data>;
+template class CBitcoinSecret_impl<CBech32Data>;
 
 
 namespace {

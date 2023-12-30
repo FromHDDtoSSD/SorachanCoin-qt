@@ -17,10 +17,9 @@
 #include <bignum.h>
 #include <address/base58.h>
 
-template <typename ENC, typename VER> class CBitcoinAddress_impl;
+template <typename ENC> class CBitcoinAddress_impl;
 class CBase58Data;
-class VERBase58;
-using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data, VERBase58>;
+using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>;
 
 namespace Script_const {
     // Maximum number of bytes pushable to the stack

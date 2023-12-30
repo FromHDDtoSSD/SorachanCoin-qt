@@ -15,13 +15,31 @@
 #include <script/interpreter.h>
 #include <string>
 
-/** Base class for all base58-encoded or bech32-encoded data */
+namespace key_io {
+    enum {
+        PUBKEY_PAIR_ADDRESS = 1,
+        PUBKEY_ADDRESS = 63,
+        SCRIPT_ADDRESS = 20,
+
+        PUBKEY_PAIR_ADDRESS_TEST = 6,
+        PUBKEY_ADDRESS_TEST = 145,
+        SCRIPT_ADDRESS_TEST = 196,
+
+        // from implementation
+        PUBKEY_DIRECT = 35,
+        PUBKEY_ETH_ADDRESS = 80,
+        PUBKEY_DIRECT_TEST = 10,
+        PUBKEY_ETH_ADDRESS_TEST = 81
+    };
+} // namespace key_io
+
+/** Base class for all data */
 class IKeyData {
-private:
     IKeyData(const IKeyData &)=delete;
     IKeyData &operator=(const IKeyData &)=delete;
     IKeyData(IKeyData &&)=delete;
     IKeyData &operator=(IKeyData &&)=delete;
+
 protected:
     // the version byte
     unsigned char nVersion;
@@ -75,10 +93,11 @@ public:
     bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
 };
 
-class CHexAddress : public IKeyData {
+/** vchData: keccak256 under 160bit */
+class CEthData : public IKeyData {
 protected:
-    CHexAddress() {}
-    virtual ~CHexAddress() {}
+    CEthData() {}
+    virtual ~CEthData() {}
 
     void SetData(int nVersionIn, const void *pdata, size_t nSize) {
         nVersion = nVersionIn;
@@ -92,15 +111,20 @@ protected:
     }
 
 public:
-    bool SetString(const char *psz) {
+    bool SetString(const char *psz) { // psz is ETH address
         return SetString(std::string(psz));
     }
 
     bool SetString(const std::string &str) {
         if(str.empty())
             return false;
-        vchData = strenc::ParseHex(str);
-        return true;
+        nVersion = 0; // unused
+        std::string strTemp = str;
+        if(str[0] == '0' && str[1] == 'x') {
+            strTemp = str.substr(2);
+        }
+        vchData = strenc::ParseHex(strTemp);
+        return (vchData.size() == 20) ? true: false;
     }
 
     std::string ToString() const {
@@ -110,23 +134,7 @@ public:
     }
 };
 
-class VERHexAddress {
-public:
-    enum {
-        PUBKEY_PAIR_ADDRESS = 1,
-        PUBKEY_ADDRESS = 63,
-        SCRIPT_ADDRESS = 20,
-        PUBKEY_PAIR_ADDRESS_TEST = 6,
-        PUBKEY_ADDRESS_TEST = 145,
-        SCRIPT_ADDRESS_TEST = 196,
-
-        PUBKEY_COMPRESSED_DIRECT = 333,
-        PUBKEY_DIRECT = 353,
-        PUBKEY_COMPRESSED_DIRECT_TEST = 433,
-        PUBKEY_DIRECT_TEST = 453
-    };
-};
-
+/** vchData: CKeyID */
 class CBase58Data : public IKeyData {
 protected:
     CBase58Data() {}
@@ -144,7 +152,7 @@ protected:
     }
 
 public:
-    bool SetString(const char *psz) {
+    bool SetString(const char *psz) { // psz is base58
         base58_vector vchTemp;
         base58::manage::DecodeBase58Check(psz, vchTemp);
         if (vchTemp.empty()) {
@@ -170,23 +178,6 @@ public:
         vch.insert(vch.end(), vchData.begin(), vchData.end());
         return base58::manage::EncodeBase58Check(vch);
     }
-};
-
-class VERBase58 {
-public:
-    enum {
-        PUBKEY_PAIR_ADDRESS = 1,
-        PUBKEY_ADDRESS = 63,
-        SCRIPT_ADDRESS = 20,
-        PUBKEY_PAIR_ADDRESS_TEST = 6,
-        PUBKEY_ADDRESS_TEST = 145,
-        SCRIPT_ADDRESS_TEST = 196,
-
-        PUBKEY_COMPRESSED_DIRECT = 333,
-        PUBKEY_DIRECT = 353,
-        PUBKEY_COMPRESSED_DIRECT_TEST = 433,
-        PUBKEY_DIRECT_TEST = 453
-    };
 };
 
 #define BECH32_TEST_MODE
@@ -241,7 +232,7 @@ public:
 
     std::string ToString() const {
         static const char *hrp_main = "sora";
-        static const char *hrp_test = "sora_testnet";
+        static const char *hrp_test = "soratest";
         const char *hrp = args_bool::fTestNet ? hrp_test: hrp_main;
         bech32_vector vch((uint32_t)1, (uint8_t)nVersion);
         vch.insert(vch.end(), vchData.begin(), vchData.end());
@@ -257,23 +248,6 @@ public:
     }
 };
 
-class VERBech32 {
-public:
-    enum {
-        PUBKEY_PAIR_ADDRESS = 11,
-        PUBKEY_ADDRESS = 33,
-        SCRIPT_ADDRESS = 53,
-        PUBKEY_PAIR_ADDRESS_TEST = 66,
-        PUBKEY_ADDRESS_TEST = 233,
-        SCRIPT_ADDRESS_TEST = 253,
-
-        PUBKEY_COMPRESSED_DIRECT = 333,
-        PUBKEY_DIRECT = 353,
-        PUBKEY_COMPRESSED_DIRECT_TEST = 433,
-        PUBKEY_DIRECT_TEST = 453
-    };
-};
-
 /** base58-encoded or bech32-encoded Bitcoin addresses.
  * Public-key-hash-addresses have version 0 (or 111 testnet).
  * The data vector contains RIPEMD160(SHA256(pubkey)), where pubkey is the serialized public key.
@@ -282,8 +256,8 @@ public:
  * Pubkey-pair-addresses have version 1 (or 6 testnet)
  * The data vector contains a serialized copy of two compressed ECDSA secp256k1 public keys.
  */
-template <typename ENC, typename VER>
-class CBitcoinAddress_impl final : public ENC, public VER {
+template <typename ENC>
+class CBitcoinAddress_impl final : public ENC {
 public:
     CBitcoinAddress_impl &operator=(const CBitcoinAddress_impl &obj) {
         ENC::Set(static_cast<const ENC &>(obj));
@@ -320,14 +294,14 @@ public:
     bool IsPubKey() const;
     bool IsPair() const;
 };
-using CBitcoinPubkey  = CBitcoinAddress_impl<CHexAddress, VERHexAddress>; // P2PK '0x'
-using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data, VERBase58>; // P2PKH 'S'
-using CScriptAddress  = CBitcoinAddress_impl<CBase58Data, VERBase58>; // P2SH 'A'
-using CWitnessAddress = CBitcoinAddress_impl<CBech32Data, VERBech32>; // P2WPKH 'sora'
-using CDaoAddress     = CBitcoinAddress_impl<CHexAddress, VERHexAddress>; // atomic swap custom op_code '0x'
+using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '5'
+using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2'
+using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH
+using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest'
+using CEthAddress     = CBitcoinAddress_impl<CEthData>; // atomic swap custom op_code 'ETH: 0x'
 
-/** A base58-encoded secret key */
-template <typename ENC, typename VER>
+/** base58-encoded or bech32-encoded secret key */
+template <typename ENC>
 class CBitcoinSecret_impl : public ENC
 {
 private:
@@ -343,11 +317,12 @@ public:
     void SetSecret(const CSecret &vchSecret, bool fCompressed) {
         assert(vchSecret.size() == 32);
 
-        ENC::SetData(128 + (args_bool::fTestNet ? VER::PUBKEY_ADDRESS_TEST : VER::PUBKEY_ADDRESS), &vchSecret[0], vchSecret.size());
+        ENC::SetData(128 + (args_bool::fTestNet ? key_io::PUBKEY_ADDRESS_TEST : key_io::PUBKEY_ADDRESS), &vchSecret[0], vchSecret.size());
         if (fCompressed) {
             ENC::setvchData(1);
         }
     }
+
     CSecret GetSecret(bool &fCompressedOut) {
         CSecret vchSecret;
         vchSecret.resize(32);
@@ -361,9 +336,9 @@ public:
         bool fExpectTestNet = false;
         switch(ENC::getVersion())
         {
-        case (128 + VER::PUBKEY_ADDRESS):
+        case (128 + key_io::PUBKEY_ADDRESS):
             break;
-        case (128 + VER::PUBKEY_ADDRESS_TEST):
+        case (128 + key_io::PUBKEY_ADDRESS_TEST):
             fExpectTestNet = true;
             break;
         default:
@@ -371,16 +346,18 @@ public:
         }
         return fExpectTestNet == args_bool::fTestNet && (ENC::getvchData().size() == 32 || (ENC::getvchData().size() == 33 && ENC::getvchData()[32] == 1));
     }
+
     bool SetString(const char *pszSecret) {
         return ENC::SetString(pszSecret) && IsValid();
     }
+
     bool SetString(const std::string &strSecret) {
         return SetString(strSecret.c_str());
     }
 };
-using CBitcoinSecHex = CBitcoinSecret_impl<CHexAddress, VERHexAddress>;
-using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data, VERBase58>;
-using CWitnessSecret = CBitcoinSecret_impl<CBech32Data, VERBech32>;
+using CEthSecret = CBitcoinSecret_impl<CEthData>;
+using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data>;
+using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 
 namespace key_io {
 
