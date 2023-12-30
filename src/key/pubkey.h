@@ -559,20 +559,20 @@ struct CExtPubKey {
 
 class CPubKeyVch {
 public:
-    CPubKeyVch() : fcompressed(false) {
+    CPubKeyVch() {
         ::memset(&vch[0], 0x00, CPubKey::PUBLIC_KEY_SIZE);
     }
     CPubKeyVch(const CPubKey &in) {
         if(! in.IsFullyValid_BIP66())
             return;
 
-        if(in.IsCompressed()) {
-            fcompressed = true;
-            ::memcpy(&vch[0], in.data(), CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
-        } else {
-            fcompressed = false;
-            ::memcpy(&vch[0], in.data(), CPubKey::PUBLIC_KEY_SIZE);
+        CPubKey pubkey;
+        pubkey.Set(in.begin(), in.end());
+        if(pubkey.IsCompressed()) {
+            if(! pubkey.Decompress())
+                return;
         }
+        ::memcpy(&vch[0], pubkey.data(), CPubKey::PUBLIC_KEY_SIZE);
     }
 
     bool operator==(const CPubKeyVch &obj) const {
@@ -580,7 +580,7 @@ public:
     }
 
     unsigned int GetSerializeSize() const {
-        return fcompressed ? CPubKey::COMPRESSED_PUBLIC_KEY_SIZE: CPubKey::PUBLIC_KEY_SIZE;
+        return CPubKey::PUBLIC_KEY_SIZE;
     }
 
     template<typename Stream>
@@ -602,7 +602,6 @@ public:
     }
 
 private:
-    bool fcompressed;
     unsigned char vch[CPubKey::PUBLIC_KEY_SIZE];
 };
 

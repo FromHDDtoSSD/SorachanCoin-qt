@@ -28,7 +28,7 @@ namespace key_io {
         // from implementation
         PUBKEY_DIRECT = 35,
         PUBKEY_ETH_ADDRESS = 80,
-        PUBKEY_DIRECT_TEST = 10,
+        PUBKEY_DIRECT_TEST = 15,
         PUBKEY_ETH_ADDRESS_TEST = 81
     };
 } // namespace key_io
@@ -290,15 +290,20 @@ public:
     bool IsValid() const;
     CTxDestination Get() const;
     bool GetKeyID(CKeyID &keyID) const;
+
+    // script type
+    bool IsDirect() const;
+    bool IsEth() const;
     bool IsScript() const;
     bool IsPubKey() const;
     bool IsPair() const;
 };
-using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '5'
-using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2'
-using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH
-using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest'
-using CEthAddress     = CBitcoinAddress_impl<CEthData>; // atomic swap custom op_code 'ETH: 0x'
+using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '7' CPubKey 65bytes
+using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2' CHash160 to CPubKey 20bytes
+using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH '9' '2' CHash160 to CScript 20bytes
+using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest' CHash160 to CPubKey 20bytes
+using CWitnessScript  = CBitcoinAddress_impl<CBech32Data>; // P2WSH 'sora' 'soratest' CSHA256 to CScript 32bytes
+using CEthAddress     = CBitcoinAddress_impl<CEthData>;    // DAO atomic swap custom op_code 'ETH: 0x' CHashEth to CPubKey 20bytes
 
 /** base58-encoded or bech32-encoded secret key */
 template <typename ENC>

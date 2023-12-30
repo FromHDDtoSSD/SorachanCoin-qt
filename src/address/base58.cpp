@@ -152,6 +152,11 @@ bool base58::manage::DecodeBase58(const std::string &str, std::vector<unsigned c
 #endif
 
 std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
+
+    // debug: checking prefix
+    //base58_vector &vec = const_cast<base58_vector&>(vchIn);
+    //vec[0] = 196;
+
     // add 4-byte hash check to the end
     base58_vector vch(vchIn);
     uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
@@ -160,7 +165,7 @@ std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
 }
 
 bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) { // psz is base58
-    debugcs::instance() << "address: " << std::string(psz) << debugcs::endl();
+    //debugcs::instance() << "address: " << std::string(psz) << debugcs::endl();
     if (!DecodeBase58(psz, vchRet) || (vchRet.size() < 4)) {
         vchRet.clear();
         return false;

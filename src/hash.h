@@ -18,6 +18,7 @@
 #include <crypto/ripemd160.h>
 #include <crypto/sha256.h>
 #include <crypto/qhash65536.h>
+#include <crypto/keccak256.h>
 
 // BIP32
 # include <crypto/hmac_sha512.h>
@@ -296,6 +297,30 @@ public:
     CHash160& Reset() {
         sha.Reset();
         rip.Reset();
+        return *this;
+    }
+};
+
+/** A hasher class for Eth 160-bit hash (keccak256). */
+class CHashEth {
+private:
+    CKECCAK256 keccak;
+public:
+    static constexpr size_t OUTPUT_SIZE = 20;
+
+    void Finalize(unsigned char hash[OUTPUT_SIZE]) {
+        unsigned char buf[CKECCAK256::OUTPUT_SIZE];
+        keccak.Finalize(buf);
+        ::memcpy(hash, buf + 12, 20);
+    }
+
+    CHashEth& Write(const unsigned char *data, size_t len) {
+        keccak.Write(data, len);
+        return *this;
+    }
+
+    CHashEth& Reset() {
+        keccak.Reset();
         return *this;
     }
 };

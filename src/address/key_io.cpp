@@ -79,19 +79,19 @@ bool CBitcoinAddress_impl<ENC>::IsValid() const {
         fSimple = false;
         break;
     case key_io::PUBKEY_DIRECT:
-        nExpectedSize = 33; // compressed of public key
+        nExpectedSize = 65; // public key
         fExpectTestNet = false;
         break;
     case key_io::PUBKEY_ADDRESS:
-        nExpectedSize = 20; // Hash of public key
+        nExpectedSize = 20; // Hash of public key CHash160
         fExpectTestNet = false;
         break;
     case key_io::SCRIPT_ADDRESS:
-        nExpectedSize = 20; // Hash of CScript
+        nExpectedSize = 20; // Hash of CScript CHash160
         fExpectTestNet = false;
         break;
     case key_io::PUBKEY_ETH_ADDRESS:
-        nExpectedSize = 20; // Hash of public key
+        nExpectedSize = 20; // Hash of public key CHashEth
         fExpectTestNet = false;
         break;
     case key_io::PUBKEY_PAIR_ADDRESS_TEST:
@@ -100,7 +100,7 @@ bool CBitcoinAddress_impl<ENC>::IsValid() const {
         fSimple = false;
         break;
     case key_io::PUBKEY_DIRECT_TEST:
-        nExpectedSize = 33;
+        nExpectedSize = 65;
         fExpectTestNet = true;
         break;
     case key_io::PUBKEY_ADDRESS_TEST:
@@ -192,6 +192,40 @@ bool CBitcoinAddress_impl<ENC>::GetKeyID(CKeyID &keyID) const {
     default:
         return false;
     }
+}
+
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsDirect() const {
+    if (! IsValid()) {
+        return false;
+    }
+
+    switch (ENC::getVersion())
+    {
+    case key_io::PUBKEY_DIRECT:
+    case key_io::PUBKEY_DIRECT_TEST:
+        return true;
+    default:
+        return false;
+    }
+    return false;
+}
+
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::IsEth() const {
+    if (! IsValid()) {
+        return false;
+    }
+
+    switch (ENC::getVersion())
+    {
+    case key_io::PUBKEY_ETH_ADDRESS:
+    case key_io::PUBKEY_ETH_ADDRESS_TEST:
+        return true;
+    default:
+        return false;
+    }
+    return false;
 }
 
 template <typename ENC>

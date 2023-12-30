@@ -14,6 +14,7 @@
 #include <sync/lsync.h>
 #include <util.h>
 #include <address/key_io.h>
+#include <hash.h>
 
 namespace {
 const Script_util::valtype vchFalse((uint32_t)0);
@@ -1324,6 +1325,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     case OP_SHA256:
                     case OP_HASH160:
                     case OP_HASH256:
+                    case OP_HASHETH:
                     {
                         // (in -- hash)
                         if (stack.size() < 1) {
@@ -1332,7 +1334,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         }
 
                         valtype &vch = stacktop(-1);
-                        valtype vchHash((opcode == OP_RIPEMD160 || opcode == OP_SHA1 || opcode == OP_HASH160) ? 20 : 32);
+                        valtype vchHash((opcode == OP_RIPEMD160 || opcode == OP_SHA1 || opcode == OP_HASH160 || opcode == OP_HASHETH) ? 20 : 32);
                         if (opcode == OP_RIPEMD160) {
                             RIPEMD160(&vch[0], vch.size(), &vchHash[0]);
                         } else if (opcode == OP_SHA1) {
@@ -1341,6 +1343,10 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             SHA256(&vch[0], vch.size(), &vchHash[0]);
                         } else if (opcode == OP_HASH160) {
                             uint160 hash160 = hash_basis::Hash160(vch);
+                            std::memcpy(&vchHash[0], &hash160, sizeof(hash160));
+                        } else if (opcode == OP_HASHETH) {
+                            uint160 hash160;
+                            latest_crypto::CHashEth().Write(&vch[0], vch.size()).Finalize((unsigned char *)&hash160);
                             std::memcpy(&vchHash[0], &hash160, sizeof(hash160));
                         } else if (opcode == OP_HASH256) {
                             uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
@@ -2558,7 +2564,11 @@ void CScript::SetDestination(const CTxDestination &dest) {
 
 void CScript::SetAddress(const CBitcoinAddress &dest) {
     this->clear();
-    if (dest.IsScript()) {
+    if(dest.IsDirect()) {
+        *this << dest.GetData() << ScriptOpcodes::OP_CHECKSIG;
+    } else if (dest.IsEth()) { // supported: latest wallet
+        *this << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASHETH << dest.GetData() << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG;
+    } else if (dest.IsScript()) {
         *this << ScriptOpcodes::OP_HASH160 << dest.GetData() << ScriptOpcodes::OP_EQUAL;
     } else if (dest.IsPubKey()) {
         *this << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASH160 << dest.GetData() << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG;

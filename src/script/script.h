@@ -279,9 +279,10 @@ namespace ScriptOpcodes
         OP_NOP9 = 0xb8,
         OP_NOP10 = 0xb9,
 
-        // zerocoin
+        // zerocoin, dao
         OP_ZEROCOINMINT = 0xc1,
         OP_ZEROCOINSPEND = 0xc2,
+        OP_HASHETH = 0xc3,
 
         // template matching params
         OP_SMALLDATA = 0xf9,
