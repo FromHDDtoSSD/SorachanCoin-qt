@@ -19,16 +19,14 @@ class CScript;
 // A, virtual base class for key stores
 class CKeyStore
 {
-private:
-    CKeyStore(const CKeyStore &); // {}
-    CKeyStore &operator=(const CKeyStore &); // {}
+    CKeyStore(const CKeyStore &)=delete;
+    CKeyStore &operator=(const CKeyStore &)=delete;
 
 protected:
     mutable CCriticalSection cs_KeyStore;
 
 public:
     CKeyStore() {}
-
     virtual ~CKeyStore() {}
 
     // Add a key to the store.
@@ -233,20 +231,17 @@ typedef std::map<CMalleableKeyView, std::vector<unsigned char> > CryptedMalleabl
 //
 class CCryptoKeyStore : public CBasicKeyStore
 {
-private:
-    CCryptoKeyStore(const CCryptoKeyStore &); // {}
-    CCryptoKeyStore &operator=(const CCryptoKeyStore &); // {}
+    CCryptoKeyStore(const CCryptoKeyStore &)=delete;
+    CCryptoKeyStore &operator=(const CCryptoKeyStore &)=delete;
 
+private:
     CryptedKeyMap mapCryptedKeys;
     CryptedMalleableKeyMap mapCryptedMalleableKeys;
     CKeyingMaterial vMasterKey;
 
-    ///////////////////////////////////////////////////////////////////////
     // CCryptoKeyStore::SetCrypted() is confirmed the fUseCrypto flag only:
-    //
     // if fUseCrypto is true, CBasicKeyStore::mapKeys must be empty
     // if fUseCrypto is false, CCryptoKeyStore::vMasterKey must be empty
-    ///////////////////////////////////////////////////////////////////////
     bool fUseCrypto;
 
 protected:
@@ -394,7 +389,6 @@ public:
     boost::signals2::signal<void (CCryptoKeyStore *wallet)> NotifyStatusChanged;
 };
 
-// latest core
 // A virtual base class for key stores
 /*
 class CKeyStore : public SigningProvider

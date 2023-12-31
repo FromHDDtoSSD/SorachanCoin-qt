@@ -66,11 +66,22 @@ bool CBitcoinAddress_impl<ENC>::Set(const CMalleablePubKey &mpk) {
 }
 
 template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::SetAddrToID(const std::string &strAddress) {
+    return ENC::SetString(strAddress);
+}
+
+template <typename ENC>
+bool CBitcoinAddress_impl<ENC>::SetAddrToID(const char *strAddress) {
+    return ENC::SetString(strAddress);
+}
+
+template <typename ENC>
 bool CBitcoinAddress_impl<ENC>::IsValid() const {
     unsigned int nExpectedSize = 20;
     bool fExpectTestNet = false;
     bool fSimple = true;
 
+    //debugcs::instance() << "CBitcoinAddress IsValid: version: " << ENC::getVersion() << debugcs::endl();
     switch(ENC::getVersion())
     {
     case key_io::PUBKEY_PAIR_ADDRESS:

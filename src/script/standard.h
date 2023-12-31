@@ -62,7 +62,8 @@ struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness 
 };
 
 /*
- * A txout script template with a specific destination. It is either:
+ * A txout script template with a specific destination.
+ *  * It is either:
  *  * CNoDestination: no destination set
  *  * CPubKeyVch: TX_PUBKEY destination (P2PK)
  *  * CKeyID: TX_PUBKEYHASH destination (P2PKH)
@@ -75,8 +76,8 @@ struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness 
 using CTxDestination = boost::variant<
                        CNoDestination,
                        CPubKeyVch,
-                       CKeyID, // pubkey.h
-                       CScriptID, // key.h
+                       CKeyID,
+                       CScriptID,
                        WitnessV0ScriptHash,
                        WitnessV0KeyHash,
                        WitnessUnknown>;

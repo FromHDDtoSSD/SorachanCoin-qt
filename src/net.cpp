@@ -693,7 +693,7 @@ void CNode::PushVersion()
     latest_crypto::random::GetStrongRandBytes((unsigned char *)&bitsocket::nLocalHostNonce, sizeof(bitsocket::nLocalHostNonce));
     logging::LogPrintf("send version message: version %d, blocks=%d, us=%s, them=%s, peer=%s\n", version::PROTOCOL_VERSION, block_info::nBestHeight, addrMe.ToString().c_str(), addrYou.ToString().c_str(), addr.ToString().c_str());
     PushMessage("version", version::PROTOCOL_VERSION, net_node::nLocalServices, nTime, addrYou, addrMe, bitsocket::nLocalHostNonce, format_version::FormatSubVersion(version::CLIENT_NAME, version::CLIENT_VERSION, std::vector<std::string>()), block_info::nBestHeight);
-    debugcs::instance() << "PushMessage send version" << debugcs::endl();
+    //debugcs::instance() << "PushMessage send version" << debugcs::endl();
 }
 
 void CNode::ClearBanned()

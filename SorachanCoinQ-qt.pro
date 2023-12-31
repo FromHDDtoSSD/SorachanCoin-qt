@@ -728,6 +728,7 @@ HEADERS += \
     src/util/exception.h \
     src/thread/threadsafety.h \
     src/address/bech32.h \
+    src/address/hasheth.h \
     src/const/chainparamsbase.h \
     src/const/chainparams.h \
     src/const/attributes.h \
@@ -825,6 +826,7 @@ SOURCES += \
     src/kernel_worker.cpp \
     src/address/base58.cpp \
     src/address/key_io.cpp \
+    src/address/hasheth.cpp \
     src/cryptogram.cpp \
     src/ecies.cpp \
     src/uint256.cpp \

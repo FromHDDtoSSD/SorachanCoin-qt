@@ -315,6 +315,7 @@ bool CCryptoKeyStore::GetMalleableKey(const CMalleableKeyView &keyView, CMalleab
 
 bool CCryptoKeyStore::GetKey(const CKeyID &address, CKey &keyOut) const
 {
+    //debugcs::instance() << "called keystore GetKey size: " << mapKeys.size() << " : " << mapCryptedKeys.size() << debugcs::endl();
     {
         LOCK(cs_KeyStore);
         if (! IsCrypted()) {

@@ -133,6 +133,16 @@ std::string CTxIn::ToString() const {
     return str;
 }
 
+CTxOut::CTxOut() {
+    SetNull();
+}
+
+CTxOut::CTxOut(int64_t nValueIn, CScript scriptPubKeyIn) {
+    debugcs::instance() << "CTxOut CScript check: " << scriptPubKeyIn.ToString() << debugcs::endl();
+    nValue = nValueIn;
+    scriptPubKey = scriptPubKeyIn;
+}
+
 std::string CTxOut::ToStringShort() const {
     return tfm::format(" out %s %s", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString(true).c_str());
 }
@@ -141,6 +151,10 @@ std::string CTxOut::ToString() const {
     if (IsEmpty()) return "CTxOut(empty)";
     if (scriptPubKey.size() < 6) return "CTxOut(error)";
     return tfm::format("CTxOut(nValue=%s, scriptPubKey=%s)", strenc::FormatMoney(nValue).c_str(), scriptPubKey.ToString().c_str());
+}
+
+void CTxOut::print() const {
+    logging::LogPrintf("%s\n", ToString().c_str());
 }
 
 // Return transaction in tx, and if it was found inside a block, its hash is placed in hashBlock

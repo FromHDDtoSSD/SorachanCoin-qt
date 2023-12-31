@@ -20,6 +20,7 @@ SorachanCoind_LDADD = -lpthread \
 SorachanCoind_SOURCES = \
  address/base58.cpp \
  address/bech32.cpp \
+ address/hasheth.cpp \
  address/key_io.cpp \
  bench/be_aes.cpp \
  bench/be_bench.cpp \
@@ -60,6 +61,7 @@ SorachanCoind_SOURCES = \
  crypto/sha256_sse4.cpp \
  crypto/sha256_sse41.cpp \
  crypto/sha512.cpp \
+ crypto/keccak256.cpp \
  file_operate/fs.cpp \
  file_operate/iofs.cpp \
  json/json_spirit_reader_template.cpp \

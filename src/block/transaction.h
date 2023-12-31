@@ -270,15 +270,12 @@ public:
     }
 };
 
-// CTransaction IN
-// An input of a transaction.  It contains the location of the previous
+// Transaction Input(vin[]) copy ok, move ok
+// An input of a transaction.
+// It contains the location of the previous
 // transaction's output that it claims and a signature that matches the output's public key.
 class CTxIn
 {
-    //CTxIn(const CTxIn &)=delete;
-    //CTxIn(CTxIn &)=delete;
-    //CTxIn &operator=(const CTxIn &)=delete;
-    //CTxIn &operator=(CTxIn &&)=delete;
 public:
     /* Setting nSequence to this value for every input in a transaction
      * disables nLockTime. */
@@ -378,14 +375,11 @@ public:
     }
 };
 
-// CTransaction OUT
-// An output of a transaction. It contains the public key that the next input must be able to sign with to claim it.
+// Transaction Output (vout[]) copy ok, move ok
+// An output of a transaction.
+// It contains the public key that the next input must be able to sign with to claim it.
 class CTxOut
 {
-    //CTxOut(const CTxOut &)=delete;
-    //CTxOut(CTxOut &&)=delete;
-    //CTxOut &operator=(const CTxOut &)=delete;
-    //CTxOut &operator=(CTxOut &&)=delete;
 private:
     int64_t nValue; // amount
     CScript scriptPubKey;
@@ -399,13 +393,8 @@ public:
     void sub_nValue(int64_t _InValue) {nValue -= _InValue; assert(nValue >= 0);}
     CScript &set_scriptPubKey() {return scriptPubKey;}
 
-    CTxOut() {
-        SetNull();
-    }
-    CTxOut(int64_t nValueIn, CScript scriptPubKeyIn) {
-        nValue = nValueIn;
-        scriptPubKey = scriptPubKeyIn;
-    }
+    CTxOut();
+    CTxOut(int64_t nValueIn, CScript scriptPubKeyIn);
 
     void SetNull() {
         nValue = -1;
@@ -424,7 +413,6 @@ public:
     uint256 GetHash() const {
         return hash_basis::SerializeHash(*this);
     }
-
     bool IsZerocoinMint() const {
         return !scriptPubKey.empty() && scriptPubKey.IsZerocoinMint();
     }
@@ -439,9 +427,7 @@ public:
 
     std::string ToStringShort() const;
     std::string ToString() const;
-    void print() const {
-        logging::LogPrintf("%s\n", ToString().c_str());
-    }
+    void print() const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>

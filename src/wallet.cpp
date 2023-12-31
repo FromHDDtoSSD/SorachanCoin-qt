@@ -2230,7 +2230,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                 for(const std::pair<CScript, int64_t> &s: vecSend)
                 {
                     wtxNew.set_vout().push_back(CTxOut(s.second, s.first));
-                    debugcs::instance() << "CScript: " << s.first.ToString() << debugcs::endl();
+                    debugcs::instance() << "spend: " << s.second << " : " << "CScript: " << s.first.ToString() << debugcs::endl();
                 }
 
                 // Choose coins to use
