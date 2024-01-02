@@ -35,7 +35,7 @@ bool CPubKey::IsFullyValid() const {
 }
 
 bool CPubKey::IsFullyValid_BIP66() const {
-    DEBUGCS_CHECK("by secp256k1");
+    //DEBUGCS_CHECK("by secp256k1");
     if (! IsValid())
         return false;
     secp256k1_pubkey pubkey;
@@ -235,9 +235,10 @@ std::string CPubKey::ToString() const {
 // If this function succeeds, the recovered public key is guaranteed to be valid
 // (the signature is a valid signature of the given data for that key)
 //#define DEBUG_LIBSECP256K1
-bool CPubKey::SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig) {
+bool CPubKey::SetCompactSignature(const uint256 &hash, const key_vector &vchSig) {
     bool ret_libsecp256k1 = RecoverCompact(hash, vchSig);
-    if(ret_libsecp256k1) return true;
+    if(ret_libsecp256k1)
+        return true;
 
     // if ret_libsecp256k1 == false, below: old core, OPENSSL recheck
     if (vchSig.size() != 65)
@@ -772,7 +773,7 @@ int CPubKey::secp256k1_ecdsa_signature_normalize(secp256k1_signature *sigout, co
     return ret;
 }
 
-bool CPubKey::CheckLowS(const std::vector<unsigned char> &vchSig) { // SorachanCoin checkeed: no used "context_verify"
+bool CPubKey::CheckLowS(const key_vector &vchSig) {
     secp256k1_signature sig;
     if (! ecdsa_signature_parse_der_lax(&sig, vchSig.data(), vchSig.size()))
         return false;
@@ -3409,27 +3410,25 @@ void CPubKey::ecmult::secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe
     r[31] = a->n[0] & 0xff;
 }
 
-int CPubKey::secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed) {
+int CPubKey::secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char *pub, size_t *size, int compressed) {
     if (ecmult::secp256k1_ge_is_infinity(elem))
         return 0;
-    //DEBUGCS_CHECK("step1");
+
     ecmult::secp256k1_fe_normalize_var(&elem->x);
     ecmult::secp256k1_fe_normalize_var(&elem->y);
-    ecmult::secp256k1_fe_get_be32(&(*pub)[1], &elem->x);
+    ecmult::secp256k1_fe_get_be32(&pub[1], &elem->x);
     if (compressed) {
         *size = COMPRESSED_PUBLIC_KEY_SIZE;
-        //DEBUGCS_CHECK("step2 33byte");
-        (*pub)[0] = ecmult::secp256k1_fe_is_odd(&elem->y) ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
+        pub[0] = ecmult::secp256k1_fe_is_odd(&elem->y) ? SECP256K1_TAG_PUBKEY_ODD : SECP256K1_TAG_PUBKEY_EVEN;
     } else {
         *size = PUBLIC_KEY_SIZE;
-        //DEBUGCS_CHECK("step2 65byte");
-        (*pub)[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
-        ecmult::secp256k1_fe_get_be32(&(*pub)[COMPRESSED_PUBLIC_KEY_SIZE], &elem->y);
+        pub[0] = SECP256K1_TAG_PUBKEY_UNCOMPRESSED;
+        ecmult::secp256k1_fe_get_be32(&pub[COMPRESSED_PUBLIC_KEY_SIZE], &elem->y);
     }
     return 1;
 }
 
-int CPubKey::secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) {
+int CPubKey::secp256k1_ec_pubkey_serialize(unsigned char *output, size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags) {
     ecmult::secp256k1_ge Q;
     int ret = 0;
 
@@ -3438,24 +3437,20 @@ int CPubKey::secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SI
     *outputlen = 0;
     size_t len = (flags & SECP256K1_FLAGS_BIT_COMPRESSION) ? COMPRESSED_PUBLIC_KEY_SIZE : PUBLIC_KEY_SIZE;
 
-    ARG_CHECK(*output != nullptr);
-    std::memset(*output, 0, len);
+    ARG_CHECK(output != nullptr);
+    std::memset(output, 0, len);
 
     ARG_CHECK(pubkey != nullptr);
     ARG_CHECK((flags & SECP256K1_FLAGS_TYPE_MASK) == SECP256K1_FLAGS_TYPE_COMPRESSION);
-
-    //DEBUGCS_CHECK("step1");
     if (secp256k1_pubkey_load(&Q, pubkey)) {
-        //DEBUGCS_CHECK("step2");
         ret = secp256k1_eckey_pubkey_serialize(&Q, output, &len, flags & SECP256K1_FLAGS_BIT_COMPRESSION);
-        //DEBUGCS_CHECK((std::string("step3 ret: ") + std::to_string(ret)).c_str());
         if (ret) *outputlen = len;
     }
+
     return ret;
 }
 
-bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned char> &vchSig) {
-    // SorachanCoin checked: no used "context_verify and context_ecmult"
+bool CPubKey::RecoverCompact(const uint256 &hash, const key_vector &vchSig) {
     if (vchSig.size() != COMPACT_SIGNATURE_SIZE)
         return false;
 
@@ -3465,21 +3460,19 @@ bool CPubKey::RecoverCompact(const uint256 &hash, const std::vector<unsigned cha
     secp256k1_ecdsa_recoverable_signature sig;
     if (! secp256k1_ecdsa_recoverable_signature_parse_compact(&sig, &vchSig[1], recid))
         return false;
-    //DEBUGCS_CHECK("step1");
     if (! secp256k1_ecdsa_recover(&pubkey, &sig, hash.begin()))
         return false;
 
-    //DEBUGCS_CHECK("step2");
     unsigned char pub[PUBLIC_KEY_SIZE];
     size_t publen;
-    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED)) {
+    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, fComp ? SECP256K1_EC_COMPRESSED : SECP256K1_EC_UNCOMPRESSED)) {
         Invalidate();
         return false; // if ge is infinity.
-    } else {
-        //DEBUGCS_CHECK((std::string("step3 key_size: ") + std::to_string(publen)).c_str());
-        Set(pub, pub + publen);
-        return true;
     }
+
+    Set(pub, pub + publen);
+    Compress();
+    return true;
 }
 
 void CPubKey::ecmult::secp256k1_ge_set_xy(secp256k1_ge *r, const secp256k1_fe *x, const secp256k1_fe *y) {
@@ -3596,7 +3589,25 @@ bool CPubKey::Decompress() {
 
     unsigned char pub[PUBLIC_KEY_SIZE];
     size_t publen;
-    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED)) {
+    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, SECP256K1_EC_UNCOMPRESSED)) {
+        Invalidate();
+        return false; // if ge is infinity.
+    } else {
+        Set(pub, pub + publen);
+        return true;
+    }
+}
+
+bool CPubKey::Compress() {
+    if (! IsValid())
+        return false;
+    secp256k1_pubkey pubkey;
+    if (! secp256k1_ec_pubkey_parse(&pubkey, vch_, size()))
+        return false;
+
+    unsigned char pub[COMPRESSED_PUBLIC_KEY_SIZE];
+    size_t publen;
+    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED)) {
         Invalidate();
         return false; // if ge is infinity.
     } else {
@@ -3878,9 +3889,9 @@ bool CPubKey::Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChi
     if (! secp256k1_ec_pubkey_tweak_add(&pubkey, out))
         return false;
 
-    unsigned char pub[PUBLIC_KEY_SIZE];
+    unsigned char pub[COMPRESSED_PUBLIC_KEY_SIZE];
     size_t publen;
-    if(! secp256k1_ec_pubkey_serialize(&pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED)) {
+    if(! secp256k1_ec_pubkey_serialize(pub, &publen, &pubkey, SECP256K1_EC_COMPRESSED)) {
         pubkeyChild.Invalidate();
         return false; // if ge is infinity.
     } else {

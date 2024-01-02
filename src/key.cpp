@@ -214,9 +214,18 @@ CPrivKey CKey::GetPrivKey() const
 
 CPubKey CKey::GetPubKey() const
 {
-    int nSize = i2o_ECPublicKey(pkey, NULL);
+    int nSize = i2o_ECPublicKey(pkey, nullptr);
     if (! nSize) {
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey failed");
+    }
+    if(IsCompressed()) {
+        if(nSize != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {
+            throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
+        }
+    } else {
+        if(nSize != CPubKey::PUBLIC_KEY_SIZE) {
+            throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
+        }
     }
 
     key_vector vchPubKey((uint32_t)nSize, (uint8_t)0);
@@ -224,6 +233,7 @@ CPubKey CKey::GetPubKey() const
     if (i2o_ECPublicKey(pkey, &pbegin) != nSize) {
         throw key_error("CKey::GetPubKey() : i2o_ECPublicKey returned unexpected size");
     }
+
     return CPubKey(vchPubKey);
 }
 
@@ -264,7 +274,7 @@ bool CKey::Sign(uint256 hash, key_vector &vchSig)
 // The format is one header byte, followed by two times 32 bytes for the serialized r and s values.
 // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
 //                  0x1D = second key with even y, 0x1E = second key with odd y
-bool CKey::SignCompact(uint256 hash, std::vector<unsigned char> &vchSig)
+bool CKey::SignCompact(uint256 hash, key_vector &vchSig)
 {
     bool fOk = false;
     ECDSA_SIG *sig = ECDSA_do_sign((unsigned char *)&hash, sizeof(hash), pkey);

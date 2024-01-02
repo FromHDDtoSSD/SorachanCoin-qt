@@ -139,7 +139,7 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()
         return;
     }
 
-    CKey key;
+    CFirmKey key;
     if (! entry::pwalletMain->GetKey(keyID, key)) {
         ui->statusLabel_SM->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel_SM->setText(tr("Private key for the entered address is not available."));
@@ -150,7 +150,7 @@ void SignVerifyMessageDialog::on_signMessageButton_SM_clicked()
     ss << block_info::strMessageMagic;
     ss << ui->messageIn_SM->document()->toPlainText().toStdString();
 
-    std::vector<unsigned char> vchSig;
+    key_vector vchSig;
     if (! key.SignCompact(hash_basis::Hash(ss.begin(), ss.end()), vchSig)) {
         ui->statusLabel_SM->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel_SM->setText(QString("<nobr>") + tr("Message signing failed.") + QString("</nobr>"));

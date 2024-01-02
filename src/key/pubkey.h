@@ -312,8 +312,8 @@ public:
     static void secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge);
     static int secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32);
     static int secp256k1_pubkey_load(ecmult::secp256k1_ge *ge, const secp256k1_pubkey *pubkey);
-    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char (*pub)[PUBLIC_KEY_SIZE], size_t *size, int compressed);
-    static int secp256k1_ec_pubkey_serialize(unsigned char (*output)[PUBLIC_KEY_SIZE], size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags);
+    static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char *pub, size_t *size, int compressed);
+    static int secp256k1_ec_pubkey_serialize(unsigned char *output, size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags);
     static int secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
         //static int secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
     static int secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsigned char *pub, size_t size);
@@ -442,6 +442,11 @@ public:
         return CKeyID(hash_basis::Hash160(begin(), end()));
     }
 
+    //! Get the Bytes vector of this public key
+    key_vector GetPubVch() const {
+        return key_vector(begin(), end());
+    }
+
     //! Get the 256-bit hash of this public key.
     uint256 GetHash() const {
         return hash_basis::Hash(begin(), end());
@@ -466,19 +471,20 @@ public:
     bool Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const;
 
     // Check whether a signature is normalized (lower-S). [libsecp256k1]
-    static bool CheckLowS(const std::vector<unsigned char> &vchSig);
+    static bool CheckLowS(const key_vector &vchSig);
 
     //! Recover a public key from a compact signature. [libsecp256k1]
-    bool RecoverCompact(const uint256 &hash, const std::vector<unsigned char> &vchSig);
+    bool RecoverCompact(const uint256 &hash, const key_vector &vchSig);
 
-    //! Recover a public key from a compact signature. [OpenSSL]
-    bool SetCompactSignature(const uint256 &hash, const std::vector<unsigned char> &vchSig);
+    //! Recover a public key from a compact signature. [libsecp256k1 and OpenSSL]
+    bool SetCompactSignature(const uint256 &hash, const key_vector &vchSig);
 
     // Reserialize to DER [OpenSSL]
     static bool ReserealizeSignature(key_vector &vchSig);
 
     //! Turn this public key into an uncompressed public key. [libsecp256k1]
     bool Decompress();
+    bool Compress();
 
     //! Derive BIP32 child pubkey. [for HD wallet] [libsecp256k1]
     bool Derive(CPubKey &pubkeyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const;

@@ -5,17 +5,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-//! About private key:
-// SorachanCoin: We improved that the ctx is separated by public key and private key.
-// CKey: for old logic private key (base58).
-// CFirmKey: for latest logic private key (bech32).
-
-//! Transaction
-// CKey(base58) => CKey(base58): OK
-// CKey(base58) => CFirmKey(bech32): OK
-// CFirmKey(bech32) => CKey(base58): OK
-// CFirmKey(bech32) => CFirmKey(bech32): OK
-
 #include <crypto/hmac_sha256.h>
 #include <crypto/common.h>
 #include <key/privkey.h>
@@ -101,7 +90,7 @@ void CFirmKey::ecmult::secp256k1_gej_neg(CPubKey::ecmult::secp256k1_gej *r, cons
 }
 
 bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_ge *r, const CPubKey::ecmult::secp256k1_gej *a, size_t len) {
-    auto secp256k1_fe_inv_all_var = [](std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &r, const std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> &a, size_t len) {
+    auto secp256k1_fe_inv_all_var = [](CPubKey::ecmult::secp256k1_fe *r, const CPubKey::ecmult::secp256k1_fe *a, size_t len) {
         if (len < 1) return true;
         ARG_BOOL_CHECK((&r[0] + len <= &a[0]) || (&a[0] + len <= &r[0]));
         r[0] = a[0];
@@ -125,7 +114,8 @@ bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_g
     };
 
     std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> az(new (std::nothrow) CPubKey::ecmult::secp256k1_fe[len]);
-    ARG_BOOL_CHECK(! az);
+    if(! az.get())
+        return false;
     size_t count = 0;
     for (size_t i = 0; i < len; ++i) {
         if (! a[i].infinity) {
@@ -134,8 +124,9 @@ bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_g
     }
 
     std::unique_ptr<CPubKey::ecmult::secp256k1_fe[]> azi(new (std::nothrow) CPubKey::ecmult::secp256k1_fe[count]);
-    ARG_BOOL_CHECK(! azi);
-    if(! secp256k1_fe_inv_all_var(azi, az, count))
+    if(! azi.get())
+        return false;
+    if(! secp256k1_fe_inv_all_var(azi.get(), az.get(), count))
         return false;
 
     count = 0;
@@ -465,7 +456,9 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
         CPubKey::ecmult::secp256k1_gej_set_ge(&initial_, CPubKey::ecmult::secp256k1_get_ge_const_g());
         CFirmKey::ecmult::secp256k1_gej_neg(&initial_, &initial_);
         CPubKey::secp256k1_scalar_set_int(&blind_, 1);
+        // return true; // debug: Confirmed normal operation at this location.
     }
+
     /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
     CPubKey::secp256k1_scalar_get_be32(nonce32, &blind_);
     /** Using a CSPRNG allows a failure free interface, avoids needing large amounts of random data,
@@ -478,6 +471,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     }
     CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, seed32 ? 64 : 32);
     std::memset(keydata, 0, sizeof(keydata));
+
     /* Retry for out of range results to achieve uniformity. */
     do {
         CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
@@ -587,12 +581,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() {
     prec_ = (CPubKey::ecmult::secp256k1_ge_storage (*)[64][16])secp256k1_ecmult_static_context;
 #endif
 
-    // SorachanCoin: Seed generator
-    unsigned char seed[32] = {0};
-    latest_crypto::random::GetStrongRandBytes(seed, 32);
-    bool ret = secp256k1_ecmult_gen_blind(seed);
-    cleanse::OPENSSL_cleanse(seed, 32);
-    return ret;
+    return secp256k1_ecmult_gen_blind(nullptr);
 }
 
 void CFirmKey::ecmult::secp256k1_gen_context::clear() {
@@ -612,17 +601,16 @@ CFirmKey::ecmult::secp256k1_gen_context::~secp256k1_gen_context() {
 
 
 void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) {
-    //r->d[0] = 0;
-    //r->d[1] = 0;
-    //r->d[2] = 0;
-    //r->d[3] = 0;
-    //r->d[4] = 0;
-    //r->d[5] = 0;
-    //r->d[6] = 0;
-    //r->d[7] = 0;
-
-    //! SorachanCoin: if used -03, the above process will be eliminated.
+    //! if used -03, the above process will be eliminated.
     cleanse::memory_cleanse(r, sizeof(CPubKey::secp256k1_unit));
+    r->d[0] = 0;
+    r->d[1] = 0;
+    r->d[2] = 0;
+    r->d[3] = 0;
+    r->d[4] = 0;
+    r->d[5] = 0;
+    r->d[6] = 0;
+    r->d[7] = 0;
     VERIFY_CHECK((*(uint256 *)r) == 0);
 }
 
@@ -716,7 +704,7 @@ int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen
         std::memcpy(ptr, middle, sizeof(middle)); ptr += sizeof(middle);
         pubkeylen = CPubKey::COMPRESSED_PUBLIC_KEY_SIZE;
         unsigned char ser_pubkey[CPubKey::PUBLIC_KEY_SIZE];
-        ARG_CHECK(CPubKey::secp256k1_ec_pubkey_serialize(&ser_pubkey, &pubkeylen, &pubkey, CPubKey::SECP256K1_EC_COMPRESSED));
+        ARG_CHECK(CPubKey::secp256k1_ec_pubkey_serialize(ser_pubkey, &pubkeylen, &pubkey, CPubKey::SECP256K1_EC_COMPRESSED));
         std::memcpy(ptr, ser_pubkey, pubkeylen);
         cleanse::OPENSSL_cleanse(ser_pubkey, sizeof(ser_pubkey));
         ptr += pubkeylen;
@@ -745,7 +733,7 @@ int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen
         std::memcpy(ptr, middle, sizeof(middle)); ptr += sizeof(middle);
         pubkeylen = CPubKey::PUBLIC_KEY_SIZE;
         unsigned char ser_pubkey[CPubKey::PUBLIC_KEY_SIZE];
-        ARG_CHECK(CPubKey::secp256k1_ec_pubkey_serialize(&ser_pubkey, &pubkeylen, &pubkey, CPubKey::SECP256K1_EC_UNCOMPRESSED));
+        ARG_CHECK(CPubKey::secp256k1_ec_pubkey_serialize(ser_pubkey, &pubkeylen, &pubkey, CPubKey::SECP256K1_EC_UNCOMPRESSED));
         std::memcpy(ptr, ser_pubkey, pubkeylen);
         cleanse::OPENSSL_cleanse(ser_pubkey, sizeof(ser_pubkey));
         ptr += pubkeylen;
@@ -755,52 +743,59 @@ int CFirmKey::ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen
     return 1;
 }
 
-// SorachanCoin:
-// implement GetStrongRandBytes to gen_ctx.
-// implement OPENSSL_cleanse to gen_ctx.
-CPrivKey CFirmKey::GetPrivKey(bool *fret) const {
+CPrivKey CFirmKey::GetPrivKey() const {
     assert(fValid_);
-    assert(fret!=nullptr);
-    *fret = false;
     CPrivKey privkey;
     size_t privkeylen;
     privkey.resize(PRIVATE_KEY_SIZE);
     privkeylen = PRIVATE_KEY_SIZE;
-    CFirmKey::ecmult::secp256k1_gen_context gen_ctx; // SorachanCoin: GetStrongRandBytes
-    if(! gen_ctx.build())
-        return privkey;
-    if(! ec_privkey_export_der(gen_ctx, privkey.data(), &privkeylen, begin(), fCompressed_))
-        return privkey;
+    CFirmKey::ecmult::secp256k1_gen_context gen_ctx;
+    if(! gen_ctx.build()) {
+        throw key_error("CFirmKey::GetPrivKey() : gen_ctx failed");
+    }
+    if(! ec_privkey_export_der(gen_ctx, privkey.data(), &privkeylen, begin(), fCompressed_)) {
+        throw key_error("CFirmKey::GetPrivKey() : ec_privkey_export_der failed");
+    }
 
     privkey.resize(privkeylen);
-    *fret = true;
     return privkey;
 }
 
-CPubKey CFirmKey::GetPubKey(bool *fret) const {
+CPubKey CFirmKey::GetPubKey() const {
     assert(fValid_);
-    assert(fret!=nullptr);
-    *fret = false;
     CPubKey::secp256k1_pubkey pubkey;
     size_t clen = CPubKey::PUBLIC_KEY_SIZE;
     CPubKey result;
     CFirmKey::ecmult::secp256k1_gen_context gen_ctx;
-    if(! gen_ctx.build())
-        return result;
-    int ret = CFirmKey::secp256k1_ec_pubkey_create(gen_ctx, &pubkey, begin());
-    if(! ret)
-        return result;
-    unsigned char ser_pubkey[CPubKey::PUBLIC_KEY_SIZE];
-    if(! CPubKey::secp256k1_ec_pubkey_serialize(&ser_pubkey, &clen, &pubkey, fCompressed_ ? CPubKey::SECP256K1_EC_COMPRESSED : CPubKey::SECP256K1_EC_UNCOMPRESSED))
-        return result;
-    result.Set(&ser_pubkey[0], &ser_pubkey[0] + clen);
-    if(result.size() != clen)
-        return result;
-    if(! result.IsValid())
-        return result;
+    if(! gen_ctx.build()) {
+        throw key_error("CFirmKey::GetPubKey() : gen_ctx build failed");
+    }
 
-    *fret = true;
+    int ret = CFirmKey::secp256k1_ec_pubkey_create(gen_ctx, &pubkey, begin());
+    if(! ret) {
+        throw key_error("CFirmKey::GetPubKey() : secp256k1_ec_pubkey_create failed");
+    }
+
+    unsigned char ser_pubkey[CPubKey::PUBLIC_KEY_SIZE];
+    if(! CPubKey::secp256k1_ec_pubkey_serialize(ser_pubkey, &clen, &pubkey, fCompressed_ ? CPubKey::SECP256K1_EC_COMPRESSED : CPubKey::SECP256K1_EC_UNCOMPRESSED)) {
+        throw key_error("CFirmKey::GetPubKey() : secp256k1_ec_pubkey_serialize failed");
+    }
+
+    result.Set(&ser_pubkey[0], &ser_pubkey[0] + clen);
+    if(result.size() != clen) {
+        throw key_error("CFirmKey::GetPubKey() : publickey size failed");
+    }
+    if(! result.IsFullyValid_BIP66()) {
+        throw key_error("CFirmKey::GetPubKey() : publickey valid failed");
+    }
+
     return result;
+}
+
+CSecret CFirmKey::GetSecret(bool &fCompressed) const {
+    CSecret ret(keydata_.begin(), keydata_.end());
+    fCompressed = fCompressed_;
+    return ret;
 }
 
 int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
@@ -1067,7 +1062,7 @@ int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned c
     return 1;
 }
 
-bool CFirmKey::SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const {
+bool CFirmKey::SignCompact(const uint256 &hash, key_vector &vchSig) const {
     ARG_BOOL_CHECK(fValid_);
     vchSig.resize(CPubKey::COMPACT_SIGNATURE_SIZE);
     int rec = -1;
@@ -1115,9 +1110,7 @@ bool CFirmKey::Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChil
     ARG_BOOL_CHECK(IsCompressed());
     std::vector<unsigned char, secure_allocator<unsigned char> > vout(64);
     if ((nChild >> 31) == 0) {
-        bool fret=false;
-        CPubKey pubkey = GetPubKey(&fret);
-        if(! fret) return false;
+        CPubKey pubkey = GetPubKey();
         ARG_BOOL_CHECK(pubkey.size() == CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
         bip32::BIP32Hash(cc, nChild, *pubkey.begin(), pubkey.begin()+1, vout.data());
     } else {
@@ -1241,20 +1234,20 @@ void CExtFirmKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]
     key.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, true);
 }
 
-bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild, bool *fret) const {
+bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild) const {
     out.nDepth = nDepth + 1;
-    CKeyID id = key.GetPubKey(fret).GetID();
+    CKeyID id = key.GetPubKey().GetID();
     std::memcpy(&out.vchFingerprint[0], &id, 4);
     out.nChild = _nChild;
     return key.Derive(out.key, out.chaincode, _nChild, chaincode);
 }
 
-CExtPubKey CExtFirmKey::Neuter(bool *fret) const {
+CExtPubKey CExtFirmKey::Neuter() const {
     CExtPubKey ret;
     ret.nDepth = nDepth;
     std::memcpy(&ret.vchFingerprint[0], &vchFingerprint[0], 4);
     ret.nChild = nChild;
-    ret.pubkey = key.GetPubKey(fret);
+    ret.pubkey = key.GetPubKey();
     ret.chaincode = chaincode;
     return ret;
 }

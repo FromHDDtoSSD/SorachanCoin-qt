@@ -669,6 +669,80 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
 
     LOCK(CRPCTable::cs_getwork);
 
+    std::string hex = params[0].get_str();
+    if(hex.size() < 2*80) {
+        return false;
+    }
+
+    // CBlockHeader
+    std::string header_hex = hex.substr(0, 2*80);
+    CDataStream ssBlockHeader(strenc::ParseHex(header_hex), SER_NETWORK, version::PROTOCOL_VERSION);
+    CBlockHeader blockheader;
+    try {
+        ssBlockHeader >> blockheader;
+    } catch (const std::exception &) {
+        return false;
+    }
+
+    // CTransactionVch
+    std::string txs_hex = hex.substr(2*80);
+    CDataStream ssTxs(strenc::ParseHex(txs_hex), SER_NETWORK, version::PROTOCOL_VERSION);
+    CTransactionVch txsvch;
+    try {
+        ssTxs >> txsvch;
+    } catch (const std::exception &) {
+        return false;
+    }
+
+    CBlock block;
+    block.set_nVersion(blockheader.get_nVersion());
+    block.set_hashPrevBlock(blockheader.get_hashPrevBlock());
+    block.set_hashMerkleRoot(blockheader.get_hashMerkleRoot());
+    block.set_nTime(blockheader.get_nTime());
+    block.set_nBits(blockheader.get_nBits());
+    block.set_nNonce(blockheader.get_nNonce());
+    block.set_vtx() = txsvch.vtx;
+
+    // debug
+    debugcs::instance() << "block: " << block.get_hashMerkleRoot().GetHex() << debugcs::endl();
+    for(const auto &d: mapGbtNewBlock)
+        debugcs::instance() << "mapBlock: " << d.second.first->get_hashMerkleRoot().GetHex() << debugcs::endl();
+
+    // reward (coinbase)
+    if(block.get_vtx(0).get_vout().size()==0) {
+        CTransaction txCoinBase;
+        txCoinBase.set_vin().resize(1);
+        txCoinBase.set_vin(0).set_prevout().SetNull();
+        txCoinBase.set_vout().resize(1);
+        CReserveKey reservekey(entry::pwalletMain);
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
+        block.set_vtx().clear();
+        block.set_vtx().push_back(txCoinBase);
+        block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
+        return false;
+    }
+
+    static CReserveKey reservekey(entry::pwalletMain);
+    bool fAccepted = miner::CheckWork(&block, *entry::pwalletMain, reservekey);
+    if (! fAccepted) {
+        return false;
+    }
+
+    return json_spirit::Value::null;
+}
+
+/*
+json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool fHelp) {
+    if (fHelp || params.size() < 1 || params.size() > 2) {
+        throw std::runtime_error(
+            "submitblock <hex data> [optional-params-obj]\n"
+            "[optional-params-obj] parameter is currently ignored.\n"
+            "Attempts to submit new block to network.\n"
+            "See https://en.bitcoin.it/wiki/BIP_0022 for full specification.");
+    }
+
+    LOCK(CRPCTable::cs_getwork);
+
     //if(! args_bool::fTestNet) {
     //    return false; // checking testnet
     //}
@@ -735,6 +809,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
     //debugcs::instance() << "submitblock: accepted" << debugcs::endl();
     return json_spirit::Value::null;
 }
+*/
 
 /*
 // Copyright (c) 2010 Satoshi Nakamoto

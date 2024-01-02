@@ -447,7 +447,7 @@ json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, bool
         throw bitjson::JSONRPCError(RPC_TYPE_ERROR, "Address does not refer to key");
     }
 
-    CKey key;
+    CFirmKey key;
     if (! entry::pwalletMain->GetKey(keyID, key)) {
         throw bitjson::JSONRPCError(RPC_WALLET_ERROR, "Private key not available");
     }
@@ -456,7 +456,7 @@ json_spirit::Value CRPCTable::signmessage(const json_spirit::Array &params, bool
     ss << block_info::strMessageMagic;
     ss << strMessage;
 
-    std::vector<unsigned char> vchSig;
+    key_vector vchSig;
     if (! key.SignCompact(hash_basis::Hash(ss.begin(), ss.end()), vchSig)) {
         throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Sign failed");
     }

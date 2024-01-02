@@ -1024,4 +1024,15 @@ public:
     }
 };
 
+struct CTransactionVch {
+public:
+    std::vector<CTransaction> vtx;
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(this->vtx);
+    }
+};
+
 #endif // BITCOIN_TRANSACTION_H

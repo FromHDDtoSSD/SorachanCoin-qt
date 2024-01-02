@@ -8,7 +8,7 @@
 
 #include <crypter.h>
 #include <sync/lsync.h>
-#include <key.h>
+#include <key/privkey.h>
 #include <boost/signals2/signal.hpp>
 #include <boost/variant.hpp>
 class CScript;
@@ -38,7 +38,8 @@ public:
 
     // Check whether a key corresponding to a given address is present in the store.
     virtual bool HaveKey(const CKeyID &address) const =0;
-    virtual bool GetKey(const CKeyID &address, CKey& keyOut) const =0;
+    virtual bool GetKey(const CKeyID &address, CKey &keyOut) const =0;
+    virtual bool GetKey(const CKeyID &address, CFirmKey &keyOut) const =0;
     virtual void GetKeys(std::set<CKeyID> &setAddress) const =0;
     virtual bool GetPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const {
         CKey key;
@@ -49,10 +50,13 @@ public:
         return true;
     }
 
+    // Support for Eth Address
+    virtual bool GetEthAddr(const CKeyID &id, std::string &address) const =0;
+
     // Support for BIP 0013 : see https://en.bitcoin.it/wiki/BIP_0013
-    virtual bool AddCScript(const CScript& redeemScript) =0;
+    virtual bool AddCScript(const CScript &redeemScript) =0;
     virtual bool HaveCScript(const CScriptID &hash) const =0;
-    virtual bool GetCScript(const CScriptID &hash, CScript& redeemScriptOut) const =0;
+    virtual bool GetCScript(const CScriptID &hash, CScript &redeemScriptOut) const =0;
 
     // Support for Watch-only addresses
     virtual bool AddWatchOnly(const CScript &dest) =0;
@@ -140,6 +144,18 @@ public:
         }
         return false;
     }
+
+    bool GetKey(const CKeyID &address, CFirmKey &keyOut) const {
+        LOCK(cs_KeyStore);
+        KeyMap::const_iterator mi = mapKeys.find(address);
+        if (mi != mapKeys.end()) {
+            keyOut.SetSecret((*mi).second.first, (*mi).second.second);
+            return true;
+        }
+        return false;
+    }
+
+    virtual bool GetEthAddr(const CKeyID &id, std::string &address) const;
 
     virtual bool AddCScript(const CScript &redeemScript);
     virtual bool HaveCScript(const CScriptID &hash) const;
@@ -291,7 +307,8 @@ public:
             return mapCryptedKeys.count(address) > 0;
         }
     }
-    bool GetKey(const CKeyID &address, CKey& keyOut) const;
+    bool GetKey(const CKeyID &address, CKey &keyOut) const;
+    bool GetKey(const CKeyID &address, CFirmKey &keyOut) const;
     bool GetPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const;
     void GetKeys(std::set<CKeyID> &setAddress) const {
         if (! IsCrypted()) {
@@ -381,6 +398,8 @@ public:
         }
         return false;
     }
+
+    bool GetEthAddr(const CKeyID &id, std::string &address) const;
 
     //
     // Wallet status (encrypted, locked) changed.

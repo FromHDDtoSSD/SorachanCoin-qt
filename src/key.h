@@ -45,7 +45,7 @@ typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;
 /** 3, CSecret is a serialization of just the secret parameter (must be 32 bytes) **/
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecret;
 
-/** [A(1Å`3)] An encapsulated OpenSSL Elliptic Curve key (private) **/
+/** [A(1-3)] An encapsulated OpenSSL Elliptic Curve key (private) **/
 /** The private key includes the secret key as well as the public key. **/
 class CKey
 {
@@ -125,7 +125,7 @@ public:
     // The format is one header byte, followed by two times 32 bytes for the serialized r and s values.
     // The header byte: 0x1B = first key with even y, 0x1C = first key with odd y,
     //                  0x1D = second key with even y, 0x1E = second key with odd y
-    bool SignCompact(uint256 hash, std::vector<unsigned char> &vchSig);
+    bool SignCompact(uint256 hash, key_vector &vchSig);
 
     bool IsValid() const;
 

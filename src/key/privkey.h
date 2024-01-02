@@ -6,6 +6,8 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 // SECP256k1: private key
+// P2PKH: CKey
+// other P2PKH: CFirmKey
 
 #ifndef BITCOIN_PRIVKEY_H
 #define BITCOIN_PRIVKEY_H
@@ -14,6 +16,7 @@
 #include <uint256.h>
 #include <allocator/allocators.h>
 #include <key/pubkey.h>
+#include <key.h> // CKey, CPrivKey(279 vch), CSecret(32 vch)
 
 namespace latest_crypto {
     class CHMAC_SHA256;
@@ -24,7 +27,8 @@ namespace latest_crypto {
  * CPrivKey is a serialized private key, with all parameters included
  * (PRIVATE_KEY_SIZE bytes)
  */
-using CPrivKey = std::vector<unsigned char, secure_allocator<unsigned char> >;
+// using CPrivKey = std::vector<unsigned char, secure_allocator<unsigned char> >;
+// using CSecretKey = std::vector<unsigned char, secure_allocator<unsigned char> >;
 
 /** An encapsulated private key. */
 class CFirmKey
@@ -54,11 +58,6 @@ private:
 
     //! Check whether the 32-byte(PRIVATE_BYTE_VECTOR_SIZE) array pointed to by vch is valid keydata.
     static bool Check(const unsigned char *vch);
-
-    // SorachanCoin (src/secp256k1): PrivateKey config
-#ifdef USE_ECMULT_STATIC_PRECOMPUTATION
-# undef USE_ECMULT_STATIC_PRECOMPUTATION
-#endif
 
     class hash {
     public:
@@ -175,6 +174,14 @@ public:
             fValid_ = false;
     }
 
+    void SetSecret(const CSecret &secret, bool fCompressedIn = true) {
+        Set(secret.begin(), secret.end(), fCompressedIn);
+    }
+
+    void SetCompressedPubKey(bool fCompressedIn) {
+        fCompressed_ = fCompressedIn;
+    }
+
     //! Simple read-only vector-like interface.
     unsigned int size() const { return (fValid_ ? keydata_.size() : 0); }
     const unsigned char *begin() const { return keydata_.data(); }
@@ -190,12 +197,17 @@ public:
     void MakeNewKey(bool fCompressedIn);
 
     //! Convert the private key to a CPrivKey (serialized OpenSSL private key data).
-    // This is expensive.
-    CPrivKey GetPrivKey(bool *fret) const;
+    CPrivKey GetPrivKey() const;
 
     //! Compute the public key from a private key.
-    // This is expensive.
-    CPubKey GetPubKey(bool *fret) const;
+    CPubKey GetPubKey() const;
+
+    //! Compute the CSecret from a private key.
+    CSecret GetSecret(bool &fCompressed) const;
+    CSecret GetSecret() const {
+        bool fCompressed;
+        return GetSecret(fCompressed);
+    }
 
     //! Create a DER-serialized signature.
     // The test_case parameter tweaks the deterministic nonce.
@@ -208,7 +220,7 @@ public:
      *                  0x1D = second key with even y, 0x1E = second key with odd y,
      *                  add 0x04 for compressed keys.
      */
-    bool SignCompact(const uint256 &hash, std::vector<unsigned char> &vchSig) const;
+    bool SignCompact(const uint256 &hash, key_vector &vchSig) const;
 
     //! Derive BIP32 child key.
     bool Derive(CFirmKey &keyChild, ChainCode &ccChild, unsigned int nChild, const ChainCode &cc) const;
@@ -244,8 +256,8 @@ struct CExtFirmKey {
 
     void Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const;
     void Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtFirmKey &out, unsigned int nChild, bool *fret) const;
-    CExtPubKey Neuter(bool *fret) const;
+    bool Derive(CExtFirmKey &out, unsigned int nChild) const;
+    CExtPubKey Neuter() const;
     void SetSeed(const unsigned char *seed, unsigned int nSeedLen);
     template <typename Stream>
     void Serialize(Stream &s) const {
