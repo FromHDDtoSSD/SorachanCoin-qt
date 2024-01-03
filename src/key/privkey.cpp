@@ -1215,7 +1215,10 @@ bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSki
     return VerifyPubKey(vchPubKey);
 }
 
-void CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const {
+CPrivKey CExtFirmKey::GetPrivKeyVch() const {
+    CPrivKey vch;
+    vch.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
+    unsigned char *code = &vch.front();
     code[0] = nDepth;
     std::memcpy(code+1, vchFingerprint, 4);
     code[5] = (nChild >> 24) & 0xFF; code[6] = (nChild >> 16) & 0xFF;
@@ -1224,14 +1227,15 @@ void CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) cons
     code[41] = 0;
     assert(key.size() == 32);
     std::memcpy(code+42, key.begin(), 32);
+    return vch;
 }
 
-void CExtFirmKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) {
+void CExtFirmKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
     nDepth = code[0];
     std::memcpy(vchFingerprint, code+1, 4);
     nChild = (code[5] << 24) | (code[6] << 16) | (code[7] << 8) | code[8];
     std::memcpy(chaincode.begin(), code+9, 32);
-    key.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, true);
+    key.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, fCompressed);
 }
 
 bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild) const {

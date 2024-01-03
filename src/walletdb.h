@@ -27,11 +27,7 @@ enum DBErrors
 
 class CKeyMetadata
 {
-private:
     CKeyMetadata(const CKeyMetadata &)=delete;
-    // CKeyMetadata(CKeyMetadata &&)=delete;
-    // CKeyMetadata &operator=(const CKeyMetadata &)=delete;
-    // CKeyMetadata &operator=(CKeyMetadata &&)=delete;
 
 public:
     static const int CURRENT_VERSION = 1;

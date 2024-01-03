@@ -294,7 +294,7 @@ public:
     SecureString(const SecureString &obj) {
         *this = obj;
     }
-    SecureString(const SecureString &&obj) {
+    SecureString(const SecureString &&obj) noexcept {
         this->str_ = std::move(obj.str_);
     }
 
@@ -306,11 +306,40 @@ public:
         return *this;
     }
     SecureString &operator=(const std::string &)=delete;
+    SecureString &operator=(std::string &&b) {
+        str_.clear();
+        str_.insert(str_.end(), b.begin(), b.end());
+        cleanse::memory_cleanse(&b.front(), b.size());
+        b.clear();
+        return *this;
+    }
     SecureString &operator=(const char *)=delete;
+    SecureString &operator=(char *b) {
+        str_ = b;
+        cleanse::OPENSSL_cleanse(b, ::strlen(b));
+        return *this;
+    }
+    SecureString &operator=(char b) {
+        str_ = b;
+        return *this;
+    }
+    SecureString &operator+=(char b) {
+        str_ += b;
+        return *this;
+    }
     bool operator==(const SecureString &obj) const {
         return (this->str_ == obj.str_);
     }
 
+    const char *data() const {
+        return str_.data();
+    }
+    char &front() {
+        return str_.front();
+    }
+    void clear() {
+        str_.clear();
+    }
     std::size_t size() const {
         return str_.size();
     }
@@ -324,8 +353,15 @@ public:
     bool empty() const {
         return str_.empty();
     }
+    String_with_s_allocator::iterator insert(String_with_s_allocator::iterator offset, String_with_s_allocator::iterator begin, String_with_s_allocator::iterator end) {
+        return str_.insert(offset, begin, end);
+    }
     SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
         str_.assign(str.str_, pos, n);
+        return *this;
+    }
+    SecureString &assign(std::size_t n, char c) {
+        str_.assign(n, c);
         return *this;
     }
     SecureString &assign(const char *)=delete;

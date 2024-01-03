@@ -39,7 +39,8 @@ const int8_t mapBase58[256] = {
 };
 } // namespace
 
-bool base58::manage::DecodeBase58(const char *psz, base58_vector &vch) {
+template <typename T=base58_vector>
+bool base58::manage::DecodeBase58(const char *psz, T &vch) {
     // Skip leading spaces.
     while (*psz && strenc::IsSpace(*psz))
         psz++;
@@ -52,7 +53,7 @@ bool base58::manage::DecodeBase58(const char *psz, base58_vector &vch) {
     }
     // Allocate enough space in big-endian base256 representation.
     int size = strlen(psz) * 733 /1000 + 1; // log(58) / log(256), rounded up.
-    base58_vector b256(size);
+    T b256(size);
     // Process the characters.
     static_assert(sizeof(mapBase58)/sizeof(mapBase58[0]) == 256, "mapBase58.size() should be 256"); // guarantee not out of range
     while (*psz && !strenc::IsSpace(*psz)) {
@@ -61,7 +62,7 @@ bool base58::manage::DecodeBase58(const char *psz, base58_vector &vch) {
         if (carry == -1)  // Invalid b58 character
             return false;
         int i = 0;
-        for (base58_vector::reverse_iterator it = b256.rbegin(); (carry != 0 || i < length) && (it != b256.rend()); ++it, ++i) {
+        for (typename T::reverse_iterator it = b256.rbegin(); (carry != 0 || i < length) && (it != b256.rend()); ++it, ++i) {
             carry += 58 * (*it);
             *it = (uint8_t)(carry % 256);
             carry /= 256;
@@ -76,7 +77,7 @@ bool base58::manage::DecodeBase58(const char *psz, base58_vector &vch) {
     if (*psz != 0)
         return false;
     // Skip leading zeroes in b256.
-    base58_vector::iterator it = b256.begin() + (size - length);
+    typename T::iterator it = b256.begin() + (size - length);
     while (it != b256.end() && *it == 0)
         it++;
     // Copy result into output vector.
@@ -87,7 +88,8 @@ bool base58::manage::DecodeBase58(const char *psz, base58_vector &vch) {
     return true;
 }
 
-std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsigned char *pend) {
+template <typename R=std::string, typename T=base58_vector>
+R base58::manage::EncodeBase58(const unsigned char *pbegin, const unsigned char *pend) {
     // Skip & count leading zeroes.
     int zeroes = 0;
     int length = 0;
@@ -97,13 +99,13 @@ std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsi
     }
     // Allocate enough space in big-endian base58 representation.
     int size = (pend - pbegin) * 138 / 100 + 1; // log(256) / log(58), rounded up.
-    base58_vector b58(size);
+    T b58(size);
     // Process the bytes.
     while (pbegin != pend) {
         int carry = *pbegin;
         int i = 0;
         // Apply "b58 = b58 * 256 + ch".
-        for (base58_vector::reverse_iterator it = b58.rbegin(); (carry != 0 || i < length) && (it != b58.rend()); it++, i++) {
+        for (typename T::reverse_iterator it = b58.rbegin(); (carry != 0 || i < length) && (it != b58.rend()); it++, i++) {
             carry += 256 * (*it);
             *it = (uint8_t)(carry % 58);
             carry /= 58;
@@ -114,11 +116,11 @@ std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsi
         pbegin++;
     }
     // Skip leading zeroes in base58 result.
-    base58_vector::iterator it = b58.begin() + (size - length);
+    typename T::iterator it = b58.begin() + (size - length);
     while (it != b58.end() && *it == 0)
         it++;
     // Translate the result into a string.
-    std::string str;
+    R str;
     str.reserve(zeroes + (b58.end() - it));
     str.assign(zeroes, '1');
     while (it != b58.end())
@@ -126,13 +128,14 @@ std::string base58::manage::EncodeBase58(const unsigned char *pbegin, const unsi
     return str;
 }
 
-std::string base58::manage::EncodeBase58(const base58_vector &vch) {
-    return EncodeBase58(vch.data(), vch.data() + vch.size());
+template <typename R=std::string, typename T=base58_vector>
+R base58::manage::EncodeBase58(const T &vch) {
+    return EncodeBase58<R, T>(vch.data(), vch.data() + vch.size());
 }
 
-bool base58::manage::DecodeBase58(const std::string &str, base58_vector &vchRet) {
-    return DecodeBase58(str.c_str(), vchRet);
-}
+//bool base58::manage::DecodeBase58(const std::string &str, base58_vector &vchRet) {
+//    return DecodeBase58<base58_vector>(str.c_str(), vchRet);
+//}
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 std::string base58::manage::EncodeBase58(const std::vector<unsigned char> &vch) {
@@ -151,21 +154,17 @@ bool base58::manage::DecodeBase58(const std::string &str, std::vector<unsigned c
 }
 #endif
 
-std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {
-
-    // debug: checking prefix
-    //base58_vector &vec = const_cast<base58_vector&>(vchIn);
-    //vec[0] = 196;
-
+template <typename R=std::string, typename T=base58_vector>
+R base58::manage::EncodeBase58Check(const T &vchIn) {
     // add 4-byte hash check to the end
-    base58_vector vch(vchIn);
+    T vch(vchIn);
     uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
     vch.insert(vch.end(), (unsigned char*)&hash, (unsigned char*)&hash + 4);
-    return EncodeBase58(vch);
+    return EncodeBase58<R, T>(vch);
 }
 
-bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) { // psz is base58
-    //debugcs::instance() << "address: " << std::string(psz) << debugcs::endl();
+template <typename T=base58_vector>
+bool base58::manage::DecodeBase58Check(const char *psz, T &vchRet) { // psz is base58
     if (!DecodeBase58(psz, vchRet) || (vchRet.size() < 4)) {
         vchRet.clear();
         return false;
@@ -181,8 +180,32 @@ bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet) {
 }
 
 bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vchRet) {
-    return DecodeBase58Check(str.c_str(), vchRet);
+    return DecodeBase58Check<base58_vector>((const char *)str.c_str(), vchRet);
 }
+
+bool base58::manage::DecodeBase58Check(const SecureString &str, CPrivKey &vchRet) {
+    const size_t bufsize = str.size() + 1;
+    std::unique_ptr<unsigned char[]> buf(new (std::nothrow) unsigned char[bufsize]);
+    if(buf.get()==nullptr)
+        return false;
+    ::memset(buf.get(), 0x00, bufsize);
+    ::strcpy((char *)buf.get(), str.data());
+    bool ret = DecodeBase58Check<CPrivKey>((const char *)buf.get(), vchRet);
+    cleanse::OPENSSL_cleanse(buf.get(), bufsize);
+    return ret;
+}
+
+// for WIF(SecureString, CPrivKey)
+template std::string base58::manage::EncodeBase58<std::string, base58_vector>(const unsigned char *pbegin, const unsigned char *pend);
+template SecureString base58::manage::EncodeBase58<SecureString, CPrivKey>(const unsigned char *pbegin, const unsigned char *pend);
+template std::string base58::manage::EncodeBase58(const base58_vector &);
+template SecureString base58::manage::EncodeBase58(const CPrivKey &);
+template std::string base58::manage::EncodeBase58Check(const base58_vector &);
+template SecureString base58::manage::EncodeBase58Check(const CPrivKey &);
+template bool base58::manage::DecodeBase58(const char *psz, base58_vector &vchRet);
+template bool base58::manage::DecodeBase58(const char *psz, CPrivKey &vchRet);
+template bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet);
+template bool base58::manage::DecodeBase58Check(const char *psz, CPrivKey &vchRet);
 
 /*
 std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {

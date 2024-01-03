@@ -15,6 +15,7 @@
 #include <key/privkey.h>
 #include <script/interpreter.h>
 #include <string>
+#include <allocator/allocators.h>
 #include <debugcs/debugcs.h>
 
 namespace key_io {
@@ -31,7 +32,11 @@ namespace key_io {
         PUBKEY_DIRECT = 35,
         PUBKEY_ETH_ADDRESS = 80,
         PUBKEY_DIRECT_TEST = 15,
-        PUBKEY_ETH_ADDRESS_TEST = 81
+        PUBKEY_ETH_ADDRESS_TEST = 81,
+
+        // WIF (wallet import format)
+        PRIVKEY_UNCOMPRESS = 10,
+        PRIVKEY_COMPRESS = 48
     };
 } // namespace key_io
 
@@ -349,16 +354,17 @@ using CEthSecret = CBitcoinSecret_impl<CEthData>;
 using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data>;
 using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 
+// BIP32 and WIF
 namespace key_io {
 
 CFirmKey DecodeSecret(const std::string &str);
-std::string EncodeSecret(const CFirmKey &key);
+SecureString EncodeSecret(const CFirmKey &key);
 
 CExtPubKey DecodeExtPubKey(const std::string &str);
-std::string EncodeExtPubKey(const CExtPubKey &extpubkey);
+std::string EncodeExtPubKey(const CExtPubKey &extpubkey, unsigned char nVersion);
 
-CExtFirmKey DecodeExtKey(const std::string &str);
-std::string EncodeExtKey(const CExtFirmKey &extkey);
+CExtFirmKey DecodeExtFirmKey(const SecureString &str);
+SecureString EncodeExtFirmKey(const CExtFirmKey &extkey);
 
 std::string EncodeDestination(const CTxDestination &dest);
 CTxDestination DecodeDestination(const std::string &str);

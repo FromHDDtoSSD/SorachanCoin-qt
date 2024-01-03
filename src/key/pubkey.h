@@ -501,7 +501,8 @@ public:
 };
 
 // BIP32
-struct CExtPubKey {
+class CExtPubKey {
+public:
     static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
@@ -517,34 +518,40 @@ struct CExtPubKey {
                a.pubkey == b.pubkey;
     }
 
-    void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const {
+    static void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) {
         code[0] = 0xFF;
     }
-    void Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const;
-    void Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
+    static void Invalidate(key_vector &code) {
+        code[0] = 0xFF;
+    }
+
+    key_vector GetPubVch() const;
+    void Set(const key_vector &vch);
+    void Set(const unsigned char data[BIP32_EXTKEY_SIZE]);
     bool Derive(CExtPubKey &out, unsigned int nChild) const;
 
     void Serialize(CSizeComputer &s) const {
         // Optimized implementation for ::GetSerializeSize that avoids copying.
         s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
     }
-    /*
+
     unsigned int GetSerializeSize() const {
         return BIP32_EXTKEY_SIZE + 1;
     }
-    */
+
     template <typename Stream>
     void Serialize(Stream &s) const {
         unsigned int len = BIP32_EXTKEY_SIZE;
         compact_size::manage::WriteCompactSize(s, len);
-        unsigned char code[BIP32_EXTKEY_SIZE];
-        Encode(code);
-        s.write((const char *)&code[0], len);
+        key_vector code = GetPubVch();
+        s.write((const char *)code.data(), len);
     }
+
     template <typename Stream>
     void Unserialize(Stream &s) {
         unsigned int len = compact_size::manage::ReadCompactSize(s);
-        unsigned char code[BIP32_EXTKEY_SIZE];
+        //unsigned char code[BIP32_EXTKEY_SIZE];
+        key_vector code;
         if (len != BIP32_EXTKEY_SIZE) {
             if(len <= 0) {
                 Invalidate(code);
@@ -558,7 +565,7 @@ struct CExtPubKey {
             Invalidate(code);
         } else {
             s.read((char *)&code[0], len);
-            Decode(code);
+            Set(code);
         }
     }
 };

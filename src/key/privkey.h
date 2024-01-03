@@ -239,7 +239,8 @@ public:
 };
 
 // BIP32
-struct CExtFirmKey {
+class CExtFirmKey {
+public:
     unsigned char nDepth;
     unsigned char vchFingerprint[4];
     unsigned int nChild;
@@ -254,27 +255,33 @@ struct CExtFirmKey {
             a.key == b.key;
     }
 
-    void Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const;
-    void Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
+    CPrivKey GetPrivKeyVch() const;
+    void Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed);
+
     bool Derive(CExtFirmKey &out, unsigned int nChild) const;
+
     CExtPubKey Neuter() const;
+
     void SetSeed(const unsigned char *seed, unsigned int nSeedLen);
+
     template <typename Stream>
     void Serialize(Stream &s) const {
-        unsigned int len = CExtPubKey::BIP32_EXTKEY_SIZE;
+        const unsigned int len = CExtPubKey::BIP32_EXTKEY_SIZE;
         ::WriteCompactSize(s, len);
-        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
-        Encode(code);
+        CPrivKey code = GetPrivKeyVch();
         s.write((const char *)&code[0], len);
     }
+
     template <typename Stream>
     void Unserialize(Stream &s) {
         unsigned int len = compact_size::manage::ReadCompactSize(s);
         unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
         if (len != CExtPubKey::BIP32_EXTKEY_SIZE)
             throw std::runtime_error("Invalid extended key size\n");
+
         s.read((char *)&code[0], len);
-        Decode(code);
+        Set(code, true);
+        cleanse::OPENSSL_cleanse(&code[0], sizeof(code));
     }
 };
 

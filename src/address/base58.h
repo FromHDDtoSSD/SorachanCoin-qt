@@ -28,16 +28,20 @@ namespace base58 {
     class manage : private no_instance {
     private:
         // Decode a base58-encoded string psz into byte vector vchRet
-        static bool DecodeBase58(const char *psz, base58_vector &vchRet);
+        template <typename T=base58_vector>
+        static bool DecodeBase58(const char *psz, T &vchRet);
+
     public:
         // Encode a byte sequence as a base58-encoded string
-        static std::string EncodeBase58(const unsigned char *pbegin, const unsigned char *pend);
+        template <typename R=std::string, typename T=base58_vector>
+        static R EncodeBase58(const unsigned char *pbegin, const unsigned char *pend);
 
         // Encode a byte vector as a base58-encoded string
-        static std::string EncodeBase58(const base58_vector &vch);
+        template <typename R=std::string, typename T=base58_vector>
+        static R EncodeBase58(const T &vch);
 
         // Decode a base58-encoded string str into byte vector vchRet
-        static bool DecodeBase58(const std::string &str, base58_vector &vchRet);
+        //static bool DecodeBase58(const std::string &str, base58_vector &vchRet);
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
         // Encode a byte vector as a base58-encoded string
@@ -48,11 +52,14 @@ namespace base58 {
 #endif
 
         // [4 bytes hash check] Encode a byte vector to a base58-encoded string, including checksum
-        static std::string EncodeBase58Check(const base58_vector &vchIn);
+        template <typename R=std::string, typename T=base58_vector>
+        static R EncodeBase58Check(const T &vchIn);
 
         // [4 bytes hash check] Decode a base58-encoded string psz or str that includes a checksum, into byte vector vchRet
-        static bool DecodeBase58Check(const char *psz, base58_vector &vchRet);
+        template <typename T=base58_vector>
+        static bool DecodeBase58Check(const char *psz, T &vchRet);
         static bool DecodeBase58Check(const std::string &str, base58_vector &vchRet);
+        static bool DecodeBase58Check(const SecureString &str, CPrivKey &vchRet);
     };
 }
 
