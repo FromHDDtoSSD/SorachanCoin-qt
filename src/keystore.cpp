@@ -9,6 +9,35 @@
 #include <wallet.h> // CWallet::fWalletUnlockMintOnly
 
 static void keydebug(const CKey &key) {
+    //using namespace ScriptOpcodes;
+    // debug ok: WIF
+    /*
+    try {
+        CFirmKey fikey;
+        fikey.SetSecret(key.GetSecret(), key.IsCompressed());
+        SecureString enc_priv_key = key_io::EncodeSecret(fikey);
+        debugcs::instance() << "WIF CFirmKey encoded: " << enc_priv_key.size() << " : " << enc_priv_key.print() << debugcs::endl();
+
+        CFirmKey fikey2 = key_io::DecodeSecret(enc_priv_key);
+        assert(fikey == fikey2);
+        assert(fikey.GetPubKey().IsCompressed() == fikey2.GetPubKey().IsCompressed());
+        assert(fikey.GetPubKey() == fikey2.GetPubKey());
+
+        CFirmKey fikey3;
+        fikey3.SetSecret(key.GetSecret(), false);
+        SecureString enc_priv_key2 = key_io::EncodeSecret(fikey3);
+        debugcs::instance() << "WIF CFirmKey encoded: " << enc_priv_key2.size() << " : " << enc_priv_key2.print() << debugcs::endl();
+
+        CFirmKey fikey4 = key_io::DecodeSecret(enc_priv_key2);
+        assert(fikey3 == fikey4);
+        assert(fikey3.GetPubKey().IsCompressed() == fikey4.GetPubKey().IsCompressed());
+        assert(fikey3.GetPubKey() == fikey4.GetPubKey());
+    } catch (const std::runtime_error &e) {
+        debugcs::instance() << "Error" << debugcs::endl();
+    }
+    */
+
+    // ETH style(ecrecover) consensus in signCompact and recoverCompact
 
     /* debug ok: CFirmKey(for Eth) RecoverCompact checked
     CSecret secret = key.GetSecret();

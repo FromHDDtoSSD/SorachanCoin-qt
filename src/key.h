@@ -45,6 +45,12 @@ typedef std::vector<unsigned char, secure_allocator<unsigned char> > CPrivKey;
 /** 3, CSecret is a serialization of just the secret parameter (must be 32 bytes) **/
 typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecret;
 
+/** 4, CfCompSecret is a serialization of CFirmKey with compressed flag (must be 33 bytes) **/
+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CfCompSecret;
+
+/** 5, CExtSecret is a serialization of CExtFirmKey (must be 75 bytes) **/
+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CExtSecret;
+
 /** [A(1-3)] An encapsulated OpenSSL Elliptic Curve key (private) **/
 /** The private key includes the secret key as well as the public key. **/
 class CKey

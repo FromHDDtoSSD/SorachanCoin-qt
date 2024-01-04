@@ -58,8 +58,11 @@ namespace base58 {
         // [4 bytes hash check] Decode a base58-encoded string psz or str that includes a checksum, into byte vector vchRet
         template <typename T=base58_vector>
         static bool DecodeBase58Check(const char *psz, T &vchRet);
+
         static bool DecodeBase58Check(const std::string &str, base58_vector &vchRet);
-        static bool DecodeBase58Check(const SecureString &str, CPrivKey &vchRet);
+
+        template <typename R=SecureString, typename T=CExtSecret>
+        static bool DecodeBase58Check(const R &str, T &vchRet);
     };
 }
 

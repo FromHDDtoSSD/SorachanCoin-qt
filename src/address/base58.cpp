@@ -183,29 +183,39 @@ bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vc
     return DecodeBase58Check<base58_vector>((const char *)str.c_str(), vchRet);
 }
 
-bool base58::manage::DecodeBase58Check(const SecureString &str, CPrivKey &vchRet) {
+template <typename R=SecureString, typename T=CExtSecret>
+bool base58::manage::DecodeBase58Check(const R &str, T &vchRet) {
     const size_t bufsize = str.size() + 1;
     std::unique_ptr<unsigned char[]> buf(new (std::nothrow) unsigned char[bufsize]);
     if(buf.get()==nullptr)
         return false;
     ::memset(buf.get(), 0x00, bufsize);
     ::strcpy((char *)buf.get(), str.data());
-    bool ret = DecodeBase58Check<CPrivKey>((const char *)buf.get(), vchRet);
+    bool ret = DecodeBase58Check<T>((const char *)buf.get(), vchRet);
     cleanse::OPENSSL_cleanse(buf.get(), bufsize);
     return ret;
 }
 
-// for WIF(SecureString, CPrivKey)
+// for WIF(SecureString, CExtSecret, CfCompSecret)
+// At the moment, since types CExtSecret and CfCompSecret are the same type, we have commented out CfCompSecret.
 template std::string base58::manage::EncodeBase58<std::string, base58_vector>(const unsigned char *pbegin, const unsigned char *pend);
-template SecureString base58::manage::EncodeBase58<SecureString, CPrivKey>(const unsigned char *pbegin, const unsigned char *pend);
+template SecureString base58::manage::EncodeBase58<SecureString, CExtSecret>(const unsigned char *pbegin, const unsigned char *pend);
+//template SecureString base58::manage::EncodeBase58<SecureString, CfCompSecret>(const unsigned char *pbegin, const unsigned char *pend);
 template std::string base58::manage::EncodeBase58(const base58_vector &);
-template SecureString base58::manage::EncodeBase58(const CPrivKey &);
+template SecureString base58::manage::EncodeBase58(const CExtSecret &);
+//template SecureString base58::manage::EncodeBase58(const CfCompSecret &);
 template std::string base58::manage::EncodeBase58Check(const base58_vector &);
-template SecureString base58::manage::EncodeBase58Check(const CPrivKey &);
+template SecureString base58::manage::EncodeBase58Check(const CExtSecret &);
+//template SecureString base58::manage::EncodeBase58Check(const CfCompSecret &);
 template bool base58::manage::DecodeBase58(const char *psz, base58_vector &vchRet);
-template bool base58::manage::DecodeBase58(const char *psz, CPrivKey &vchRet);
+template bool base58::manage::DecodeBase58(const char *psz, CExtSecret &vchRet);
+//template bool base58::manage::DecodeBase58(const char *psz, CfCompSecret &vchRet);
 template bool base58::manage::DecodeBase58Check(const char *psz, base58_vector &vchRet);
-template bool base58::manage::DecodeBase58Check(const char *psz, CPrivKey &vchRet);
+template bool base58::manage::DecodeBase58Check(const char *psz, CExtSecret &vchRet);
+//template bool base58::manage::DecodeBase58Check(const char *psz, CfCompSecret &vchRet);
+template bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vchRet);
+template bool base58::manage::DecodeBase58Check(const SecureString &str, CExtSecret &vchRet);
+//template bool base58::manage::DecodeBase58Check(const SecureString &str, CfCompSecret &vchRet);
 
 /*
 std::string base58::manage::EncodeBase58Check(const base58_vector &vchIn) {

@@ -11,6 +11,7 @@
 #include <string>
 #include <mutex>
 #include <map>
+#include <util/args.h>
 #include <cleanse/cleanse.h>
 
 #ifdef WIN32
@@ -365,6 +366,10 @@ public:
         return *this;
     }
     SecureString &assign(const char *)=delete;
+
+    const char *print() const {
+        return args_bool::fTestNet ? str_.c_str(): "mainnet is not supported.";
+    }
 
     // insert [] or ()
     char &operator[](std::size_t pos) const { // insert string directly

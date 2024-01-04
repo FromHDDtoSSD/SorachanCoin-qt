@@ -357,7 +357,7 @@ using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 // BIP32 and WIF
 namespace key_io {
 
-CFirmKey DecodeSecret(const std::string &str);
+CFirmKey DecodeSecret(const SecureString &str);
 SecureString EncodeSecret(const CFirmKey &key);
 
 CExtPubKey DecodeExtPubKey(const std::string &str);

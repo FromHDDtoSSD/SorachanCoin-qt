@@ -416,28 +416,42 @@ static CTxDestination DecodeDestination(const std::string &str, const CChainPara
     return CNoDestination();
 }
 
-CFirmKey key_io::DecodeSecret(const std::string &str) {
+static constexpr unsigned char compressed_flag = 1;
+static constexpr size_t base58_bytes_prefix_size = sizeof(unsigned char);
+CFirmKey key_io::DecodeSecret(const SecureString &str) {
     CFirmKey key;
-    base58_vector data;
-    if (base58::manage::DecodeBase58Check(str, data)) {
-        const chainparams_vector &privkey_prefix = Chain_info::Params().Base58Prefix(CChainParams::SECRET_KEY);
-        if ((data.size() == 32 + privkey_prefix.size() || (data.size() == 33 + privkey_prefix.size() && data.back() == 1)) &&
-            std::equal(privkey_prefix.begin(), privkey_prefix.end(), data.begin())) {
-            bool compressed = data.size() == 33 + privkey_prefix.size();
-            key.Set(data.begin() + privkey_prefix.size(), data.begin() + privkey_prefix.size() + 32, compressed);
+    CfCompSecret data;
+    if (base58::manage::DecodeBase58Check<SecureString, CfCompSecret>(str, data)) {
+        //debugcs::instance() << "DecodeSecret size: " << data.size() << debugcs::endl();
+        if(data.size() == CFirmKey::PRIVATE_BYTE_VECTOR_SIZE + base58_bytes_prefix_size + 1 && data.back() == compressed_flag) {
+            data.pop_back();
+            key.Set(data.begin() + base58_bytes_prefix_size, data.end(), true);
+        } else if (data.size() == CFirmKey::PRIVATE_BYTE_VECTOR_SIZE + base58_bytes_prefix_size) {
+            key.Set(data.begin() + base58_bytes_prefix_size, data.end(), false);
+        } else {
+            throw std::runtime_error("CfCompSecret is invalid");
         }
-    }
-    if (! data.empty()) {
-        cleanse::OPENSSL_cleanse(data.data(), data.size());
     }
     return key;
 }
 
-constexpr size_t base58_bytes_prefix_size = sizeof(unsigned char);
+SecureString key_io::EncodeSecret(const CFirmKey &key) {
+    if(! key.IsValid())
+        throw std::runtime_error("privkey is invalid");
+
+    const unsigned char prefix = key.IsCompressed() ? key_io::PRIVKEY_COMPRESS: key_io::PRIVKEY_UNCOMPRESS;
+    CfCompSecret data((uint32_t)base58_bytes_prefix_size, (uint8_t)prefix);
+    data.insert(data.end(), key.begin(), key.end());
+    if (key.IsCompressed())
+        data.push_back(compressed_flag);
+
+    return base58::manage::EncodeBase58Check<SecureString, CfCompSecret>(data);
+}
+
 CExtPubKey key_io::DecodeExtPubKey(const std::string &str) { // str is base58
     CExtPubKey key;
     base58_vector data;
-    if (base58::manage::DecodeBase58Check(str, data)) {
+    if (base58::manage::DecodeBase58Check<std::string, base58_vector>(str, data)) {
         if (data.size() == CExtPubKey::BIP32_EXTKEY_SIZE + base58_bytes_prefix_size) {
             // data structure is bytes_prefix(unsigned char) + CExtPubKey bytes vector
             // only require CExtPubKey bytes vector, therefore add pointer in base58_bytes_prefix_size
@@ -452,32 +466,21 @@ CExtPubKey key_io::DecodeExtPubKey(const std::string &str) { // str is base58
 }
 
 std::string key_io::EncodeExtPubKey(const CExtPubKey &extkey, unsigned char nVersion) { // e.g. nVersion: key_io::PUBKEY_ADDRESS
-    key_vector data((uint32_t)base58_bytes_prefix_size, (uint8_t)nVersion);
-    key_vector vch = extkey.GetPubVch();
+    base58_vector data((uint32_t)base58_bytes_prefix_size, (uint8_t)nVersion);
+    base58_vector vch = extkey.GetPubVch();
     data.insert(data.end(), vch.begin(), vch.end());
-    assert(data.size() == CExtPubKey::BIP32_EXTKEY_SIZE + base58_bytes_prefix_size);
-    std::string ret = base58::manage::EncodeBase58Check(data);
+    if(data.size() != CExtPubKey::BIP32_EXTKEY_SIZE + base58_bytes_prefix_size)
+        throw std::runtime_error("key_io::EncodeExtPubKey is failure");
+
+    std::string ret = base58::manage::EncodeBase58Check<std::string, base58_vector>(data);
     cleanse::memory_cleanse(data.data(), data.size());
     return ret;
 }
 
-SecureString key_io::EncodeSecret(const CFirmKey &key) {
-    if(! key.IsValid())
-        throw std::runtime_error("privkey is invalid");
-
-    const unsigned char prefix = key.IsCompressed() ? key_io::PRIVKEY_COMPRESS: key_io::PRIVKEY_UNCOMPRESS;
-    CPrivKey data((uint32_t)base58_bytes_prefix_size, (uint8_t)prefix);
-    data.insert(data.end(), key.begin(), key.end());
-    if (key.IsCompressed())
-        data.push_back(1);
-
-    return base58::manage::EncodeBase58Check<SecureString, CPrivKey>(data);
-}
-
 CExtFirmKey key_io::DecodeExtFirmKey(const SecureString &str) {
     CExtFirmKey key;
-    CPrivKey data;
-    if (base58::manage::DecodeBase58Check(str, data)) {
+    CExtSecret data;
+    if (base58::manage::DecodeBase58Check<SecureString, CExtSecret>(str, data)) {
         if (data.size() != CExtPubKey::BIP32_EXTKEY_SIZE + base58_bytes_prefix_size)
             throw std::runtime_error("key_io::DecodeExtFirmKey: size is invalid");
 
@@ -501,7 +504,7 @@ SecureString key_io::EncodeExtFirmKey(const CExtFirmKey &extkey) {
         throw std::runtime_error("key_io::EncodeExtFirmKey: privkey is invalid");
     }
 
-    CPrivKey data;
+    CExtSecret data;
     if(extkey.key.IsCompressed()) {
         data.push_back((uint8_t)key_io::PRIVKEY_COMPRESS);
     } else {
@@ -511,7 +514,7 @@ SecureString key_io::EncodeExtFirmKey(const CExtFirmKey &extkey) {
     data.resize(base58_bytes_prefix_size + CExtPubKey::BIP32_EXTKEY_SIZE);
     CPrivKey keyvch = extkey.GetPrivKeyVch();
     data.insert(data.end(), keyvch.begin(), keyvch.end());
-    return base58::manage::EncodeBase58Check<SecureString, CPrivKey>(data);
+    return base58::manage::EncodeBase58Check<SecureString, CExtSecret>(data);
 }
 
 std::string key_io::EncodeDestination(const CTxDestination &dest) {
