@@ -11,6 +11,46 @@
 #include <string.h>
 #include <algorithm>
 
+void CBase58Data::SetData(int nVersionIn, const void *pdata, size_t nSize) {
+    nVersion = nVersionIn;
+    vchData.resize(nSize);
+    if (! vchData.empty()) {
+        std::memcpy(&vchData[0], pdata, nSize);
+    }
+}
+
+void CBase58Data::SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend) {
+    SetData(nVersionIn, (void *)pbegin, pend - pbegin);
+}
+
+bool CBase58Data::SetString(const std::string &str) {
+    return SetString(str.c_str());
+}
+
+std::string CBase58Data::ToString() const {
+    base58_vector vch((uint32_t)1, (uint8_t)nVersion);
+    vch.insert(vch.end(), vchData.begin(), vchData.end());
+    return base58::manage::EncodeBase58Check(vch);
+}
+
+bool CBase58Data::SetString(const char *psz) { // psz is base58
+    base58_vector vchTemp;
+    base58::manage::DecodeBase58Check(psz, vchTemp);
+    if (vchTemp.empty()) {
+        vchData.clear();
+        nVersion = 0;
+        return false;
+    } else {
+        nVersion = vchTemp[0];
+        vchData.resize(vchTemp.size() - 1);
+        if (! vchData.empty()) {
+            std::memcpy(&vchData[0], &vchTemp[1], vchData.size());
+        }
+        cleanse::OPENSSL_cleanse(&vchTemp[0], vchData.size());
+        return true;
+    }
+}
+
 namespace {
 template <typename ENC>
 class CBitcoinAddressVisitor : public boost::static_visitor<bool>

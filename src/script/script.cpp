@@ -174,9 +174,10 @@ const char *ScriptOpcodes::GetOpName(ScriptOpcodes::opcodetype opcode) {
     case OP_NOP9                   : return "OP_NOP9";
     case OP_NOP10                  : return "OP_NOP10";
 
-    // zerocoin
+    // zerocoin, dao
     case OP_ZEROCOINMINT           : return "OP_ZEROCOINMINT";
     case OP_ZEROCOINSPEND          : return "OP_ZEROCOINSPEND";
+    case OP_HASHETH                : return "OP_HASHETH";
 
     // template matching params
     case OP_PUBKEYHASH             : return "OP_PUBKEYHASH";
@@ -1669,6 +1670,13 @@ public:
     }
 };
 CSignatureCache CSignatureCache::signatureCache;
+
+bool Script_util::CheckSig(const script_vector &vchSig, const script_vector &vchPubKey, const uint256 &hash) {
+    CPubKey pubkey(vchPubKey);
+    if(! pubkey.IsFullyValid_BIP66())
+        return false;
+    return pubkey.Verify_BIP66(hash, vchSig);
+}
 
 bool Script_util::CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags) {
     //

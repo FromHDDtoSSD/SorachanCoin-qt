@@ -308,10 +308,10 @@ private:
 public:
     static constexpr size_t OUTPUT_SIZE = 20;
 
-    void Finalize(unsigned char hash[OUTPUT_SIZE]) {
+    void Finalize(unsigned char hash[CHashEth::OUTPUT_SIZE]) {
         unsigned char buf[CKECCAK256::OUTPUT_SIZE];
-        keccak.Finalize(buf);
-        ::memcpy(hash, buf + 12, 20);
+        keccak.Finalize((unsigned char *)&buf[0]);
+        ::memcpy(hash, &buf[0] + 12, 20);
     }
 
     CHashEth& Write(const unsigned char *data, size_t len) {

@@ -141,51 +141,18 @@ public:
     }
 };
 
-/** vchData: CKeyID */
+/** vchData: CKeyID and Eth address Hybrid */
 class CBase58Data : public IKeyData {
 protected:
     CBase58Data() {}
     virtual ~CBase58Data() {}
-
-    void SetData(int nVersionIn, const void *pdata, size_t nSize) {
-        nVersion = nVersionIn;
-        vchData.resize(nSize);
-        if (! vchData.empty()) {
-            std::memcpy(&vchData[0], pdata, nSize);
-        }
-    }
-    void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend) {
-        SetData(nVersionIn, (void *)pbegin, pend - pbegin);
-    }
+    void SetData(int nVersionIn, const void *pdata, size_t nSize);
+    void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend);
 
 public:
-    bool SetString(const char *psz) { // psz is base58
-        base58_vector vchTemp;
-        base58::manage::DecodeBase58Check(psz, vchTemp);
-        if (vchTemp.empty()) {
-            vchData.clear();
-            nVersion = 0;
-            return false;
-        } else {
-            nVersion = vchTemp[0];
-            vchData.resize(vchTemp.size() - 1);
-            if (! vchData.empty()) {
-                std::memcpy(&vchData[0], &vchTemp[1], vchData.size());
-            }
-            cleanse::OPENSSL_cleanse(&vchTemp[0], vchData.size());
-            return true;
-        }
-    }
-
-    bool SetString(const std::string &str) {
-        return SetString(str.c_str());
-    }
-
-    std::string ToString() const {
-        base58_vector vch((uint32_t)1, (uint8_t)nVersion);
-        vch.insert(vch.end(), vchData.begin(), vchData.end());
-        return base58::manage::EncodeBase58Check(vch);
-    }
+    bool SetString(const char *psz);
+    bool SetString(const std::string &str);
+    std::string ToString() const;
 };
 
 /** vchData: CKeyID */

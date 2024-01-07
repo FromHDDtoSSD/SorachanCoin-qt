@@ -40,7 +40,7 @@ using hex_vector = prevector<PREVECTOR_N, uint8_t>;
 using hex_vector = std::vector<uint8_t>;
 #endif
 std::string SanitizeString(const std::string &str, int rule = SAFE_CHARS_DEFAULT);
-hex_vector ParseHex(const char *psz);
+template <typename T=hex_vector > T ParseHex(const char *psz);
 hex_vector ParseHex(const std::string &str);
 std::vector<unsigned char> ParseHexCh(const char *psz);
 std::vector<unsigned char> ParseHexCh(const std::string &str);

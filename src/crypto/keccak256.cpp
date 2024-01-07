@@ -1,109 +1,166 @@
-#include <crypto/keccak256.h>
-#include <algorithm>
-#include <cstddef>
+#include "keccak256.h"
 #include <cstdint>
-#include <vector>
-#include <iostream>
-
-// 1bit (64 bit word) left rotate
-namespace {
-uint64_t Rotl(uint64_t x, int n) { return (x << n) | (x >> (64 -n)); }
-} // namespace
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 namespace keccak256_lib {
 
-void KeccakF(uint64_t st[25]) {
-  static std::vector<int> rho = {
-    1, 3, 6, 10, 15, 21, 28, 36, 45, 55, 2, 14,
-    27, 41, 56, 8, 25, 43, 62, 18, 39, 61, 20, 44
-  };
+/******** The Keccak-f[1600] permutation ********/
 
-  static std::vector<int> pi = {
-    10, 7, 11, 17, 18, 3, 5, 16, 8, 21, 24, 4,
-    15, 23, 19, 13, 12, 2, 20, 14, 22, 9, 6, 1
-  };
+/*** Constants. ***/
+static const uint8_t rho[24] = \
+{ 1,  3,   6, 10, 15, 21,
+28, 36, 45, 55,  2, 14,
+27, 41, 56,  8, 25, 43,
+62, 18, 39, 61, 20, 44};
+static const uint8_t pi[24] = \
+{10,  7, 11, 17, 18, 3,
+5, 16,  8, 21, 24, 4,
+15, 23, 19, 13, 12, 2,
+20, 14, 22,  9, 6,  1};
+static const uint64_t RC[24] = \
+{1ULL, 0x8082ULL, 0x800000000000808aULL, 0x8000000080008000ULL,
+0x808bULL, 0x80000001ULL, 0x8000000080008081ULL, 0x8000000000008009ULL,
+0x8aULL, 0x88ULL, 0x80008009ULL, 0x8000000aULL,
+0x8000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL, 0x8000000000008003ULL,
+0x8000000000008002ULL, 0x8000000000000080ULL, 0x800aULL, 0x800000008000000aULL,
+0x8000000080008081ULL, 0x8000000000008080ULL, 0x80000001ULL, 0x8000000080008008ULL};
 
-  int i,j;
-  uint64_t t, bc[5];
+/*** Helper macros to unroll the permutation. ***/
+#define rol(x, s) (((x) << s) | ((x) >> (64 - s)))
+#define REPEAT6(e) e e e e e e
+#define REPEAT24(e) REPEAT6(e e e e)
+#define REPEAT5(e) e e e e e
+#define FOR5(v, s, e)							\
+    v = 0;										\
+    REPEAT5(e; v += s;)
 
-  for (int round = 0; round < ROUNDS; ++round) {
-    // θ step
-    for (i = 0; i < 5; ++i)
-      bc[i] = st[i] ^ st[i + 5] ^ st[i + 10] ^ st[i + 15] ^ st[i + 20];
+/*** Keccak-f[1600] ***/
+static inline void keccakf(void* state) {
+    uint64_t* a = (uint64_t*)state;
+    uint64_t b[5] = {0};
+    uint64_t t = 0;
+    uint8_t x, y;
 
-    for (i = 0; i < 5; ++i) {
-      t = bc[(i+4) % 5] ^ Rotl(bc[i + 1] % 5, 1);
-      for (j = 0; j < 25; j += 5)
-        st[j + i] ^= t;
+    for (int i = 0; i < 24; i++) {
+        // Theta
+        FOR5(x, 1,
+            b[x] = 0;
+        FOR5(y, 5,
+            b[x] ^= a[x + y]; ))
+            FOR5(x, 1,
+                FOR5(y, 5,
+                    a[y + x] ^= b[(x + 4) % 5] ^ rol(b[(x + 1) % 5], 1); ))
+            // Rho and pi
+            t = a[1];
+        x = 0;
+        REPEAT24(b[0] = a[pi[x]];
+        a[pi[x]] = rol(t, rho[x]);
+        t = b[0];
+        x++; )
+            // Chi
+            FOR5(y,
+                5,
+                FOR5(x, 1,
+                    b[x] = a[y + x];)
+                FOR5(x, 1,
+                    a[y + x] = b[x] ^ ((~b[(x + 1) % 5]) & b[(x + 2) % 5]); ))
+            // Iota
+            a[0] ^= RC[i];
     }
-
-    // ρ and π steps
-    t = st[1];
-    for (i = 0; i < ROUNDS; ++i) {
-      j = pi[i];
-      bc[0] = st[j];
-      st[j] = Rotl(t, rho[i]);
-      t = bc[0];
-    }
-
-    // χ step
-    for (j = 0; j < 25; j +=5) {
-      for (i = 0; i < 5; ++i)
-        bc[0] = st[j * i];
-      for (i = 0; i < 5; ++i)
-        st[j + i] ^= (~bc[(i + 1) % 5]) & bc[(i + 2) % 5];
-    }
-
-    // ι step
-    st[0] ^= RNDC[round];
-  }
 }
 
-Keccak::Keccak(const void *in, size_t inlen, void *md, int _mdlen) {
-  Init(_mdlen);
-  Update(in, inlen);
-  Finalize(md);
+/******** The FIPS202-defined functions. ********/
+
+/*** Some helper macros. ***/
+
+#define _(S) do { S } while (0)
+#define FOR(i, ST, L, S)							\
+    _(for (size_t i = 0; i < L; i += ST) { S; })
+#define mkapply_ds(NAME, S)						\
+    static inline void NAME(uint8_t* dst,			\
+        const uint8_t* src,						\
+        size_t len) {								\
+        FOR(i, 1, len, S);							\
+    }
+#define mkapply_sd(NAME, S)						\
+    static inline void NAME(const uint8_t* src,	\
+        uint8_t* dst,								\
+        size_t len) {								\
+        FOR(i, 1, len, S);							\
+    }
+
+mkapply_ds(xorin, dst[i] ^= src[i])  // xorin
+mkapply_sd(setout, dst[i] = src[i])  // setout
+
+#define P keccakf
+#define Plen 200
+
+                                     // Fold P*F over the full blocks of an input.
+#define foldP(I, L, F)								\
+    while (L >= rate) {							\
+        F(a, I, rate);								\
+        P(a);										\
+        I += rate;									\
+        L -= rate;									\
+    }
+
+                                     /** The sponge-based hash construction. **/
+    static inline int hash(uint8_t* out, size_t outlen,
+        const uint8_t* in, size_t inlen,
+        size_t rate, uint8_t delim) {
+    if ((out == NULL) || ((in == NULL) && inlen != 0) || (rate >= Plen)) {
+        return HASH_ERR_BAD_PARAMETER;
+    }
+    uint8_t a[Plen] = {0};
+    // Absorb input.
+    foldP(in, inlen, xorin);
+    // Xor in the DS and pad frame.
+    a[inlen] ^= delim;
+    a[rate - 1] ^= 0x80;
+    // Xor in the last block.
+    xorin(a, in, inlen);
+    // Apply P
+    P(a);
+    // Squeeze output.
+    foldP(out, outlen, setout);
+    setout(a, out, outlen);
+    memset(a, 0, 200);
+    return HASH_SUCCESS;
 }
 
-int Keccak::Init(int _mdlen) {
-  for (int i = 0; i < 25; ++i)
-    st.w[i] = 0;
+#define defsha3(bits)													\
+    int sha3_##bits(uint8_t* out, size_t outlen,						\
+        const uint8_t* in, size_t inlen) {								\
+        if (outlen > (bits/8)) {										\
+            return -1;                                                  \
+        }																\
+        return hash(out, outlen, in, inlen, 200 - (bits / 4), 0x01);	\
+    }
 
-  mdlen = _mdlen;
-  rsiz = 200 - 2 * mdlen;
-  pt = 0;
+/*** FIPS202 SHA3 FOFs ***/
+defsha3(256)
 
-  return 1;
+int Keccak::Init() {
+    Reset();
+    return 1;
+}
+
+int Keccak::Reset() {
+    ::memset(output, 0x00, sizeof(Keccak::output));
+    ::memset(outputHex, 0x00, sizeof(Keccak::outputHex));
+    return 1;
 }
 
 int Keccak::Update(const void *data, size_t len) {
-  size_t i;
-  int j;
-  j = pt;
-
-  for (i = 0; i < len; ++i) {
-    st.b[++j] ^= ((const uint8_t *) data)[i];
-    if (j >= rsiz) {
-      KeccakF(st.w);
-      j = 0;
-    }
-  }
-
-  pt = j;
-
-  return 1;
+    SHA3_256(output, (const uint8_t*)data, len);
+    return 1;
 }
 
-int Keccak::Finalize(void *md) {
-  st.b[pt] ^= 0x06;
-  st.b[rsiz - 1] ^= 0x80;
-  KeccakF(st.w);
-
-  for (int i = 0; i < mdlen; ++i) {
-    ((uint8_t *) md)[i] = st.b[i];
-  }
-
-  return 1;
+int Keccak::Finalize(void *hash) {
+    ::memcpy(hash, output, 32);
+    return 1;
 }
 
 } // namespace keccak256_lib
@@ -111,7 +168,7 @@ int Keccak::Finalize(void *md) {
 namespace latest_crypto {
 
 CKECCAK256::CKECCAK256() {
-    keccak.Init(OUTPUT_SIZE);
+    keccak.Init();
 }
 
 CKECCAK256& CKECCAK256::Write(const unsigned char* data, size_t len) {
@@ -124,7 +181,7 @@ void CKECCAK256::Finalize(unsigned char hash[OUTPUT_SIZE]) {
 }
 
 CKECCAK256& CKECCAK256::Reset() {
-    keccak.Init(OUTPUT_SIZE);
+    keccak.Init();
     return *this;
 }
 

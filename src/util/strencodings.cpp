@@ -121,10 +121,11 @@ bool IsHexNumber(const std::string &str)
     return (str.size() > starting_location);
 }
 
-hex_vector ParseHex(const char *psz)
+template <typename T=hex_vector>
+T ParseHex(const char *psz)
 {
     // convert hex dump to vector
-    hex_vector vch;
+    T vch;
     for(;;)
     {
         while (IsSpace(*psz))
@@ -144,7 +145,7 @@ hex_vector ParseHex(const char *psz)
 
 hex_vector ParseHex(const std::string &str)
 {
-    return ParseHex(str.c_str());
+    return ParseHex<hex_vector>(str.c_str());
 }
 
 std::vector<unsigned char> ParseHexCh(const char *psz)
@@ -676,3 +677,7 @@ bool WildcardMatch(const std::string &str, const std::string &mask)
 }
 
 } // namespace strenc
+
+#include <key/privkey.h>
+template strenc::hex_vector strenc::ParseHex<strenc::hex_vector>(const char *psz);
+template CSecret strenc::ParseHex<CSecret>(const char *psz);

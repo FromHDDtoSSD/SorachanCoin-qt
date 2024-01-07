@@ -8,8 +8,334 @@
 #include <address/base58.h>
 #include <wallet.h> // CWallet::fWalletUnlockMintOnly
 
-static void keydebug(const CKey &key) {
+namespace firmkeydebug {
+
+static bool sign1(const CFirmKey &fikey, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
+    key_vector vchSig;
+    if(! fikey.Sign(hash, vchSig))
+        return false;
+
+    vchSig.push_back((unsigned char)nHashType);
+    scriptSigRet << vchSig;
+    return true;
+}
+
+static bool signC(const CFirmKey &fikey, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
+    key_vector vchSig;
+    if(! fikey.SignCompact(hash, vchSig))
+        return false;
+
+    vchSig.push_back((unsigned char)nHashType);
+    scriptSigRet << vchSig;
+    return true;
+}
+
+static uint256 SignatureHash(const CScript &scriptCodeIn, const CTransaction &txTo, unsigned int nIn, int nHashType) {
+    if (nIn >= txTo.get_vin().size())
+        return uint256(1);
+
+    CScript scriptCode(scriptCodeIn);
+    CTransaction txTmp(txTo);
+    scriptCode.FindAndDelete(CScript(ScriptOpcodes::OP_CODESEPARATOR));
+    for (auto &d: txTmp.set_vin()) {
+        d.set_scriptSig(CScript());
+    }
+    txTmp.set_vin(nIn).set_scriptSig(scriptCode);
+
+    if ((nHashType & 0x1f) == Script_param::SIGHASH_NONE) {
+        txTmp.set_vout().clear();
+        for (unsigned int i = 0; i < txTmp.get_vin().size(); ++i) {
+            if (i != nIn)
+                txTmp.set_vin(i).set_nSequence(0);
+        }
+    } else if ((nHashType & 0x1f) == Script_param::SIGHASH_SINGLE) {
+        unsigned int nOut = nIn;
+        if (nOut >= txTmp.get_vout().size())
+            return false;
+
+        txTmp.set_vout().resize(nOut+1);
+        for (unsigned int i = 0; i < nOut; ++i)
+            txTmp.set_vout(i).SetNull();
+
+        for (unsigned int i = 0; i < txTmp.get_vin().size(); ++i) {
+            if (i != nIn)
+                txTmp.set_vin(i).set_nSequence(0);
+        }
+    }
+
+    if (nHashType & Script_param::SIGHASH_ANYONECANPAY) {
+        txTmp.set_vin(0) = txTmp.get_vin(nIn);
+        txTmp.set_vin().resize(1);
+    }
+
+    CDataStream ss(SER_GETHASH, 0);
+    ss.reserve(10000);
+    ss << txTmp << nHashType;
+    uint256 hash;
+    latest_crypto::CHash256().Write((const unsigned char *)&ss[0], ss.size()).Finalize((unsigned char *)&hash);
+    return hash;
+}
+
+static bool ecrecover(const uint256 &hash, const key_vector &sig, CPubKey &pubkeyRet, bool fCompress = true) {
+    if(! pubkeyRet.RecoverCompact(hash, sig))
+        return false;
+    if(! pubkeyRet.IsFullyValid_BIP66())
+        return false;
+
+    // SignCompact and RecoverCompact generate compressed public key in any case,
+    // then, if require decompress public key, must call decompress method.
+    if(fCompress)
+        (pubkeyRet.IsCompressed()==false) ? pubkeyRet.Compress(): 0;
+    else
+        pubkeyRet.IsCompressed() ? pubkeyRet.Decompress(): 0;
+
+    return true;
+}
+
+static CSecret DecodeEthStylePrivKey(const SecureString &address) {
+    if(! (address.size()==64 || address.size()==66))
+        throw std::runtime_error("address is invalid.");
+
+    const char *begin = (address[0]=='0' && address[1]=='x') ? address.data() + 2: address.data();
+    return strenc::ParseHex<CSecret>(begin);
+}
+
+static void debug1(const CKey &key) {
     //using namespace ScriptOpcodes;
+
+    /* keccak256 sha3: ok
+    {
+        uint256 hashke;
+        keccak256_lib::Keccak kecc;
+        kecc.Init();
+        kecc.Update((const unsigned char *)"hello", 5);
+        kecc.Finalize((unsigned char *)&hashke);
+        debugcs::instance() << strenc::HexStr(key_vector(hashke.begin(), hashke.begin() + 32)) << debugcs::endl();
+    }
+
+    {
+        uint256 hashke;
+        latest_crypto::CKECCAK256().Write((const unsigned char *)"hello", 5).Finalize((unsigned char *)&hashke);
+        debugcs::instance() << strenc::HexStr(key_vector(hashke.begin(), hashke.begin() + 32)) << debugcs::endl();
+    }
+    */
+
+    /* Eth style adress: ok
+     * pubkey: 0xae72a48c1a36bd18af168541c53037965d26e4a8
+    {
+        char tmp[128];
+        strcpy(tmp, "7777777777777777777777777777777777777777777777777777777777777777");
+        SecureString secretkey;
+        secretkey.operator=((char *)&tmp[0]);
+        CSecret secret = DecodeEthStylePrivKey(secretkey);
+        debugcs::instance() << strenc::HexStr(key_vector(secret.begin(), secret.end())) << debugcs::endl();
+        CFirmKey fikey;
+        fikey.Set(secret.begin(), secret.end(), true);
+        CPubKey pubkey = fikey.GetPubKey();
+        debugcs::instance() << "pubkey CKeyID: " << strenc::HexStr(pubkey.GetID()) << debugcs::endl();
+        key_vector vchPubKey = pubkey.GetPubEth();
+        uint160 hash;
+        latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
+        debugcs::instance() << "Eth Style public key: 0x" << strenc::HexStr(key_vector(hash.begin(), hash.end())) << debugcs::endl();
+    }
+    */
+
+    /* checking privhash and custom script(for DAO): OK
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        uint256 privhash;
+        CSecret target = fikey.GetSecret();
+        latest_crypto::CHash256().Write((const unsigned char *)target.data(), target.size()).Finalize((unsigned char *)&privhash);
+
+        CTxIn txin;
+        txin.set_prevout().SetNull();
+        CTxOut txout;
+        CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << fikey.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIGVERIFY << privhash << OP_EQUAL;
+        txout.set_scriptPubKey() = scriptPubKey;
+        txout.set_nValue(1000000);
+
+        CTransaction tx;
+        tx.set_vin().emplace_back(txin);
+        tx.set_vout().emplace_back(txout);
+        uint256 txhash = SignatureHash(scriptPubKey, tx, 0, Script_param::SIGHASH_ALL);
+        CScript scriptSig;
+        assert(sign1(fikey, txhash, Script_param::SIGHASH_ALL, scriptSig)==true);
+        CScript scriptDao = CScript() << privhash;
+        scriptDao += scriptSig;
+        scriptDao << fikey.GetPubKey();
+        tx.set_vin(0).set_scriptSig() = scriptDao;
+        assert(Script_util::VerifyScript(scriptDao, scriptPubKey, tx, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
+    // checking txconbase CFirmKey: ok
+    /*
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        CTransaction txCoinBase;
+        txCoinBase.set_vin().resize(1);
+        txCoinBase.set_vin(0).set_prevout().SetNull();
+        txCoinBase.set_vout().resize(1);
+        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(fikey.GetPubKey().GetID());
+        txCoinBase.set_vout(0).set_nValue(1000000);
+
+        CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << fikey.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+        debugcs::instance() << scriptPubKey.ToString() << debugcs::endl();
+        assert(scriptPubKey == txCoinBase.get_vout(0).get_scriptPubKey());
+        uint256 txhash = SignatureHash(scriptPubKey, txCoinBase, 0, Script_param::SIGHASH_ALL);
+
+        CScript scriptSig;
+        assert(sign1(fikey, txhash, Script_param::SIGHASH_ALL, scriptSig) == true);
+        scriptSig << fikey.GetPubKey();
+        txCoinBase.set_vin(0).set_scriptSig() = scriptSig;
+        assert(Script_util::VerifyScript(scriptSig, scriptPubKey, txCoinBase, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
+    /* checking custom opecode CFirmKey: ok
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        CTxIn txin;
+        txin.set_prevout().SetNull();
+        CTxOut txout;
+        CScript scriptPubKey = CScript() << OP_HASH160 << fikey.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+        txout.set_scriptPubKey() = scriptPubKey;
+        txout.set_nValue(1000000);
+
+        CTransaction tx;
+        tx.set_vin().emplace_back(txin);
+        tx.set_vout().emplace_back(txout);
+        uint256 txhash = SignatureHash(scriptPubKey, tx, 0, Script_param::SIGHASH_ALL);
+        CScript scriptSig;
+        assert(sign1(fikey, txhash, Script_param::SIGHASH_ALL, scriptSig)==true);
+        scriptSig << fikey.GetPubKey() << fikey.GetPubKey();
+        tx.set_vin(0).set_scriptSig() = scriptSig;
+        assert(Script_util::VerifyScript(scriptSig, scriptPubKey, tx, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
+    /* CFirmKey multisig: P2PK and OP_IF ok
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        CFirmKey fikey2;
+        fikey2.MakeNewKey(true);
+
+        CTxIn txin;
+        txin.set_prevout().SetNull();
+        CTxOut txout;
+        CScript scriptPubKey = CScript() << fikey.GetPubKey() << OP_CHECKSIG << OP_IF << fikey2.GetPubKey() << OP_CHECKSIG << OP_ELSE << OP_FALSE << OP_ENDIF;
+        txout.set_scriptPubKey() = scriptPubKey;
+        txout.set_nValue(1000000);
+
+        CTransaction tx;
+        tx.set_vin().emplace_back(txin);
+        tx.set_vout().emplace_back(txout);
+        uint256 txhash = SignatureHash(scriptPubKey, tx, 0, Script_param::SIGHASH_ALL);
+        CScript multiSig;
+        assert(sign1(fikey2, txhash, Script_param::SIGHASH_ALL, multiSig)==true);
+        assert(sign1(fikey, txhash, Script_param::SIGHASH_ALL, multiSig)==true);
+        tx.set_vin(0).set_scriptSig() = multiSig;
+        assert(Script_util::VerifyScript(multiSig, scriptPubKey, tx, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
+    /* CFirmKey multisig: P2PKH ok
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        CFirmKey fikey2;
+        fikey2.MakeNewKey(true);
+
+        CTxIn txin;
+        txin.set_prevout().SetNull();
+        CTxOut txout;
+        CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << fikey.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIGVERIFY << OP_DUP << OP_HASH160 << fikey2.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+        txout.set_scriptPubKey() = scriptPubKey;
+        txout.set_nValue(1000000);
+
+        CTransaction tx;
+        tx.set_vin().emplace_back(txin);
+        tx.set_vout().emplace_back(txout);
+        uint256 txhash = SignatureHash(scriptPubKey, tx, 0, Script_param::SIGHASH_ALL);
+        CScript multiSig1;
+        assert(sign1(fikey, txhash, Script_param::SIGHASH_ALL, multiSig1)==true);
+        multiSig1 << fikey.GetPubKey();
+        CScript multiSig2;
+        assert(sign1(fikey2, txhash, Script_param::SIGHASH_ALL, multiSig2)==true);
+        multiSig2 << fikey2.GetPubKey();
+        multiSig2 += multiSig1;
+        tx.set_vin(0).set_scriptSig() = multiSig2;
+        assert(Script_util::VerifyScript(multiSig2, scriptPubKey, tx, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
+    // ETH style(ecrecover) consensus in SignCompact and RecoverCompact
+    /* debug ok
+    CFirmKey fikey;
+    CSecret secret = key.GetSecret();
+    fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+    fikey.SetCompressedPubKey(true);
+    debugcs::instance() << "pubkey compressed: " << strenc::HexStr(fikey.GetPubKey().GetPubVch()) << debugcs::endl();
+    fikey.SetCompressedPubKey(false);
+    debugcs::instance() << "pubkey decompress: " << strenc::HexStr(fikey.GetPubKey().GetPubVch()) << debugcs::endl();
+
+    CTxIn txin;
+    CTxOut txout;
+    CScript scriptPubKey = CScript() << OP_DUP << OP_HASH160 << fikey.GetPubKey().GetID() << OP_EQUALVERIFY << OP_CHECKSIG;
+
+    CTransaction tx;
+    tx.set_vin().emplace_back(txin);
+    tx.set_vout().emplace_back(txout);
+
+    uint256 txhash = SignatureHash(scriptPubKey, tx, 0, Script_param::SIGHASH_ALL);
+    debugcs::instance() << "sign target hash: " << txhash.ToString() << debugcs::endl();
+
+    fikey.SetCompressedPubKey(true);
+    key_vector sig;
+    fikey.SignCompact(txhash, sig);
+    CPubKey pubkey;
+    assert(ecrecover(txhash, sig, pubkey, fikey.IsCompressed())==true);
+    assert(pubkey.IsCompressed() == fikey.GetPubKey().IsCompressed());
+    assert(pubkey == fikey.GetPubKey());
+
+    fikey.SetCompressedPubKey(false);
+    key_vector sig2;
+    fikey.SignCompact(txhash, sig2);
+    CPubKey pubkey2;
+    assert(ecrecover(txhash, sig2, pubkey2, fikey.IsCompressed())==true);
+    assert(pubkey2.IsCompressed() == fikey.GetPubKey().IsCompressed());
+    assert(pubkey2 == fikey.GetPubKey());
+
+    assert(pubkey != pubkey2);
+    key_vector sig3;
+    fikey.Sign(txhash, sig3);
+    CPubKey pubkey3;
+    assert(ecrecover(txhash, sig3, pubkey3, fikey.IsCompressed())==false);
+
+    CPubKey pubkey4;
+    assert(ecrecover(txhash, sig, pubkey4, true)==true);
+    assert(ecrecover(txhash, sig, pubkey4, false)==true);
+    */
+
     // debug ok: WIF
     /*
     try {
@@ -36,8 +362,6 @@ static void keydebug(const CKey &key) {
         debugcs::instance() << "Error" << debugcs::endl();
     }
     */
-
-    // ETH style(ecrecover) consensus in signCompact and recoverCompact
 
     /* debug ok: CFirmKey(for Eth) RecoverCompact checked
     CSecret secret = key.GetSecret();
@@ -116,9 +440,11 @@ static void keydebug(const CKey &key) {
     */
 }
 
+} // namespace keydebug
+
 bool CBasicKeyStore::AddKey(const CKey &key)
 {
-    keydebug(key);
+    firmkeydebug::debug1(key);
 
     bool fCompressed = false;
     CSecret secret = key.GetSecret(fCompressed);

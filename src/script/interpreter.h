@@ -34,6 +34,7 @@ public:
 private:
 
     static uint256 SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
+    static bool CheckSig(const script_vector &vchSig, const script_vector &vchPubKey, const uint256 &hash);
     static bool CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
     static unsigned int HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore);
 

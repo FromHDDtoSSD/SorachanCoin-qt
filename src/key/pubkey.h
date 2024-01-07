@@ -443,8 +443,19 @@ public:
     }
 
     //! Get the Bytes vector of this public key
+    //! 33 bytes or 65 bytes public key
     key_vector GetPubVch() const {
         return key_vector(begin(), end());
+    }
+
+    //! Get the Bytes vector Eth type of thie public key
+    //! 64 bytes only x and y decompress public key, then remove prefix flag
+    key_vector GetPubEth() const {
+        CPubKey pubtmp = *this;
+        pubtmp.Decompress();
+        key_vector vchEth(pubtmp.begin(), pubtmp.end());
+        vchEth.erase(vchEth.begin()); // remove prefix flag
+        return vchEth;
     }
 
     //! Get the 256-bit hash of this public key.

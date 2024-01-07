@@ -7,53 +7,41 @@
 #include <array>
 #include <cleanse/cleanse.h>
 
-// KECCAK256 library
-// https://github.com/kazuakiishiguro/cpp-keccak256
-
+// https://github.com/jluuM2/sha3/blob/master/sha3/sha3.cpp
 namespace keccak256_lib {
 
-// round
-// The sequence of step mappigs that is iterated
-// inthe calculation of a KECCAK-p permutation
-static constexpr int ROUNDS = 24;
+#define HASH_ERR_BAD_PARAMETER 1
+#define HASH_SUCCESS 0
+#include <cstdint>
+#include <cstdlib>
 
-// keccak round constant
-// For each round of a KECCAK-p permutation, a lane value that is
-// determined by the round index. The round constant is the second input to
-// the ι step mapping.
-static constexpr std::array<std::uint64_t, ROUNDS> RNDC {
-  0x0000000000000001ULL, 0x0000000000008082ULL, 0x800000000000808aULL,
-  0x8000000080008000ULL, 0x000000000000808bULL, 0x0000000080000001ULL,
-  0x8000000080008081ULL, 0x8000000000008009ULL, 0x000000000000008aULL,
-  0x0000000000000088ULL, 0x0000000080008009ULL, 0x000000008000000aULL,
-  0x000000008000808bULL, 0x800000000000008bULL, 0x8000000000008089ULL,
-  0x8000000000008003ULL, 0x8000000000008002ULL, 0x8000000000000080ULL,
-  0x000000000000800aULL, 0x800000008000000aULL, 0x8000000080008081ULL,
-  0x8000000000008080ULL, 0x0000000080000001ULL, 0x8000000080008008ULL
-};
+#define decsha3(bits) \
+    int sha3_##bits(uint8_t*, size_t, uint8_t const*, size_t);
 
-// Keccack-f[b] transform. b = 25w = 1600
-void KeccakF(uint64_t st[25]);
+    decsha3(256)
+        decsha3(512)
+
+        static inline void SHA3_256(uint8_t* ret, const uint8_t * data, size_t const size)
+    {
+        sha3_256(ret, 32, data, size);
+    }
 
 class Keccak {
- private:
-  union {
-    uint8_t b[200]; // The width of a KECCAK-p permutation in bits
-    uint64_t w[25]; // The lane of 64-bit 5 * 5 = 25 words. Also b = 25w = 1600
-  } st; // state
+private:
+    uint8_t output[32];
+    char outputHex[65];
 
-  int pt, rsiz, mdlen; // mdlen = hash output in bytes
- public:
-  Keccak() {}
-  Keccak(const void *in, size_t in_len, void *md, int _mdlen);
-  int Init(int _mdlen);
-  int Update(const void *data, size_t len);
-  int Finalize(void *md);
-  int Reset();
+public:
+    Keccak() {Init();}
+    int Init();
+    int Update(const void *data, size_t len);
+    int Finalize(void *hash);
+    int Reset();
 
-  void Clean() {
-      cleanse::OPENSSL_cleanse(st.b, sizeof(st.b));
-  }
+    void Clean() {
+        cleanse::OPENSSL_cleanse(output, sizeof(output));
+        cleanse::OPENSSL_cleanse(outputHex, sizeof(outputHex));
+    }
 };
 
 } // namespace keccak256_lib
