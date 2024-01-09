@@ -82,6 +82,7 @@ public:
 // Basic Type
 //
 typedef std::map<CKeyID, std::pair<CSecret, bool> > KeyMap;
+typedef std::map<CKeyID, CEthID> EthMap;
 typedef std::map<CScriptID, CScript > ScriptMap;
 typedef std::set<CScript> WatchOnlySet;
 typedef std::map<CMalleableKeyView, CSecret> MalleableKeyMap;
@@ -93,10 +94,13 @@ class CBasicKeyStore : public CKeyStore
 {
 protected:
     KeyMap mapKeys;
+    EthMap mapEths;
     MalleableKeyMap mapMalleableKeys;
 
     ScriptMap mapScripts;
     WatchOnlySet setWatchOnly;
+
+    CEthID GetEthAddress(const CPubKey &pubkey);
 
 public:
     bool AddKey(const CKey &key);

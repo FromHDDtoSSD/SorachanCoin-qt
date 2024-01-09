@@ -35,6 +35,14 @@ public:
     CKeyID(const uint160 &in) : uint160(in) {}
 };
 
+/** A reference to a CEthID: the Hash160 of Eth style public key */
+class CEthID : public uint160
+{
+public:
+    CEthID() : uint160(0) {}
+    CEthID(const uint160 &in) : uint160(in) {}
+};
+
 // An encapsulated OpenSSL or secp256k1 Elliptic Curve key (public)
 // 32Bytes or 32Bytes + 32Bytes PublicKey
 // The signature is 1 byte at the beginning. so 33Bytes or 65 Bytes.

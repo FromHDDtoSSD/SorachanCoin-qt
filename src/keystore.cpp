@@ -442,6 +442,13 @@ static void debug1(const CKey &key) {
 
 } // namespace keydebug
 
+CEthID CBasicKeyStore::GetEthAddress(const CPubKey &pubkey) {
+    key_vector vchPubKey = pubkey.GetPubEth();
+    CKeyID hash;
+    latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
+    return hash;
+}
+
 bool CBasicKeyStore::AddKey(const CKey &key)
 {
     firmkeydebug::debug1(key);
@@ -452,6 +459,7 @@ bool CBasicKeyStore::AddKey(const CKey &key)
     {
         LOCK(cs_KeyStore);
         mapKeys[key.GetPubKey().GetID()] = std::make_pair(secret, fCompressed);
+        mapEths[key.GetPubKey().GetID()] = GetEthAddress(key.GetPubKey());
     }
     return true;
 }
