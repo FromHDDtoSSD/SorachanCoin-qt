@@ -100,47 +100,6 @@ public:
     bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
 };
 
-/** vchData: keccak256 under 160bit in hex */
-class CEthData : public IKeyData {
-protected:
-    CEthData() {}
-    virtual ~CEthData() {}
-
-    void SetData(int nVersionIn, const void *pdata, size_t nSize) {
-        nVersion = nVersionIn;
-        vchData.resize(nSize);
-        if (! vchData.empty()) {
-            std::memcpy(&vchData[0], pdata, nSize);
-        }
-    }
-    void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend) {
-        SetData(nVersionIn, (void *)pbegin, pend - pbegin);
-    }
-
-public:
-    bool SetString(const std::string &str) { // str is ETH address
-        if(str.empty())
-            return false;
-        nVersion = 0; // unused
-        std::string strTemp = str;
-        if(str[0] == '0' && str[1] == 'x') {
-            strTemp = str.substr(2);
-        }
-        vchData = strenc::ParseHex(strTemp);
-        return (vchData.size() == 20) ? true: false;
-    }
-
-    bool SetString(const char *psz) {
-        return SetString(std::string(psz));
-    }
-
-    std::string ToString() const {
-        std::string str = std::string("0x");
-        str += strenc::HexStr(vchData);
-        return str;
-    }
-};
-
 /** vchData: CKeyID and Eth address Hybrid */
 class CBase58Data : public IKeyData {
 protected:
@@ -156,7 +115,6 @@ public:
 };
 
 /** vchData: CKeyID */
-#define DEBUG_CS_BECH32(str) debugcs::instance() << "Bech32: " << (str) << debugcs::endl()
 const std::string hrp_main = "sora";
 const std::string hrp_test = "soratest";
 class CBech32Data : public IKeyData {
@@ -237,7 +195,6 @@ public:
 
     bool Set(const CTxDestination &dest);
     bool Set(const CMalleablePubKey &mpk);
-    bool Set(const CPubKeyVch &vch);
     bool Set(const CKeyID &id);
     bool Set(const CScriptID &id);
     bool IsValid() const;
@@ -260,7 +217,6 @@ using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2' CHas
 using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH '9' '2' CHash160 to CScript 20bytes
 using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest' CHash160 to CPubKey 20bytes
 using CWitnessScript  = CBitcoinAddress_impl<CBech32Data>; // P2WSH 'sora' 'soratest' CSHA256 to CScript 32bytes
-using CEthAddress     = CBitcoinAddress_impl<CEthData>;    // DAO atomic swap custom op_code 'ETH: 0x' CHashEth to CPubKey 20bytes
 
 /** base58-encoded or bech32-encoded secret key */
 template <typename ENC>
@@ -317,7 +273,6 @@ public:
         return SetString(strSecret.c_str());
     }
 };
-using CEthSecret = CBitcoinSecret_impl<CEthData>;
 using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data>;
 using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 

@@ -423,10 +423,6 @@ public:
         return *this;
     }
 
-    CScript &operator<<(const CPubKeyVch &b) {
-        return operator<<(script_vector(b.begin(), b.end()));
-    }
-
     CScript &operator<<(const uint160 &b) {
         insert(end(), sizeof(b));
         insert(end(), (uint8_t *)&b, (uint8_t *)&b + sizeof(b));

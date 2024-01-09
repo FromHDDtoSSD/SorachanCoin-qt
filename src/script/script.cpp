@@ -2201,15 +2201,6 @@ public:
         }
     }
 
-    void operator()(const CPubKeyVch &vch) {
-        CPubKey pubkey;
-        pubkey.Set(key_vector(vch.begin(), vch.end()));
-        CKeyID keyID = pubkey.GetID();
-        if(keystore.HaveKey(keyID)) {
-            vKeys.push_back(keyID);
-        }
-    }
-
     void operator()(const CKeyID &keyId) {
         if (keystore.HaveKey(keyId)) {
             vKeys.push_back(keyId);
@@ -2521,13 +2512,6 @@ public:
     bool operator()(const CNoDestination &dest) const {
         script->clear();
         return false;
-    }
-
-    bool operator()(const CPubKeyVch &vch) const {
-        using namespace ScriptOpcodes;
-        script->clear();
-        *script << vch << OP_CHECKSIG;
-        return true;
     }
 
     bool operator()(const CKeyID &keyID) const {

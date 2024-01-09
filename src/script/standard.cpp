@@ -235,13 +235,6 @@ public:
         return false;
     }
 
-    bool operator()(const CPubKeyVch &PubkeyVch) const {
-        using namespace ScriptOpcodes;
-        script->clear();
-        *script << CScript::ToByteVector(PubkeyVch) << OP_CHECKSIG;
-        return true;
-    }
-
     bool operator()(const CKeyID &keyID) const {
         using namespace ScriptOpcodes;
         script->clear();

@@ -1847,18 +1847,6 @@ public:
         return json_spirit::Object();
     }
 
-    json_spirit::Object operator()(const CPubKeyVch &vch) const {
-        json_spirit::Object obj;
-        CPubKey vchPubKey;
-        vchPubKey.Set(key_vector(vch.begin(), vch.end()));
-        obj.push_back(json_spirit::Pair("isscript", false));
-        if (mine == MINE_SPENDABLE) {
-            obj.push_back(json_spirit::Pair("pubkey", util::HexStr(vchPubKey.begin(), vchPubKey.end())));
-            obj.push_back(json_spirit::Pair("iscompressed", vchPubKey.IsCompressed()));
-        }
-        return obj;
-    }
-
     json_spirit::Object operator()(const CKeyID &keyID) const {
         json_spirit::Object obj;
         CPubKey vchPubKey;

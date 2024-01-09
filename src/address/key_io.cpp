@@ -61,7 +61,6 @@ private:
 public:
     CBitcoinAddressVisitor(CBitcoinAddress_impl<ENC> *addrIn) : addr(addrIn) {}
 
-    bool operator()(const CPubKeyVch &vch) const         { return addr->Set(vch); }
     bool operator()(const CKeyID &id) const              { return addr->Set(id); }
     bool operator()(const CScriptID &id) const           { return addr->Set(id); }
     bool operator()(const CMalleablePubKey &mpk) const   { return addr->Set(mpk); }
@@ -76,14 +75,6 @@ public:
 template <typename ENC>
 bool CBitcoinAddress_impl<ENC>::Set(const CTxDestination &dest) {
     return boost::apply_visitor(CBitcoinAddressVisitor<ENC>(this), dest);
-}
-
-template <typename ENC>
-bool CBitcoinAddress_impl<ENC>::Set(const CPubKeyVch &vch) {
-    if(vch.GetSerializeSize() != 33)
-        return false;
-    ENC::SetData(key_io::PUBKEY_DIRECT, &vch, vch.GetSerializeSize());
-    return true;
 }
 
 template <typename ENC>
@@ -343,10 +334,6 @@ private:
 
 public:
     explicit DestinationEncoder(const CChainParams &params) : m_params(params) {}
-
-    std::string operator()(const CPubKeyVch &vch) const {
-        return strenc::HexStr(vch);
-    }
 
     std::string operator()(const CKeyID &id) const {
         base58_vector data = m_params.Base58Prefix(CChainParams::PUBKEY_ADDRESS);

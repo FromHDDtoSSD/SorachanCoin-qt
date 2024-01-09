@@ -442,13 +442,6 @@ static void debug1(const CKey &key) {
 
 } // namespace keydebug
 
-CEthID CBasicKeyStore::GetEthAddress(const CPubKey &pubkey) {
-    key_vector vchPubKey = pubkey.GetPubEth();
-    CKeyID hash;
-    latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
-    return hash;
-}
-
 bool CBasicKeyStore::AddKey(const CKey &key)
 {
     firmkeydebug::debug1(key);
@@ -459,7 +452,7 @@ bool CBasicKeyStore::AddKey(const CKey &key)
     {
         LOCK(cs_KeyStore);
         mapKeys[key.GetPubKey().GetID()] = std::make_pair(secret, fCompressed);
-        mapEths[key.GetPubKey().GetID()] = GetEthAddress(key.GetPubKey());
+        mapEths[key.GetPubKey().GetID()] = CBasicKeyStore::GetEthAddr(key.GetPubKey());
     }
     return true;
 }
@@ -817,6 +810,13 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CFirmKey &keyOut) const
     return false;
 }
 
+CEthID CBasicKeyStore::GetEthAddr(const CPubKey &pubkey) {
+    key_vector vchPubKey = pubkey.GetPubEth();
+    CKeyID hash;
+    latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
+    return hash;
+}
+
 bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
     LOCK(cs_KeyStore);
 
@@ -824,7 +824,7 @@ bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
     if(mi != mapKeys.end()) {
         CFirmKey key;
         key.SetSecret((*mi).second.first, (*mi).second.second);
-        key_vector vch = key.GetPubKey().GetPubVch();
+        key_vector vch = key.GetPubKey().GetPubEth();
         uint160 hash;
         latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
         address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
@@ -852,7 +852,7 @@ bool CCryptoKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
 
         CFirmKey key;
         key.SetSecret(secret, pubkey.IsCompressed());
-        key_vector vch = key.GetPubKey().GetPubVch();
+        key_vector vch = key.GetPubKey().GetPubEth();
         uint160 hash;
         latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
         address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));

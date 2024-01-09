@@ -9,7 +9,6 @@
 #include <stdint.h>
 #include <uint256.h>
 #include <boost/variant.hpp>
-class CPubKeyVch;
 class CKeyID;
 class CScriptID;
 class CScript;
@@ -75,7 +74,6 @@ struct WitnessUnknown { //! CTxDestination subtype to encode any future Witness 
   */
 using CTxDestination = boost::variant<
                        CNoDestination,
-                       CPubKeyVch,
                        CKeyID,
                        CScriptID,
                        WitnessV0ScriptHash,

@@ -100,7 +100,7 @@ protected:
     ScriptMap mapScripts;
     WatchOnlySet setWatchOnly;
 
-    CEthID GetEthAddress(const CPubKey &pubkey);
+    static CEthID GetEthAddr(const CPubKey &pubkey);
 
 public:
     bool AddKey(const CKey &key);
