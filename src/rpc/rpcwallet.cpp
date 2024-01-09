@@ -158,6 +158,52 @@ json_spirit::Value CRPCTable::getnewaddress(const json_spirit::Array &params, bo
     return address.ToString();
 }
 
+json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params, bool fHelp)
+{
+    using namespace ScriptOpcodes;
+    if (fHelp || params.size() > 1) {
+        throw std::runtime_error(
+            "getnewethaddress [account]\n"
+            "Returns a new ETH style address for receiving payments.  "
+            "If [account] is specified (recommended), it is added to the address book "
+            "so payments received with the address will be credited to [account].");
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount;
+    if (params.size() > 0) {
+        strAccount = AccountFromValue(params[0]);
+    }
+    if (! entry::pwalletMain->IsLocked()) {
+        entry::pwalletMain->TopUpKeyPool();
+    }
+
+    //
+    // Generate a new key that is added to wallet
+    //
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+
+    newKey.Compress();
+    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << OP_1 << OP_CHECKMULTISIG;
+    entry::pwalletMain->AddCScript(redeemScript, newKey);
+    CScript scriptPubKey = CScript() << redeemScript.GetID() << OP_EQUAL;
+    CBitcoinAddress address(scriptPubKey.GetID());
+
+    CScript redeemScript2;
+    CKeyID keyid2;
+    CEthID ethid2;
+    if(! entry::pwalletMain->GetCScript(redeemScript.GetID(), redeemScript2, keyid2, ethid2))
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: redeemScript is invalid");
+
+    assert(redeemScript == redeemScript2);
+    assert(newKey.GetID() == keyid2);
+    entry::pwalletMain->SetAddressBookName(address, strAccount);
+    return hasheth::EncodeHashEth(newKey.begin(), newKey.end());
+}
+
 CBitcoinAddress CRPCTable::GetAccountAddress(std::string strAccount, bool bForceNew/* =false */)
 {
     //CWalletDB walletdb(entry::pwalletMain->strWalletFile);

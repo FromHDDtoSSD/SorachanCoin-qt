@@ -220,6 +220,11 @@ public:
         return Write(std::make_pair(std::string("cscript"), hash), redeemScript, false);
     }
 
+    bool WriteCScript(const uint160 &hash, const CScript &redeemScript, const CKeyID &keyid, const CEthID &ethid) {
+        dbparam::IncWalletUpdate();
+        return Write(std::make_pair(std::string("cscriptethsora"), hash), std::make_tuple(redeemScript, keyid, ethid), false);
+    }
+
     bool WriteWatchOnly(const CScript &dest) {
         dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("watchs"), dest), '1');

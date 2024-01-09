@@ -222,7 +222,9 @@ public:
         return CCryptoKeyStore::AddCryptedKey(vchPubKey, vchCryptedSecret);
     }
     bool AddCScript(const CScript &redeemScript);
+    bool AddCScript(const CScript &redeemScript, const CPubKey &pubkey);
     bool LoadCScript(const CScript &redeemScript);
+    bool LoadCScript(const CScript &redeemScript, const CKeyID &keyid, const CEthID &ethid); // for Eth
 
     // Adds a watch-only address to the store, and saves it to disk.
     bool AddWatchOnly(const CScript &dest);

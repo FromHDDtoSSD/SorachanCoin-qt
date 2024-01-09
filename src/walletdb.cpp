@@ -548,6 +548,19 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
                 strErr = "Error reading wallet database: LoadCScript failed";
                 return false;
             }
+        } else if (strType == "cscriptethsora") {
+            uint160 hash;
+            ssKey >> hash;
+            CScript script;
+            ssValue >> script;
+            CKeyID keyid;
+            ssValue >> keyid;
+            CEthID ethid;
+            ssValue >> ethid;
+            if (! pwallet->LoadCScript(script, keyid, ethid)) {
+                strErr = "Error reading wallet database: LoadCScript failed";
+                return false;
+            }
         } else if (strType == "orderposnext") {
             ssValue >> pwallet->nOrderPosNext;
         }

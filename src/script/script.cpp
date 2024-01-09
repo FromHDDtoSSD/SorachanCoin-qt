@@ -2555,11 +2555,8 @@ void CScript::SetDestination(const CTxDestination &dest) {
 }
 
 void CScript::SetAddress(const CBitcoinAddress &dest) {
-    //debugcs::instance() << "called: CScript SetAddress: " << strenc::HexStr(dest.GetData()) << debugcs::endl();
     this->clear();
-    if(dest.IsDirect()) {
-        *this << dest.GetData() << ScriptOpcodes::OP_CHECKSIG;
-    } else if (dest.IsEth()) { // supported: latest core
+    if (dest.IsEth()) {
         *this << ScriptOpcodes::OP_DUP << ScriptOpcodes::OP_HASHETH << dest.GetData() << ScriptOpcodes::OP_EQUALVERIFY << ScriptOpcodes::OP_CHECKSIG;
     } else if (dest.IsScript()) {
         *this << ScriptOpcodes::OP_HASH160 << dest.GetData() << ScriptOpcodes::OP_EQUAL;

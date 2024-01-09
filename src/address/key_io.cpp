@@ -120,10 +120,6 @@ bool CBitcoinAddress_impl<ENC>::IsValid() const {
         fExpectTestNet = false;
         fSimple = false;
         break;
-    case key_io::PUBKEY_DIRECT:
-        nExpectedSize = 65; // public key
-        fExpectTestNet = false;
-        break;
     case key_io::PUBKEY_ADDRESS:
         nExpectedSize = 20; // Hash of public key CHash160
         fExpectTestNet = false;
@@ -140,10 +136,6 @@ bool CBitcoinAddress_impl<ENC>::IsValid() const {
         nExpectedSize = 68;
         fExpectTestNet = true;
         fSimple = false;
-        break;
-    case key_io::PUBKEY_DIRECT_TEST:
-        nExpectedSize = 65;
-        fExpectTestNet = true;
         break;
     case key_io::PUBKEY_ADDRESS_TEST:
         nExpectedSize = 20;
@@ -234,23 +226,6 @@ bool CBitcoinAddress_impl<ENC>::GetKeyID(CKeyID &keyID) const {
     default:
         return false;
     }
-}
-
-template <typename ENC>
-bool CBitcoinAddress_impl<ENC>::IsDirect() const {
-    if (! IsValid()) {
-        return false;
-    }
-
-    switch (ENC::getVersion())
-    {
-    case key_io::PUBKEY_DIRECT:
-    case key_io::PUBKEY_DIRECT_TEST:
-        return true;
-    default:
-        return false;
-    }
-    return false;
 }
 
 template <typename ENC>

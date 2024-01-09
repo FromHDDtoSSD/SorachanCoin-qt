@@ -226,6 +226,23 @@ static void debug1(const CKey &key) {
     }
     */
 
+    /*
+    {
+        CFirmKey fikey;
+        CSecret secret = key.GetSecret();
+        fikey.Set(secret.begin(), secret.end(), key.IsCompressed());
+        fikey.SetCompressedPubKey(true);
+
+        CTxIn txin;
+        txin.set_prevout().SetNull();
+        CTxOut txout;
+        CScript redeemScript = CScript() << OP_1 << fikey.GetPubKey() << OP_1 << OP_CHECKMULTISIG;
+        CScript scriptPubKey = CScript() << redeemScript.GetID() << OP_EQUAL;
+
+        //assert(Script_util::VerifyScript(scriptSig, scriptPubKey, tx, 0, Script_param::STRICT_FLAGS, Script_param::SIGHASH_ALL)==true);
+    }
+    */
+
     /* CFirmKey multisig: P2PK and OP_IF ok
     {
         CFirmKey fikey;
@@ -452,7 +469,6 @@ bool CBasicKeyStore::AddKey(const CKey &key)
     {
         LOCK(cs_KeyStore);
         mapKeys[key.GetPubKey().GetID()] = std::make_pair(secret, fCompressed);
-        mapEths[key.GetPubKey().GetID()] = CBasicKeyStore::GetEthAddr(key.GetPubKey());
     }
     return true;
 }
@@ -479,6 +495,22 @@ bool CBasicKeyStore::AddCScript(const CScript &redeemScript)
     return true;
 }
 
+bool CBasicKeyStore::AddCScript(const CScript &redeemScript, const CPubKey &pubkey)
+{
+    if (redeemScript.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
+        return logging::error("CBasicKeyStore::AddCScript() : redeemScripts > %i bytes are invalid", Script_const::MAX_SCRIPT_ELEMENT_SIZE);
+    }
+
+    {
+        LOCK(cs_KeyStore);
+        CKeyID keyid = pubkey.GetID();
+        CEthID ethid = GetEthAddr(pubkey);
+        mapScripts[redeemScript.GetID()] = redeemScript;
+        mapEths[redeemScript.GetID()] = std::make_pair(keyid, ethid);
+    }
+    return true;
+}
+
 bool CBasicKeyStore::HaveCScript(const CScriptID &hash) const
 {
     bool result;
@@ -500,6 +532,26 @@ bool CBasicKeyStore::GetCScript(const CScriptID &hash, CScript &redeemScriptOut)
         }
     }
     return false;
+}
+
+bool CBasicKeyStore::GetCScript(const CScriptID &hash, CScript &redeemScriptOut, CKeyID &keyid, CEthID &ethid) const
+{
+    LOCK(cs_KeyStore);
+    bool f1=false, f2=false;
+    ScriptMap::const_iterator mi = mapScripts.find(hash);
+    if (mi != mapScripts.end()) {
+        redeemScriptOut = (*mi).second;
+        f1 = true;
+    }
+
+    EthMap::const_iterator mi2 = mapEths.find(hash);
+    if (mi2 != mapEths.end()) {
+        keyid = (*mi2).second.first;
+        ethid = (*mi2).second.second;
+        f2 = true;
+    }
+
+    return f1 && f2;
 }
 
 bool CBasicKeyStore::AddWatchOnly(const CScript &dest)

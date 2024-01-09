@@ -213,6 +213,20 @@ bool CWallet::AddCScript(const CScript &redeemScript)
     return CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteCScript(hash_basis::Hash160(redeemScript), redeemScript);
 }
 
+bool CWallet::AddCScript(const CScript &redeemScript, const CPubKey &pubkey)
+{
+    if (! CCryptoKeyStore::AddCScript(redeemScript, pubkey)) {
+        return false;
+    }
+    if (! fFileBacked) {
+        return true;
+    }
+
+    CKeyID keyid = pubkey.GetID();
+    CEthID ethid = CBasicKeyStore::GetEthAddr(pubkey);
+    return CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteCScript(hash_basis::Hash160(redeemScript), redeemScript, keyid, ethid);
+}
+
 bool CWallet::LoadCScript(const CScript &redeemScript)
 {
     /* A sanity check was added in commit 5ed0a2b to avoid adding redeemScripts
@@ -225,6 +239,16 @@ bool CWallet::LoadCScript(const CScript &redeemScript)
     }
 
     return CCryptoKeyStore::AddCScript(redeemScript);
+}
+
+bool CWallet::LoadCScript(const CScript &redeemScript, const CKeyID &keyid, const CEthID &ethid)
+{
+    debugcs::instance() << "LoadScript: " << strenc::HexStr(redeemScript) << " : " << strenc::HexStr(keyid) << " : " << strenc::HexStr(ethid) << debugcs::endl();
+    if(! LoadCScript(redeemScript))
+        return false;
+
+    this->mapEths[redeemScript.GetID()] = std::make_pair(keyid, ethid);
+    return true;
 }
 
 bool CWallet::AddWatchOnly(const CScript &dest)

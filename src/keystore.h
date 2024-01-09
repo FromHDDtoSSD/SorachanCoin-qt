@@ -82,7 +82,7 @@ public:
 // Basic Type
 //
 typedef std::map<CKeyID, std::pair<CSecret, bool> > KeyMap;
-typedef std::map<CKeyID, CEthID> EthMap;
+typedef std::map<CScriptID, std::pair<CKeyID, CEthID> > EthMap;
 typedef std::map<CScriptID, CScript > ScriptMap;
 typedef std::set<CScript> WatchOnlySet;
 typedef std::map<CMalleableKeyView, CSecret> MalleableKeyMap;
@@ -162,8 +162,10 @@ public:
     virtual bool GetEthAddr(const CKeyID &id, std::string &address) const;
 
     virtual bool AddCScript(const CScript &redeemScript);
+    virtual bool AddCScript(const CScript &redeemScript, const CPubKey &pubkey);
     virtual bool HaveCScript(const CScriptID &hash) const;
     virtual bool GetCScript(const CScriptID &hash, CScript &redeemScriptOut) const;
+    virtual bool GetCScript(const CScriptID &hash, CScript &redeemScriptOut, CKeyID &keyid, CEthID &ethid) const;
 
     virtual bool AddWatchOnly(const CScript &dest);
     virtual bool RemoveWatchOnly(const CScript &dest);

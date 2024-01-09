@@ -29,9 +29,7 @@ namespace key_io {
         SCRIPT_ADDRESS_TEST = 196,
 
         // from implementation
-        PUBKEY_DIRECT = 35,
         PUBKEY_ETH_ADDRESS = 80,
-        PUBKEY_DIRECT_TEST = 15,
         PUBKEY_ETH_ADDRESS_TEST = 81,
 
         // WIF (wallet import format)
@@ -202,7 +200,6 @@ public:
     bool GetKeyID(CKeyID &keyID) const;
 
     // script type
-    bool IsDirect() const;
     bool IsEth() const;
     bool IsScript() const;
     bool IsPubKey() const;
