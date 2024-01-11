@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[93];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[94];    // Bitcoin RPC Command
 
     //
     // map command
@@ -401,6 +401,7 @@ private:
     static json_spirit::Value getbalance(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value movecmd(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value sendfrom(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value sendethfrom(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value sendmany(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value addmultisigaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value addredeemscript(const json_spirit::Array &params, bool fHelp);

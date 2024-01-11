@@ -161,7 +161,7 @@ public:
  * Pubkey-pair-addresses have version 1 (or 6 testnet)
  * The data vector contains a serialized copy of two compressed ECDSA secp256k1 public keys.
  */
-// ENC: CBase58Data, CBech32Data, CEthData
+// ENC: CBase58Data, CBech32Data
 template <typename ENC>
 class CBitcoinAddress_impl final : public ENC {
 public:

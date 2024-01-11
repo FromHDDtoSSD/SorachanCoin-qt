@@ -126,6 +126,17 @@ public:
         return result;
     }
 
+    bool HaveEth(const CEthID &address) const {
+        {
+            LOCK(cs_KeyStore);
+            for(const auto &d: mapEths) {
+                if(d.second.second == address)
+                    return true;
+            }
+        }
+        return false;
+    }
+
     void GetKeys(std::set<CKeyID> &setAddress) const {
         setAddress.clear();
         {
@@ -155,6 +166,17 @@ public:
         if (mi != mapKeys.end()) {
             keyOut.SetSecret((*mi).second.first, (*mi).second.second);
             return true;
+        }
+        return false;
+    }
+
+    bool GetKeyID(const CEthID &address, CKeyID &keyid) const {
+        LOCK(cs_KeyStore);
+        for(const auto &d: mapEths) {
+            if(address == d.second.second) {
+                keyid = d.second.first;
+                return true;
+            }
         }
         return false;
     }

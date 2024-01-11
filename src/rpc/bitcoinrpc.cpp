@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 //
 // Call Table
 //
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[93] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[94] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                       &help,                        true,   true },
@@ -229,6 +229,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[93] =
     { "getbalance",                 &getbalance,                  false,  false },
     { "move",                       &movecmd,                     false,  false },
     { "sendfrom",                   &sendfrom,                    false,  false },
+    { "sendethfrom",                &sendethfrom,                 false,  false },
     { "sendmany",                   &sendmany,                    false,  false },
     { "addmultisigaddress",         &addmultisigaddress,          false,  false },
     { "addredeemscript",            &addredeemscript,             false,  false },

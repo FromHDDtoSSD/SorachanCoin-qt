@@ -187,21 +187,28 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
     }
 
     newKey.Compress();
+    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
+
     CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << OP_1 << OP_CHECKMULTISIG;
     entry::pwalletMain->AddCScript(redeemScript, newKey);
-    CScript scriptPubKey = CScript() << redeemScript.GetID() << OP_EQUAL;
-    CBitcoinAddress address(scriptPubKey.GetID());
+    CBitcoinAddress address(redeemScript.GetID());
 
-    CScript redeemScript2;
-    CKeyID keyid2;
-    CEthID ethid2;
-    if(! entry::pwalletMain->GetCScript(redeemScript.GetID(), redeemScript2, keyid2, ethid2))
-        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: redeemScript is invalid");
+    // redeemScript checking
+    {
+        CScript redeemScript2;
+        CKeyID keyid2;
+        CEthID ethid2;
+        if(! entry::pwalletMain->GetCScript(redeemScript.GetID(), redeemScript2, keyid2, ethid2))
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: redeemScript is invalid");
+        if(redeemScript != redeemScript2)
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: redeemScript is invalid");
+        if(newKey.GetID() != keyid2)
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: keyid is invalid");
+    }
 
-    assert(redeemScript == redeemScript2);
-    assert(newKey.GetID() == keyid2);
     entry::pwalletMain->SetAddressBookName(address, strAccount);
-    return hasheth::EncodeHashEth(newKey.begin(), newKey.end());
+    return hasheth::EncodeHashEth(newKey);
 }
 
 CBitcoinAddress CRPCTable::GetAccountAddress(std::string strAccount, bool bForceNew/* =false */)
@@ -834,6 +841,73 @@ json_spirit::Value CRPCTable::sendfrom(const json_spirit::Array &params, bool fH
     std::string strAddress = params[1].get_str();
 
     CBitcoinAddress address(strAddress);
+    if (address.IsValid()) {
+        scriptPubKey.SetAddress(address);
+    } else {
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " address").c_str());
+    }
+
+    int64_t nAmount = AmountFromValue(params[2]);
+    if (nAmount < block_info::nMinimumInputValue) {
+        throw bitjson::JSONRPCError(-101, "Send amount too small");
+    }
+
+    int nMinDepth = 1;
+    if (params.size() > 3) {
+        nMinDepth = params[3].get_int();
+    }
+
+    CWalletTx wtx;
+    wtx.strFromAccount = strAccount;
+    if (params.size() > 4 && params[4].type() != json_spirit::null_type && !params[4].get_str().empty()) {
+        wtx.mapValue["comment"] = params[4].get_str();
+    }
+    if (params.size() > 5 && params[5].type() != json_spirit::null_type && !params[5].get_str().empty()) {
+        wtx.mapValue["to"]      = params[5].get_str();
+    }
+
+    EnsureWalletIsUnlocked();
+
+    // Check funds
+    int64_t nBalance = GetAccountBalance(strAccount, nMinDepth, MINE_SPENDABLE);
+    if (nAmount > nBalance) {
+        throw bitjson::JSONRPCError(RPC_WALLET_INSUFFICIENT_FUNDS, "Account has insufficient funds");
+    }
+
+    // Send
+    std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+    if (! strError.empty()) {
+        throw bitjson::JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+
+    return wtx.GetHash().GetHex();
+}
+
+json_spirit::Value CRPCTable::sendethfrom(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() < 3 || params.size() > 6) {
+        throw std::runtime_error(
+            "sendfrom <from account> <to ETH type coinaddress> <amount> [minconf=1] [comment] [comment-to]\n"
+            "<amount> is a real and is rounded to the nearest " + strenc::FormatMoney(block_info::nMinimumInputValue)
+            + HelpRequiringPassphrase());
+    }
+
+    //if(! args_bool::fTestNet)
+    //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
+
+    std::string strAccount = AccountFromValue(params[0]);
+
+    // Parse address
+    CScript scriptPubKey;
+    std::string strAddress = params[1].get_str();
+    strAddress.erase(strAddress.begin(), strAddress.begin()+1);
+    CEthID ethid;
+    ethid.SetHex(strAddress.c_str());
+    CKeyID keyid;
+    if(! entry::pwalletMain->GetKeyID(ethid, keyid))
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " EthID").c_str());
+
+    CBitcoinAddress address(keyid);
     if (address.IsValid()) {
         scriptPubKey.SetAddress(address);
     } else {

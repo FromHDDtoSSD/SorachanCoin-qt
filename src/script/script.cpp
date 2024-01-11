@@ -1967,6 +1967,7 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
         }
         return true;
     case TX_SCRIPTHASH:
+        //debugcs::instance() << "Solver CScriptID: " << uint160(vSolutions[0]).GetHex() << debugcs::endl();
         return keystore.GetCScript(uint160(vSolutions[0]), scriptSigRet);
     case TX_MULTISIG:
         scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
@@ -2087,8 +2088,10 @@ isminetype Script_util::IsMine(const CKeyStore &keystore, const CScript &scriptP
     case TX_SCRIPTHASH:
         {
             CScriptID scriptID = CScriptID(uint160(vSolutions[0]));
+            //debugcs::instance() << "IsMine CScriptID 1: " << scriptID.GetHex() << debugcs::endl();
             CScript subscript;
             if (keystore.GetCScript(scriptID, subscript)) {
+                //debugcs::instance() << "IsMine CScriptID 2: " << scriptID.GetHex() << debugcs::endl();
                 isminetype ret = IsMine(keystore, subscript);
                 if (ret == MINE_SPENDABLE) {
                     return ret;
@@ -2208,6 +2211,7 @@ public:
     }
 
     void operator()(const CScriptID &scriptId) {
+        //debugcs::instance() << "CAffectedKeysVisitor CScriptID: " << scriptId.GetHex() << debugcs::endl();
         CScript script;
         if (keystore.GetCScript(scriptId, script)) {
             Process(script);
