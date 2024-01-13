@@ -1,7 +1,8 @@
 // Copyright (c) 2018-2021 The SorachanCoin Developers
-// Copyright (c) 2018-2021 The Sora neko Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#ifndef CLI_MODE_ENABLE
 
 #ifndef SORACHANCOIN_COMMON_H
 #define SORACHANCOIN_COMMON_H
@@ -91,3 +92,5 @@ namespace predsystem {
 
 #endif
 #endif // SORACHANCOIN_COMMON_H
+
+#endif // ifndef CLI_MODE_ENABLE

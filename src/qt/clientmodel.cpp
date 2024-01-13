@@ -44,6 +44,7 @@ ClientModel::~ClientModel() {
     unsubscribeFromCoreSignals();
 }
 
+#ifndef CLI_MODE_ENABLE
 double ClientModel::getPoSKernelPS() {
     return QtConsoleRPC::GetPoSKernelPS();
 }
@@ -55,6 +56,7 @@ double ClientModel::getDifficulty(bool fProofofStake) {
         return QtConsoleRPC::GetDifficulty(diff::spacing::GetLastBlockIndex(block_info::pindexBest, false));
     }
 }
+#endif
 
 int ClientModel::getNumConnections(uint8_t flags) const {
     LOCK(net_node::cs_vNodes);

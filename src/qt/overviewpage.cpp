@@ -245,6 +245,7 @@ void OverviewPage::showOutOfSyncWarning(bool fShow)
     ui->labelTransactionsStatus->setVisible(fShow);
 }
 
+#ifndef CLI_MODE_ENABLE
 void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
 {
 #ifdef WIN32
@@ -253,6 +254,7 @@ void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
     QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
 #endif
 }
+#endif
 
 void OverviewPage::on_DriveVerifyCommandLinkButton_clicked()
 {

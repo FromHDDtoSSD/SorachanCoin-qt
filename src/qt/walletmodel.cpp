@@ -18,6 +18,7 @@
 #include <QTimer>
 #include <allocator/qtsecure.h>
 
+#ifndef CLI_MODE_ENABLE
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(nullptr),
     transactionTableModel(nullptr),
@@ -45,6 +46,16 @@ WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *p
         throw qt_error("WalletModel Failed to allocate memory.", nullptr);
     }
 }
+#else
+WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
+    QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(nullptr),
+    transactionTableModel(nullptr),
+    cachedBalance(0), cachedStake(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0),
+    cachedNumTransactions(0),
+    cachedEncryptionStatus(Unencrypted),
+    cachedNumBlocks(0)
+{}
+#endif
 
 WalletModel::~WalletModel()
 {

@@ -42,8 +42,10 @@ public:
 
     OptionsModel *getOptionsModel();
 
+#ifndef CLI_MODE_ENABLE
     double getPoSKernelPS();
     double getDifficulty(bool fProofofStake);
+#endif
 
     //! Return number of connections, default is in- and outbound (total)
     int getNumConnections(uint8_t flags = CONNECTIONS_ALL) const;

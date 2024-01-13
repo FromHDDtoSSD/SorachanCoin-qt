@@ -51,7 +51,9 @@ public:
     RPCExecutor() {}
 public slots:
     void start() {}
+#ifndef CLI_MODE_ENABLE
     void request(const QString &command);
+#endif
 signals:
     void reply(int category, const QString &command);
 };
@@ -162,6 +164,7 @@ bool parseCommandLine(std::vector<std::string> &args, const std::string &strComm
     }
 }
 
+#ifndef CLI_MODE_ENABLE
 void RPCExecutor::request(const QString &command)
 {
     std::vector<std::string> args;
@@ -205,6 +208,7 @@ void RPCExecutor::request(const QString &command)
         emit reply(RPCConsole::CMD_ERROR, QString("Error: ") + QString::fromStdString(e.what()));
     }
 }
+#endif
 
 RPCConsole::RPCConsole(QWidget *parent) : QWidget(parent), ui(new (std::nothrow) Ui::RPCConsole), historyPtr(0) {
     if(! ui)

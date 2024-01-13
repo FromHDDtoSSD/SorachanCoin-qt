@@ -181,6 +181,17 @@ public:
         return false;
     }
 
+    bool GetEthID(const CKeyID &id, CEthID &ethaddr) const {
+        LOCK(cs_KeyStore);
+        for(const auto &d: mapEths) {
+            if(id == d.second.first) {
+                ethaddr = d.second.second;
+                return true;
+            }
+        }
+        return false;
+    }
+
     virtual bool GetEthAddr(const CKeyID &id, std::string &address) const;
 
     virtual bool AddCScript(const CScript &redeemScript);

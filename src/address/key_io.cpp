@@ -10,6 +10,8 @@
 #include <assert.h>
 #include <string.h>
 #include <algorithm>
+#include <init.h>
+#include <address/hasheth.h>
 
 void CBase58Data::SetData(int nVersionIn, const void *pdata, size_t nSize) {
     nVersion = nVersionIn;
@@ -28,6 +30,14 @@ bool CBase58Data::SetString(const std::string &str) {
 }
 
 std::string CBase58Data::ToString() const {
+    CScript redeemScript;
+    CKeyID keyid;
+    CEthID ethid;
+    if(entry::pwalletMain->GetCScript(CScriptID(uint160(vchData)), redeemScript, keyid, ethid)) {
+        if(redeemScript.IsPayToEthID())
+            return std::string("0x") + ethid.ToString();
+    }
+
     base58_vector vch((uint32_t)1, (uint8_t)nVersion);
     vch.insert(vch.end(), vchData.begin(), vchData.end());
     return base58::manage::EncodeBase58Check(vch);

@@ -286,6 +286,7 @@ int MintingTableModel::columnCount(const QModelIndex &parent) const
     return columns.length();
 }
 
+#ifndef CLI_MODE_ENABLE
 QVariant MintingTableModel::data(const QModelIndex &index, int role) const
 {
     if(! index.isValid()) {
@@ -378,6 +379,7 @@ QVariant MintingTableModel::data(const QModelIndex &index, int role) const
     }
     return QVariant();
 }
+#endif
 
 void MintingTableModel::setMintingInterval(int interval)
 {
@@ -406,6 +408,7 @@ QString MintingTableModel::formatTxPoSReward(KernelRecord *wtx) const
     return posReward;
 }
 
+#ifndef CLI_MODE_ENABLE
 double MintingTableModel::getDayToMint(KernelRecord *wtx) const
 {
     const CBlockIndex *p = diff::spacing::GetLastBlockIndex(block_info::pindexBest, true);
@@ -415,12 +418,15 @@ double MintingTableModel::getDayToMint(KernelRecord *wtx) const
     prob = prob * 100;
     return prob;
 }
+#endif
 
+#ifndef CLI_MODE_ENABLE
 QString MintingTableModel::formatDayToMint(KernelRecord *wtx) const
 {
     double prob = getDayToMint(wtx);
     return QString::number(prob, 'f', 3) + "%";
 }
+#endif
 
 QString MintingTableModel::formatTxAddress(const KernelRecord *wtx, bool tooltip) const
 {

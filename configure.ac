@@ -7,6 +7,12 @@ AM_INIT_AUTOMAKE([foreign])
 AC_CONFIG_SRCDIR([config.h.in])
 AC_CONFIG_HEADERS([config.h])
 
+AC_ARG_ENABLE([cli-mode],
+    [AS_HELP_STRING([--enable-cli-mode],
+    [Enable the CLI mode])],
+    [cli_mode=$enableval], [cli_mode=no])
+AM_CONDITIONAL([CLI_MODE], [test "x$cli_mode" = "xyes"])
+
 # Checks for programs.
 AC_PROG_CXX
 AC_PROG_CC

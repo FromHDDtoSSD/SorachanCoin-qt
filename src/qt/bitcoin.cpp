@@ -192,7 +192,7 @@ private:
 };
 #include "bitcoin.moc"
 
-#ifndef BITCOIN_QT_TEST
+#if !defined(BITCOIN_QT_TEST) && !defined(CLI_MODE_ENABLE)
 int main(int argc, char *argv[])
 {
     // Do this early as we don't want to bother initializing if we are just calling IPC
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
     app.processEvents();
     app.setQuitOnLastWindowClosed(false);
 
-#ifdef WIN32
+# ifdef WIN32
     if(map_arg::GetBoolArg("-miniw")) {
         bool restart = false;
         try {
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
         }
         return 0;
     }
-#endif
+# endif
 
     try {
         // Regenerate startup link, to fix links to old versions
@@ -380,4 +380,4 @@ int main(int argc, char *argv[])
     }
     return 0;
 }
-#endif // BITCOIN_QT_TEST
+#endif // !BITCOIN_QT_TEST && !CLI_MODE_ENABLE

@@ -1,7 +1,14 @@
 
+if CLI_MODE
+bin_PROGRAMS = SorachanCoin-cli
+else
 bin_PROGRAMS = SorachanCoind
+endif
 INCLUDES = -I../library/boost_1_68_0/include -I../library/libressl-2.8.2/include -I../library/sqlite/include -I../library/db-4.8.30/include -Ileveldb/include -Ileveldb/helpers
 SorachanCoind_CXXFLAGS = -std=c++11 -DUSE_QUANTUM -DUSE_BERKELEYDB -DUSE_LEVELDB -DUSE_CAUTOFILE -DUSE_IPV6 -DBOOST_NO_CXX11_SCOPED_ENUMS -w -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+if CLI_MODE
+SorachanCoind_CXXFLAGS += -DCLI_MODE_ENABLE
+endif
 SorachanCoind_LDADD = -lpthread \
  ../library/boost_1_68_0/lib/libboost_system.a \
  ../library/boost_1_68_0/lib/libboost_filesystem.a \

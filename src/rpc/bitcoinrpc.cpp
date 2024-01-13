@@ -1204,12 +1204,14 @@ json_spirit::Value CRPCTable::execute(const std::string &strMethod, const json_s
 
 json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spirit::Array &params)
 {
+#ifndef CLI_MODE_ENABLE
     if (map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
         throw std::runtime_error(tinyformat::format(
             _("You must set rpcpassword=<password> in the configuration file:\n%s\n"
             "If the file does not exist, create it with owner-readable-only file permissions."),
             iofs::GetConfigFile().string().c_str()));
     }
+#endif
 
     // Connect to localhost
     bool fUseSSL = map_arg::GetBoolArg("-rpcssl");
@@ -1332,6 +1334,8 @@ json_spirit::Array bitrpc::RPCConvertValues(const std::string &strMethod, const 
     if (strMethod == "move"                   && n > 3) { ConvertTo<int64_t>(params[3]); }
     if (strMethod == "sendfrom"               && n > 2) { ConvertTo<double>(params[2]); }
     if (strMethod == "sendfrom"               && n > 3) { ConvertTo<int64_t>(params[3]); }
+    if (strMethod == "sendethfrom"            && n > 2) { ConvertTo<double>(params[2]); }
+    if (strMethod == "sendethfrom"            && n > 3) { ConvertTo<int64_t>(params[3]); }
     if (strMethod == "listtransactions"       && n > 1) { ConvertTo<int64_t>(params[1]); }
     if (strMethod == "listtransactions"       && n > 2) { ConvertTo<int64_t>(params[2]); }
     if (strMethod == "listaccounts"           && n > 0) { ConvertTo<int64_t>(params[0]); }

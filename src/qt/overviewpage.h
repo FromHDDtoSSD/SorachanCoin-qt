@@ -58,7 +58,9 @@ private slots:
     void updateDisplayUnit();
     void handleTransactionClicked(const QModelIndex &index);
     void updateWatchOnlyLabels(bool showWatchOnly);
+#ifndef CLI_MODE_ENABLE
     void on_BenchmarkCommandLinkButton_clicked();
+#endif
     void on_DriveVerifyCommandLinkButton_clicked();
     //void on_pushButton_clicked();
     //void on_pushButton_2_clicked();

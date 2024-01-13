@@ -1,6 +1,5 @@
 TEMPLATE = app
-TARGET = SorachanCoinQ-qt
-VERSION = 3.36.13
+VERSION = 3.37.13
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -24,6 +23,19 @@ RELEASE=0
 # 1: QT GUI
 #
 GUI_MODE=1
+
+#
+# SorachanCoin-cli
+# 0: SorachanCoin-Core
+# 1: SorachanCoin-cli
+#
+CLI_MODE=0
+
+contains (CLI_MODE, 0) {
+    TARGET = SorachanCoin-Core
+} else {
+    TARGET = SorachanCoin-cli
+}
 
 #
 # IN MEMORY VSTREAM test (when enabled, ver 5)
@@ -136,6 +148,13 @@ contains(RELEASE, 0) {
     DEBUG_RUNTIME_TEST=0
     DEBUG_ALGO_CHECK=0
     DEBUG_ALGO_CS_OUTPUT=0
+}
+
+contains(CLI_MODE, 0) {
+    # do nothing
+} else {
+    DEFINES -= QT_GUI
+    DEFINES += CLI_MODE_ENABLE
 }
 
 contains(DEBUG_IN_MEMORY_VSTREAM, 0) {
@@ -990,7 +1009,7 @@ QMAKE_EXTRA_COMPILERS += TSQM
 # "Other files" to show in Qt Creator
 #
 OTHER_FILES += doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
-OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh
+OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh configure.ac
 
 #
 # windows: indicate define

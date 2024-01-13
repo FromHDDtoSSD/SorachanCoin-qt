@@ -169,6 +169,9 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
             "so payments received with the address will be credited to [account].");
     }
 
+    if(! args_bool::fTestNet)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
+
     // Parse the account first so we don't generate a key if there's an error
     std::string strAccount;
     if (params.size() > 0) {
@@ -196,6 +199,7 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
 
     // redeemScript checking
     {
+        //debugcs::instance() << "redeemScript size: " << redeemScript.size() << debugcs::endl();
         CScript redeemScript2;
         CKeyID keyid2;
         CEthID ethid2;
@@ -207,6 +211,7 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
             throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: keyid is invalid");
     }
 
+    //debugcs::instance() << "address: " << address.ToString() << debugcs::endl();
     entry::pwalletMain->SetAddressBookName(address, strAccount);
     return hasheth::EncodeHashEth(newKey);
 }
@@ -892,8 +897,8 @@ json_spirit::Value CRPCTable::sendethfrom(const json_spirit::Array &params, bool
             + HelpRequiringPassphrase());
     }
 
-    //if(! args_bool::fTestNet)
-    //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
+    if(! args_bool::fTestNet)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
 
     std::string strAccount = AccountFromValue(params[0]);
 

@@ -174,6 +174,7 @@ bool entry::AppInit(int argc, char *argv[])
         }
         */
 
+#ifndef CLI_MODE_ENABLE
         if (map_arg::GetMapArgsCount("-?") || map_arg::GetMapArgsCount("--help")) {
             //
             // First part of help message is specific to bitcoind / RPC client
@@ -190,6 +191,7 @@ bool entry::AppInit(int argc, char *argv[])
             ::fprintf(stdout, "%s", strUsage.c_str());
             return false;
         }
+#endif
 
         //
         // Command-line RPC
@@ -201,9 +203,15 @@ bool entry::AppInit(int argc, char *argv[])
         }
 
         if (args_bool::fCommandLine) {
+            debugcs::instance() << "command send" << debugcs::endl();
             int ret = bitrpc::CommandLineRPC(argc, argv);
             exit(ret);
         }
+
+#ifdef CLI_MODE_ENABLE
+        debugcs::instance() << "ERROR: command is invalid." << debugcs::endl();
+        exit(0);
+#endif
 
         fRet = AppInit2();
     } catch (const std::exception &e) {

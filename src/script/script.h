@@ -557,6 +557,11 @@ public:
     bool IsPushOnly(const_iterator pc) const;
 
     //
+    // If 1-1 multisig, in PayToEthID tarnsactions:
+    //
+    bool IsPayToEthID() const;
+
+    //
     // witness transactions:
     //
     bool IsPayToWitnessScriptHash() const;

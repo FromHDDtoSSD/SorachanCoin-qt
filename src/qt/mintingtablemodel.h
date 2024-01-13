@@ -40,7 +40,9 @@ public:
     void setMintingProxyModel(MintingFilterProxy *mintingProxy);
     int rowCount(const QModelIndex &parent) const;
     int columnCount(const QModelIndex &parent) const;
+#ifndef CLI_MODE_ENABLE
     QVariant data(const QModelIndex &index, int role) const;
+#endif
     QVariant headerData(int section, Qt::Orientation orientation, int role) const;
     QModelIndex index(int row, int column, const QModelIndex & parent = QModelIndex()) const;
 
@@ -56,8 +58,10 @@ private:
 
     QString lookupAddress(const std::string &address, bool tooltip) const;
 
+#ifndef CLI_MODE_ENABLE
     double getDayToMint(KernelRecord *wtx) const;
     QString formatDayToMint(KernelRecord *wtx) const;
+#endif
     QString formatTxAddress(const KernelRecord *wtx, bool tooltip) const;
     QString formatTxHash(const KernelRecord *wtx) const;
     QString formatTxAge(const KernelRecord *wtx) const;

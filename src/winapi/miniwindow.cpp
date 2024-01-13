@@ -2,6 +2,8 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#ifndef CLI_MODE_ENABLE
+
 #include <windows.h>
 #include <winapi/miniwindow.h>
 #include <wallet.h>
@@ -517,3 +519,5 @@ bool predsystem::CreateMiniwindow(bool *restart)
     unregister_wc();
     return true;
 }
+
+#endif // ifndef CLI_MODE_ENABLE

@@ -59,7 +59,9 @@ public:
     /** Set the client model.
         The client model represents the part of the core that communicates with the P2P network, and is wallet-agnostic.
     */
+#ifndef CLI_MODE_ENABLE
     void setClientModel(ClientModel *clientModel);
+#endif
     /** Set the wallet model.
         The wallet model represents a bitcoin wallet, and offers access to the list of transactions, address book and sending
         functionality.
@@ -156,8 +158,10 @@ public slots:
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */
+#ifndef CLI_MODE_ENABLE
     void setNumBlocks(int count, int nTotalBlocks);
     void updateMining();            // stake information icon
+#endif
     /** Set the encryption status as shown in the UI.
        @param[in] status            current encryption status
        @see WalletModel::EncryptionStatus

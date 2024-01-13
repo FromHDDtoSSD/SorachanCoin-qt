@@ -488,6 +488,7 @@ void BitcoinGUI::createToolBars() {
     toolbar2->setVisible(false);
 }
 
+#ifndef CLI_MODE_ENABLE
 void BitcoinGUI::setClientModel(ClientModel *clientModel) {
     this->clientModel = clientModel;
     if(clientModel) {
@@ -529,6 +530,7 @@ void BitcoinGUI::setClientModel(ClientModel *clientModel) {
         receiveCoinsPage->setOptionsModel(clientModel->getOptionsModel());
     }
 }
+#endif
 
 void BitcoinGUI::setWalletModel(WalletModel *walletModel) {
     this->walletModel = walletModel;
@@ -650,6 +652,7 @@ void BitcoinGUI::setNumConnections(int count) {
     labelConnectionsIcon->setToolTip(tr("%n active connection(s) to SorachanCoin network", "", count));
 }
 
+#ifndef CLI_MODE_ENABLE
 void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks) {
     // don't show / hide progress bar and its label if we have no connection to the network
     if (!clientModel || clientModel->getNumConnections() == 0) {
@@ -737,7 +740,9 @@ void BitcoinGUI::setNumBlocks(int count, int nTotalBlocks) {
     progressBarLabel->setToolTip(tooltip);
     progressBar->setToolTip(tooltip);
 }
+#endif
 
+#ifndef CLI_MODE_ENABLE
 void BitcoinGUI::updateMining() {
     if(! this->walletModel) {
         return;
@@ -765,6 +770,7 @@ void BitcoinGUI::updateMining() {
         this->labelMiningIcon->setToolTip(tr("No suitable inputs were found"));
     }
 }
+#endif
 
 void BitcoinGUI::message(const QString &title, const QString &message, unsigned int style, const QString &detail) {
     QString strTitle = tr(strCoinName) + " - ";
