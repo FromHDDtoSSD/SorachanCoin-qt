@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.37.13
+VERSION = 3.38.13
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -1009,7 +1009,7 @@ QMAKE_EXTRA_COMPILERS += TSQM
 # "Other files" to show in Qt Creator
 #
 OTHER_FILES += doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
-OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh configure.ac
+OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh configure.ac sora_builder.sh
 
 #
 # windows: indicate define

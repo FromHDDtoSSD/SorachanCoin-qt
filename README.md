@@ -53,20 +53,13 @@ https://www.fromhddtossd.com/
 
 How to build?
 ===========================
-chmod 755 autogen.sh<br>
-./autogen.sh<br>
-./configure<br>
-make<br>
-<br>
-generated under ./src, "SorachanCoind"
+chmod +x sora_builder.sh autogen.sh<br>
+./sora_builder.sh<br>
+generated under ./src, "SorachanCoind" "SorachanCoin-cli"
 
-Configure options
-===========================
-Supported SorachanCoin-cli<br>
-./configure --enable-cli-mode<br>
-make<br>
-generated under ./src, "SorachanCoin_cli"<br>
-mv SorachanCoin_cli SorachanCoin-cli
+**Automatically and statically links the necessary libraries.<br>
+therefore, by simply executing sora_builder.sh, <br>
+"SorachanCoind" and "SorachanCoin-cli" will be reliably built.**
 
 e.g.<br>
 SorachanCoin-cli help<br>
@@ -80,6 +73,9 @@ SorachanCoin-cli sendethfrom "user" 0xb0e7168246ecea8c015402cf872ac28199c560f6 3
 
 e.g. using -datadir<br>
 SorachanCoin-cli -datadir=/coins/sora getinfo
+
+e.g. using -testnet<br>
+SorachanCoin-cli -testnet getinfo
 
 Block Explorer
 ===========================

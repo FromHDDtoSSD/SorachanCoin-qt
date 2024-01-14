@@ -209,7 +209,7 @@ bool entry::AppInit(int argc, char *argv[])
         }
 
 #ifdef CLI_MODE_ENABLE
-        ::fprintf(stdout, "ERROR: command is invalid");
+        ::fprintf(stdout, "ERROR: command is invalid\n");
         exit(0);
 #endif
 

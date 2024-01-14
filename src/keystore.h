@@ -181,6 +181,17 @@ public:
         return false;
     }
 
+    bool GetScriptID(const CEthID &address, CScriptID &scriptid) const {
+        LOCK(cs_KeyStore);
+        for(const auto &d: mapEths) {
+            if(address == d.second.second) {
+                scriptid = d.first;
+                return true;
+            }
+        }
+        return false;
+    }
+
     bool GetEthID(const CKeyID &id, CEthID &ethaddr) const {
         LOCK(cs_KeyStore);
         for(const auto &d: mapEths) {

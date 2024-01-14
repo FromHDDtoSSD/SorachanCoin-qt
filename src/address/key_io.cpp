@@ -43,9 +43,21 @@ std::string CBase58Data::ToString() const {
     return base58::manage::EncodeBase58Check(vch);
 }
 
-bool CBase58Data::SetString(const char *psz) { // psz is base58
+bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID
     base58_vector vchTemp;
-    base58::manage::DecodeBase58Check(psz, vchTemp);
+    if(psz[0]=='0' && psz[1]=='x') {
+        CEthID ethid;
+        ethid.SetHex(std::string(psz));
+        CScriptID scriptid;
+        if(! entry::pwalletMain->GetScriptID(ethid, scriptid))
+            return false;
+        unsigned char prefix = args_bool::fTestNet ? key_io::SCRIPT_ADDRESS_TEST : key_io::SCRIPT_ADDRESS;
+        vchTemp.push_back(prefix);
+        vchTemp.insert(vchTemp.end(), BEGIN(scriptid), END(scriptid));
+    } else {
+        base58::manage::DecodeBase58Check(psz, vchTemp);
+    }
+
     if (vchTemp.empty()) {
         vchData.clear();
         nVersion = 0;

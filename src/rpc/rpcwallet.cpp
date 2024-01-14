@@ -169,8 +169,8 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
             "so payments received with the address will be credited to [account].");
     }
 
-    if(! args_bool::fTestNet)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
+    //if(! args_bool::fTestNet)
+    //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
 
     // Parse the account first so we don't generate a key if there's an error
     std::string strAccount;
@@ -897,8 +897,8 @@ json_spirit::Value CRPCTable::sendethfrom(const json_spirit::Array &params, bool
             + HelpRequiringPassphrase());
     }
 
-    if(! args_bool::fTestNet)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
+    //if(! args_bool::fTestNet)
+    //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
 
     std::string strAccount = AccountFromValue(params[0]);
 
@@ -908,11 +908,11 @@ json_spirit::Value CRPCTable::sendethfrom(const json_spirit::Array &params, bool
     strAddress.erase(strAddress.begin(), strAddress.begin()+1);
     CEthID ethid;
     ethid.SetHex(strAddress.c_str());
-    CKeyID keyid;
-    if(! entry::pwalletMain->GetKeyID(ethid, keyid))
+    CScriptID scriptid;
+    if(! entry::pwalletMain->GetScriptID(ethid, scriptid))
         throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " EthID").c_str());
 
-    CBitcoinAddress address(keyid);
+    CBitcoinAddress address(scriptid);
     if (address.IsValid()) {
         scriptPubKey.SetAddress(address);
     } else {
