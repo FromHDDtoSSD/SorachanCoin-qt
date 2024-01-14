@@ -1216,7 +1216,7 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
         auto getvalue = [](const char *buf, const std::string &target, std::string &dest) {
             assert(buf != nullptr);
             std::string src = buf;
-            uint32_t pos = src.find(target);
+            auto pos = src.find(target);
             if(pos != std::string::npos) {
                 dest.clear();
                 dest.reserve(128);
