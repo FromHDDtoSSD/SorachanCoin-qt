@@ -203,13 +203,13 @@ bool entry::AppInit(int argc, char *argv[])
         }
 
         if (args_bool::fCommandLine) {
-            debugcs::instance() << "command send" << debugcs::endl();
+            //debugcs::instance() << "command send" << debugcs::endl();
             int ret = bitrpc::CommandLineRPC(argc, argv);
             exit(ret);
         }
 
 #ifdef CLI_MODE_ENABLE
-        debugcs::instance() << "ERROR: command is invalid." << debugcs::endl();
+        ::fprintf(stdout, "ERROR: command is invalid");
         exit(0);
 #endif
 

@@ -62,18 +62,24 @@ generated under ./src, "SorachanCoind"
 
 Configure options
 ===========================
+Supported SorachanCoin-cli<br>
 ./configure --enable-cli-mode<br>
-generated under ./src, "SorachanCoin-cli"
+make<br>
+generated under ./src, "SorachanCoin_cli"<br>
+mv SorachanCoin_cli SorachanCoin-cli
 
 e.g.<br>
 SorachanCoin-cli help<br>
 SorachanCoin-cli getinfo<br>
-SOrachanCoin-cli listaccounts<br>
+SorachanCoin-cli listaccounts<br>
 SorachanCoin-cli getnewaddress ""<br>
-SoracahnCoin-cli getnewethaddress ""<br>
+SorachanCoin-cli getnewethaddress ""<br>
 SorachanCoin-cli getblocktemplate '{"mode":"template"}'<br>
 SorachanCoin-cli sendfrom "user" SkNtsZ8CuYAbFKHGoNqDXvPQYF9WDa4h7W 30<br>
-SoracahnCoin-cli sendethfrom "user" 0xb0e7168246ecea8c015402cf872ac28199c560f6 30
+SorachanCoin-cli sendethfrom "user" 0xb0e7168246ecea8c015402cf872ac28199c560f6 30
+
+e.g. using -datadir<br>
+SorachanCoin-cli -datadir=/coins/sora getinfo
 
 Block Explorer
 ===========================

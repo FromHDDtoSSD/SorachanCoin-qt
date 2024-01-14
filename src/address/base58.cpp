@@ -39,7 +39,7 @@ const int8_t mapBase58[256] = {
 };
 } // namespace
 
-template <typename T=base58_vector>
+template <typename T>
 bool base58::manage::DecodeBase58(const char *psz, T &vch) {
     // Skip leading spaces.
     while (*psz && strenc::IsSpace(*psz))
@@ -88,7 +88,7 @@ bool base58::manage::DecodeBase58(const char *psz, T &vch) {
     return true;
 }
 
-template <typename R=std::string, typename T=base58_vector>
+template <typename R, typename T>
 R base58::manage::EncodeBase58(const unsigned char *pbegin, const unsigned char *pend) {
     // Skip & count leading zeroes.
     int zeroes = 0;
@@ -128,7 +128,7 @@ R base58::manage::EncodeBase58(const unsigned char *pbegin, const unsigned char 
     return str;
 }
 
-template <typename R=std::string, typename T=base58_vector>
+template <typename R, typename T>
 R base58::manage::EncodeBase58(const T &vch) {
     return EncodeBase58<R, T>(vch.data(), vch.data() + vch.size());
 }
@@ -154,7 +154,7 @@ bool base58::manage::DecodeBase58(const std::string &str, std::vector<unsigned c
 }
 #endif
 
-template <typename R=std::string, typename T=base58_vector>
+template <typename R, typename T>
 R base58::manage::EncodeBase58Check(const T &vchIn) {
     // add 4-byte hash check to the end
     T vch(vchIn);
@@ -163,7 +163,7 @@ R base58::manage::EncodeBase58Check(const T &vchIn) {
     return EncodeBase58<R, T>(vch);
 }
 
-template <typename T=base58_vector>
+template <typename T>
 bool base58::manage::DecodeBase58Check(const char *psz, T &vchRet) { // psz is base58
     if (!DecodeBase58(psz, vchRet) || (vchRet.size() < 4)) {
         vchRet.clear();
@@ -183,7 +183,7 @@ bool base58::manage::DecodeBase58Check(const std::string &str, base58_vector &vc
     return DecodeBase58Check<base58_vector>((const char *)str.c_str(), vchRet);
 }
 
-template <typename R=SecureString, typename T=CExtSecret>
+template <typename R, typename T>
 bool base58::manage::DecodeBase58Check(const R &str, T &vchRet) {
     const size_t bufsize = str.size() + 1;
     std::unique_ptr<unsigned char[]> buf(new (std::nothrow) unsigned char[bufsize]);

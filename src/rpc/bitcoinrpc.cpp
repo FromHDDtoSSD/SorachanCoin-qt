@@ -1211,6 +1211,55 @@ json_spirit::Object bitrpc::CallRPC(const std::string &strMethod, const json_spi
             "If the file does not exist, create it with owner-readable-only file permissions."),
             iofs::GetConfigFile().string().c_str()));
     }
+#else
+    {
+        auto getvalue = [](const char *buf, const std::string &target, std::string &dest) {
+            assert(buf != nullptr);
+            std::string src = buf;
+            uint32_t pos = src.find(target);
+            if(pos != std::string::npos) {
+                dest.clear();
+                dest.reserve(128);
+                pos += target.size();
+                while(pos < src.size()) {
+                    if(src[pos]!='=' && src[pos]!=' ')
+                        dest += src[pos];
+                    ++pos;
+                }
+            } else {
+                // do nothing (if no find, no change dest)
+            }
+        };
+
+        fs::path path = iofs::GetConfigFile();
+        //::fprintf(stdout, "path: %s\n", path.string().c_str());
+        if(boost::filesystem::exists(path)) {
+            std::string rpcuser, rpcpassword;
+            boost::filesystem::ifstream file(path);
+            char buf[1024];
+            while(file.getline(buf, sizeof(buf))) {
+                getvalue(buf, std::string("rpcuser"), rpcuser);
+                getvalue(buf, std::string("rpcpassword"), rpcpassword);
+                cleanse::OPENSSL_cleanse(buf, sizeof(buf));
+            }
+            //::fprintf(stdout, "read rpcuser: %s\n", rpcuser.c_str());
+            //::fprintf(stdout, "read rpcpassword: %s\n", rpcpassword.c_str());
+            file.close();
+
+            map_arg::SetMapArgsString("-rpcuser", rpcuser);
+            map_arg::SetMapArgsString("-rpcpassword", rpcpassword);
+            //::fprintf(stdout, "RPC1: %s\n", map_arg::GetMapArgsString("-rpcuser").c_str());
+            //::fprintf(stdout, "RPC2: %s\n", map_arg::GetMapArgsString("-rpcpassword").c_str());
+        } else {
+            throw std::runtime_error("couldn't read configure file");
+        }
+
+        if(map_arg::GetMapArgsString("-rpcuser").empty() && map_arg::GetMapArgsString("-rpcpassword").empty()) {
+            throw std::runtime_error("rpc setting is invalid");
+        }
+
+        //util::Sleep(5000);
+    }
 #endif
 
     // Connect to localhost

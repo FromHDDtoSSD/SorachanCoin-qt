@@ -354,9 +354,9 @@ public:
     bool empty() const {
         return str_.empty();
     }
-    String_with_s_allocator::iterator insert(String_with_s_allocator::iterator offset, String_with_s_allocator::iterator begin, String_with_s_allocator::iterator end) {
-        return str_.insert(offset, begin, end);
-    }
+    //String_with_s_allocator::iterator insert(String_with_s_allocator::iterator offset, String_with_s_allocator::iterator begin, String_with_s_allocator::iterator end) {
+    //    return str_.insert(offset, begin, end);
+    //}
     SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
         str_.assign(str.str_, pos, n);
         return *this;
