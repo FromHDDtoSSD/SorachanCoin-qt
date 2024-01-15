@@ -562,6 +562,11 @@ public:
     bool IsPayToEthID() const;
 
     //
+    // If EthID Locked Transaction
+    //
+    bool IsLockToEthID() const;
+
+    //
     // witness transactions:
     //
     bool IsPayToWitnessScriptHash() const;

@@ -8,6 +8,9 @@
 namespace hasheth {
     std::string EncodeHashEth(const CPubKey &pubkey);
     std::string EncodeHashEth(const unsigned char *pbegin, const unsigned char *pend);
+
+    std::string EncodeHashEth2(const CPubKey &pubkey);
+    std::string EncodeHashEth2(const unsigned char *pbegin, const unsigned char *pend);
 } // namespace hasheth
 
 #endif // BITCOIN_HASHETH_H

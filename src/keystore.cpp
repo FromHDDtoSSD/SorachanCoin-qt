@@ -864,7 +864,7 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CFirmKey &keyOut) const
 
 CEthID CBasicKeyStore::GetEthAddr(const CPubKey &pubkey) {
     key_vector vchPubKey = pubkey.GetPubEth();
-    CKeyID hash;
+    CEthID hash;
     latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
     return hash;
 }
@@ -876,11 +876,13 @@ bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
     if(mi != mapKeys.end()) {
         CFirmKey key;
         key.SetSecret((*mi).second.first, (*mi).second.second);
-        key_vector vch = key.GetPubKey().GetPubEth();
-        uint160 hash;
-        latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        address = hasheth::EncodeHashEth(key.GetPubKey());
         return true;
+        //key_vector vch = key.GetPubKey().GetPubEth();
+        //uint160 hash;
+        //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
+        //address = hash.ToString(); // strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        //return true;
     }
 
     return false;
@@ -904,11 +906,13 @@ bool CCryptoKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
 
         CFirmKey key;
         key.SetSecret(secret, pubkey.IsCompressed());
-        key_vector vch = key.GetPubKey().GetPubEth();
-        uint160 hash;
-        latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        address = hasheth::EncodeHashEth(key.GetPubKey());
         return true;
+        //key_vector vch = key.GetPubKey().GetPubEth();
+        //uint160 hash;
+        //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
+        //address = hash.ToString(); // strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        //return true;
     }
 
     return false;

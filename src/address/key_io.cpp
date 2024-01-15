@@ -34,7 +34,7 @@ std::string CBase58Data::ToString() const {
     CKeyID keyid;
     CEthID ethid;
     if(entry::pwalletMain->GetCScript(CScriptID(uint160(vchData)), redeemScript, keyid, ethid)) {
-        if(redeemScript.IsPayToEthID())
+        if(redeemScript.IsPayToEthID() || redeemScript.IsLockToEthID())
             return std::string("0x") + ethid.ToString();
     }
 

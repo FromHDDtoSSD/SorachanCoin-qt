@@ -249,6 +249,13 @@ bool CScript::IsPayToEthID() const {
             at(36) == ScriptOpcodes::OP_CHECKMULTISIG);
 }
 
+bool CScript::IsLockToEthID() const {
+    return (size() == 58 &&
+            at(0)  == ScriptOpcodes::OP_2 &&
+            at(1)  == 0x21 &&
+            at(57) == ScriptOpcodes::OP_CHECKMULTISIG);
+}
+
 bool CScript::IsPushOnly(const_iterator pc) const {
     while (pc < end()) {
         ScriptOpcodes::opcodetype opcode;
