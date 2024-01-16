@@ -6,6 +6,7 @@
 #include <key/pubkey.h>
 
 namespace hasheth {
+    std::string HexStr(const CEthID &id);
     std::string EncodeHashEth(const CPubKey &pubkey);
     std::string EncodeHashEth(const unsigned char *pbegin, const unsigned char *pend);
 

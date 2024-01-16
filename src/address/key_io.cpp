@@ -35,7 +35,7 @@ std::string CBase58Data::ToString() const {
     CEthID ethid;
     if(entry::pwalletMain->GetCScript(CScriptID(uint160(vchData)), redeemScript, keyid, ethid)) {
         if(redeemScript.IsPayToEthID() || redeemScript.IsLockToEthID())
-            return std::string("0x") + ethid.ToString();
+            return std::string("0x") + hasheth::HexStr(ethid);
     }
 
     base58_vector vch((uint32_t)1, (uint8_t)nVersion);

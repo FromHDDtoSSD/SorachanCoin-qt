@@ -881,7 +881,7 @@ bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
         //key_vector vch = key.GetPubKey().GetPubEth();
         //uint160 hash;
         //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        //address = hash.ToString(); // strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        //address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
         //return true;
     }
 
@@ -911,7 +911,7 @@ bool CCryptoKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
         //key_vector vch = key.GetPubKey().GetPubEth();
         //uint160 hash;
         //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        //address = hash.ToString(); // strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
+        //address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
         //return true;
     }
 

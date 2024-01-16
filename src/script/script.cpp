@@ -250,10 +250,10 @@ bool CScript::IsPayToEthID() const {
 }
 
 bool CScript::IsLockToEthID() const {
-    return (size() == 58 &&
+    return (size() == 71 &&
             at(0)  == ScriptOpcodes::OP_2 &&
             at(1)  == 0x21 &&
-            at(57) == ScriptOpcodes::OP_CHECKMULTISIG);
+            at(70) == ScriptOpcodes::OP_CHECKMULTISIG);
 }
 
 bool CScript::IsPushOnly(const_iterator pc) const {

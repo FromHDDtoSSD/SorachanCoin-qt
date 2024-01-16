@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 //
 // Call Table
 //
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[95] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[96] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                       &help,                        true,   true },
@@ -257,6 +257,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[95] =
     { "dumpwallet",                 &dumpwallet,                  true,   false },
     { "importwallet",               &importwallet,                false,  false },
     { "importprivkey",              &importprivkey,               false,  false },
+    { "importprivethkey",           &importprivethkey,            false,  false },
     { "importaddress",              &importaddress,               false,  true  },
     { "removeaddress",              &removeaddress,               false,  true  },
     { "listunspent",                &listunspent,                 false,  false },
@@ -1422,6 +1423,7 @@ json_spirit::Array bitrpc::RPCConvertValues(const std::string &strMethod, const 
     if (strMethod == "keypoolreset"           && n > 0) { ConvertTo<int64_t>(params[0]); }
     if (strMethod == "importaddress"          && n > 2) { ConvertTo<bool>(params[2]); }
     if (strMethod == "importprivkey"          && n > 2) { ConvertTo<bool>(params[2]); }
+    if (strMethod == "importprivethkey"       && n > 2) { ConvertTo<bool>(params[2]); }
 
     return params;
 }

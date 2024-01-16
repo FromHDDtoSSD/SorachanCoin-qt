@@ -102,6 +102,85 @@ json_spirit::Value CRPCTable::importprivkey(const json_spirit::Array &params, bo
     return json_spirit::Value::null;
 }
 
+json_spirit::Value CRPCTable::importprivethkey(const json_spirit::Array &params, bool fHelp)
+{
+    using namespace ScriptOpcodes;
+    if (fHelp || params.size() < 1 || params.size() > 3) {
+        throw std::runtime_error(
+            "importprivkey <privkey> [label] [rescan=true]\n"
+            "Adds a private key (as returned by hex Eth style) to your wallet.");
+    }
+
+    EnsureWalletIsUnlocked();
+
+    std::string strSecret = params[0].get_str();
+    std::string &estr = const_cast<std::string &>(params[0].get_str());
+    cleanse::OPENSSL_cleanse(&estr.front(), estr.size());
+    std::string strLabel = "";
+    if (params.size() > 1) {
+        strLabel = params[1].get_str();
+    }
+
+    // Whether to perform rescan after import
+    bool fRescan = true;
+    if (params.size() > 2) {
+        fRescan = params[2].get_bool();
+    }
+
+    if(strSecret[0]=='0' && strSecret[1]=='x')
+        strSecret.erase(strSecret.begin(), strSecret.begin() + 1);
+
+    strenc::hex_vector vec = strenc::ParseHex(strSecret);
+    CKey key;
+    key.SetSecret(CSecret(vec.data(), vec.data() + vec.size()));
+    cleanse::OPENSSL_cleanse(&strSecret.front(), strSecret.size());
+    cleanse::OPENSSL_cleanse(&vec.front(), vec.size());
+    if(! key.IsValid())
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
+    if (CWallet::fWalletUnlockMintOnly) // ppcoin: no importprivkey in mint-only mode
+        throw bitjson::JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for minting only.");
+
+    CPubKey pubkey = key.GetPubKey();
+    if(! pubkey.IsFullyValid_BIP66())
+        throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid public key");
+
+    CScript redeemScript = CScript() << OP_1 << pubkey.GetPubVch() << OP_1 << OP_CHECKMULTISIG;
+    entry::pwalletMain->AddCScript(redeemScript, pubkey);
+    CBitcoinAddress addr(redeemScript.GetID());
+
+    CKeyID keyid = pubkey.GetID();
+    {
+        LOCK2(block_process::cs_main, entry::pwalletMain->cs_wallet);
+
+        //
+        // Don't throw error in case a key is already there
+        //
+        if (entry::pwalletMain->HaveKey(keyid)) {
+            return json_spirit::Value::null;
+        }
+
+        entry::pwalletMain->mapKeyMetadata[addr].nCreateTime = 1;
+        if (! entry::pwalletMain->AddKey(key)) {
+            throw bitjson::JSONRPCError(RPC_WALLET_ERROR, "Error adding key to wallet");
+        }
+
+        entry::pwalletMain->MarkDirty();
+        entry::pwalletMain->SetAddressBookName(addr, strLabel);
+
+        if (fRescan) {
+            //
+            // whenever a key is imported, we need to scan the whole chain
+            //
+            entry::pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
+
+            entry::pwalletMain->ScanForWalletTransactions(block_info::pindexGenesisBlock, true);
+            entry::pwalletMain->ReacceptWalletTransactions();
+        }
+    }
+
+    return json_spirit::Value::null;
+}
+
 json_spirit::Value CRPCTable::importaddress(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 3) {
