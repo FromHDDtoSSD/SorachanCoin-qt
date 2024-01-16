@@ -29,13 +29,19 @@ bool CBase58Data::SetString(const std::string &str) {
     return SetString(str.c_str());
 }
 
-std::string CBase58Data::ToString() const {
+std::string CBase58Data::ToString(bool fhidden) const {
+    if(! fhidden) {
+        CEthID ethid;
+        if(entry::pwalletMain->GetEthID(CKeyID(uint160(vchData)), ethid))
+            return hasheth::HexStr(ethid);
+    }
+
     CScript redeemScript;
     CKeyID keyid;
     CEthID ethid;
     if(entry::pwalletMain->GetCScript(CScriptID(uint160(vchData)), redeemScript, keyid, ethid)) {
         if(redeemScript.IsPayToEthID() || redeemScript.IsLockToEthID())
-            return std::string("0x") + hasheth::HexStr(ethid);
+            return hasheth::HexStr(ethid);
     }
 
     base58_vector vch((uint32_t)1, (uint8_t)nVersion);
@@ -46,8 +52,9 @@ std::string CBase58Data::ToString() const {
 bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID
     base58_vector vchTemp;
     if(psz[0]=='0' && psz[1]=='x') {
-        CEthID ethid;
-        ethid.SetHex(std::string(psz));
+        CEthID ethid = hasheth::ParseHex(std::string(psz));
+        if(ethid == CEthID())
+            return false;
         CScriptID scriptid;
         if(! entry::pwalletMain->GetScriptID(ethid, scriptid))
             return false;

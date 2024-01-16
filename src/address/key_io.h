@@ -66,7 +66,7 @@ protected:
 
     virtual bool SetString(const char *psz)=0; // address to vch
     virtual bool SetString(const std::string &str)=0; // address to vch
-    virtual std::string ToString() const=0; // vch to address
+    virtual std::string ToString(bool fhidden) const=0; // vch to address
 
     IKeyData() {
         nVersion = 0;
@@ -109,7 +109,7 @@ protected:
 public:
     bool SetString(const char *psz);
     bool SetString(const std::string &str);
-    std::string ToString() const;
+    std::string ToString(bool fhidden = false) const;
 };
 
 /** vchData: CKeyID */
@@ -147,7 +147,7 @@ public:
         return SetString(std::string(psz));
     }
 
-    std::string ToString() const {
+    std::string ToString(bool fhidden = false) const {
         std::string hrp = args_bool::fTestNet ? hrp_test: hrp_main;
         return bech32::Encode(hrp, vchData);
     }

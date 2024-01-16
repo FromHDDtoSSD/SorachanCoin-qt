@@ -305,6 +305,29 @@ json_spirit::Value CRPCTable::getnewethlock(const json_spirit::Array &params, bo
     return hasheth::EncodeHashEth2(ethPubkey);
 }
 
+json_spirit::Value CRPCTable::getkeyentangle(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 1) {
+        throw std::runtime_error(
+            "getkeyentangle [Eth style address]\n"
+            "Returns a hidden address for receiving payments.\n"
+            "This hidden address is recorded in the block explorer,\n"
+            "and SORA's address and Ethereum address entangle through this hidden address.");
+    }
+
+    std::string strhex = params[0].get_str();
+    if(! (strhex.size() == sizeof(uint160) * 2 || strhex.size() == sizeof(uint160) * 2 + 2))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: CEthID is invalid");
+
+    CEthID ethid = hasheth::ParseHex(strhex);
+    CKeyID keyid;
+    if(! entry::pwalletMain->GetKeyID(ethid, keyid))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: CKeyID is invalid");
+
+    CBitcoinAddress address(keyid);
+    return address.ToString(true);
+}
+
 CBitcoinAddress CRPCTable::GetAccountAddress(std::string strAccount, bool bForceNew/* =false */)
 {
     //CWalletDB walletdb(entry::pwalletMain->strWalletFile);

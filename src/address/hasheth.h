@@ -7,6 +7,7 @@
 
 namespace hasheth {
     std::string HexStr(const CEthID &id);
+    CEthID ParseHex(const std::string &hexstr);
     std::string EncodeHashEth(const CPubKey &pubkey);
     std::string EncodeHashEth(const unsigned char *pbegin, const unsigned char *pend);
 

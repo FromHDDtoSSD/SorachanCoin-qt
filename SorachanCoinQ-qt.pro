@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.38.13
+VERSION = 3.39.13
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -15,7 +15,7 @@ message(Qt version: $$[QT_VERSION])
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
 
 #
 # GUI_MODE

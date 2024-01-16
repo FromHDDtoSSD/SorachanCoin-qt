@@ -3,18 +3,32 @@
 #include <address/hasheth.h>
 #include <hash.h>
 
-///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
 // Note:
-// When get a Eth style key, Must NOT use ToString(), GetHex() in uint160
+// When get a Eth style key, Must NOT use ToString(), GetHex(), SetHex() in uint160
 // using HexStr(std::vector<unsigned char>)
 //
 // e.g. hex is '9abcdef5'
 // ToString(): f5debc9a
 // HexStr: 9abcdef5 -> this style is Eth style key.
-///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////
 
 std::string hasheth::HexStr(const CEthID &id) {
-    return strenc::HexStr(id.begin(), id.end());
+    return std::string("0x") + strenc::HexStr(id.begin(), id.end());
+}
+
+CEthID hasheth::ParseHex(const std::string &hexstr) {
+    std::string hextmp = hexstr;
+    if(hexstr[0]=='0' && hexstr[1]=='x')
+        hextmp.erase(0, 2);
+
+    strenc::hex_vector hex = strenc::ParseHex(hextmp);
+    if(hex.size() != sizeof(CEthID))
+        return CEthID();
+
+    CEthID ethid;
+    ::memcpy(ethid.begin(), hex.data(), sizeof(CEthID));
+    return ethid;
 }
 
 std::string hasheth::EncodeHashEth(const CPubKey &pubkey) {

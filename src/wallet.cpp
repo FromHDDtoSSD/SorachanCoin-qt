@@ -2915,6 +2915,8 @@ bool CWallet::SetAddressBookName(const CBitcoinAddress &address, const std::stri
     std::map<CBitcoinAddress, std::string>::iterator mi = mapAddressBook.find(address);
     mapAddressBook[address] = strName;
 
+    // debugcs::instance() << address.ToString() << ":" << strName << debugcs::endl();
+
     // NotifyAddressBookChanged(this, address, strName, ::IsMine(*this, address) != MINE_NO, (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED);
     NotifyAddressBookChanged(this, address, strName, Script_util::IsMine(*this, address) != MINE_NO, (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED);
 

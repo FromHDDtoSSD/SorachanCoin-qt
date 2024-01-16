@@ -864,9 +864,9 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CFirmKey &keyOut) const
 
 CEthID CBasicKeyStore::GetEthAddr(const CPubKey &pubkey) {
     key_vector vchPubKey = pubkey.GetPubEth();
-    CEthID hash;
+    uint160 hash;
     latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
-    return hash;
+    return CEthID(hash);
 }
 
 bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
@@ -878,11 +878,6 @@ bool CBasicKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
         key.SetSecret((*mi).second.first, (*mi).second.second);
         address = hasheth::EncodeHashEth(key.GetPubKey());
         return true;
-        //key_vector vch = key.GetPubKey().GetPubEth();
-        //uint160 hash;
-        //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        //address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
-        //return true;
     }
 
     return false;
@@ -908,11 +903,6 @@ bool CCryptoKeyStore::GetEthAddr(const CKeyID &id, std::string &address) const {
         key.SetSecret(secret, pubkey.IsCompressed());
         address = hasheth::EncodeHashEth(key.GetPubKey());
         return true;
-        //key_vector vch = key.GetPubKey().GetPubEth();
-        //uint160 hash;
-        //latest_crypto::CHashEth().Write((const unsigned char *)vch.data(), vch.size()).Finalize((unsigned char *)&hash);
-        //address = strenc::HexStr(key_vector(BEGIN(hash), END(hash)));
-        //return true;
     }
 
     return false;
