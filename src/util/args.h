@@ -137,6 +137,15 @@ public:
         return mapMultiArgs[key];
     }
 
+    static void SetMapMultiArgsString(const std::string &key, const std::vector<std::string> &vec) {
+        mapMultiArgs[key] = vec;
+    }
+
+    static void AddMapMultiArgsString(const std::string &key, const std::vector<std::string> &vec) {
+        for(const auto &d: vec)
+            mapMultiArgs[key].push_back(d);
+    }
+
     /**
     * Return string argument or default value
     *

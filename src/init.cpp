@@ -599,6 +599,46 @@ std::string entry::HelpMessage()
     return strUsage;
 }
 
+static std::vector<std::string> GetAddnodes() {
+    std::vector<std::string> addr = {
+        "66.42.37.74",
+        "45.76.210.121",
+        "64.176.36.226",
+        "45.76.210.121",
+        "64.176.36.226",
+        "164.68.113.76",
+        "106.166.76.251",
+        "150.95.215.192",
+        "114.181.177.109",
+        "60.138.189.158",
+        "182.248.243.118",
+        "77.72.134.97",
+        "133.167.96.111",
+        "199.247.2.125",
+        "149.28.200.62",
+        "139.180.169.48",
+        "207.148.70.125",
+        "194.67.212.124",
+        "95.47.170.238",
+        "68.9.46.50",
+        "47.254.27.37",
+        "150.129.80.152",
+        "154.223.134.122",
+        "27.134.250.227",
+        "68.9.46.70",
+        "109.105.181.75",
+        "119.179.71.111",
+        "109.105.166.142",
+        "72.39.179.47",
+        "109.49.12.24",
+        "104.37.175.112",
+        "138.219.221.232",
+        "95.47.170.102"
+    };
+
+    return addr;
+}
+
 //
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
@@ -606,6 +646,9 @@ std::string entry::HelpMessage()
 #define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 bool entry::AppInit2(bool restart/*=false*/)
 {
+    if(! map_arg::GetBoolArg("-testnet"))
+        map_arg::AddMapMultiArgsString(std::string("-addnode"), GetAddnodes());
+
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
 
