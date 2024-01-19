@@ -84,18 +84,18 @@ public:
         return vchData;
     }
 
-    int CompareTo(const IKeyData &b58) const {
+    virtual int CompareTo(const IKeyData &b58) const {
         if (nVersion < b58.nVersion) { return -1; }
         if (nVersion > b58.nVersion) { return  1; }
         if (vchData < b58.vchData)   { return -1; }
         if (vchData > b58.vchData)   { return  1; }
         return 0;
     }
-    bool operator==(const IKeyData &b58) const { return CompareTo(b58) == 0; }
-    bool operator<=(const IKeyData &b58) const { return CompareTo(b58) <= 0; }
-    bool operator>=(const IKeyData &b58) const { return CompareTo(b58) >= 0; }
-    bool operator< (const IKeyData &b58) const { return CompareTo(b58) <  0; }
-    bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
+    virtual bool operator==(const IKeyData &b58) const { return CompareTo(b58) == 0; }
+    virtual bool operator<=(const IKeyData &b58) const { return CompareTo(b58) <= 0; }
+    virtual bool operator>=(const IKeyData &b58) const { return CompareTo(b58) >= 0; }
+    virtual bool operator< (const IKeyData &b58) const { return CompareTo(b58) <  0; }
+    virtual bool operator> (const IKeyData &b58) const { return CompareTo(b58) >  0; }
 };
 
 /** vchData: CKeyID and Eth address Hybrid */
@@ -105,11 +105,18 @@ protected:
     virtual ~CBase58Data() {}
     void SetData(int nVersionIn, const void *pdata, size_t nSize);
     void SetData(int nVersionIn, const unsigned char *pbegin, const unsigned char *pend);
+    int CompareTo(const CBase58Data &b58) const;
 
 public:
     bool SetString(const char *psz);
     bool SetString(const std::string &str);
     std::string ToString(bool fhidden = false) const;
+
+    bool operator==(const CBase58Data &b58) const { return CompareTo(b58) == 0; }
+    bool operator<=(const CBase58Data &b58) const { return CompareTo(b58) <= 0; }
+    bool operator>=(const CBase58Data &b58) const { return CompareTo(b58) >= 0; }
+    bool operator< (const CBase58Data &b58) const { return CompareTo(b58) <  0; }
+    bool operator> (const CBase58Data &b58) const { return CompareTo(b58) >  0; }
 };
 
 /** vchData: CKeyID */

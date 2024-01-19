@@ -13,6 +13,14 @@
 #include <init.h>
 #include <address/hasheth.h>
 
+int CBase58Data::CompareTo(const CBase58Data &b58) const {
+    std::string vch = this->ToString();
+    std::string b58vch = b58.ToString();
+    if (vch < b58vch) { return -1; }
+    if (vch > b58vch) { return  1; }
+    return 0;
+}
+
 void CBase58Data::SetData(int nVersionIn, const void *pdata, size_t nSize) {
     nVersion = nVersionIn;
     vchData.resize(nSize);
