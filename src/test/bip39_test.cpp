@@ -8,8 +8,8 @@ public:
         return; // OK
 
         debugcs::instance() << "bip39_test" << debugcs::endl();
-        debugcs::instance() << bip39_words::generate_mnemonic().ToString() << debugcs::endl();
-        debugcs::instance() << bip39_words::generate_priv_mnemonic().ToString() << debugcs::endl();
+        //debugcs::instance() << bip39_words::generate_mnemonic().ToString() << debugcs::endl();
+        //debugcs::instance() << bip39_words::generate_priv_mnemonic().ToString() << debugcs::endl();
     }
     ~bip39_test() {}
 };

@@ -15,6 +15,7 @@
 #include <cleanse/cleanse.h>
 #include <util/args.h>
 #include <crypto/blake2.h>
+#include <hash.h>
 #ifndef WIN32
 # define MAP_NOCORE 0
 #endif
@@ -73,9 +74,12 @@ void *quantum_lib::secure_malloc(size_t sizeIn) {
 #else
     lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true : false;
 #endif
+
     if (! lock_ret) {
-        if(! args_bool::fMemoryLockPermissive)
-            throw std::runtime_error("quantumlib::secure_alloc virtual lock failure.");
+        // args_bool::fMemoryLockPermissive
+        // default setting is false (enable lock, readonly, readwrite)
+        // throw std::runtime_error("quantumlib::secure_alloc virtual lock failure.");
+        args_bool::fMemoryLockPermissive = true;
     }
 
     alloc_info *pinfo = reinterpret_cast<alloc_info *>(ptr);
@@ -144,16 +148,23 @@ void quantum_lib::secure_memrandom(void *ptr, size_t sizeIn) {
 }
 
 void quantum_lib::secure_stackzero(const size_t sizeIn) {
+#ifndef _MSC_VER
     unsigned char dummy[sizeIn];
     secure_memzero(dummy, sizeIn);
+#endif
 }
 
 void quantum_lib::secure_stackrandom(const size_t sizeIn) {
+#ifndef _MSC_VER
     unsigned char dummy[sizeIn];
     secure_memrandom(dummy, sizeIn);
+#endif
 }
 
 bool quantum_lib::secure_mprotect_noaccess(const void *ptr) {
+    if(args_bool::fMemoryLockPermissive)
+        return true;
+
     size_t size;
     //bool fMemoryLocked;
     void *__ptr = const_cast<void *>(ptr);
@@ -179,6 +190,9 @@ bool quantum_lib::secure_mprotect_noaccess(const void *ptr) {
 }
 
 bool quantum_lib::secure_mprotect_readonly(const void *ptr) {
+    if(args_bool::fMemoryLockPermissive)
+        return true;
+
     size_t size;
     //bool fMemoryLocked;
     void *__ptr = const_cast<void *>(ptr);
@@ -204,6 +218,9 @@ bool quantum_lib::secure_mprotect_readonly(const void *ptr) {
 }
 
 bool quantum_lib::secure_mprotect_readwrite(void *ptr) {
+    if(args_bool::fMemoryLockPermissive)
+        return true;
+
     int32_t size;
     //bool fMemoryLocked;
     {
@@ -232,7 +249,7 @@ void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
 }
 
 namespace quantum_hash {
-void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) {
+void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data)  {
     static constexpr size_t buffer_length = 32768;
     blake2s_hash::blake2s_state S;
     blake2s_hash::blake2s_init(&S, size_hash);
@@ -253,7 +270,7 @@ void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t
     blake2s_hash::blake2s_final(&S, hash, size_hash);
 }
 
-void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) {
+void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data)  {
     assert(latest_crypto::Lamport::BLAKE2KeyHash::Size()==CBLAKE2S::Size());
     CBLAKE2S ctx;
     ctx.Write(data, size_data);
@@ -287,38 +304,40 @@ void util::alloc_secure(CSecureSegment<byte> *&secure, const byte *dataIn, size_
     CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(false);
     byte *offset = guard.get_addr();
     std::memcpy(offset, dataIn, sizeIn);
-    //debugcs::instance() << "ALLOC_SECURE SIZE: " << sizeIn << debugcs::endl();
 }
 
 void util::release(byte *&data) {
-    //debugcs::instance() << "ALLOC FREE" << debugcs::endl();
     if (data) delete[] data;
     data = nullptr;
 }
 
 void util::release(CSecureSegment<byte> *&secure) {
-    //debugcs::instance() << "ALLOC_SECURE FREE" << debugcs::endl();
     if (secure) delete secure;
     secure = nullptr;
 }
 
 std::shared_ptr<CPublicKey> CPrivateKey::derivePublicKey() const {
     CSecureSegmentRW<byte> guard = secure->unlockAndInitRW(true);
-    std::shared_ptr<CPublicKey> generatedKey = std::make_shared<CPublicKey>(kRandomNumbersCount * kRandomNumberSize);
+    try {
+        std::shared_ptr<CPublicKey> generatedKey = std::make_shared<CPublicKey>(kRandomNumbersCount * kRandomNumberSize);
 
-    //
-    // Numbers buffers initialisation via hashing private key numbers.
-    //
-    const unsigned char *source = static_cast<const unsigned char *>(guard.get_addr()); // Note: Segment(gurde) Read OK
-    unsigned char *destination = static_cast<unsigned char *>(generatedKey->get_addr());
+        //
+        // Numbers buffers initialisation via hashing private key numbers.
+        //
+        const unsigned char *source = static_cast<const unsigned char *>(guard.get_addr()); // Note: Segment(gurde) Read OK
+        unsigned char *destination = static_cast<unsigned char *>(generatedKey->get_addr());
 
-    for (size_t i = 0; i < kRandomNumbersCount; ++i)
-    {
-        quantum_hash::blake2_generichash(destination, kRandomNumberSize, source, kRandomNumberSize);
-        source += kRandomNumberSize;
-        destination += kRandomNumberSize;
+        for (size_t i = 0; i < kRandomNumbersCount; ++i)
+        {
+            quantum_hash::blake2_generichash(destination, kRandomNumberSize, source, kRandomNumberSize);
+            source += kRandomNumberSize;
+            destination += kRandomNumberSize;
+        }
+        return generatedKey; // Note: Segment(gurde) Called destructor => Read Lock
+
+    } catch (std::bad_alloc &) {
+        return std::shared_ptr<CPublicKey>(nullptr);
     }
-    return generatedKey; // Note: Segment(gurde) Called destructor => Read Lock
 }
 
 BLAKE2KeyHash::BLAKE2KeyHash(const CPrivateKey &key) {
@@ -339,7 +358,7 @@ BLAKE2KeyHash::BLAKE2KeyHash(byte *buffer) {
     std::memcpy(data, buffer, kBytesSize);
 }
 
-void CSignature::collectSignature(byte *signature, const byte *key, const byte *messageHash) const {
+void CSignature::collectSignature(byte *signature, const byte *key, const byte *messageHash) {
     byte *signatureOffset = signature;
     const byte *numbersPairOffset = key;
     for (size_t i = 0; i < hashSize; ++i) {
@@ -354,7 +373,76 @@ void CSignature::collectSignature(byte *signature, const byte *key, const byte *
     }
 }
 
-bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) const {
+// static method (Sign) signatured size is 8KB
+void CSignature::Sign(const byte *data, size_t size, const CPrivateKey &pKey, byte *signatured) {
+    //
+    // hashed Signature data
+    //
+    assert(pKey.get_secure());
+    byte messageHash[hashSize];
+    quantum_hash::blake2_generichash(messageHash, hashSize, data, size);
+    CSecureSegmentRW<byte> guard = pKey.get_secure()->unlockAndInitRW(true);
+    collectSignature(signatured, guard.get_addr(), messageHash);
+}
+
+// static method (Verify) signatured size is 8KB
+bool CSignature::Verify(const byte *data, size_t size, const CPublicKey &pubKey, const byte *signatured) {
+    //
+    // Collecting hashed data signature.
+    //
+    byte messageHash[hashSize]; // 32 bytes
+    quantum_hash::blake2_generichash(messageHash, hashSize, data, size);
+
+    //
+    // Collecting pub key signature.
+    //
+    byte pubKeySignature[kSize]; // 32 * 512 / 2 = 8192 bytes
+    collectSignature(pubKeySignature, pubKey.get_addr(), messageHash);
+
+    // test OK
+    // compact pubkey
+    /*
+    byte pubKeySignature2[kSize];
+    CPublicKey pubKey2 = pubKey;
+    for(int i=0; i < pubKey2.get_size(); i+=32) {
+        std::memset(pubKey2.get_addr() + i + compactpubkey, 0x00, 32 - compactpubkey);
+    }
+    collectSignature(pubKeySignature2, pubKey2.get_addr(), messageHash);
+    */
+
+    //
+    // Collecting hashed signature.
+    //
+    byte hashedSignature[kSize]; // 32 * 512 / 2 = 8192 bytes
+    const byte *originalSignatureOffset = signatured;
+    byte *hashedSignatureOffset = hashedSignature;
+    for (size_t i = 0; i < hashCount / 2; ++i) {
+        quantum_hash::blake2_generichash(hashedSignatureOffset, hashSize, originalSignatureOffset, hashSize);
+        originalSignatureOffset += hashSize;
+        hashedSignatureOffset += hashSize;
+    }
+
+    //
+    // if compact pubkey, Comparing results.
+    //
+    bool compact_compare = true;
+    for(int i=0; i < kSize; i+=32) {
+        if(std::memcmp(pubKeySignature + i, hashedSignature + i, compactpubkey) != 0) {
+            compact_compare = false;
+            break;
+        }
+    }
+    if(compact_compare) {
+        return true; // OK, compact pubkey.
+    }
+
+    //
+    // if fully pubkey, Comparing results.
+    //
+    return (std::memcmp(pubKeySignature, hashedSignature, kSize) == 0) ? true : false;
+}
+
+bool CSignature::Verify(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) {
     if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr)
         return false;
 
@@ -374,7 +462,7 @@ bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<cons
     // Collecting hashed signature.
     //
     byte hashedSignature[kSize];
-    const byte *originalSignatureOffset = data;
+    const byte *originalSignatureOffset = _signatured;
     byte *hashedSignatureOffset = hashedSignature;
     for (size_t i = 0; i < hashCount / 2; ++i) {
         quantum_hash::blake2_generichash(hashedSignatureOffset, hashSize, originalSignatureOffset, hashSize);
@@ -389,10 +477,8 @@ bool CSignature::check(const byte *dataIn, size_t dataSize, std::shared_ptr<cons
 }
 
 std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) {
-    if(pKey->is_ok()) {
-        std::shared_ptr<CPublicKey> nullKey = nullptr;
-        return nullKey;
-    }
+    if(pKey->is_ok())
+        return std::shared_ptr<CPublicKey>(nullptr);
 
     //
     // 1, Create publicKey
@@ -405,7 +491,7 @@ std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size
     byte messageHash[hashSize];
     quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
     CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
-    collectSignature(data, guard.get_addr(), messageHash);
+    collectSignature(_signatured, guard.get_addr(), messageHash);
 
     //
     // 3, Cropping the private key.
@@ -419,55 +505,214 @@ std::shared_ptr<CPublicKey> CSignature::derivePublicKey(const byte *dataIn, size
 void CSignature::createHash(const byte *dataIn, size_t dataSize, CPrivateKey *pKey) {
     using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
 
-    byte previous[sizeof(data)];
-    std::memcpy(previous, data, sizeof(data));
+    byte previous[sizeof(_signatured)];
+    std::memcpy(previous, _signatured, sizeof(_signatured));
 
     byte messageHash[hashSize];
     quantum_hash::blake2_generichash(messageHash, hashSize, dataIn, dataSize);
     CSecureSegmentRW<byte> guard = pKey->get_secure()->unlockAndInitRW(true);
-    collectSignature(data, guard.get_addr(), messageHash);
+    collectSignature(_signatured, guard.get_addr(), messageHash);
 
-    auto is_memzero = [](const byte *p) {
-        static byte cmp[sizeof(data)] = {'\0'};
+    auto is_memzero = [&](const byte *p) {
+        static byte cmp[sizeof(_signatured)] = {'\0'};
         return (::memcmp(p, cmp, sizeof(cmp))==0)? true: false;
     };
     if(! is_memzero(previous)) {
         debugcs::instance() << "LAMPORT WRITE PBKDF2 count: 1" << debugcs::endl();
-        pbkdf5::PBKDF2_HASH(previous, kSize, messageHash, hashSize, 1, data, sizeof(data));
+        pbkdf5::PBKDF2_HASH(previous, kSize, messageHash, hashSize, 1, _signatured, sizeof(_signatured));
     } else {
         debugcs::instance() << "LAMPORT WRITE FIRST" << debugcs::endl();
     }
 }
 
-CLamport::CLamport(const CLamport &obj) : privKey(obj.privKey.get_addr(), obj.privKey.get_size()), CSignature() {
-    std::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
+//
+// CLamport
+//
+
+CLamport::CLamport(const CLamport &obj) : _privkey(obj._privkey.get_addr(), obj._privkey.get_size()) {
+    *(CSignature *)this = (const CSignature &)obj;
 }
 
 CLamport &CLamport::operator=(const CLamport &obj) {
-    privKey.operator=(obj.privKey);
-    std::memcpy(this->get_addr(), obj.get_addr(), this->get_size());
+    _privkey.operator=(obj._privkey);
+    *(CSignature *)this = (const CSignature &)obj;
     return *this;
 }
 
-CLamport::CLamport() : privKey(), CSignature() {} // Automatically, set random to privKey.
-CLamport::CLamport(const byte *dataIn, size_t _size_check_) : privKey(dataIn, _size_check_), CSignature() {} // Manually, set 16KBytes random to privKey. Note: must _size_check_ is 16Kbytes.
+CLamport::CLamport() : _privkey(), CSignature() {}
+
+CLamport::CLamport(const byte *dataIn) : _privkey(dataIn, 16 * 1024), CSignature() {}
+
 CLamport::~CLamport() {}
 
-std::shared_ptr<CPublicKey> CLamport::create_pubkey(const std::uint8_t *dataIn, size_t dataSize) {
-    // std::shared_ptr<CPublicKey> debugKey = privKey.derivePublicKey();
-    // Note: Call to CSignature::derivePublicKey
-    return this->derivePublicKey(dataIn, dataSize, &privKey);
+std::shared_ptr<CPublicKey> CLamport::CreatePubKey(const unsigned char *data, size_t size) {
+    return derivePublicKey(data, size, &_privkey);
+}
+
+CPublicKey CLamport::GetPubKey() const {
+    std::shared_ptr<CPublicKey> pubKey = _privkey.derivePublicKey();
+    return *pubKey.get();
+}
+
+bool CLamport::CmpPrivKey(const CLamport &obj) const {
+    return this->_privkey == obj._privkey;
+}
+
+const CSecureSegment<byte> *CLamport::GetPrivKey() const {
+    return this->_privkey.get_secure();
+}
+
+void CLamport::Sign(const byte *data, size_t size, byte *signatured) const {
+    CSignature::Sign(data, size, _privkey, signatured);
 }
 
 void CLamport::create_hashonly(const std::uint8_t *dataIn, size_t dataSize) {
-    this->createHash(dataIn, dataSize, &privKey);
+    this->createHash(dataIn, dataSize, &_privkey);
 }
 
 }} // latest_crypto and Lamport
 
 
 
+//
+// quantum resist key
+//
 
+CqKey::CqKey(const CqSecretKey &seed) : _lamport(nullptr), _valid(false) { // must be seed size is "16 * 1024"
+    if(seed.size()!=16 * 1024)
+        return;
+
+    _lamport = new (std::nothrow) latest_crypto::Lamport::CLamport(seed.data());
+    if(_lamport)
+        _valid = true;
+}
+
+CqPubKey CqKey::GetPubKey(bool fCompact /*= true*/) const {
+    if(! _valid)
+        throw std::runtime_error("CqKey::GetPubKey invalid.");
+    latest_crypto::Lamport::CPublicKey pubkey = _lamport->GetPubKey();
+    if(fCompact) {
+        for(int i=0; i < pubkey.get_size(); i+=32) {
+            std::memset(pubkey.get_addr() + i + latest_crypto::Lamport::compactpubkey, 0x00, 30);
+        }
+    }
+
+/* [OK]
+#ifdef DEBUG
+    std::vector<unsigned char> vchpubkey;
+    vchpubkey.resize(pubkey.get_size());
+    ::memcpy(&vchpubkey.front(), pubkey.get_addr(), pubkey.get_size());
+    std::string debug_str = strenc::HexStr(vchpubkey);
+    ::printf("CqKey GetPubKey: %s\n", debug_str.c_str());
+#endif
+*/
+    return pubkey;
+}
+
+CqSecretKey CqKey::GetSecret() const {
+    if(! _valid)
+        throw std::runtime_error("CqKey::GetSecret invalid.");
+    const latest_crypto::CSecureSegment<unsigned char> *secure = _lamport->GetPrivKey();
+    const latest_crypto::CSecureSegmentRW<unsigned char> obj = secure->unlockAndInitRW(true);
+    CqSecretKey qkey;
+    qkey.resize(obj.get_size());
+    std::memcpy(&qkey.front(), obj.get_addr(), obj.get_size());
+    return qkey;
+}
+
+bool CqPubKey::Verify(const qkey_vector &data, const qkey_vector &vchSig) const {
+    return latest_crypto::Lamport::CLamport::Verify(data.data(), data.size(), *this, vchSig.data());
+}
+
+bool CqPubKey::Verify(const uint256 &data, const qkey_vector &vchSig) const {
+    assert(sizeof(uint256)==32);
+    return latest_crypto::Lamport::CLamport::Verify(data.begin(), sizeof(uint256), *this, vchSig.data());
+}
+
+CqKeyID CqPubKey::GetID() const { // compact: 1024 bytes, fully: 16384 bytes
+    latest_crypto::Lamport::CPublicKey pubkey = *(static_cast<const latest_crypto::Lamport::CPublicKey *>(this));
+    bool fCompact = true;
+    const unsigned char objnull[32 - latest_crypto::Lamport::compactpubkey] = {0};
+    std::string strcompact;
+    strcompact.resize((pubkey.get_size()/32) * latest_crypto::Lamport::compactpubkey);
+    for(int i=0, k=0; i < pubkey.get_size(); i+=32) {
+        std::memcpy(&strcompact.front() + ((uintptr_t)k++ * latest_crypto::Lamport::compactpubkey), pubkey.get_addr() + i, latest_crypto::Lamport::compactpubkey);
+        if(std::memcmp(pubkey.get_addr() + i + latest_crypto::Lamport::compactpubkey, objnull, 32 - latest_crypto::Lamport::compactpubkey) != 0) {
+            fCompact = false;
+            break;
+        }
+    }
+    if(fCompact)
+        return CqKeyID(strenc::HexStr(strcompact));
+
+    std::vector<unsigned char> vchpub;
+    vchpub.resize(pubkey.get_size());
+    ::memcpy(&vchpub.front(), pubkey.get_addr(), pubkey.get_size());
+    return CqKeyID(strenc::HexStr(vchpub));
+}
+
+bool CqPubKey::IsFullyValid_BIP66() const {
+    return _valid;
+}
+
+bool CqPubKey::IsCompressed() const {
+    if(! _valid)
+        return false;
+    CqKeyID id = GetID();
+    return ((id.size() / 2) == COMPRESSED_PUBLIC_KEY_SIZE);
+}
+
+bool CqPubKey::RecoverCompact(const CqKeyID &pubkeyid) {
+    qkey_vector vchSig = strenc::ParseHex(pubkeyid);
+    //::printf("RecoverCompact size: %d\n", (int)vchSig.size());
+    if(vchSig.size() == COMPRESSED_PUBLIC_KEY_SIZE) {
+        qkey_vector vchSig2;
+        vchSig2.resize(FULLY_PUBLIC_KEY_SIZE, 0x00);
+        const unsigned char *psig = vchSig.data();
+
+        for(int i=0; i < FULLY_PUBLIC_KEY_SIZE; i += 32) {
+            for (int k=0; k < latest_crypto::Lamport::compactpubkey; ++k) {
+                vchSig2[i + k] = *psig++;
+            }
+        }
+
+        this->operator=(latest_crypto::Lamport::CPublicKey(vchSig2.data(), vchSig2.size()));
+        _valid = true;
+        return true;
+    } else if (vchSig.size() == FULLY_PUBLIC_KEY_SIZE) {
+        this->operator=(latest_crypto::Lamport::CPublicKey(vchSig.data(), vchSig.size()));
+        _valid = true;
+        return true;
+    }
+    _valid = false;
+    return false;
+}
+
+void CqKey::Sign(const qkey_vector &data, qkey_vector &vchSig) const {
+    vchSig.resize(_lamport->GetSize());
+    _lamport->Sign(data.data(), data.size(), &vchSig.front());
+}
+
+void CqKey::Sign(const uint256 &hash, qkey_vector &vchSig) const {
+    vchSig.resize(_lamport->GetSize());
+    assert(sizeof(uint256)==32);
+    _lamport->Sign(hash.begin(), sizeof(uint256), &vchSig.front());
+}
+
+bool CqKey::VerifyPubKey(const CqPubKey &pubkey) const {
+    unsigned char rnd[8];
+    std::string str = "SorachanCoin key verification\n";
+    latest_crypto::random::GetRandBytes(rnd, sizeof(rnd));
+    uint256 hash;
+    latest_crypto::CHash256().Write((unsigned char *)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
+    qkey_vector vchSig;
+    Sign(hash, vchSig);
+    bool ret = pubkey.Verify(hash, vchSig);
+    cleanse::OPENSSL_cleanse(rnd, sizeof(rnd));
+    cleanse::OPENSSL_cleanse(&hash, sizeof(uint256));
+    cleanse::OPENSSL_cleanse(vchSig.data(), vchSig.size() * sizeof(unsigned char));
+    return ret;
+}
 
 //
 // TEST: runtime.
@@ -497,7 +742,7 @@ private:
     typedef std::uint8_t byte;
     static Quantum_startup q_startup;
 
-    static void sanity_check() {
+    static void sanity_check()  {
         bool a = test_sanity::glibc_sanity_test();
         bool b = test_sanity::glibcxx_sanity_test();
         assert(a && b);
@@ -505,7 +750,7 @@ private:
     }
 
     template <int rsv, typename T>
-    static void prevector_check(int n, int m) {
+    static void prevector_check(int n, int m)  {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the vector testing ..." << debugcs::endl();
 
         _bench_func("[vector] prevector_check() Des Tri", &check_prevector::PrevectorDestructorTrivial, 3, 3);
@@ -546,7 +791,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked vector" << debugcs::endl();
     }
 
-    static void aes_check() {
+    static void aes_check()  {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the crypto testing ..." << debugcs::endl();
 
         _bench_func("[crypto] AES128_check()", &latest_crypto::bench_AES128, 1, 1);
@@ -557,7 +802,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked crypto" << debugcs::endl();
     }
 
-    static void memory_check() {
+    static void memory_check()  {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the memory testing ..." << debugcs::endl();
 
         assert(1);
@@ -565,7 +810,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked memory" << debugcs::endl();
     }
 
-    static void hash_check() {
+    static void hash_check()  {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the hash testing ..." << debugcs::endl();
 
         _bench_func("[hash] Ripemd160_check()", &latest_crypto::Ripemd160Assertcheck);
@@ -577,7 +822,7 @@ private:
         debugcs::instance() << "[[[OK]]] SorachanCoin the checked blake2 and lamport" << debugcs::endl();
     }
 
-    static void json_check() {
+    static void json_check()  {
         debugcs::instance() << "[[[BEGIN]]] SorachanCoin the JSON testing ..." << debugcs::endl();
 
         _bench_func("[JSON] json_check()", &latest_json::JsonAssertcheck, 1, 1);
@@ -586,7 +831,7 @@ private:
     }
 
 #ifdef WIN32
-    static unsigned int __stdcall benchmark(void *) {
+    static unsigned int __stdcall benchmark(void *)  {
         for(int i = 0; i < _test_count; ++i)
         {
 #ifdef SANITY_TEST
@@ -612,7 +857,7 @@ private:
     }
 #endif
 private:
-    Quantum_startup() {
+    Quantum_startup()  {
 #if defined(DEBUG)
         //
         // Lamport benchmark [Thread Safe]
@@ -642,4 +887,4 @@ private:
     }
     ~Quantum_startup() {}
 };
-Quantum_startup Quantum_startup::q_startup;
+//Quantum_startup Quantum_startup::q_startup;

@@ -239,49 +239,52 @@ public:
 };
 
 // BIP32
-class CExtFirmKey {
-public:
-    unsigned char nDepth;
-    unsigned char vchFingerprint[4];
-    unsigned int nChild;
-    ChainCode chaincode;
-    CFirmKey key;
+struct CExtFirmKey {
+    unsigned char nDepth_;
+    unsigned char vchFingerprint_[4];
+    unsigned int nChild_;
+    ChainCode chaincode_; // uint256
+    CFirmKey privkey_;
 
     friend bool operator==(const CExtFirmKey &a, const CExtFirmKey &b) {
-        return a.nDepth == b.nDepth &&
-            ::memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], sizeof(vchFingerprint)) == 0 &&
-            a.nChild == b.nChild &&
-            a.chaincode == b.chaincode &&
-            a.key == b.key;
+        return a.nDepth_ == b.nDepth_ &&
+               ::memcmp(&a.vchFingerprint_[0], &b.vchFingerprint_[0], sizeof(vchFingerprint_)) == 0 &&
+               a.nChild_ == b.nChild_ &&
+               a.chaincode_ == b.chaincode_ &&
+               a.privkey_ == b.privkey_;
     }
 
+    bool Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const;
     CPrivKey GetPrivKeyVch() const;
-    void Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed);
-
+    bool Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
+    bool Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
     bool Derive(CExtFirmKey &out, unsigned int nChild) const;
 
     CExtPubKey Neuter() const;
 
-    void SetSeed(const unsigned char *seed, unsigned int nSeedLen);
+    bool SetSeed(const unsigned char *seed, unsigned int nSeedLen);
 
     template <typename Stream>
     void Serialize(Stream &s) const {
         const unsigned int len = CExtPubKey::BIP32_EXTKEY_SIZE;
         ::WriteCompactSize(s, len);
-        CPrivKey code = GetPrivKeyVch();
+        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
+        if(! Encode(code))
+            throw std::runtime_error("Invalid CExtKey Encode\n");
         s.write((const char *)&code[0], len);
     }
 
     template <typename Stream>
     void Unserialize(Stream &s) {
-        unsigned int len = compact_size::manage::ReadCompactSize(s);
+        const unsigned int len = compact_size::manage::ReadCompactSize(s);
         unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
         if (len != CExtPubKey::BIP32_EXTKEY_SIZE)
             throw std::runtime_error("Invalid extended key size\n");
-
         s.read((char *)&code[0], len);
-        Set(code, true);
-        cleanse::OPENSSL_cleanse(&code[0], sizeof(code));
+        //if(! Decode(code))
+        //    throw std::runtime_error("Invalid CExtKey Decode\n");
+        if(! Set(code))
+            throw std::runtime_error("Invalid CExtKey Decode\n");
     }
 };
 

@@ -9,6 +9,7 @@
 
 #include <db.h>
 #include <keystore.h>
+#include <bip32/hdchain.h>
 
 class CKeyPool;
 class CAccount;
@@ -223,6 +224,34 @@ public:
     bool WriteCScript(const uint160 &hash, const CScript &redeemScript, const CKeyID &keyid, const CEthID &ethid) {
         dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("cscriptethsora"), hash), std::make_tuple(redeemScript, keyid, ethid), false);
+    }
+
+    bool WriteHDSeed(const CPubKey &pubkey, const CPrivKey &vchExtSeed, unsigned int _child_offset, const CSeedSecret &cryptosalt, unsigned int fcrypto) { // if fcrypto 1: crypto enabled
+        dbparam::IncWalletUpdate();
+        return Write(std::make_pair(std::string("hdkeyseed"), pubkey), std::make_tuple(vchExtSeed, _child_offset, cryptosalt, fcrypto));
+    }
+
+    bool WriteChildHDSeed(const CPubKey &pubkey, unsigned int _child_offset) {
+        //dbparam::IncWalletUpdate();
+        std::pair<std::string, CPubKey> key;
+        std::tuple<CPrivKey, unsigned int, CSeedSecret, unsigned int> value;
+        key.first = std::string("hdkeyseed");
+        key.second = pubkey;
+        if(! Read(key, value))
+            return false;
+
+        dbparam::IncWalletUpdate();
+        return WriteHDSeed(pubkey, std::get<0>(value), _child_offset, std::get<2>(value), std::get<3>(value));
+    }
+
+    bool WriteReservedHDPubkeys(const std::vector<CPubKey> &reservedPubkeys) {
+        dbparam::IncWalletUpdate();
+        return Write(std::string("hdpubkeys"), reservedPubkeys);
+    }
+
+    bool WriteUsedHDKey(unsigned int _usedkey_offset) {
+        dbparam::IncWalletUpdate();
+        return Write(std::string("hdusedkey"), _usedkey_offset);
     }
 
     bool WriteWatchOnly(const CScript &dest) {

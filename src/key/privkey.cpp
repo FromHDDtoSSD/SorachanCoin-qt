@@ -1215,54 +1215,84 @@ bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSki
     return VerifyPubKey(vchPubKey);
 }
 
+/////////////////////////////////////////////////////////////////////////////////
+// BIP32
+/////////////////////////////////////////////////////////////////////////////////
+
+bool CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const  {
+    if(! privkey_.IsValid())
+        return false;
+
+    code[0] = nDepth_;
+    std::memcpy(code+1, vchFingerprint_, 4);
+    code[5] = (nChild_ >> 24) & 0xFF; code[6] = (nChild_ >> 16) & 0xFF;
+    code[7] = (nChild_ >>  8) & 0xFF; code[8] = (nChild_ >>  0) & 0xFF;
+    std::memcpy(code+9, chaincode_.begin(), 32);
+    code[41] = 0;
+    assert(privkey_.size() == 32);
+    std::memcpy(code+42, privkey_.begin(), 32);
+    return true;
+}
+
 CPrivKey CExtFirmKey::GetPrivKeyVch() const {
     CPrivKey vch;
     vch.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
     unsigned char *code = &vch.front();
-    code[0] = nDepth;
-    std::memcpy(code+1, vchFingerprint, 4);
-    code[5] = (nChild >> 24) & 0xFF; code[6] = (nChild >> 16) & 0xFF;
-    code[7] = (nChild >>  8) & 0xFF; code[8] = (nChild >>  0) & 0xFF;
-    std::memcpy(code+9, chaincode.begin(), 32);
+    code[0] = nDepth_;
+    std::memcpy(code+1, vchFingerprint_, 4);
+    code[5] = (nChild_ >> 24) & 0xFF; code[6] = (nChild_ >> 16) & 0xFF;
+    code[7] = (nChild_ >>  8) & 0xFF; code[8] = (nChild_ >>  0) & 0xFF;
+    std::memcpy(code+9, chaincode_.begin(), 32);
     code[41] = 0;
-    assert(key.size() == 32);
-    std::memcpy(code+42, key.begin(), 32);
+    assert(privkey_.size() == 32);
+    std::memcpy(code+42, privkey_.begin(), 32);
     return vch;
 }
 
-void CExtFirmKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
-    nDepth = code[0];
-    std::memcpy(vchFingerprint, code+1, 4);
-    nChild = (code[5] << 24) | (code[6] << 16) | (code[7] << 8) | code[8];
-    std::memcpy(chaincode.begin(), code+9, 32);
-    key.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, fCompressed);
+bool CExtFirmKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) {
+    return Set(code, true);
+}
+
+bool CExtFirmKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
+    nDepth_ = code[0];
+    std::memcpy(vchFingerprint_, code+1, 4);
+    nChild_ = (code[5] << 24) | (code[6] << 16) | (code[7] << 8) | code[8];
+    std::memcpy(chaincode_.begin(), code+9, 32);
+    privkey_.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, fCompressed);
+    return privkey_.IsValid();
 }
 
 bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild) const {
-    out.nDepth = nDepth + 1;
-    CKeyID id = key.GetPubKey().GetID();
-    std::memcpy(&out.vchFingerprint[0], &id, 4);
-    out.nChild = _nChild;
-    return key.Derive(out.key, out.chaincode, _nChild, chaincode);
+    out.nDepth_ = nDepth_ + 1;
+    CKeyID id = privkey_.GetPubKey().GetID();
+    std::memcpy(&out.vchFingerprint_[0], &id, 4);
+    out.nChild_ = _nChild;
+    return privkey_.Derive(out.privkey_, out.chaincode_, _nChild, chaincode_);
 }
 
-CExtPubKey CExtFirmKey::Neuter() const {
+CExtPubKey CExtFirmKey::Neuter() const  {
     CExtPubKey ret;
-    ret.nDepth = nDepth;
-    std::memcpy(&ret.vchFingerprint[0], &vchFingerprint[0], 4);
-    ret.nChild = nChild;
-    ret.pubkey = key.GetPubKey();
-    ret.chaincode = chaincode;
+    ret.nDepth_ = nDepth_;
+    std::memcpy(&ret.vchFingerprint_[0], &vchFingerprint_[0], 4);
+    ret.nChild_ = nChild_;
+    ret.pubkey_ = privkey_.GetPubKey();
+    if(! ret.pubkey_.IsCompressed())
+        ret.pubkey_.Compress();
+    ret.chaincode_ = chaincode_;
     return ret;
 }
 
-void CExtFirmKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
-    static const unsigned char hashkey[] = {'B','i','t','c','o','i','n',' ','s','e','e','d'};
+bool CExtFirmKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
+    static const unsigned char hashkey[] = {'F','r','o','m','H','D','D','t','o','S','S','D'};
     std::vector<unsigned char, secure_allocator<unsigned char> > vout(64);
     latest_crypto::CHMAC_SHA512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());
-    key.Set(vout.data(), vout.data() + 32, true);
-    std::memcpy(chaincode.begin(), vout.data() + 32, 32);
-    nDepth = 0;
-    nChild = 0;
-    std::memset(vchFingerprint, 0, sizeof(vchFingerprint));
+    privkey_.Set(vout.data(), vout.data() + 32, true);
+    if(! privkey_.IsValid())
+        return false;
+
+    std::memcpy(chaincode_.begin(), vout.data() + 32, 32);
+    nDepth_ = 0;
+    nChild_ = 0;
+    std::memset(vchFingerprint_, 0, sizeof(vchFingerprint_));
+    return true;
 }

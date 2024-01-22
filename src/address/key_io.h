@@ -216,9 +216,9 @@ private:
     bool SetAddrToID(const std::string &strAddress);
     bool SetAddrToID(const char *strAddress);
 };
-using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '7' CPubKey 65bytes
+//using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '7' CPubKey 65bytes
 using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2' CHash160 to CPubKey 20bytes
-using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH '9' '2' CHash160 to CScript 20bytes
+//using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH '9' '2' CHash160 to CScript 20bytes
 using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest' CHash160 to CPubKey 20bytes
 using CWitnessScript  = CBitcoinAddress_impl<CBech32Data>; // P2WSH 'sora' 'soratest' CSHA256 to CScript 32bytes
 

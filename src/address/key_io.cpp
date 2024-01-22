@@ -539,12 +539,12 @@ CExtFirmKey key_io::DecodeExtFirmKey(const SecureString &str) {
 }
 
 SecureString key_io::EncodeExtFirmKey(const CExtFirmKey &extkey) {
-    if(! extkey.key.IsValid()) {
+    if(! extkey.privkey_.IsValid()) {
         throw std::runtime_error("key_io::EncodeExtFirmKey: privkey is invalid");
     }
 
     CExtSecret data;
-    if(extkey.key.IsCompressed()) {
+    if(extkey.privkey_.IsCompressed()) {
         data.push_back((uint8_t)key_io::PRIVKEY_COMPRESS);
     } else {
         data.push_back((uint8_t)key_io::PRIVKEY_UNCOMPRESS);

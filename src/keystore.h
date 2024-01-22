@@ -104,6 +104,7 @@ protected:
 
 public:
     bool AddKey(const CKey &key);
+    bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH);
     bool GetMalleableKey(const CMalleableKeyView &keyView, CMalleableKey &mKey) const {
         {
@@ -347,6 +348,7 @@ public:
     virtual bool AddCryptedMalleableKey(const CMalleableKeyView& keyView, const std::vector<unsigned char> &vchCryptedSecretH);
 
     bool AddKey(const CKey& key);
+    bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView& keyView, const CSecret &vchSecretH);
     bool HaveKey(const CKeyID &address) const {
         {

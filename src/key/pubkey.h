@@ -14,7 +14,6 @@
 #include <uint256.h>
 #include <hash.h>
 #include <serialize.h>
-#include <bip32/hdchain.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ec.h>
 #include <cleanse/cleanse.h>
@@ -520,6 +519,81 @@ public:
 };
 
 // BIP32
+struct CExtPubKey {
+    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74; // serialized extpubkey data (Encode, Decode)
+    unsigned char nDepth_;
+    unsigned char vchFingerprint_[4];
+    unsigned int nChild_;
+    ChainCode chaincode_; // uint256
+    CPubKey pubkey_; // code to compressed pubkey
+
+    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b)  {
+        return a.nDepth_ == b.nDepth_ &&
+               ::memcmp(&a.vchFingerprint_[0], &b.vchFingerprint_[0], sizeof(vchFingerprint_)) == 0 &&
+               a.nChild_ == b.nChild_ &&
+               a.chaincode_ == b.chaincode_ &&
+               a.pubkey_ == b.pubkey_;
+    }
+
+    void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const  {
+        code[0] = 0xFF;
+    }
+
+    key_vector GetPubVch() const;
+    bool Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const; // extpubkey to code
+    bool Set(const key_vector &vch);
+    bool Set(const unsigned char code[BIP32_EXTKEY_SIZE]);
+    //bool Decode(const unsigned char code[BIP32_EXTKEY_SIZE]); // code to extpubkey (replace set method)
+
+    bool Derive(CExtPubKey &out, unsigned int _nChildIn) const;
+
+    void Serialize(CSizeComputer &s) const {
+        // Optimized implementation for ::GetSerializeSize that avoids copying.
+        s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
+    }
+    /*
+    unsigned int GetSerializeSize() const {
+        return BIP32_EXTKEY_SIZE + 1;
+    }
+    */
+
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        const unsigned int len = BIP32_EXTKEY_SIZE;
+        compact_size::manage::WriteCompactSize(s, len);
+        unsigned char code[BIP32_EXTKEY_SIZE];
+        if(! Encode(code))
+            throw std::runtime_error("Invalid CExtPubKey Encode");
+        s.write((const char *)&code[0], len);
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        unsigned int len = compact_size::manage::ReadCompactSize(s);
+        unsigned char code[BIP32_EXTKEY_SIZE];
+        if (len != BIP32_EXTKEY_SIZE) {
+            if(len <= 0) {
+                Invalidate(code);
+                return;
+            }
+            char dummy;
+            while(len--) {
+                s.read((char *)&dummy, sizeof(char));
+                cleanse::OPENSSL_cleanse(&dummy, sizeof(char));
+            }
+            Invalidate(code);
+        } else {
+            s.read((char *)&code[0], len);
+            //if(! Decode(code))
+            //    throw std::runtime_error("Invalid CExtPubKey Decode");
+            if(! Set(code))
+                throw std::runtime_error("Invalid CExtPubKey Decode");
+        }
+    }
+};
+
+/*
+// BIP32
 class CExtPubKey {
 public:
     static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
@@ -588,6 +662,7 @@ public:
         }
     }
 };
+*/
 
 // secp256k1 signed negate operator
 using s256k1_fe = CPubKey::ecmult::secp256k1_fe;

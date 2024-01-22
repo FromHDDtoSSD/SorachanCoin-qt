@@ -100,7 +100,8 @@ static CSecret DecodeEthStylePrivKey(const SecureString &address) {
     return strenc::ParseHex<CSecret>(begin);
 }
 
-static void debug1(const CKey &key) {
+template <typename T=CKey>
+static void debug1(const T &key) {
     //using namespace ScriptOpcodes;
 
     /* keccak256 sha3: ok
@@ -473,6 +474,20 @@ bool CBasicKeyStore::AddKey(const CKey &key)
     return true;
 }
 
+bool CBasicKeyStore::AddKey(const CFirmKey &key)
+{
+    firmkeydebug::debug1(key);
+
+    bool fCompressed = false;
+    CSecret secret = key.GetSecret(fCompressed);
+
+    {
+        LOCK(cs_KeyStore);
+        mapKeys[key.GetPubKey().GetID()] = std::make_pair(secret, fCompressed);
+    }
+    return true;
+}
+
 bool CBasicKeyStore::AddMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH)
 {
     {
@@ -662,6 +677,39 @@ bool CCryptoKeyStore::Unlock(const CKeyingMaterial &vMasterKeyIn)
 }
 
 bool CCryptoKeyStore::AddKey(const CKey &key)
+{
+    {
+        LOCK(cs_KeyStore);
+
+        CScript script;
+        script.SetDestination(key.GetPubKey().GetID());
+
+        if (HaveWatchOnly(script)) {
+            return false;
+        }
+
+        if (! IsCrypted()) {
+            return CBasicKeyStore::AddKey(key);
+        }
+
+        if (IsLocked()) {    // this lock is CCryptoKeyStore
+            return false;
+        }
+
+        std::vector<unsigned char> vchCryptedSecret;
+        CPubKey vchPubKey = key.GetPubKey();
+        bool fCompressed;
+        if (! crypter::EncryptSecret(vMasterKey, key.GetSecret(fCompressed), vchPubKey.GetHash(), vchCryptedSecret)) {
+            return false;
+        }
+        if (! AddCryptedKey(key.GetPubKey(), vchCryptedSecret)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool CCryptoKeyStore::AddKey(const CFirmKey &key)
 {
     {
         LOCK(cs_KeyStore);

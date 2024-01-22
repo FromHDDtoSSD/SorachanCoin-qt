@@ -189,6 +189,7 @@ public:
 
     // Adds a key to the store, and saves it to disk.
     bool AddKey(const CKey &key);
+    bool AddKey(const CFirmKey &key);
     bool AddKey(const CMalleableKey &mKey);
 
     // Adds a key to the store, without saving it to disk (used by LoadWallet)

@@ -250,6 +250,75 @@ static void LamportAssertcheck_(benchmark::State& state)
 
         latest_crypto::random::GetStrongRandBytes(data, buf_size);
         Lamport::CLamport lamport; // Note: generate private key (ramdom).
+        std::shared_ptr<Lamport::CPublicKey> pubKey = lamport.CreatePubKey(data, buf_size);
+        assert(lamport.Verify(data, buf_size, pubKey) == true);
+
+        assert(lamport.GetSize() == 8192);
+        assert(pubKey->get_size() == 16384);
+
+        byte tmp = data[0];
+        if(tmp - (data[0] = 0xFF))
+            assert(lamport.Verify(data, buf_size, pubKey) == false); // Although data is of changing(insert 0xFF), no changed to pubkey.
+        else
+            assert(lamport.Verify(data, buf_size, pubKey) == true); // If data is no change, it can be checking again and again.
+
+        std::shared_ptr<Lamport::CPublicKey> pubKey2 = lamport.CreatePubKey(data, buf_size);
+        assert(lamport.Verify(data, buf_size, pubKey2) == false); // Note: lamport object is used limit once. lamport object prevent reuse.
+
+        {
+            Lamport::CLamport lamport3;
+            std::shared_ptr<Lamport::CPublicKey> pubKey3 = lamport3.CreatePubKey(data, buf_size);
+            assert(lamport3.Verify(data, buf_size, pubKey3) == true); // OK. new privKey.
+        }
+
+        {
+            CQHASH65536 lamhash;
+            uint65536 hash;
+            lamhash.Write(data, buf_size);
+            lamhash.Finalize((unsigned char *)&hash);
+
+            CQHASH65536 lamhash2;
+            uint65536 hash2;
+            lamhash2.Write(data, buf_size);
+            lamhash2.Write(data, buf_size);
+            lamhash2.Finalize((unsigned char *)&hash2);
+            assert(hash != hash2);
+
+            CQHASH65536 lamhash3;
+            uint65536 hash3;
+            lamhash3.Write(data, buf_size);
+            lamhash3.Write(data, buf_size);
+            lamhash3.Finalize((unsigned char *)&hash3);
+            assert(hash2 == hash3);
+        }
+
+#ifdef LAMPORT_RESULT_VIEW
+        const byte *offset = pubKey->get_addr();
+        const size_t size = pubKey->get_size();
+        for (size_t i = 0; i < size; ++i)
+        {
+            char buf[8] = { 0 };
+            ::sprintf_s(buf, 8, "%X", offset[i]);
+            debugcs::instance() << buf << debugcs::endl();
+        }
+        debugcs::instance() << debugcs::endl() << "--------------------------------" << debugcs::endl() << debugcs::endl();
+#endif
+    }
+}
+
+/*
+static void LamportAssertcheck_(benchmark::State& state)
+{
+    while(state.KeepRunning()) {
+        const size_t buf_size = PREVECTOR_N;
+
+        quantum_lib::secure_stackzero(buf_size);
+        prevector<PREVECTOR_N, byte> vdata;
+        vdata.resize(buf_size, 0x00);
+        byte *data = &vdata.at(0);
+
+        latest_crypto::random::GetStrongRandBytes(data, buf_size);
+        Lamport::CLamport lamport; // Note: generate private key (ramdom).
         std::shared_ptr<Lamport::CPublicKey> pubKey = lamport.create_pubkey(data, buf_size);
         assert(lamport.check(data, buf_size, pubKey) == true);
 
@@ -305,6 +374,7 @@ static void LamportAssertcheck_(benchmark::State& state)
 #endif
     }
 }
+*/
 
 #define HASH_TEST(name, iter)                            \
     void name ## Assertcheck(benchmark::State& state) {  \

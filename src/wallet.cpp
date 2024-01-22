@@ -115,6 +115,22 @@ bool CWallet::AddKey(const CKey &key)
     return true;
 }
 
+bool CWallet::AddKey(const CFirmKey &key)
+{
+    CPubKey pubkey = key.GetPubKey();
+    if (! CCryptoKeyStore::AddKey(key)) {
+        return false;
+    }
+    if (! fFileBacked) {
+        return true;
+    }
+    if (! IsCrypted()) {
+        return CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteKey(pubkey, key.GetPrivKey(), mapKeyMetadata[CBitcoinAddress(pubkey.GetID())]);
+    }
+
+    return true;
+}
+
 bool CWallet::AddKey(const CMalleableKey &mKey)
 {
     CMalleableKeyView keyView = CMalleableKeyView(mKey);
