@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.41.13
+VERSION = 3.42.13
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network

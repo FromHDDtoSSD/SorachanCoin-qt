@@ -419,6 +419,53 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
                 strErr = "Error reading wallet database: LoadCryptedKey failed";
                 return false;
             }
+        } else if (strType == "hdkeyseed") {
+            CPubKey pubkey;
+            ssKey >> pubkey;
+
+            hd_wallet::get().pkeyseed = new (std::nothrow) CExtKey;
+            if(! hd_wallet::get().pkeyseed) {
+                strErr = "Error reading wallet database: memory allocate failure";
+                return false;
+            }
+
+            unsigned int fcrypto;
+            ssValue >> hd_wallet::get().vchextkey;
+            ssValue >> hd_wallet::get()._child_offset;
+            ssValue >> hd_wallet::get().cryptosalt;
+            ssValue >> fcrypto;
+            if(fcrypto == 0)
+                hd_wallet::get().fcryptoseed = false;
+            else
+                hd_wallet::get().fcryptoseed = true;
+
+            __printf("SeedKey _childnumof: %d, fcryptoseed: %d\n", hd_wallet::get()._child_offset, fcrypto);
+            if(! hd_wallet::get().fcryptoseed) {
+                if(hd_wallet::get().vchextkey.size() != CExtPubKey::BIP32_EXTKEY_SIZE) {
+                    strErr = "Error reading wallet database: extkey decode size failure";
+                    return false;
+                }
+                if(! hd_wallet::get().pkeyseed->Decode(hd_wallet::get().vchextkey.data())) {
+                    strErr = "Error reading wallet database: setseed failure";
+                    return false;
+                }
+                if(hd_wallet::get().pkeyseed->privkey_.GetPubKey() != pubkey) {
+                    strErr = "Error reading wallet database: pubkey corrupt";
+                    return false;
+                }
+            } else {
+                if(! hd_wallet::get().InValidKeyseed())
+                    return false;
+            }
+
+        } else if (strType == "hdpubkeys") {
+
+            ssValue >> hd_wallet::get().reserved_pubkey;
+
+        } else if (strType == "hdusedkey") {
+
+            ssValue >> hd_wallet::get()._usedkey_offset;
+
         } else if (strType == "key" || strType == "wkey") {
             CKey key;
             CPubKey vchPubKey;

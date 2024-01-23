@@ -64,6 +64,8 @@ public:
         return obj;
     }
 
+    static bool IsEmptyRandomWallet();
+
     bool InValidKeyseed(); // to invalid privkey
 
     // quantum resistance

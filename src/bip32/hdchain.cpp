@@ -11,7 +11,6 @@
 #include <random/random.h>
 #include <init.h>
 #include <bip32/hdchain.h>
-//#include <crypto/hmac_sha512.h>
 
 namespace SeedCrypto {
     static const unsigned char civ[] = {'S','o','r','a','c','h','a','n','C','o','i','n','S','e','e','d'}; // AES_BLOCKSIZE: 16 bytes
@@ -83,6 +82,27 @@ namespace SeedCrypto {
     }
 }
 
+bool hd_wallet::IsEmptyRandomWallet() {
+    if(hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->GetBalance() != 0)
+        return false;
+    if(entry::pwalletMain->GetWatchOnlyBalance() != 0)
+        return false;
+    if(entry::pwalletMain->GetUnconfirmedBalance() != 0)
+        return false;
+    if(entry::pwalletMain->GetUnconfirmedWatchOnlyBalance() != 0)
+        return false;
+    if(entry::pwalletMain->GetImmatureBalance() != 0)
+        return false;
+    if(entry::pwalletMain->GetImmatureWatchOnlyBalance() != 0)
+        return false;
+    if(! entry::pwalletMain->IsEmptyRedeemScript())
+        return false;
+
+    return true;
+}
+
 hd_wallet::~hd_wallet() {
     delete pkeyseed;
 }
@@ -129,6 +149,9 @@ bool hd_wallet::get_nextkey(CExtKey &nextkey, const CExtKey &extkeyseed) {
 // must be call create_seed: when balance 0 and Decrypted
 //
 bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, std::vector<CPubKey> &outpubkeys) {
+    if(! IsEmptyRandomWallet())
+        return false;
+
     constexpr int generate_keys_unit = hdkeys_child_regenerate;
 
     CExtKey keyseed;
@@ -166,7 +189,6 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
 
     // Erase random-wallet keys
     // remaining random wallet keys
-    /* SORA L1 - Blockchain is no supported these erase because using random-wallet too
     {
         //LOCK(entry::pwalletMain->cs_wallet);
         std::vector<CPubKey> vpubkeys;
@@ -197,7 +219,6 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
         if(! entry::pwalletMain->EraseBasicKey())
             return false;
     }
-    */
 
     //
     // Registerd hd-wallet keys
@@ -309,4 +330,87 @@ namespace hd_wallet_debug {
         bool ret3 = key2.Encode(&_debug_data->front());
         __printf("seed ret3:%d\n", ret3);
     }
+}
+
+CSeedSecret CreateSeed(const std::vector<SecureString> &passphrase16) {
+    if(passphrase16.size() != 16)
+        return CSeedSecret();
+
+    CSeedSecret seed;
+    for(const auto &d: passphrase16) {
+        int size = d.size();
+        for(int i=0; i < size; ++i) {
+            seed.push_back(d[i]);
+        }
+    }
+
+    if(seed.size() < 32)
+        return CSeedSecret();
+
+    return seed;
+}
+
+bool CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn) {
+    if(hd_wallet::get().enable==false) {
+        CSeedSecret seed;
+        if(! seedIn.empty()) {
+            seed = seedIn;
+        } else {
+            seed.resize(1024);
+            latest_crypto::random::GetStrongRandBytes(&seed.front(), seed.size());
+        }
+
+        if(seed.size() < 16)
+            return false;
+        if(! hd_wallet::get().create_seed(seed, hd_wallet::get().vchextkey, hd_wallet::get().reserved_pubkey)) {
+            return false;
+        }
+
+        hd_wallet::get().pkeyseed = new (std::nothrow) CExtKey;
+        if(! hd_wallet::get().pkeyseed)
+            return false;
+        if(! hd_wallet::get().pkeyseed->Decode(hd_wallet::get().vchextkey.data()))
+            return false;
+        hd_wallet::get().cryptosalt.clear();
+        hd_wallet::get().fcryptoseed = false;
+        hd_wallet::get().enable = true;
+
+        //entry::pwalletMain->TopUpKeyPool();
+        entry::pwalletMain->NewKeyPool(hdkeys_reserve_pubkey_to_pool);
+
+        if(fFirstcreation_wallet) {
+            return true;
+        }
+
+        // Rescan
+        // whenever a key is imported, we need to scan the whole chain
+        int32_t retry_counter = 0;
+        bool fRescan = false;
+        while (retry_counter++ <= 3) {
+            try {
+                const int rescan_begin = (!args_bool::fTestNet) ? 625000 : 0;
+                CBlockIndex *pnext = block_info::pindexGenesisBlock->set_pnext();
+                for(int i=0; i < rescan_begin; ++i) { // mainnet, after 625000
+                    if(! pnext)
+                        break;
+                    pnext = pnext->set_pnext();
+                }
+                if(pnext) {
+                    entry::pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
+                    entry::pwalletMain->ScanForWalletTransactions(pnext, true);
+                    //entry::pwalletMain->ReacceptWalletTransactions();
+                }
+                fRescan = true;
+                break;
+            } catch (const std::exception &) {
+                // do nothing, retry
+            }
+        }
+
+        return fRescan;
+    } else {
+        return true;
+    }
+
+    return false;
 }

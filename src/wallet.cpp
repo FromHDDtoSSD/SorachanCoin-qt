@@ -2009,6 +2009,10 @@ int64_t CWallet::GetWatchOnlyNewMint() const
     return nTotal;
 }
 
+bool CWallet::IsEmptyRedeemScript() const {
+    return mapScripts.empty();
+}
+
 bool CWallet::SelectCoinsMinConf(int64_t nTargetValue, unsigned int nSpendTime, int nConfMine, int nConfTheirs, std::vector<COutput> vCoins, std::set<std::pair<const CWalletTx *,unsigned int> > &setCoinsRet, int64_t &nValueRet) const
 {
     auto ApproximateBestSubset = [](std::vector<std::pair<int64_t, std::pair<const CWalletTx *,unsigned int> > >vValue, int64_t nTotalLower, int64_t nTargetValue, std::vector<char> &vfBest, int64_t &nBest, int iterations /* = 1000 */)

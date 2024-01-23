@@ -254,6 +254,13 @@ public:
         return Write(std::string("hdusedkey"), _usedkey_offset);
     }
 
+    bool EraseKey(const CPubKey &pubkey) { // Note that, EraseKey use ONLY hd-wallet upgrade (random wallet keys in 0 balance, Erase)
+        dbparam::IncWalletUpdate();
+        bool ret1 = Erase(std::make_pair(std::string("keymeta"), pubkey));
+        bool ret2 = Erase(std::make_pair(std::string("key"), pubkey));
+        return ret1 && ret2;
+    }
+
     bool WriteWatchOnly(const CScript &dest) {
         dbparam::IncWalletUpdate();
         return Write(std::make_pair(std::string("watchs"), dest), '1');

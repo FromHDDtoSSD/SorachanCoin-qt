@@ -460,6 +460,12 @@ static void debug1(const T &key) {
 
 } // namespace keydebug
 
+bool CBasicKeyStore::EraseBasicKey() {
+    LOCK(cs_KeyStore);
+    mapKeys.clear();
+    return true;
+}
+
 bool CBasicKeyStore::AddKey(const CKey &key)
 {
     firmkeydebug::debug1(key);

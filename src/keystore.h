@@ -30,7 +30,8 @@ public:
     virtual ~CKeyStore() {}
 
     // Add a key to the store.
-    virtual bool AddKey(const CKey& key) =0;
+    virtual bool AddKey(const CKey &key) =0;
+    virtual bool AddKey(const CFirmKey &key) =0;
 
     // Add a malleable key to store.
     virtual bool AddMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH) =0;
@@ -103,6 +104,8 @@ protected:
     static CEthID GetEthAddr(const CPubKey &pubkey);
 
 public:
+    bool EraseBasicKey();
+
     bool AddKey(const CKey &key);
     bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH);
@@ -347,7 +350,7 @@ public:
     virtual bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
     virtual bool AddCryptedMalleableKey(const CMalleableKeyView& keyView, const std::vector<unsigned char> &vchCryptedSecretH);
 
-    bool AddKey(const CKey& key);
+    bool AddKey(const CKey &key);
     bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView& keyView, const CSecret &vchSecretH);
     bool HaveKey(const CKeyID &address) const {
