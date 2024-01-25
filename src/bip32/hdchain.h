@@ -84,4 +84,9 @@ private:
     ~hd_wallet();
 };
 
+namespace hd_create {
+    CSeedSecret CreateSeed(const std::vector<SecureString> &passphrase16);
+    bool CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn);
+}
+
 #endif

@@ -19,6 +19,7 @@
 #include <util/time.h>
 #include <util/strencodings.h> // HexStr (Witness)
 #include <util/thread.h>
+#include <bip32/hdchain.h>
 
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
@@ -326,6 +327,53 @@ json_spirit::Value CRPCTable::getkeyentangle(const json_spirit::Array &params, b
 
     CBitcoinAddress address(keyid);
     return address.ToString(true);
+}
+
+json_spirit::Value CRPCTable::gethdwalletinfo(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 0) {
+        throw std::runtime_error(
+            "gethdwalletinfo\n"
+            "Returns the status of HD Wallet, encryption and locked as enabled or disabled in JSON format.");
+    }
+
+    json_spirit::Object obj;
+    obj.push_back(json_spirit::Pair("enabled", hd_wallet::get().enable ? true: false));
+    obj.push_back(json_spirit::Pair("encryption", entry::pwalletMain->IsCrypted() ? true: false));
+    obj.push_back(json_spirit::Pair("locked", entry::pwalletMain->IsLocked() ? true: false));
+    return obj;
+}
+
+json_spirit::Value CRPCTable::createhdwallet(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 0) {
+        throw std::runtime_error(
+            "createhdwallet\n"
+            "Building SORA Integrate Wallet (BIP32 HD Wallet + Quantum + Random Wallet by importprivkey)\n"
+            "Currently must be 0 balance. Otherwise, createhdwallet will be failure.");
+    }
+
+    bool ret = hd_create::CreateHDWallet(true, CSeedSecret());
+    return ret;
+}
+
+json_spirit::Value CRPCTable::restorehdwallet(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 16) {
+        throw std::runtime_error(
+            "restorehdwallet [16 passphrase]\n"
+            "Building and Restoring SORA Integrate Wallet (BIP32 HD Wallet + Quantum + Random Wallet by importprivkey)\n"
+            "Currently must be 0 balance. Otherwise, restorehdwallet will be failure.");
+    }
+
+    std::vector<SecureString> vstr;
+    vstr.resize(16);
+    for(int i=0; i < 16; ++i) {
+        vstr[i] = std::move(const_cast<std::string &>(params[i].get_str()));
+    }
+    CSeedSecret seed = hd_create::CreateSeed(vstr);
+    bool ret = hd_create::CreateHDWallet(false, seed);
+    return ret;
 }
 
 CBitcoinAddress CRPCTable::GetAccountAddress(std::string strAccount, bool bForceNew/* =false */)

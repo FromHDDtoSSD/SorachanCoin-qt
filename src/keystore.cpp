@@ -642,8 +642,17 @@ bool CCryptoKeyStore::Lock()
         CWallet::fWalletUnlockMintOnly = false;
     }
 
+    if(hd_wallet::get().enable) {
+        if(! LockHDSeed())
+            return false;
+    }
+
     NotifyStatusChanged(this);
     return true;
+}
+
+bool CCryptoKeyStore::LockHDSeed() {
+    return hd_wallet::get().InValidKeyseed();
 }
 
 bool CCryptoKeyStore::Unlock(const CKeyingMaterial &vMasterKeyIn)

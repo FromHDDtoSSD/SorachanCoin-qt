@@ -960,8 +960,8 @@ bool CBlock::AcceptBlock()
     // ppcoin: check pending sync-checkpoint
     Checkpoints::manage::AcceptPendingSyncCheckpoint();
 
-    // SorachanCoin: check Autocheckpoint
-    return CAutocheckPoint::get_instance().Check();
+    return true;
+    //return CAutocheckPoint::get_instance().Check();
 }
 
 // ppcoin: total coin age spent in block, in the unit of coin-days.

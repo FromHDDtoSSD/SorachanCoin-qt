@@ -1034,14 +1034,16 @@ void net_node::ThreadSocketHandler2(void *parg)
                         pnode->CloseSocketDisconnect();
                     } else {
                         // typical socket buffer is 8K-64K
-                        //char pchBuf[0x10000];
-                        std::vector<char> pchBuf;
-                        pchBuf.resize(0x10000);
-                        int nBytes = recv(pnode->hSocket, &pchBuf[0], pchBuf.size(), MSG_DONTWAIT);
+                        char pchBuf[0x10000];
+                        //std::vector<char> pchBuf;
+                        //pchBuf.resize(0x10000);
+                        //int nBytes = recv(pnode->hSocket, &pchBuf[0], pchBuf.size(), MSG_DONTWAIT);
+                        int nBytes = recv(pnode->hSocket, &pchBuf[0], sizeof(pchBuf), MSG_DONTWAIT);
 
                         if(nBytes > 0) {
                             vRecv.resize(nPos + nBytes);
-                            std::memcpy(&vRecv[nPos], pchBuf.data(), nBytes);
+                            //std::memcpy(&vRecv[nPos], pchBuf.data(), nBytes);
+                            std::memcpy(&vRecv[nPos], &pchBuf[0], nBytes);
                             pnode->nLastRecv = bitsystem::GetTime();
                             pnode->nRecvBytes += nBytes;
                             pnode->RecordBytesRecv(nBytes);

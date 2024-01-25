@@ -234,6 +234,7 @@ public:
     // Adds a watch-only address to the store, without saving it to disk (used by LoadWallet)
     bool LoadWatchOnly(const CScript &dest);
 
+    // Random Wallet and HD Wallet fully supported (No necessary call UnlockHDSeed, EncryptHDSeed etc ...)
     bool Unlock(const SecureString &strWalletPassphrase);
     bool ChangeWalletPassphrase(const SecureString &strOldWalletPassphrase, const SecureString &strNewWalletPassphrase);
     bool EncryptWallet(const SecureString &strWalletPassphrase);
@@ -241,6 +242,16 @@ public:
 
     void GetAddresses(std::map<CBitcoinAddress, int64_t> &mapAddresses) const;
     bool GetPEM(const CKeyID &keyID, const std::string &fileName, const SecureString &strPassPhrase) const;
+
+protected:
+
+    // HD Wallet ONLY supported : LockHDSeed;  // after hd_wallet, dbwrite: false, vchextkey: enc, pkeyseed: invalid, cryptoseed: true
+    bool UnlockHDSeed(const SecureString &strWalletPassphrase, CSeedSecret *poutdecvchextkey);  // after hd_wallet, dbwrite: false, vchextkey: enc (out: poutdecvchextkey), pkeyseed: dec, cryptoseed: false
+    bool ChangeHDSeedWalletPassphrase(const SecureString &strOldWalletPassphrase, const SecureString &strNewWalletPassphrase);
+    bool EncryptHDSeed(const SecureString &strWalletPassphrase); // after hd_wallet, dbwrite: true, vchextkey: enc, pkeyseed: invalid, cryptoseed: true
+    bool DecryptHDSeed(const SecureString &strWalletPassphrase); // after hd_wallet, dbwrite: true, vchextkey: dec, pkeyseed: dec, cryptoseed: false
+
+public:
 
     //
     // Increment the next transaction order id

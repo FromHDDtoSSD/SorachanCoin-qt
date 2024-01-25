@@ -619,7 +619,7 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
 
 bool CWalletDB::IsKeyType(std::string strType)
 {
-    return (strType== "key" || strType == "wkey" || strType == "mkey" || strType == "ckey" || strType == "malpair" || strType == "malcpair");
+    return (strType == "key" || strType == "wkey" || strType == "mkey" || strType == "ckey" || strType == "malpair" || strType == "malcpair" || strType == "hdkey");
 }
 
 DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
@@ -638,6 +638,35 @@ DBErrors CWalletDB::LoadWallet(CWallet *pwallet)
                 return DB_TOO_NEW;
             }
             pwallet->LoadMinVersion(nMinVersion);
+        }
+
+        //
+        // check hd wallet
+        //
+        {
+            IDB::DbIterator ite = GetIteCursor();
+            if(ite.is_error()) {
+                logging::LogPrintf("Error getting wallet database cursor\n");
+                //debugcs::instance() << "LoadWallet Iterator Error" << debugcs::endl();
+                return DB_CORRUPT;
+            }
+            for(;;) {
+                CDataStream ssKey, ssValue;
+                int ret = IDB::ReadAtCursor(ite, ssKey, ssValue);
+                if(ret == DB_NOTFOUND)
+                    break;
+                else if(ret != 0) {
+                    logging::LogPrintf("Error getting wallet database cursor\n");
+                    //debugcs::instance() << "LoadWallet Iterator Error" << debugcs::endl();
+                    return DB_CORRUPT;
+                }
+                std::string key;
+                ssKey >> key;
+                if(key == "hdkeyseed") {
+                    hd_wallet::get().enable = true;
+                    break;
+                }
+            }
         }
 
         //

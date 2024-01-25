@@ -307,6 +307,10 @@ bool CWallet::LoadWatchOnly(const CScript &dest)
 
 bool CWallet::Unlock(const SecureString &strWalletPassphrase)
 {
+    auto hd_seed_unlock = [&]() {
+        return UnlockHDSeed(strWalletPassphrase, nullptr);
+    };
+
     if (! IsLocked()) {
         return false;
     }
@@ -324,6 +328,12 @@ bool CWallet::Unlock(const SecureString &strWalletPassphrase)
                 return false;
             }
             if (CCryptoKeyStore::Unlock(vMasterKey)) {
+                // hd_wallet
+                if(hd_wallet::get().enable) {
+                    return hd_seed_unlock();
+                }
+
+                // random_wallet
                 return true;
             }
         }
@@ -334,6 +344,10 @@ bool CWallet::Unlock(const SecureString &strWalletPassphrase)
 bool CWallet::ChangeWalletPassphrase(const SecureString &strOldWalletPassphrase, const SecureString &strNewWalletPassphrase)
 {
     bool fWasLocked = IsLocked();
+    if(hd_wallet::get().enable) {
+        if(! ChangeHDSeedWalletPassphrase(strOldWalletPassphrase, strNewWalletPassphrase))
+            return false;
+    }
 
     {
         LOCK(cs_wallet);
@@ -535,6 +549,59 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
             pwalletdbEncryption = NULL;
         }
 
+        // if hd wallet, seed encrypt
+        if(hd_wallet::get().enable) {
+            if(! EncryptHDSeed(strWalletPassphrase))
+                return false;
+
+            /*
+            __printf("HD_WALLET Encrypt\n");
+            if(hd_wallet::get().fcryptoseed)
+                return false;
+
+            CPubKey pubkey = hd_wallet::get().pkeyseed->privkey_.GetPubKey();
+
+            CSeedSecret vchWalletPassphrase;
+            for(int i=0; i<strWalletPassphrase.size(); ++i)
+                vchWalletPassphrase.push_back(strWalletPassphrase[i]);
+
+            unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+            SeedCrypto::CreateKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
+
+            CSeedSecret vchextkeySig = SeedCrypto::DataAddSignature(hd_wallet::get().vchextkey);
+
+            CSeedSecret vchencrypted;
+            vchencrypted.resize(vchextkeySig.size() * 3);
+            size_t outsize = 0;
+            if(! SeedCrypto::Encrypto(keyhash, vchextkeySig.data(), vchextkeySig.size(), &vchencrypted.front(), &outsize))
+                return false;
+
+            __printf("HD_WALLET sig size: %d\n", (int)vchextkeySig.size());
+            __printf("HD_WALLET enc outsize: %d\n", (int)outsize);
+            hd_wallet::get().vchextkey.resize(outsize);
+            ::memcpy(&hd_wallet::get().vchextkey.front(), vchencrypted.data(), outsize);
+            if(! hd_wallet::get().InValidKeyseed())
+                return false;
+            hd_wallet::get().fcryptoseed = true;
+
+            if(! pwalletdbEncryption) {
+                pwalletdbEncryption = new (std::nothrow) CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile);
+                if(! pwalletdbEncryption) {
+                    logging::LogPrintf("Encrypting Wallet, memory allocate failure.\n");
+                    return false;
+                }
+            }
+
+            if(! pwalletdbEncryption->WriteHDSeed(pubkey, hd_wallet::get().vchextkey, hd_wallet::get()._child_offset, hd_wallet::get().cryptosalt, 1)) {
+                logging::LogPrintf("Encrypting Wallet, writedb failure.\n");
+                return false;
+            }
+
+            delete pwalletdbEncryption;
+            pwalletdbEncryption = nullptr;
+            */
+        }
+
         Lock();
         Unlock(strWalletPassphrase);
         NewKeyPool();
@@ -556,11 +623,15 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
     return true;
 }
 
-// SorachanCoin: unsupported
 bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
 {
     if (! IsCrypted()) {
         return false;
+    }
+
+    if(hd_wallet::get().enable) {
+        if(! DecryptHDSeed(strWalletPassphrase))
+            return false;
     }
 
     CCrypter crypter;
@@ -667,6 +738,120 @@ bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const Sec
     bool result = key.WritePEM(pemOut, strPassKey);
     BIO_free(pemOut);
     return result;
+}
+
+bool CWallet::UnlockHDSeed(const SecureString &strWalletPassphrase, CSeedSecret *poutdecvchextkey) {
+    if(! hd_wallet::get().fcryptoseed)
+        return false;
+
+    CSeedSecret vchWalletPassphrase;
+    for(int i=0; i<strWalletPassphrase.size(); ++i)
+        vchWalletPassphrase.push_back(strWalletPassphrase[i]);
+
+    __printf("HD_WALLET unlock decrypt\n");
+    unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+    SeedCrypto::GetKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
+    CSeedSecret vchextkeyDec;
+    vchextkeyDec.resize(hd_wallet::get().vchextkey.size() * 3);
+    size_t decoutsize;
+    if(! SeedCrypto::Decrypto(keyhash, hd_wallet::get().vchextkey.data(), hd_wallet::get().vchextkey.size(), &vchextkeyDec.front(), &decoutsize))
+        return false;
+
+    __printf("HD_WALLET unlock dec outsize: %d\n", (int)decoutsize);
+    vchextkeyDec.resize(decoutsize);
+    CSeedSecret decvchextkey;
+    if(! SeedCrypto::IsValidData(vchextkeyDec, decvchextkey))
+        return false;
+    if(! hd_wallet::get().pkeyseed->Decode(decvchextkey.data()))
+        return false;
+
+    if(poutdecvchextkey)
+        *poutdecvchextkey = decvchextkey;
+
+    hd_wallet::get().fcryptoseed = false;
+    return true;
+}
+
+bool CWallet::ChangeHDSeedWalletPassphrase(const SecureString &strOldWalletPassphrase, const SecureString &strNewWalletPassphrase) {
+    bool fWasLocked = IsLocked();
+    {
+        LOCK(cs_wallet);
+        Lock();
+
+        if(! DecryptHDSeed(strOldWalletPassphrase))
+            return false;
+        if(! EncryptHDSeed(strNewWalletPassphrase))
+            return false;
+
+        if(fWasLocked)
+            Lock();
+    }
+    return true;
+}
+
+bool CWallet::EncryptHDSeed(const SecureString &strWalletPassphrase) {
+    if(hd_wallet::get().fcryptoseed)
+        return false;
+
+    {
+        LOCK(cs_wallet);
+
+        __printf("HD_WALLET Encrypt\n");
+        CPubKey pubkey = hd_wallet::get().pkeyseed->privkey_.GetPubKey();
+        if(! pubkey.IsFullyValid_BIP66())
+            return false;
+
+        CSeedSecret vchWalletPassphrase;
+        for(int i=0; i<strWalletPassphrase.size(); ++i)
+            vchWalletPassphrase.push_back(strWalletPassphrase[i]);
+
+        unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+        SeedCrypto::CreateKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
+
+        // note that need to vchextkey in dec(plain)
+        CSeedSecret vchextkeySig = SeedCrypto::DataAddSignature(hd_wallet::get().vchextkey);
+
+        CSeedSecret vchencrypted;
+        vchencrypted.resize(vchextkeySig.size() * 3);
+        size_t outsize = 0;
+        if(! SeedCrypto::Encrypto(keyhash, vchextkeySig.data(), vchextkeySig.size(), &vchencrypted.front(), &outsize))
+            return false;
+
+        __printf("HD_WALLET sig size: %d\n", (int)vchextkeySig.size());
+        __printf("HD_WALLET enc outsize: %d\n", (int)outsize);
+        hd_wallet::get().vchextkey.resize(outsize);
+        ::memcpy(&hd_wallet::get().vchextkey.front(), vchencrypted.data(), outsize);
+        if(! hd_wallet::get().InValidKeyseed())
+            return false;
+        hd_wallet::get().fcryptoseed = true;
+
+        if(! CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteHDSeed(pubkey, hd_wallet::get().vchextkey, hd_wallet::get()._child_offset, hd_wallet::get().cryptosalt, 1)) {
+            logging::LogPrintf("Encrypting Wallet, writedb failure.\n");
+            return false;
+        }
+    } // LOCK(cs_wallet)
+
+    return true;
+}
+
+bool CWallet::DecryptHDSeed(const SecureString &strWalletPassphrase) {
+    __printf("HD_WALLET Decrypt\n");
+    CSeedSecret decvchextkey;
+    if(! UnlockHDSeed(strWalletPassphrase, &decvchextkey))
+        return false;
+
+    {
+        LOCK(cs_wallet);
+        hd_wallet::get().vchextkey = decvchextkey;
+        CPubKey pubkey = hd_wallet::get().pkeyseed->privkey_.GetPubKey();
+        if(! pubkey.IsFullyValid_BIP66())
+            return false;
+        if(! CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteHDSeed(pubkey, hd_wallet::get().vchextkey, hd_wallet::get()._child_offset, hd_wallet::get().cryptosalt, 0)) {
+            logging::LogPrintf("Decrypting Wallet, writedb failure.\n");
+            return false;
+        }
+    }
+    return true;
 }
 
 int64_t CWallet::IncOrderPosNext(CWalletDB *pwalletdb) {

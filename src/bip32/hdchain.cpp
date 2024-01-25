@@ -215,6 +215,8 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
             __printf("EraseKey: random-wallet keys id: %s\n", pubkey.GetID().GetHex().c_str());
             if(! walletdb.EraseKey(pubkey))
                 return false;
+            if(! entry::pwalletMain->DelAddressBookName(CBitcoinAddress(pubkey.GetID())))
+                return false;
         }
         if(! entry::pwalletMain->EraseBasicKey())
             return false;
@@ -332,7 +334,7 @@ namespace hd_wallet_debug {
     }
 }
 
-CSeedSecret CreateSeed(const std::vector<SecureString> &passphrase16) {
+CSeedSecret hd_create::CreateSeed(const std::vector<SecureString> &passphrase16) {
     if(passphrase16.size() != 16)
         return CSeedSecret();
 
@@ -350,17 +352,18 @@ CSeedSecret CreateSeed(const std::vector<SecureString> &passphrase16) {
     return seed;
 }
 
-bool CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn) {
+bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn) {
     if(hd_wallet::get().enable==false) {
+        LOCK(entry::pwalletMain->cs_wallet);
         CSeedSecret seed;
         if(! seedIn.empty()) {
             seed = seedIn;
         } else {
-            seed.resize(1024);
+            seed.resize(32);
             latest_crypto::random::GetStrongRandBytes(&seed.front(), seed.size());
         }
 
-        if(seed.size() < 16)
+        if(seed.size() < 32)
             return false;
         if(! hd_wallet::get().create_seed(seed, hd_wallet::get().vchextkey, hd_wallet::get().reserved_pubkey)) {
             return false;
@@ -409,7 +412,7 @@ bool CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn) {
 
         return fRescan;
     } else {
-        return true;
+        return false;
     }
 
     return false;
