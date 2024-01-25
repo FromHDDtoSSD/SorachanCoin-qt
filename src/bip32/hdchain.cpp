@@ -353,6 +353,9 @@ CSeedSecret hd_create::CreateSeed(const std::vector<SecureString> &passphrase16)
 }
 
 bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &seedIn) {
+    if(entry::pwalletMain->IsCrypted())
+        return false;
+
     if(hd_wallet::get().enable==false) {
         LOCK(entry::pwalletMain->cs_wallet);
         CSeedSecret seed;
