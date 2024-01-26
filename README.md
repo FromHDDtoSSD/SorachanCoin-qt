@@ -55,27 +55,29 @@ How to build?
 ===========================
 chmod +x sora_builder.sh autogen.sh<br>
 ./sora_builder.sh<br>
-generated under ./src, "SorachanCoind" "SorachanCoin-cli"
+generated under ./src, "soracoind" "soracoin-cli"
 
 **Automatically and statically links the necessary libraries.<br>
 therefore, by simply executing sora_builder.sh, <br>
-"SorachanCoind" and "SorachanCoin-cli" will be reliably built.**
+"soracoind" and "soracoin-cli" will be reliably built.**
 
 e.g.<br>
-SorachanCoin-cli help<br>
-SorachanCoin-cli getinfo<br>
-SorachanCoin-cli listaccounts<br>
-SorachanCoin-cli getnewaddress ""<br>
-SorachanCoin-cli getnewethaddress ""<br>
-SorachanCoin-cli getblocktemplate '{"mode":"template"}'<br>
-SorachanCoin-cli sendfrom "user" SkNtsZ8CuYAbFKHGoNqDXvPQYF9WDa4h7W 30<br>
-SorachanCoin-cli sendethfrom "user" 0xb0e7168246ecea8c015402cf872ac28199c560f6 30
+soracoin-cli help<br>
+soracoin-cli getinfo<br>
+soracoin-cli listaccounts<br>
+soracoin-cli getnewaddress ""<br>
+soracoin-cli getnewethaddress ""<br>
+soracoin-cli getblocktemplate '{"mode":"template"}'<br>
+soracoin-cli sendfrom "user" SkNtsZ8CuYAbFKHGoNqDXvPQYF9WDa4h7W 30<br>
+soracoin-cli sendethfrom "user" 0xb0e7168246ecea8c015402cf872ac28199c560f6 30<br>
+soracoin-cli getkeyentangle 0xb0e7168246ecea8c015402cf872ac28199c560f6<br>
+soracoin-cli gethdwalletinfo
 
 e.g. using -datadir<br>
-SorachanCoin-cli -datadir=/coins/sora getinfo
+soracoin-cli -datadir=/coins/sora getinfo
 
 e.g. using -testnet<br>
-SorachanCoin-cli -testnet getinfo
+soracoin-cli -testnet getinfo
 
 Block Explorer
 ===========================

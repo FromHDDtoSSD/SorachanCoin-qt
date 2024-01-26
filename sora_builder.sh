@@ -5,4 +5,5 @@
 make
 ./configure --enable-cli-mode
 make
-mv src/SorachanCoin_cli src/SorachanCoin-cli
+mv src/SorachanCoind src/soracoind
+mv src/SorachanCoin_cli src/soracoin-cli
