@@ -317,6 +317,9 @@ json_spirit::Value CRPCTable::dumpprivkey(const json_spirit::Array &params, bool
             "Reveals the private key corresponding to <coinaddress>.");
     }
 
+    if(hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_TYPE_ERROR, "HD Wallet is unsupported.");
+
     EnsureWalletIsUnlocked();
 
     std::string strAddress = params[0].get_str();
@@ -350,6 +353,9 @@ json_spirit::Value CRPCTable::dumppem(const json_spirit::Array &params, bool fHe
             "Dump the key pair corresponding to <coinaddress> and store it as encrypted PEM file."
             + HelpRequiringPassphrase());
     }
+
+    if(hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_TYPE_ERROR, "HD Wallet is unsupported.");
 
     EnsureWalletIsUnlocked();
 
@@ -386,6 +392,9 @@ json_spirit::Value CRPCTable::dumpwallet(const json_spirit::Array &params, bool 
             + HelpRequiringPassphrase());
     }
 
+    if(hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_TYPE_ERROR, "HD Wallet is unsupported.");
+
     EnsureWalletIsUnlocked();
 
     if(! wallet_dispatch::DumpWallet(entry::pwalletMain, params[0].get_str().c_str() )) {
@@ -402,6 +411,9 @@ json_spirit::Value CRPCTable::dumpmalleablekey(const json_spirit::Array &params,
             "dumpmalleablekey <Key view>\n"
             "Dump the private and public key pairs, which correspond to provided key view.\n");
     }
+
+    if(hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_TYPE_ERROR, "HD Wallet is unsupported.");
 
     EnsureWalletIsUnlocked();
 

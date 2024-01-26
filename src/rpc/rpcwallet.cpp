@@ -344,6 +344,28 @@ json_spirit::Value CRPCTable::gethdwalletinfo(const json_spirit::Array &params, 
     return obj;
 }
 
+json_spirit::Value CRPCTable::getqpubkey(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 0) {
+        throw std::runtime_error(
+            "getqpubkey\n"
+            "Return the quantum resistance public key in SORA.");
+    }
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+
+    EnsureWalletIsUnlocked();
+
+    CqPubKey qpubkey = hd_wallet::get().GetPubKey();
+    if(! qpubkey.IsFullyValid_BIP66())
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: CqPubKey is invalid");
+
+    CqKeyID qid = qpubkey.GetID();
+    std::string addr = std::string("0x") + qid;
+    return addr;
+}
+
 json_spirit::Value CRPCTable::createhdwallet(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() != 0) {
@@ -353,8 +375,12 @@ json_spirit::Value CRPCTable::createhdwallet(const json_spirit::Array &params, b
             "Currently must be 0 balance. Otherwise, createhdwallet will be failure.");
     }
 
+#ifdef WALLET_SQL_MODE
     bool ret = hd_create::CreateHDWallet(true, CSeedSecret());
     return ret;
+#else
+    return false;
+#endif
 }
 
 json_spirit::Value CRPCTable::restorehdwallet(const json_spirit::Array &params, bool fHelp)
@@ -366,6 +392,7 @@ json_spirit::Value CRPCTable::restorehdwallet(const json_spirit::Array &params, 
             "Currently must be 0 balance. Otherwise, restorehdwallet will be failure.");
     }
 
+#ifdef WALLET_SQL_MODE
     std::vector<SecureString> vstr;
     vstr.resize(16);
     for(int i=0; i < 16; ++i) {
@@ -374,6 +401,9 @@ json_spirit::Value CRPCTable::restorehdwallet(const json_spirit::Array &params, 
     CSeedSecret seed = hd_create::CreateSeed(vstr);
     bool ret = hd_create::CreateHDWallet(false, seed);
     return ret;
+#else
+    return false;
+#endif
 }
 
 CBitcoinAddress CRPCTable::GetAccountAddress(std::string strAccount, bool bForceNew/* =false */)
