@@ -111,6 +111,9 @@ json_spirit::Value CRPCTable::importprivethkey(const json_spirit::Array &params,
             "Adds a private key (as returned by hex Eth style) to your wallet.");
     }
 
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+
     EnsureWalletIsUnlocked();
 
     std::string strSecret = params[0].get_str();

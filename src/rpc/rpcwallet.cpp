@@ -170,6 +170,9 @@ json_spirit::Value CRPCTable::getnewethaddress(const json_spirit::Array &params,
             "so payments received with the address will be credited to [account].");
     }
 
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+
     //if(! args_bool::fTestNet)
     //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
 
@@ -227,6 +230,9 @@ json_spirit::Value CRPCTable::getnewethlock(const json_spirit::Array &params, bo
             "If [account] is specified (recommended), it is added to the address book "
             "so payments locked with the address will be credited to [account].");
     }
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
 
     if(! args_bool::fTestNet)
         throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
@@ -315,6 +321,9 @@ json_spirit::Value CRPCTable::getkeyentangle(const json_spirit::Array &params, b
             "This hidden address is recorded in the block explorer,\n"
             "and SORA's address and Ethereum address entangle through this hidden address.");
     }
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
 
     std::string strhex = params[0].get_str();
     if(! (strhex.size() == sizeof(uint160) * 2 || strhex.size() == sizeof(uint160) * 2 + 2))
