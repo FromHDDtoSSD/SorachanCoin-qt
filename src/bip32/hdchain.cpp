@@ -346,8 +346,8 @@ CSeedSecret hd_create::CreateSeed(const std::vector<SecureString> &passphrase16)
         }
     }
 
-    if(seed.size() < 32)
-        return CSeedSecret();
+    //if(seed.size() < 32)
+    //    return CSeedSecret();
 
     return seed;
 }
@@ -366,7 +366,7 @@ bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &se
             latest_crypto::random::GetStrongRandBytes(&seed.front(), seed.size());
         }
 
-        if(seed.size() < 32)
+        if(seed.size() < 16)
             return false;
         if(! hd_wallet::get().create_seed(seed, hd_wallet::get().vchextkey, hd_wallet::get().reserved_pubkey)) {
             return false;
