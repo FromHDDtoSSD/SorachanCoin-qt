@@ -61,6 +61,25 @@ generated under ./src, "soracoind" "soracoin-cli"
 therefore, by simply executing sora_builder.sh, <br>
 "soracoind" and "soracoin-cli" will be reliably built.**
 
+Development tools necessary for building
+===========================
+CentOS / AlmaLinux<br>
+dnf groupinstall "Development Tools"<br>
+dnf install git<br>
+dnf install wget
+
+Ubuntu / Debian<br>
+sudo apt install build-essential<br>
+sudo apt install git<br>
+sudo apt install zlib1g-dev<br>
+sudo apt install autoconf automake
+
+Only to Debian, please execute the following command <br>
+first on the working directory (SorachanCoin-qt).<br>
+sed -i 's/template <typename T=hex_vector>/template <typename T>/g' src/util/strencodings.cpp
+
+soracoin-cli
+===========================
 e.g.<br>
 soracoin-cli help<br>
 soracoin-cli getinfo<br>
