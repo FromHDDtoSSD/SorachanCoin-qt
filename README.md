@@ -76,7 +76,7 @@ sudo apt install autoconf automake
 
 Only to Debian, please execute the following command <br>
 first on the working directory (SorachanCoin-qt).<br>
-sed -i 's/template <typename T=hex_vector>/template <typename T>/g' src/util/strencodings.cpp
+sed -i 's/template \<typename T=hex_vector\>/template \<typename T\>/g' src/util/strencodings.cpp
 
 soracoin-cli
 ===========================
