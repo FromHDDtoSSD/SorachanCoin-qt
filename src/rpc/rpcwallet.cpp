@@ -1096,6 +1096,9 @@ json_spirit::Value CRPCTable::sendethfrom(const json_spirit::Array &params, bool
             + HelpRequiringPassphrase());
     }
 
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+
     //if(! args_bool::fTestNet)
     //    throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
 
