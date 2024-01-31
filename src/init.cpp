@@ -733,7 +733,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         Checkpoints::CheckpointsMode = Checkpoints::PERMISSIVE;
 
     entry::b66mode = entry::Bip66_ADVISORY;
-    const std::string strBipMode = map_arg::GetArg("-bip66policy", "advisory");
+    const std::string strBipMode = map_arg::GetArg("-bip66policy", "permissive");
     if(strBipMode == "strict")
         entry::b66mode = entry::Bip66_STRICT;
     else if(strBipMode == "advisory")

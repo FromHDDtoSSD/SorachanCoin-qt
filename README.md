@@ -78,6 +78,11 @@ Only to Debian, please execute the following command <br>
 first on the working directory (SorachanCoin-qt).<br>
 sed -i 's/template \<typename T=hex_vector\>/template \<typename T\>/g' src/util/strencodings.cpp
 
+If openSUSE, please execute the following command <br>
+first on the working directory (SorachanCoin-qt).<br>
+chmod 777 autogen.sh<br>
+sudo echo "mv ./library/libressl-2.8.2/lib64 ./library/libressl-2.8.2/lib" >> autogen.sh
+
 soracoin-cli
 ===========================
 e.g.<br>

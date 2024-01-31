@@ -1,4 +1,5 @@
 // Copyright (c) 2017-2018 The Bitcoin Core developers
+// Copyright (c) 2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,6 +9,28 @@
 #include <file_operate/fs.h>
 
 #include <vector>
+
+namespace rapidsync {
+
+bool urlsplit(std::string url, std::string &host, std::string &path);
+bool GetData(std::string host, std::string path, std::vector<unsigned char> &responseBody, int32_t limit = 0);
+
+bool GetRapidTime(time_t &time, std::string url) {
+    constexpr int32_t limit = 1 * 1024 * 1024;
+    std::string host;
+    std::string target;
+    urlsplit(url, host, target);
+    std::vector<unsigned char> compress_data;
+    time = ::time(nullptr);
+    if(! GetData(host, target, compress_data, limit))
+        return false;
+    if(compress_data.size() < 32 * 1024)
+        return false;
+    time = ::time(nullptr) - time;
+    return true;
+}
+
+} // namespace rapidsync
 
 namespace hdwalletutil {
 
