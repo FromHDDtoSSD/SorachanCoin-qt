@@ -81,7 +81,9 @@ sed -i 's/template \<typename T=hex_vector\>/template \<typename T\>/g' src/util
 If openSUSE, please execute the following command <br>
 first on the working directory (SorachanCoin-qt).<br>
 chmod 777 autogen.sh<br>
-sudo echo "mv ./library/libressl-2.8.2/lib64 ./library/libressl-2.8.2/lib" >> autogen.sh
+sudo echo "mv ./library/libressl-2.8.2/lib64 ./library/libressl-2.8.2/lib" >> autogen.sh<br>
+sudo echo "mv ./library/db-4.8.30/lib64 ./library/db-4.8.30/lib" >> autogen.sh<br>
+sudo echo "mv ./library/sqlite/lib64 ./library/sqlite/lib" >> autogen.sh
 
 soracoin-cli
 ===========================
