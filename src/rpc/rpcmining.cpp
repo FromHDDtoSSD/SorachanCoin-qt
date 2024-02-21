@@ -480,8 +480,8 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     };
     */
 
-    if(params.size()==0)
-        throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Getblocktemplate params[0] is NULL.");
+    //if(params.size()==0)
+    //    throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Getblocktemplate params[0] is NULL.");
     //bool fBip0023 = is_bip0023(); // if false, bip0022
     const bool fBip0023 = true;
     //debugcs::instance() << "Bip0023 flag: " << (int)fBip0023 << debugcs::endl();
@@ -499,8 +499,8 @@ json_spirit::Value CRPCTable::getblocktemplate(const json_spirit::Array &params,
     }
     debugcs::instance() << "Getblocktemplate strMode: " << strMode.c_str() << debugcs::endl();
 
-    if (strMode != "template")
-        throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 2");
+    //if (strMode != "template")
+    //    throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid mode 2");
     if (net_node::vNodes.empty())
         throw bitjson::JSONRPCError(RPC_CLIENT_NOT_CONNECTED, strCoinName " is not connected!");
     if (block_notify::IsInitialBlockDownload())
