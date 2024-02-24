@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[101];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[102];    // Bitcoin RPC Command
 
     //
     // map command
@@ -315,7 +315,7 @@ private:
     static void TxToJSON(const CTransaction &tx, const uint256 &hashBlock, json_spirit::Object &entry);
 
     static double GetDifficulty(const CBlockIndex *blockindex = nullptr);
-    static double GetPoWMHashPS();
+    static double GetPoWMHashPS(int height = -1);
     static double GetPoSKernelPS();
     static json_spirit::Object blockToJSON(const CBlock &block, const CBlockIndex *blockindex, bool fPrintTransactionDetail);
     static bool ExportBlock(const std::string &strBlockHash, const CDataStream &ssBlock);
@@ -382,6 +382,7 @@ private:
 
     static json_spirit::Value getsubsidy(const json_spirit::Array &params, bool fHelp);    // in rpcmining.cpp
     static json_spirit::Value getmininginfo(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getnetworkhashps(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value scaninput(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getwork(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getworkex(const json_spirit::Array &params, bool fHelp);

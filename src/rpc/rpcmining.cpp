@@ -66,6 +66,25 @@ json_spirit::Value CRPCTable::getmininginfo(const json_spirit::Array &params, bo
     return obj;
 }
 
+json_spirit::Value CRPCTable::getnetworkhashps(const json_spirit::Array &params, bool fHelp) {
+    if (fHelp || params.size() > 2) {
+        throw std::runtime_error(
+            "getnetworkhashps <block height>\n"
+            "Return block hash information.");
+    }
+
+    int height = -1;
+    if(params.size() > 0) {
+        height = params[0].get_int();
+        if(height > block_info::nBestHeight || height < 0)
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid block height");
+    }
+
+    std::string ps;
+    ps = std::to_string(GetPoWMHashPS(height) * 1000000);
+    return ps;
+}
+
 // scaninput '{"txid":"95d640426fe66de866a8cf2d0601d2c8cf3ec598109b4d4ffa7fd03dad6d35ce","difficulty":0.01, "days":10}'
 json_spirit::Value CRPCTable::scaninput(const json_spirit::Array &params, bool fHelp) {
     if (fHelp || params.size() != 1) {

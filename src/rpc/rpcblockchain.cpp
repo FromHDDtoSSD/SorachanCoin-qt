@@ -45,13 +45,13 @@ double CRPCTable::GetDifficulty(const CBlockIndex *blockindex/* = nullptr */)
     return dDiff;
 }
 
-double CRPCTable::GetPoWMHashPS()
+double CRPCTable::GetPoWMHashPS(int height)
 {
     int nPoWInterval = 72;
     int64_t nTargetSpacingWorkMin = 30, nTargetSpacingWork = 30;
 
-    CBlockIndex *pindex = block_info::pindexGenesisBlock;
-    CBlockIndex *pindexPrevWork = block_info::pindexGenesisBlock;
+    const CBlockIndex *pindex = block_info::pindexGenesisBlock;
+    const CBlockIndex *pindexPrevWork = block_info::pindexGenesisBlock;
 
     while (pindex)
     {
@@ -62,7 +62,11 @@ double CRPCTable::GetPoWMHashPS()
             pindexPrevWork = pindex;
         }
 
-        pindex = pindex->set_pnext();
+        if(height != -1) {
+            if(pindex->get_nHeight() == height)
+                break;
+        }
+        pindex = pindex->get_pnext();
     }
 
     return GetDifficulty() * 4294.967296 / nTargetSpacingWork;

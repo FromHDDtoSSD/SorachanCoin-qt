@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 //
 // Call Table
 //
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[101] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[102] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                       &help,                        true,   true },
@@ -203,6 +203,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[101] =
     { "getinfo",                    &getinfo,                     true,   false },
     { "getsubsidy",                 &getsubsidy,                  true,   false },
     { "getmininginfo",              &getmininginfo,               true,   false },
+    { "getnetworkhashps",           &getnetworkhashps,            true,   false },
     { "scaninput",                  &scaninput,                   true,   true },
     { "getnewaddress",              &getnewaddress,               true,   false },
     { "getnewethaddress",           &getnewethaddress,            true,   false },
@@ -1399,6 +1400,8 @@ json_spirit::Array bitrpc::RPCConvertValues(const std::string &strMethod, const 
     if (strMethod == "walletpassphrase"       && n > 2) { ConvertTo<bool>(params[2]); }
     if (strMethod == "getblocktemplate"       && n > 0) { ConvertTo<json_spirit::Object>(params[0]); }
     if (strMethod == "listsinceblock"         && n > 1) { ConvertTo<int64_t>(params[1]); }
+
+    if (strMethod == "getnetworkhashps"       && n > 0) { ConvertTo<int>(params[0]); }
 
     if (strMethod == "scaninput"              && n > 0) { ConvertTo<json_spirit::Object>(params[0]); }
 
