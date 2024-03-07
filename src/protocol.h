@@ -20,9 +20,6 @@
 #include <block/block_info.h>
 
 namespace protocol {
-    const std::string forfill[] = { "ERROR", "tx", "block" };
-    const std::vector<std::string> vpszTypeName(forfill, forfill + 3);
-
     /** nServices flags */
     enum {
         NODE_NETWORK = (1 << 0)
@@ -40,16 +37,6 @@ class CMessageHeader {
     CMessageHeader &operator=(const CMessageHeader &)=delete;
     CMessageHeader(CMessageHeader &&)=delete;
     CMessageHeader &operator=(CMessageHeader &&)=delete;
-
-public: // latest core
-    //static constexpr size_t MESSAGE_START_SIZE = 4;
-    //static constexpr size_t COMMAND_SIZE = 12;
-    //static constexpr size_t MESSAGE_SIZE_SIZE = 4;
-    //static constexpr size_t CHECKSUM_SIZE = 4;
-    //static constexpr size_t MESSAGE_SIZE_OFFSET = MESSAGE_START_SIZE + COMMAND_SIZE;
-    //static constexpr size_t CHECKSUM_OFFSET = MESSAGE_SIZE_OFFSET + MESSAGE_SIZE_SIZE;
-    //static constexpr size_t HEADER_SIZE = MESSAGE_START_SIZE + COMMAND_SIZE + MESSAGE_SIZE_SIZE + CHECKSUM_SIZE;
-    //typedef unsigned char MessageStartChars[CMD_SIZE::MESSAGE_START_SIZE];
 
 private:
     static_assert(sizeof(block_info::gpchMessageStart)==4, "CMessageHeader: MESSAGE_START_SIZE Error");
@@ -97,11 +84,6 @@ public:
 /** A CService with information about it as peer */
 class CAddress : public CService
 {
-//private:
-    // CAddress(const CAddress &)=delete;
-    // CAddress &operator=(const CAddress &)=delete;
-    // CAddress(CAddress &&)=delete;
-    // CAddress &operator=(CAddress &&)=delete;
 public:
     CAddress() : CService(), nServices(protocol::NODE_NETWORK), nTime(100000000), nLastTry(0) {}
     explicit CAddress(CService ipIn, uint64_t nServicesIn=protocol::NODE_NETWORK) : CService(ipIn), nServices(nServicesIn), nTime(100000000), nLastTry(0) {}
@@ -149,47 +131,40 @@ public:
 //
 // inv message data
 //
-// constructor int typeIn param, namespace protocol
-// static const std::string forfill[] = { "ERROR", "tx", "block" };
-//
+const std::vector<const char *> vpszTypeName = { "ERROR", "tx", "block", "entangle" };
 enum _CINV_MSG_TYPE: int
 {
     MSG_ERROR = 0,
     MSG_TX = 1,
-    MSG_BLOCK
+    MSG_BLOCK = 2,
+    MSG_ENTANGLE
 };
 
 class CInv
 {
-//private:
-//    CInv(const CInv &obj); // {}
-//    CInv &operator=(const CInv &); // {}
-
 public:
     CInv() : type(_CINV_MSG_TYPE::MSG_ERROR), hash(0) {}
     CInv(_CINV_MSG_TYPE typeIn, const uint256 &hashIn) : type(typeIn), hash(hashIn) {}
     CInv(const std::string &strType, const uint256 &hashIn) : hash(hashIn) {
-        unsigned int i = 1;    // _CINV_MSG_TYPE::MSG_TX
-        for (; i < protocol::vpszTypeName.size(); ++i)
-        {
-            if (strType.compare(protocol::vpszTypeName[i]) == 0) {
+        type = _CINV_MSG_TYPE::MSG_ERROR;
+        for (unsigned int i=1; i < vpszTypeName.size(); ++i) {
+            if (strType.compare(vpszTypeName[i]) == 0) {
                 type = (_CINV_MSG_TYPE)i;
                 break;
             }
         }
-        if (i == protocol::vpszTypeName.size()) {
+        if (type == _CINV_MSG_TYPE::MSG_ERROR)
             throw std::out_of_range(tfm::format("CInv::CInv(std::string, uint256) : unknown type '%s'", strType.c_str()));
-        }
     }
 
     bool IsKnownType() const {
-        return (type >= 1 && type < (int)protocol::vpszTypeName.size());
+        return (type >= 1 && type < (int)vpszTypeName.size());
     }
     const char *GetCommand() const {
-        if (! IsKnownType()) {
+        if (! IsKnownType())
             throw std::out_of_range(tfm::format("CInv::GetCommand() : type=%d unknown type", type));
-        }
-        return protocol::vpszTypeName[type].c_str();
+
+        return vpszTypeName[type];
     }
     std::string ToString() const {
         return tfm::format("%s %s", GetCommand(), this->hash.ToString().substr(0,20).c_str());

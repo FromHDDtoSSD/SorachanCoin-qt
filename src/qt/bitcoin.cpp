@@ -174,17 +174,17 @@ class shutdownWindow
 {
 public:
     explicit shutdownWindow(QApplication *app) : shutWindow(new QWidget) {
-        //QLabel label(QString(_("Don't shut down your computer meanwhile this window is displayed.").c_str()), shutWindow);
-        //shutWindow->resize(600, 40);
-        //shutWindow->setWindowTitle(QString(_(strCoinName " shutdown ...").c_str()));
-        //shutWindow->show();
-        //label.show();
+        QLabel label(QString(_("Don't shut down your computer meanwhile this window is displayed.").c_str()), shutWindow);
+        shutWindow->resize(600, 40);
+        shutWindow->setWindowTitle(QString(_(strCoinName " shutdown ...").c_str()));
+        shutWindow->show();
+        label.show();
         shutdownRun obj;
         QTimer::singleShot(2, &obj, SLOT(run()));
         app->exec();
     }
     ~shutdownWindow() {
-        //shutWindow->close();
+        shutWindow->close();
         delete shutWindow;
     }
 private:
