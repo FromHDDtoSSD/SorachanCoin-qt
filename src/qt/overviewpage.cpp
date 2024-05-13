@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -109,6 +110,7 @@ OverviewPage::OverviewPage(QWidget *parent) :
     currentStake(0),
     currentUnconfirmedBalance(-1),
     currentImmatureBalance(-1),
+    currentQaiBalance(-1),
     txdelegate(new TxViewDelegate()),
     filter(0)
 {
@@ -151,7 +153,7 @@ OverviewPage::~OverviewPage()
     delete ui;
 }
 
-void OverviewPage::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance)
+void OverviewPage::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 qaiBalance)
 {
     BitcoinUnits::Unit unit = model->getOptionsModel()->getDisplayUnit();
     currentBalanceTotal = total;
@@ -159,12 +161,17 @@ void OverviewPage::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint
     currentStake = stake;
     currentUnconfirmedBalance = unconfirmedBalance;
     currentImmatureBalance = immatureBalance;
+    currentQaiBalance = qaiBalance;
     ui->labelAvailable->setText(BitcoinUnits::formatWithUnit(unit, total));
     ui->labelBalanceWatchOnly->setText(BitcoinUnits::formatWithUnit(unit, watchOnly));
     ui->labelStake->setText(BitcoinUnits::formatWithUnit(unit, stake));
     ui->labelUnconfirmed->setText(BitcoinUnits::formatWithUnit(unit, unconfirmedBalance));
     ui->labelImmature->setText(BitcoinUnits::formatWithUnit(unit, immatureBalance));
-    ui->labelTotal->setText(BitcoinUnits::formatWithUnit(unit, total+stake+unconfirmedBalance+immatureBalance));
+    ui->labelQai->setText(BitcoinUnits::formatWithUnit(unit, qaiBalance));
+    qint64 total_view = total + stake + unconfirmedBalance + immatureBalance - qaiBalance;
+    if(total_view < 0)
+        total_view = 0;
+    ui->labelTotal->setText(BitcoinUnits::formatWithUnit(unit, total_view));
 
     // only show immature (newly mined) balance if it's non-zero, so as not to complicate things
     // for the non-mining users
@@ -177,7 +184,7 @@ void OverviewPage::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint
     bool showWatchOnly = watchOnly != 0;
     ui->labelBalanceWatchOnly->setVisible(showWatchOnly);
     ui->labelBalanceWatchOnlyText->setVisible(showWatchOnly);
-   
+
 }
 
 // show/hide watch-only labels
@@ -209,8 +216,8 @@ void OverviewPage::setModel(WalletModel *model)
         ui->listTransactions->setModelColumn(TransactionTableModel::ToAddress);
 
         // Keep up to date with wallet
-        setBalance(model->getBalance(), model->getBalanceWatchOnly(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance());
-        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, qint64)));
+        setBalance(model->getBalance(), model->getBalanceWatchOnly(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance(), model->getQaiBalance());
+        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, qint64, qint64)));
 
         setNumTransactions(model->getNumTransactions());
         connect(model, SIGNAL(numTransactionsChanged(int)), this, SLOT(setNumTransactions(int)));
@@ -229,7 +236,7 @@ void OverviewPage::updateDisplayUnit()
 {
     if(model && model->getOptionsModel()) {
         if(currentBalanceTotal != -1) {
-            setBalance(currentBalanceTotal, currentBalanceWatchOnly, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance);
+            setBalance(currentBalanceTotal, currentBalanceWatchOnly, model->getStake(), currentUnconfirmedBalance, currentImmatureBalance, currentQaiBalance);
         }
 
         // Update txdelegate->unit with the current unit
@@ -256,10 +263,12 @@ void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
 }
 #endif
 
+/*
 void OverviewPage::on_DriveVerifyCommandLinkButton_clicked()
 {
     QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
 }
+*/
 
 /*
 void OverviewPage::on_pushButton_clicked()

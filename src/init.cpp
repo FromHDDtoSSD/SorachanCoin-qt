@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -639,6 +639,20 @@ static std::vector<std::string> GetAddnodes() {
     return addr;
 }
 
+static std::vector<std::string> GetAddnodesTestnet() {
+    std::vector<std::string> addr = {
+        "202.229.98.202",
+        "66.42.37.74",
+        "45.76.195.225",
+        "45.76.210.121"
+    };
+
+    return addr;
+}
+
+extern void Debug_checking_sign_verify();
+extern void Debug_checking_sign_verify2();
+
 //
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.
@@ -646,8 +660,14 @@ static std::vector<std::string> GetAddnodes() {
 #define I_DEBUG_CS(str) debugcs::instance() << (str) << debugcs::endl();
 bool entry::AppInit2(bool restart/*=false*/)
 {
+#ifdef ONLY_TESTNET_MODE
+    map_arg::SetMapArgsString(std::string("-testnet"), std::string("1"));
+#endif
+
     if(! map_arg::GetBoolArg("-testnet"))
         map_arg::AddMapMultiArgsString(std::string("-addnode"), GetAddnodes());
+    else
+        map_arg::AddMapMultiArgsString(std::string("-addnode"), GetAddnodesTestnet());
 
     // ********************************************************* Step 1: setup
     I_DEBUG_CS("Step 1: setup")
@@ -1418,6 +1438,19 @@ bool entry::AppInit2(bool restart/*=false*/)
         logging::LogPrintf(" rescan      %15" PRId64 "ms\n", util::GetTimeMillis() - nStart);
     }
 
+#ifdef WALLET_SQL_MODE
+    if(entry::pwalletMain && (!map_arg::GetBoolArg("-restorehdwallet"))) {
+        if(hd_wallet::get().enable == false && entry::pwalletMain->GetBalance() == 0) {
+            CClientUIInterface::uiInterface.InitMessage(_("Creating HD Wallet..."));
+            try {
+                (void)hd_create::CreateHDWallet(true, CSeedSecret());
+            }
+            catch (const json_spirit::Object &) {}
+            catch (const std::exception &) {}
+        }
+    }
+#endif
+
     // ********************************************************* Step 9: import blocks
     I_DEBUG_CS("Step 9: import blocks")
 
@@ -1508,6 +1541,9 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     // Add wallet transactions that aren't already in a block to mapTransactions
     entry::pwalletMain->ReacceptWalletTransactions();
+
+    Debug_checking_sign_verify();
+    Debug_checking_sign_verify2();
 
 #if !defined(QT_GUI)
     //

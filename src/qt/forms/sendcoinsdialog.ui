@@ -656,8 +656,8 @@ color: rgb(0, 170, 255);</string>
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>836</width>
-        <height>193</height>
+        <width>830</width>
+        <height>174</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -768,6 +768,13 @@ color: rgb(0, 170, 255);</string>
         </widget>
        </item>
       </layout>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="checkBoxSendAllQAI">
+       <property name="text">
+        <string>All balances send to Quantum and AI resistance amount</string>
+       </property>
+      </widget>
      </item>
      <item>
       <spacer name="horizontalSpacer">

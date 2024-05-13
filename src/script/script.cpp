@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
 // Copyright (c) 2009-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -15,6 +16,8 @@
 #include <util.h>
 #include <address/key_io.h>
 #include <hash.h>
+#include <bip32/hdchain.h>
+#include <init.h>
 
 namespace {
 const Script_util::valtype vchFalse((uint32_t)0);
@@ -166,7 +169,7 @@ const char *ScriptOpcodes::GetOpName(ScriptOpcodes::opcodetype opcode) {
     case OP_NOP1                   : return "OP_NOP1";
     case OP_CHECKLOCKTIMEVERIFY    : return "OP_CHECKLOCKTIMEVERIFY";
     case OP_CHECKSEQUENCEVERIFY    : return "OP_CHECKSEQUENCEVERIFY";
-    case OP_NOP4                   : return "OP_NOP4";
+    case OP_CHECKQAISIGVERIFY      : return "OP_CHECKQAISIGVERIFY";
     case OP_NOP5                   : return "OP_NOP5";
     case OP_NOP6                   : return "OP_NOP6";
     case OP_NOP7                   : return "OP_NOP7";
@@ -255,6 +258,40 @@ bool CScript::IsLockToEthID() const {
             at(1)  == 0x21 &&
             at(70) == ScriptOpcodes::OP_CHECKMULTISIG);
 }
+
+bool CScript::IsPayToQAIResistance() const {
+    bool fret = (size()  == 105 &&
+                 at(0)   == ScriptOpcodes::OP_1 &&
+                 at(1)   == 0x21 &&
+                 at(103) == ScriptOpcodes::OP_3 &&
+                 at(104) == ScriptOpcodes::OP_CHECKMULTISIG);
+    if(!fret)
+        return false;
+
+    if(at(35) != 0x21)
+        return false;
+    qkey_vector vch1(&at(36), &at(69)); // [36] - [68]
+    if(at(69) != 0x21)
+        return false;
+    qkey_vector vch2(&at(70), &at(103)); // [70] - [102]
+
+    return (CqPubKey::IsQaiHash(vch1) && CqPubKey::IsRandHash(vch2));
+}
+
+/*
+bool CScript::IsPayToQAIResistance() const {
+    bool fret = (size() == 71 &&
+                 at(0)  == ScriptOpcodes::OP_1 &&
+                 at(1)  == 0x21 &&
+                 at(69) == ScriptOpcodes::OP_2 &&
+                 at(70) == ScriptOpcodes::OP_CHECKMULTISIG);
+    if(!fret)
+        return false;
+
+    qkey_vector qvchhash(&at(36), &at(69));
+    return CqPubKey::IsQaiHash(qvchhash);
+}
+*/
 
 bool CScript::IsPushOnly(const_iterator pc) const {
     while (pc < end()) {
@@ -850,7 +887,51 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         break;
                     }
 
-                    case OP_NOP1: case OP_NOP4: case OP_NOP5:
+                    case OP_CHECKQAISIGVERIFY:
+                    {
+                        // (bool -- QAI Signature)
+                        if(stack.size() != 20)
+                            return false;
+
+                        valtype pubkey = stacktop(-1);
+                        valtype ecdsasig = stacktop(-2);
+                        valtype qpubvch;
+                        for(int i=3; i <= 4; ++i) {
+                            qpubvch.insert(qpubvch.end(), stack.at(stack.size() - i).begin(), stack.at(stack.size() - i).end());
+                        }
+                        valtype qaisig;
+                        for(int i=5; i <= 20; ++i) {
+                            qaisig.insert(qaisig.end(), stack.at(stack.size() - i).begin(), stack.at(stack.size() - i).end());
+                        }
+
+                        // size check
+                        if(qpubvch.size() != 1024)
+                            return false;
+                        if(qaisig.size() != 8193)
+                            return false;
+
+                        // ecdsa hash
+                        CScript buildScriptsig;
+                        buildScriptsig << ecdsasig;
+                        buildScriptsig << pubkey;
+                        uint256 hash;
+                        latest_crypto::CHash256().Write(buildScriptsig.data(), buildScriptsig.size()).Finalize(hash.begin());
+
+                        // QAI signature verify
+                        CqPubKey qpubkey;
+                        if(!qpubkey.RecoverCompact(strenc::HexStr(qpubvch)))
+                            return false;
+                        if(!qpubkey.IsFullyValid_BIP66())
+                            return false;
+                        if(qaisig.back() != Script_param::SIGHASH_ALL)
+                            return false;
+                        qaisig.pop_back();
+                        if(!qpubkey.Verify(hash, qaisig))
+                            return false;
+                    }
+                    break;
+
+                    case OP_NOP1: case OP_NOP5:
                     case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
                     {
                         if (flags & Script_param::SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)
@@ -1424,6 +1505,162 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                     {
                         // ([sig ...] num_of_signatures [pubkey ...] num_of_pubkeys -- bool)
 
+                        // SORA L1 Quantum and AI Resistance transaction Verify
+                        // (bool -- QAI Signature)
+                        // Must search all the stack, because the stack can change size by user
+                        bool fQaimode = false;
+                        int32_t qaiVersion = 0;
+                        for(const auto &vs: stack) {
+                            if(CqPubKey::IsQaiHash(vs)) {
+                                fQaimode = true;
+                                break;
+                            }
+                        }
+
+                        if(args_bool::fTestNet) { // skip verify (blockHeight)
+                            if(block_info::nBestHeight < 227400)
+                                fQaimode = false;
+                        } else {
+                            // do nothing
+                        }
+
+                        if(fQaimode) {
+                            if(stack.size() < 10)
+                                return false;
+
+                            debugcs::instance() << "QAI_CHECKMULTISIG stack size: " << stack.size() << debugcs::endl();
+
+                            // QAI version
+                            const valtype &qairand = stacktop(-2);
+                            const unsigned char CurrentQaiVersion = qairand[1]; // version flag [1]
+                            if(CurrentQaiVersion == (unsigned char)0x01) {
+                                const valtype &qaihashvch = stacktop(-3);
+                                if(!CqPubKey::IsQaiHash(qaihashvch))
+                                    return false;
+
+                                // QAI publickey recover
+                                const valtype &qpubvch = stacktop(-8);
+                                CqPubKey qpubkey;
+                                if(!qpubkey.RecoverCompact(qpubvch))
+                                    return false;
+                                if(!qpubkey.IsFullyValid_BIP66())
+                                    return false;
+
+                                // scriptPubKey QAI hash compare
+                                if(!qpubkey.CmpQaiHash(qaihashvch))
+                                    return false;
+
+                                // load signature, ecdsahash QAI
+                                valtype qaisig = stacktop(-10);
+                                const valtype &ecdsahash = stacktop(-9);
+                                if(qaisig.size() != 129) // signature + hashType
+                                    return false;
+                                if(ecdsahash.size() != sizeof(uint256))
+                                    return false;
+
+                                // signature QAI target hash
+                                const valtype &ecdsaPubkey = stacktop(-4);
+                                const valtype &ecdsaSig = stacktop(-6);
+                                const int32_t nHashType = (int32_t)qaisig.back();
+                                const int32_t nCurrentQaiVersion = (int32_t)CurrentQaiVersion;
+                                CScript qaistream;
+                                qaistream.reserve(256);
+                                qaistream << ecdsaSig;
+                                qaistream << ecdsaPubkey;
+                                qaistream << qaihashvch;
+                                qaistream << qairand;
+                                qaistream << ecdsahash;
+                                qaistream << nCurrentQaiVersion;
+                                qaistream << nHashType;
+                                CHashWriter qaihash(SER_GETHASH, 0);
+                                qaihash << qaistream;
+
+                                // signature QAI verify
+                                qaisig.erase(qaisig.begin() + 128, qaisig.end());
+                                if(!qpubkey.VerifyQai(qaihash.GetHash(), qaisig))
+                                    return false;
+
+                                qaiVersion = nCurrentQaiVersion;
+                                debugcs::instance() << "QAI_CHECKMULTISIG Verify OK" << debugcs::endl();
+                            } else {
+                                // CurrentQaiVersion 0x02, 0x03 ... 0xFF
+                            }
+                        } // fQaimode
+
+                        /*
+                        if(fQaimode) {
+                            if(stack.size() != 25)
+                                return false;
+
+                            // QAI version
+                            const valtype &qairand = stacktop(-2);
+                            const unsigned char CurrentQaiVersion = qairand[0];
+                            if(CurrentQaiVersion == (unsigned char)0x01) {
+                                const valtype &qaihashvch = stacktop(-3);
+                                if(CqPubKey::IsQaiHash(qaihashvch)) {
+                                    valtype qpubvch;
+                                    qpubvch.reserve(1024);
+                                    for(int i=8; i <= 9; ++i) {
+                                        qpubvch.insert(qpubvch.end(), stack.at(stack.size() - i).begin(), stack.at(stack.size() - i).end());
+                                    }
+                                    if(qpubvch.size() != 1024)
+                                        return false;
+
+                                    // QAI publickey recover
+                                    CqPubKey qpubkey;
+                                    if(!qpubkey.RecoverCompact(qpubvch))
+                                        return false;
+                                    if(!qpubkey.IsFullyValid_BIP66())
+                                        return false;
+
+                                    // scriptPubKey QAI hash compare
+                                    if(!qpubkey.CmpQaiHash(qaihashvch))
+                                        return false;
+
+                                    // load signature QAI
+                                    valtype qaisig;
+                                    qaisig.reserve(8192 + 32 + 1);
+                                    for(int i=10; i <= 25; ++i) {
+                                        qaisig.insert(qaisig.end(), stack.at(stack.size() - i).begin(), stack.at(stack.size() - i).end());
+                                    }
+                                    if(qaisig.size() != (8192 + 32 + 1))
+                                        return false;
+
+                                    // signature QAI target hash
+                                    //const valtype &qairand = stacktop(-2);
+                                    const valtype &ecdsaPubkey = stacktop(-4);
+                                    const valtype &ecdsaSig = stacktop(-6);
+                                    const uint256 ecdsahash;
+                                    ::memcpy((void *)ecdsahash.begin(), &qaisig[8192], sizeof(uint256));
+                                    const int nHashType = qaisig.back();
+                                    const int nCurrentQaiVersion = (int)CurrentQaiVersion;
+                                    CScript qaiScriptsig;
+                                    qaiScriptsig.reserve(256);
+                                    qaiScriptsig << ScriptOpcodes::OP_0;
+                                    qaiScriptsig << ecdsaSig;
+                                    qaiScriptsig << ecdsaPubkey;
+                                    qaiScriptsig << qaihashvch;
+                                    qaiScriptsig << qairand;
+                                    qaiScriptsig << ecdsahash;
+                                    qaiScriptsig << nCurrentQaiVersion;
+                                    qaiScriptsig << nHashType;
+                                    uint256 hash;
+                                    latest_crypto::CHash256().Write(qaiScriptsig.data(), qaiScriptsig.size()).Finalize(hash.begin());
+
+                                    // signature QAI verify
+                                    qaisig.erase(qaisig.begin() + 8192, qaisig.end());
+                                    if(!qpubkey.Verify(hash, qaisig))
+                                        return false;
+
+                                } else {
+                                    return false;
+                                }
+                            } else {
+                                // CurrentQaiVersion 0x02, 0x03 ... 0xFF
+                            }
+                        } // fQaimode
+                        */
+
                         int i = 1;
                         if ((int)stack.size() < i) {
                             //debugcs::instance() << "EvalScript Failure AQ." << debugcs::endl();
@@ -1519,7 +1756,28 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         }
                         popstack(stack);
 
+                        // removing QAI from the stack
+                        if(fQaimode) {
+                            if(qaiVersion == 0) {
+                                return false;
+                            } else if(qaiVersion == 1) {
+                                for(int i=0; i < 3; ++i) {
+                                    popstack(stack);
+                                }
+                                if(opcode == OP_CHECKMULTISIG) { // if OP_CHECKMULTISIG, stack size should be zero after popstack
+                                    debugcs::instance() << "QAI removing OP_CHECKMULTISIG stack size: " << std::to_string(stack.size()) << debugcs::endl();
+                                    if(stack.size() > 0) {
+                                        return false;
+                                    }
+                                }
+                            }
+                        }
+
                         stack.push_back(fSuccess ? vchTrue : vchFalse);
+
+                        if(fSuccess) {
+                            debugcs::instance() << "BASE OP_CHECKMULTISIG Verify OK" << debugcs::endl();
+                        }
 
                         if (opcode == OP_CHECKMULTISIGVERIFY) {
                             if (fSuccess) {
@@ -1558,12 +1816,172 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
     return true;
 }
 
-uint256 Script_util::SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType) {
+namespace {
+
+/**
+ * Wrapper that serializes like CTransaction, but with the modifications
+ *  required for the signature hash done in-place
+ */
+template <class T>
+class CTransactionSignatureSerializer
+{
+private:
+    const T& txTo;             //!< reference to the spending transaction (the one being serialized)
+    const CScript& scriptCode; //!< output script being consumed
+    const unsigned int nIn;    //!< input index of txTo being signed
+    const bool fAnyoneCanPay;  //!< whether the hashtype has the SIGHASH_ANYONECANPAY flag set
+    const bool fHashSingle;    //!< whether the hashtype is SIGHASH_SINGLE
+    const bool fHashNone;      //!< whether the hashtype is SIGHASH_NONE
+
+public:
+    CTransactionSignatureSerializer(const T& txToIn, const CScript& scriptCodeIn, unsigned int nInIn, int nHashTypeIn) :
+        txTo(txToIn), scriptCode(scriptCodeIn), nIn(nInIn),
+        fAnyoneCanPay(!!(nHashTypeIn & Script_param::SIGHASH_ANYONECANPAY)),
+        fHashSingle((nHashTypeIn & 0x1f) == Script_param::SIGHASH_SINGLE),
+        fHashNone((nHashTypeIn & 0x1f) == Script_param::SIGHASH_NONE) {}
+
+    /** Serialize the passed scriptCode, skipping OP_CODESEPARATORs */
+    template<typename S>
+    void SerializeScriptCode(S &s) const {
+        CScript::const_iterator it = scriptCode.begin();
+        CScript::const_iterator itBegin = it;
+        ScriptOpcodes::opcodetype opcode;
+        unsigned int nCodeSeparators = 0;
+        while (scriptCode.GetOp(it, opcode)) {
+            if (opcode == ScriptOpcodes::OP_CODESEPARATOR)
+                nCodeSeparators++;
+        }
+        compact_size::manage::WriteCompactSize(s, scriptCode.size() - nCodeSeparators);
+        it = itBegin;
+        while (scriptCode.GetOp(it, opcode)) {
+            if (opcode == ScriptOpcodes::OP_CODESEPARATOR) {
+                s.write((char*)&itBegin[0], it-itBegin-1);
+                itBegin = it;
+            }
+        }
+        if (itBegin != scriptCode.end())
+            s.write((char*)&itBegin[0], it-itBegin);
+    }
+
+    /** Serialize an input of txTo */
+    template<typename S>
+    void SerializeInput(S &s, unsigned int nInput) const {
+        // In case of SIGHASH_ANYONECANPAY, only the input being signed is serialized
+        if (fAnyoneCanPay)
+            nInput = nIn;
+        // Serialize the prevout
+        ::Serialize(s, txTo.get_vin(nInput).get_prevout());
+        // Serialize the script
+        if (nInput != nIn)
+            // Blank out other inputs' signatures
+            ::Serialize(s, CScript());
+        else
+            SerializeScriptCode(s);
+        // Serialize the nSequence
+        if (nInput != nIn && (fHashSingle || fHashNone))
+            // let the others update at will
+            ::Serialize(s, (int)0);
+        else
+            ::Serialize(s, txTo.get_vin(nInput).get_nSequence());
+    }
+
+    /** Serialize an output of txTo */
+    template<typename S>
+    void SerializeOutput(S &s, unsigned int nOutput) const {
+        if (fHashSingle && nOutput != nIn)
+            // Do not lock-in the txout payee at other indices as txin
+            ::Serialize(s, CTxOut());
+        else
+            ::Serialize(s, txTo.get_vout(nOutput));
+    }
+
+    /** Serialize txTo */
+    template<typename S>
+    void Serialize(S &s) const {
+        // Serialize nVersion
+        ::Serialize(s, txTo.get_nVersion());
+        // Serialize nTime
+        ::Serialize(s, txTo.get_nTime());
+        // Serialize vin
+        unsigned int nInputs = fAnyoneCanPay ? 1 : txTo.get_vin().size();
+        compact_size::manage::WriteCompactSize(s, nInputs);
+        for (unsigned int nInput = 0; nInput < nInputs; nInput++)
+             SerializeInput(s, nInput);
+        // Serialize vout
+        unsigned int nOutputs = fHashNone ? 0 : (fHashSingle ? nIn+1 : txTo.get_vout().size());
+        compact_size::manage::WriteCompactSize(s, nOutputs);
+        for (unsigned int nOutput = 0; nOutput < nOutputs; nOutput++)
+             SerializeOutput(s, nOutput);
+        // Serialize nLockTime
+        ::Serialize(s, txTo.get_nLockTime());
+    }
+};
+
+}
+
+namespace {
+
+class CTransactionBaseSignatureHash
+{
+    CTransactionBaseSignatureHash() = delete;
+public:
+    explicit CTransactionBaseSignatureHash(const CTransaction &tx) {
+        nVersion = tx.get_nVersion();
+        nTime = tx.get_nTime();
+        vin = tx.get_vin();
+        vout = tx.get_vout();
+        nLockTime = tx.get_nLockTime();
+    }
+    ~CTransactionBaseSignatureHash() {}
+
+    uint32_t get_nTime() const {return nTime;}
+    int get_nVersion() const {return nVersion;}
+    const std::vector<CTxIn> &get_vin() const {return vin;}
+    const CTxIn &get_vin(int index) const {return vin[index];}
+    const std::vector<CTxOut> &get_vout() const {return vout;}
+    const CTxOut &get_vout(int index) const {return vout[index];}
+    uint32_t get_nLockTime() const {return nLockTime;}
+
+    void set_nTime(uint32_t _InTime) {nTime = _InTime;}
+    uint32_t &set_nTime() {return nTime;}
+    int &set_nVersion() {return nVersion;}
+    std::vector<CTxIn> &set_vin() {return vin;}
+    CTxIn &set_vin(int index) {return vin[index];}
+    std::vector<CTxOut> &set_vout() {return vout;}
+    CTxOut &set_vout(int index) {return vout[index];}
+    uint32_t &set_nLockTime() {return nLockTime;}
+
+    template <typename Stream>
+    inline void Serialize(Stream &s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
+    }
+    template <typename Stream>
+    inline void Unserialize(Stream &s) {
+        this->SerializationOp(s, CSerActionUnserialize());
+    }
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(this->nVersion);
+        READWRITE(this->nTime);
+        READWRITE(this->vin);
+        READWRITE(this->vout);
+        READWRITE(this->nLockTime);
+    }
+
+private:
+    int nVersion;
+    uint32_t nTime;
+    std::vector<CTxIn> vin;
+    std::vector<CTxOut> vout;
+    uint32_t nLockTime;
+};
+
+uint256 DebugSignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType) {
     if (nIn >= txTo.get_vin().size()) {
         printf("ERROR: SignatureHash() : nIn=%d out of range\n", nIn);
         return 1;
     }
-    CTransaction txTmp(txTo);
+    CTransactionBaseSignatureHash txTmp(txTo);
 
     // In case concatenating two scripts ends up with two codeseparators,
     // or an extra one at the end, this prevents all those possible incompatibilities.
@@ -1620,6 +2038,24 @@ uint256 Script_util::SignatureHash(CScript scriptCode, const CTransaction &txTo,
     ss.reserve(10000);
     ss << txTmp << nHashType;
     return hash_basis::Hash(ss.begin(), ss.end());
+}
+
+}
+
+// Ctransaction Base(P2PK, P2PKH, P2SH) SignatureHash
+uint256 Script_util::SignatureHash(const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType) {
+    // Wrapper to serialize only the necessary parts of the transaction being signed
+    CTransactionSignatureSerializer<CTransaction> txTmp(txTo, scriptCode, nIn, nHashType);
+
+    // Serialize and hash
+    CHashWriter ss(SER_GETHASH, 0);
+    ss << txTmp << nHashType;
+    return ss.GetHash();
+
+    //uint256 hash = ss.GetHash();
+    //assert(hash == DebugSignatureHash(scriptCode, txTo, nIn, nHashType));
+    //debugcs::instance() << "Ctransaction Base SignatureHash OK" << debugcs::endl();
+    //return hash;
 }
 
 // Valid signature cache, to avoid doing expensive ECDSA signature checking
@@ -1911,6 +2347,51 @@ bool Script_util::Sign1(const CKeyID &address, const CKeyStore &keystore, const 
     return true;
 }
 
+/*
+bool Script_util::SignQAI(const CqKey &qkey, const CScript &scriptSig, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet) {
+    uint256 hash;
+    latest_crypto::CHash256().Write(scriptSig.data(), scriptSig.size()).Finalize(hash.begin());
+    key_vector vchSig;
+    vchSig.reserve(8192 + 32 + 1);
+    qkey.Sign(hash, vchSig);
+    assert(vchSig.size() == 8192);
+    vchSig.resize(8192 + sizeof(uint256));
+    ::memcpy(&vchSig[8192], ecdsahash.begin(), sizeof(uint256));
+    vchSig.push_back((unsigned char)nHashType);
+    assert(vchSig.size() == (8192 + 32 + 1));
+
+    std::vector<key_vector> vchtmp;
+    size_t offset = 0;
+    for(int i=0; i < (8192/Script_const::MAX_SCRIPT_ELEMENT_SIZE); ++i) {
+        key_vector vchChunk(&vchSig[offset], &vchSig[offset + Script_const::MAX_SCRIPT_ELEMENT_SIZE]);
+        vchtmp.emplace_back(vchChunk);
+        offset += Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    }
+    key_vector vchChunkLast(&vchSig[offset], &vchSig.back() + 1);
+    vchtmp.emplace_back(vchChunkLast);
+
+    for(int i = vchtmp.size() - 1; 0 <= i; --i) {
+        scriptSigRet << vchtmp[i];
+    }
+    return true;
+}
+*/
+
+bool Script_util::SignQAI(const CqKey &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet) {
+    if(!hd_wallet::get().enable)
+        return false;
+
+    key_vector vchSig;
+    qkey.SignQai(qaihash, vchSig);
+    vchSig.push_back((unsigned char)nHashType);
+    if(vchSig.size() != 129)
+        return false;
+
+    scriptSigRet << vchSig;
+    scriptSigRet << ecdsahash;
+    return true;
+}
+
 bool Script_util::SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
     CKey key;
     if (! keystore.CreatePrivKey(pubKey, R, key)) {
@@ -1942,6 +2423,108 @@ bool Script_util::SignN(const statype &multisigdata, const CKeyStore &keystore, 
     return nSigned == nRequired;
 }
 
+/*
+static bool VerifySignatureQAI(const CScript &scriptSigQAI, const CScript &ScriptSigECDSA) {
+    CScript scriptCheck;
+    {
+        CScript::const_iterator pc = scriptSigQAI.begin();
+        std::vector<script_vector> vchtmp;
+        while(pc != scriptSigQAI.end()) {
+            ScriptOpcodes::opcodetype code;
+            script_vector vch;
+            if(!scriptSigQAI.GetOp(pc, code, vch))
+                return false;
+            vchtmp.emplace_back(vch);
+        }
+        for(int i = vchtmp.size() - 1; 0 <= i; --i) {
+            scriptCheck << vchtmp[i];
+        }
+    }
+
+    CqPubKey qpubkey;
+    CScript::const_iterator pc = scriptCheck.begin();
+    int count = 0;
+    script_vector vchqpubkey;
+    script_vector qsig;
+    while(pc != scriptCheck.end()) {
+        ScriptOpcodes::opcodetype code;
+        script_vector vch;
+        if(!scriptCheck.GetOp(pc, code, vch))
+            return false;
+        if(count <= 1) {
+            vchqpubkey.insert(vchqpubkey.end(), vch.begin(), vch.end());
+            if(count == 1) {
+                if(!qpubkey.RecoverCompact(vchqpubkey))
+                    return false;
+                if(!qpubkey.IsFullyValid_BIP66())
+                    return false;
+            }
+        } else {
+            qsig.insert(qsig.end(), vch.begin(), vch.end());
+        }
+        ++count;
+    }
+
+    uint256 hash;
+    latest_crypto::CHash256().Write(ScriptSigECDSA.data(), ScriptSigECDSA.size()).Finalize(hash.begin());
+    if(qsig.size() != (8192 + 32 + 1))
+        return false;
+    //if(qsig.back() != Script_param::SIGHASH_ALL)
+    //    return false;
+
+    qsig.erase(qsig.begin() + 8192, qsig.end());
+    return qpubkey.Verify(hash, qsig);
+}
+*/
+
+static bool VerifySignatureQAI(const CScript &scriptSigQAI, const CScript &ScriptSigECDSA) {
+    CqPubKey qpubkey;
+    CScript::const_iterator pc = scriptSigQAI.begin();
+    script_vector ecdsahash;
+    script_vector qsig;
+    unsigned char hashType;
+    int counter = 0;
+    while(pc != scriptSigQAI.end()) {
+        ScriptOpcodes::opcodetype code;
+        script_vector vch;
+        if(!scriptSigQAI.GetOp(pc, code, vch))
+            return false;
+        if(counter == 2) {
+            if(!qpubkey.RecoverCompact(vch))
+                return false;
+            if(!qpubkey.IsFullyValid_BIP66())
+                return false;
+            if(qpubkey.GetVch() != vch)
+                return false;
+            debugcs::instance() << "QAI verify pubkey ok" << debugcs::endl();
+        } else if (counter == 1) {
+            ecdsahash = vch;
+            if(ecdsahash.size() != sizeof(uint256))
+                return false;
+            debugcs::instance() << "QAI verify ecdsahash ok" << debugcs::endl();
+        } else if (counter == 0) {
+            qsig = vch;
+            if(qsig.size() != 129)
+                return false;
+            hashType = (unsigned char)qsig.back();
+            debugcs::instance() << "QAI verify signature ok" << debugcs::endl();
+        } else {
+            return false;
+        }
+
+        ++counter;
+    }
+
+    CHashWriter hash(SER_GETHASH, 0);
+    hash << ScriptSigECDSA;
+    if((int)hashType != Script_param::SIGHASH_ALL)
+        return false;
+    debugcs::instance() << "QAI verify hashtype ok" << debugcs::endl();
+
+    qsig.erase(qsig.begin() + 128, qsig.end());
+    return qpubkey.VerifyQai(hash.GetHash(), qsig);
+}
+
 // Sign scriptPubKey with private keys stored in keystore, given transaction hash and hash type.
 // Signatures are returned in scriptSigRet (or returns false if scriptPubKey can't be signed),
 // unless whichTypeRet is TX_SCRIPTHASH, in which case scriptSigRet is the redemption script.
@@ -1971,15 +2554,128 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
             return SignR(key, R, keystore, hash, nHashType, scriptSigRet);
         }
     case TX_PUBKEYHASH:
-        keyID = CKeyID(uint160(vSolutions[0]));
-        if (! Sign1(keyID, keystore, hash, nHashType, scriptSigRet)) {
-            return false;
-        } else {
+        {
+            keyID = CKeyID(uint160(vSolutions[0]));
+            if (! Sign1(keyID, keystore, hash, nHashType, scriptSigRet))
+                return false;
+
             CPubKey vch;
             keystore.GetPubKey(keyID, vch);
             scriptSigRet << vch;
+            return true;
         }
-        return true;
+    case TX_SCRIPTHASH:
+        //debugcs::instance() << "Solver CScriptID: " << uint160(vSolutions[0]).GetHex() << debugcs::endl();
+        return keystore.GetCScript(uint160(vSolutions[0]), scriptSigRet);
+    case TX_MULTISIG:
+        {
+            bool fQaiTransaction = false;
+            qkey_vector qaihash;
+            qkey_vector ecdsapub;
+            qkey_vector qairand;
+            for(const auto &vch: vSolutions) {
+                if(vch.size() == 33) {
+                    // OP_1 << ECDSA pubkey << QaiHash << QaiRand << OP_3 << OP_CHECKMULTISIG
+                    if(CqPubKey::IsQaiHash(vch)) {
+                        fQaiTransaction = true;
+                        qaihash = vch;
+                    } else if (CqPubKey::IsRandHash(vch)) {
+                        qairand = vch;
+                    } else {
+                        // ECDSA UTXO public key (include QAI Sign)
+                        ecdsapub = vch;
+                    }
+                }
+            }
+
+            if(fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && hd_wallet::get().enable) {
+                // OP_CHECKMULTISIG for QAI Transaction
+                CScript ecdsaScriptSig;
+                if(!SignN(vSolutions, keystore, hash, nHashType, ecdsaScriptSig))
+                    return false;
+
+                const int32_t nCurrentQaiVersion = (int32_t)qairand[1];
+                const int32_t nHashType32 = (int32_t)nHashType;
+                CScript qaiVerifySig;
+                qaiVerifySig.reserve(256);
+                qaiVerifySig += ecdsaScriptSig;
+                qaiVerifySig << ecdsapub;
+                qaiVerifySig << qaihash;
+                qaiVerifySig << qairand;
+                qaiVerifySig << hash;
+                qaiVerifySig << nCurrentQaiVersion;
+                qaiVerifySig << nHashType32;
+
+                CqKey qkey(hd_wallet::get().GetSecretKey());
+                if(!qkey.IsValid())
+                    return false;
+
+                CHashWriter qaihash(SER_GETHASH, 0);
+                qaihash << qaiVerifySig;
+                CScript qaiSig;
+                if(!SignQAI(qkey, qaihash.GetHash(), hash, nHashType, qaiSig))
+                    return false;
+
+                CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
+                if(!qpubkey.IsFullyValid_BIP66())
+                    return false;
+                qaiSig << qpubkey;
+
+                // QAI signature verify check
+                if(!VerifySignatureQAI(qaiSig, qaiVerifySig))
+                    return false;
+
+                debugcs::instance() << "QAI creation OK" << debugcs::endl();
+
+                scriptSigRet += qaiSig;
+                scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
+                scriptSigRet += ecdsaScriptSig;
+            } else {
+                // OP_CHECKMULTISIG for P2SH BASE
+                scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
+                if(!SignN(vSolutions, keystore, hash, nHashType, scriptSigRet))
+                    return false;
+            }
+
+            return true;
+        }
+    default:
+        return false;
+
+    /*
+    case TX_PUBKEYHASH:
+        {
+            CScript buildScriptSig;
+            keyID = CKeyID(uint160(vSolutions[0]));
+            if (! Sign1(keyID, keystore, hash, nHashType, buildScriptSig))
+                return false;
+
+            CPubKey vch;
+            keystore.GetPubKey(keyID, vch);
+            buildScriptSig << vch;
+
+            if(hd_wallet::get().enable) {
+                CqKey qkey(hd_wallet::get().GetSecretKey());
+                if(!qkey.IsValid())
+                    return false;
+                if(!SignQAI(qkey, buildScriptSig, nHashType, scriptSigRet))
+                    return false;
+
+                CqKeyID qvch = hd_wallet::get().GetKeyID();
+                scriptSigRet << qvch;
+
+                // QAI signature verify check
+                if(!VerifySignatureQAI(scriptSigRet, buildScriptSig))
+                    return false;
+            }
+
+            scriptSigRet += buildScriptSig;
+
+            // QAI checking OP_CODE
+            scriptSigRet << ScriptOpcodes::OP_CHECKQAISIGVERIFY;
+
+            return true;
+        }
     case TX_SCRIPTHASH:
         //debugcs::instance() << "Solver CScriptID: " << uint160(vSolutions[0]).GetHex() << debugcs::endl();
         return keystore.GetCScript(uint160(vSolutions[0]), scriptSigRet);
@@ -1989,6 +2685,7 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
     default:
         assert(!"Witness is not supported.");
         return false;
+    */
     }
     return false;
 }
@@ -2010,11 +2707,28 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statyp
         if (vSolutions.size() < 1 || vSolutions[0].size() < 1) {
             return -1;
         }
-        return vSolutions[0][0] + 1;
+
+        {
+            int addstack = 0;
+            for(const auto &vch: vSolutions) {
+                if(CqPubKey::IsRandHash(vch)) {
+                    if(vch[1] == 0x00)
+                        return -1;
+                    else if (vch[1] == 0x01) {
+                        addstack = 3;
+                        break;
+                    } else
+                        return -1;
+                }
+            }
+
+            debugcs::instance() << "ScriptSigArgExpected TX_MULTISIG: " << std::to_string((vSolutions[0][0] + 1) + addstack) << debugcs::endl();
+            return ((vSolutions[0][0] + 1) + addstack);
+        }
+        return -1;
     case TX_SCRIPTHASH:
         return 1; // doesn't include args needed by the script
     default:
-        assert(!"Witness is not supported.");
         return -1;
     }
     return -1;
@@ -2044,12 +2758,54 @@ bool Script_util::IsStandard(const CScript &scriptPubKey, TxnOutputType::txnoutt
     return whichType != TxnOutputType::TX_NONSTANDARD;
 }
 
+/*
 unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore) {
     unsigned int nResult = 0;
     for(const valtype &pubkey: pubkeys) {
         CKeyID keyID = CPubKey(pubkey).GetID();
         if (keystore.HaveKey(keyID)) {
             ++nResult;
+        } else if(hd_wallet::get().enable && (!entry::pwalletMain->IsLocked())) {
+            unsigned char qhash[CPubKey::COMPRESSED_PUBLIC_KEY_SIZE];
+            ::memset(qhash, 0x00, sizeof(qhash));
+            ::memcpy(qhash, hd_wallet::get().GetPubKey().GetHash().begin(), sizeof(uint256));
+            if(pubkey == valtype(BEGIN(qhash), END(qhash)))
+                ++nResult;
+        }
+    }
+    return nResult;
+}
+
+unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore) {
+    unsigned int nResult = 0;
+    for(const valtype &pubkey: pubkeys) {
+        CKeyID keyID = CPubKey(pubkey).GetID();
+        if (keystore.HaveKey(keyID)) {
+            ++nResult;
+        } else if(hd_wallet::get().enable) {
+            try {
+                if(hd_wallet::get().GetPubKey().CmpQaiHash(pubkey))
+                    ++nResult;
+            } catch (const std::exception &) {}
+        }
+    }
+    return nResult;
+}
+*/
+
+unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore) {
+    unsigned int nResult = 0;
+    for(const valtype &pubkey: pubkeys) {
+        CKeyID keyID = CPubKey(pubkey).GetID();
+        if (keystore.HaveKey(keyID)) {
+            ++nResult;
+        } else if(hd_wallet::get().enable) {
+            try {
+                if(hd_wallet::get().GetPubKeyQai().CmpQaiHash(pubkey))
+                    ++nResult;
+                else if(CqPubKey::IsRandHash(pubkey))
+                    ++nResult;
+            } catch (const std::exception &) {}
         }
     }
     return nResult;

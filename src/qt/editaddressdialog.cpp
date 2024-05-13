@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +12,7 @@
 #include <QDataWidgetMapper>
 #include <QMessageBox>
 #include <allocator/qtsecure.h>
+#include <rpc/bitcoinrpc.h>
 
 EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
@@ -22,24 +24,68 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
     try {
 
         ui->setupUi(this);
-
         GUIUtil::setupAddressWidget(ui->addressEdit, this);
-
         switch(mode)
         {
         case NewReceivingAddress:
             setWindowTitle(tr("New receiving address"));
+            ui->label->setEnabled(true);
+            ui->label->setVisible(true);
+            ui->labelEdit->setEnabled(true);
+            ui->labelEdit->setVisible(true);
+            ui->label_2->setEnabled(false);
+            ui->label_2->setVisible(false);
             ui->addressEdit->setEnabled(false);
+            ui->addressEdit->setVisible(false);
+            ui->qaicheckbutton->setEnabled(true);
+            ui->qaicheckbutton->setVisible(true);
+            ui->ethcheckbutton->setEnabled(true);
+            ui->ethcheckbutton->setVisible(true);
             break;
         case NewSendingAddress:
             setWindowTitle(tr("New sending address"));
+            ui->label->setEnabled(true);
+            ui->label->setVisible(true);
+            ui->labelEdit->setEnabled(true);
+            ui->labelEdit->setVisible(true);
+            ui->label_2->setEnabled(true);
+            ui->label_2->setVisible(true);
+            ui->addressEdit->setEnabled(true);
+            ui->addressEdit->setVisible(true);
+            ui->qaicheckbutton->setEnabled(false);
+            ui->qaicheckbutton->setVisible(false);
+            ui->ethcheckbutton->setEnabled(false);
+            ui->ethcheckbutton->setVisible(false);
             break;
         case EditReceivingAddress:
             setWindowTitle(tr("Edit receiving address"));
+            ui->label->setEnabled(true);
+            ui->label->setVisible(true);
+            ui->labelEdit->setEnabled(true);
+            ui->labelEdit->setVisible(true);
+            ui->label_2->setEnabled(false);
+            ui->label_2->setVisible(false);
             ui->addressEdit->setEnabled(false);
+            ui->addressEdit->setVisible(false);
+            ui->qaicheckbutton->setEnabled(false);
+            ui->qaicheckbutton->setVisible(false);
+            ui->ethcheckbutton->setEnabled(false);
+            ui->ethcheckbutton->setVisible(false);
             break;
         case EditSendingAddress:
             setWindowTitle(tr("Edit sending address"));
+            ui->label->setEnabled(true);
+            ui->label->setVisible(true);
+            ui->labelEdit->setEnabled(true);
+            ui->labelEdit->setVisible(true);
+            ui->label_2->setEnabled(true);
+            ui->label_2->setVisible(true);
+            ui->addressEdit->setEnabled(true);
+            ui->addressEdit->setVisible(true);
+            ui->qaicheckbutton->setEnabled(false);
+            ui->qaicheckbutton->setVisible(false);
+            ui->ethcheckbutton->setEnabled(false);
+            ui->ethcheckbutton->setVisible(false);
             break;
         }
 
@@ -79,10 +125,38 @@ bool EditAddressDialog::saveCurrentRow()
         return false;
     }
 
+    if(ui->ethcheckbutton->isChecked() && ui->qaicheckbutton->isChecked()) {
+        QMessageBox::warning(this, windowTitle(),
+            tr("It cannot choose both. Please make only one selection."),
+            QMessageBox::Ok, QMessageBox::Ok);
+        return false;
+    }
+
     switch(mode)
     {
     case NewReceivingAddress:
     case NewSendingAddress:
+        try {
+            if(ui->ethcheckbutton->isChecked()) {
+                json_spirit::Array obj;
+                obj.push_back(ui->labelEdit->text().toStdString());
+                CRPCTable::getnewethaddress(obj, false);
+                return true;
+            } else if(ui->qaicheckbutton->isChecked()) {
+                json_spirit::Array obj;
+                obj.push_back(ui->labelEdit->text().toStdString());
+                CRPCTable::getnewqaiaddress(obj, false);
+                return true;
+            }
+        } catch (const json_spirit::Object &s) {
+            QMessageBox::warning(this, windowTitle(),
+                tr(s.at(1).value_.get_str().c_str()),
+                QMessageBox::Ok, QMessageBox::Ok);
+            return false;
+        } catch (const std::exception &) {
+            return false;
+        }
+
         address = model->addRow(
                 mode == NewSendingAddress ? AddressTableModel::Send : AddressTableModel::Receive,
                 ui->labelEdit->text(),

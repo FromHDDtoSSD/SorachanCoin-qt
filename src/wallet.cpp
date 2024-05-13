@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -23,6 +24,7 @@
 #include <random/random.h>
 #include <util/thread.h>
 #include <util/system.h>
+#include <init.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -43,6 +45,76 @@ const CWalletTx *CWallet::GetWalletTx(const uint256 &hash) const
     return &(it->second);
 }
 
+CPubKey CWallet::GenerateNewKey()
+{
+    auto changeDefaultkeyToHD = []() {
+        CPubKey pubkey = hd_wallet::get().reserved_pubkey[0];
+        if(! pubkey.IsFullyValid_BIP66())
+            return false;
+
+        entry::pwalletMain->vchDefaultKey = pubkey;
+        return true;
+    };
+
+    bool fCompressed = CanSupportFeature(FEATURE_COMPRPUBKEY); // default to compressed public keys if we want 0.6.0 wallets
+
+    seed::RandAddSeedPerfmon();
+    if(hd_wallet::get().enable) {
+        //
+        // if hd-wallet, already generated pubkey to send
+        //
+        if(hd_wallet::get()._child_offset > hd_wallet::get()._usedkey_offset) {
+            LOCK(cs_wallet);
+            CPubKey pubkey = hd_wallet::get().reserved_pubkey[hd_wallet::get()._usedkey_offset];
+            hd_wallet::get()._usedkey_offset++;
+
+            //CWalletDB walletdb(std::string(""), std::string(""), CSqliteDBEnv::getname_wallet());
+            CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+            bool ret = walletdb.WriteUsedHDKey(hd_wallet::get()._usedkey_offset);
+            if(ret)
+                return pubkey;
+            else {
+                changeDefaultkeyToHD();
+                return entry::pwalletMain->vchDefaultKey;
+            }
+        } else {
+            changeDefaultkeyToHD();
+            return entry::pwalletMain->vchDefaultKey;
+        }
+    }
+
+    CKey key;
+    key.MakeNewKey(fCompressed);
+
+    // Compressed public keys were introduced in version 0.6.0
+    if (fCompressed) {
+        SetMinVersion(FEATURE_COMPRPUBKEY);
+    }
+
+    CPubKey pubkey = key.GetPubKey();
+
+    // debug [OK]
+    //{
+    //    CPubKey pubkey2 = key.GetPubKey();
+    //    assert(pubkey == pubkey2);
+    //}
+
+    // Create new metadata, Add to Wallet
+    int64_t nCreationTime = bitsystem::GetTime();
+    mapKeyMetadata[CBitcoinAddress(pubkey.GetID())] = CKeyMetadata(nCreationTime);
+
+    if (!nTimeFirstKey || nCreationTime < nTimeFirstKey) {
+        nTimeFirstKey = nCreationTime;
+    }
+
+    if (! AddKey(key)) {
+        throw std::runtime_error("CWallet::GenerateNewKey() : failed to AddKey");
+    }
+
+    return key.GetPubKey();
+}
+
+/*
 CPubKey CWallet::GenerateNewKey()
 {
     bool fCompressed = CanSupportFeature(FEATURE_COMPRPUBKEY); // default to compressed public keys if we want 0.6.0 wallets
@@ -72,6 +144,7 @@ CPubKey CWallet::GenerateNewKey()
     
     return key.GetPubKey();
 }
+*/
 
 CMalleableKeyView CWallet::GenerateNewMalleableKey()
 {
@@ -1077,11 +1150,44 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
 // pblock is optional, but should be provided if the transaction is known to be in a block.
 // If fUpdate is true, existing transactions will be updated.
 //
+/*
 bool CWallet::AddToWalletIfInvolvingMe(const CTransaction &tx, const CBlock *pblock, bool fUpdate)
 {
     uint256 hash = tx.GetHash();
     {
         LOCK(cs_wallet);
+        bool fExisted = mapWallet.count(hash) != 0;
+        if (fExisted && !fUpdate) {
+            return false;
+        }
+        if (fExisted || IsMine(tx) || IsFromMe(tx)) {
+            CWalletTx wtx(this,tx);
+            //
+            // Get merkle branch if transaction was found in a block
+            //
+            if (pblock) {
+                wtx.SetMerkleBranch(pblock);
+            }
+            return AddToWallet(wtx);
+        } else {
+            WalletUpdateSpent(tx);
+        }
+    }
+    return false;
+}
+*/
+
+//
+// Add a transaction to the wallet, or update it.
+// pblock is optional, but should be provided if the transaction is known to be in a block.
+// If fUpdate is true, existing transactions will be updated.
+//
+bool CWallet::AddToWalletIfInvolvingMe(const CTransaction &tx, const CBlock *pblock, bool fUpdate)
+{
+    uint256 hash = tx.GetHash();
+    {
+        LOCK(cs_wallet);
+        wallet_process::AcceptScript(tx);
         bool fExisted = mapWallet.count(hash) != 0;
         if (fExisted && !fUpdate) {
             return false;
@@ -1145,7 +1251,7 @@ bool CWalletTx::UpdateSpent(const std::vector<char> &vfNewSpent)
         if (vfNewSpent[i] && !vfSpent[i]) {
             vfSpent[i] = true;
             fReturn = true;
-            fAvailableCreditCached = fAvailableWatchCreditCached = false;
+            fAvailableCreditCached = fAvailableWatchCreditCached = fAvailableQaiCreditCached = false;
         }
     }
     return fReturn;
@@ -1157,7 +1263,7 @@ bool CWalletTx::UpdateSpent(const std::vector<char> &vfNewSpent)
 void CWalletTx::MarkDirty()
 {
     fCreditCached = false;
-    fAvailableCreditCached = fAvailableWatchCreditCached = false;
+    fAvailableCreditCached = fAvailableWatchCreditCached = fAvailableQaiCreditCached = false;
     fDebitCached = fWatchDebitCached = false;
     fChangeCached = false;
 }
@@ -1177,7 +1283,7 @@ void CWalletTx::MarkSpent(unsigned int nOut)
     vfSpent.resize(get_vout().size());
     if (! vfSpent[nOut]) {
         vfSpent[nOut] = true;
-        fAvailableCreditCached = fAvailableWatchCreditCached = false;
+        fAvailableCreditCached = fAvailableWatchCreditCached = fAvailableQaiCreditCached = false;
     }
 }
 
@@ -1190,7 +1296,7 @@ void CWalletTx::MarkUnspent(unsigned int nOut)
     vfSpent.resize(get_vout().size());
     if (vfSpent[nOut]) {
         vfSpent[nOut] = false;
-        fAvailableCreditCached = fAvailableWatchCreditCached = false;
+        fAvailableCreditCached = fAvailableWatchCreditCached = fAvailableQaiCreditCached = false;
     }
 }
 
@@ -1577,6 +1683,53 @@ int64_t CWalletTx::GetAvailableWatchCredit(bool fUseCache) const
     return nCredit;
 }
 
+int64_t CWalletTx::GetAvailableQaiCredit(bool fUseCache) const
+{
+    if ((IsCoinBase() || IsCoinStake()) && GetBlocksToMaturity() > 0)
+        return 0;
+    if (fUseCache) {
+        if (fAvailableQaiCreditCached) {
+            return nAvailableQaiCreditCached;
+        }
+    }
+
+    int64_t nCredit = 0;
+    for (unsigned int i = 0; i < get_vout().size(); ++i)
+    {
+        if (! IsSpent(i)) {
+            const CTxOut &txout = get_vout(i);
+            const CScript scriptPubKey = txout.get_scriptPubKey();
+            if(scriptPubKey.IsPayToScriptHash()) {
+                CScript::const_iterator it = scriptPubKey.begin();
+                ScriptOpcodes::opcodetype opcode1, opcode2;
+                script_vector data1, data2;
+                if(!scriptPubKey.GetOp(it, opcode1, data1))
+                    continue;
+                if(!scriptPubKey.GetOp(it, opcode2, data2))
+                    continue;
+                if(opcode1 == ScriptOpcodes::OP_HASH160 && data2.size() == sizeof(uint160)) {
+                    CScript redeemScript;
+                    uint160 hash;
+                    ::memcpy(hash.begin(), data2.data(), sizeof(uint160));
+                    if(entry::pwalletMain->GetCScript(hash, redeemScript)) {
+                        if(redeemScript.IsPayToQAIResistance()) {
+                            nCredit += pwallet->GetCredit(txout, MINE_SPENDABLE);
+                            if (! block_transaction::manage::MoneyRange(nCredit)) {
+                                throw std::runtime_error("CWalletTx::GetAvailableCredit() : value out of range");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    nAvailableQaiCreditCached = nCredit;
+    fAvailableQaiCreditCached = true;
+
+    return nCredit;
+}
+
 int64_t CWalletTx::GetChange() const
 {
     if (fChangeCached) {
@@ -1763,6 +1916,7 @@ bool CWalletTx::WriteToDisk()
 // from or to us. If fUpdate is true, found transactions that already
 // exist in the wallet will be updated.
 // 
+/*
 int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
 {
     int ret = 0;
@@ -1781,6 +1935,36 @@ int CWallet::ScanForWalletTransactions(CBlockIndex *pindexStart, bool fUpdate)
                 }
             }
             pindex = pindex->set_pnext();
+        }
+    }
+    return ret;
+}
+*/
+
+//
+// Scan the block chain (starting in pindexStart) for transactions
+// from or to us. If fUpdate is true, found transactions that already
+// exist in the wallet will be updated.
+//
+int CWallet::ScanForWalletTransactions(const CBlockIndex *pindexStart, bool fUpdate)
+{
+    int ret = 0;
+
+    const CBlockIndex *pindex = pindexStart;
+    {
+        LOCK(cs_wallet);
+        while (pindex)
+        {
+            CBlock block;
+            if(! block.ReadFromDisk(pindex, true))
+                return ret;
+            for(const CTransaction &tx: block.get_vtx())
+            {
+                if (AddToWalletIfInvolvingMe(tx, &block, fUpdate)) {
+                    ++ret;
+                }
+            }
+            pindex = pindex->get_pnext();
         }
     }
     return ret;
@@ -2037,6 +2221,20 @@ int64_t CWallet::GetImmatureBalance() const
         {
             const CWalletTx *pcoin = &(*it).second;
             nTotal += pcoin->GetImmatureCredit();
+        }
+    }
+
+    return nTotal;
+}
+
+int64_t CWallet::GetQaiBalance() const
+{
+    int64_t nTotal = 0;
+    {
+        LOCK(cs_wallet);
+        for (const std::pair<uint256, CWalletTx> &it: mapWallet) {
+            const CWalletTx &cointx = it.second;
+            nTotal += cointx.GetAvailableQaiCredit();
         }
     }
 
@@ -2533,9 +2731,14 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
 
                 // Limit size
                 unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
-                if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
-                    return false;
+                if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 2) {
+                    if(wtxNew.get_vin().size() >= 30)
+                        return false;
                 }
+                //unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
+                //if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
+                //    return false;
+                //}
                 dPriority /= nBytes;
 
                 // Check that enough fee is included
@@ -2561,6 +2764,51 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
 
 bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
 {
+    std::vector<std::pair<CScript, int64_t> > vecSend;
+    vecSend.push_back(std::make_pair(scriptPubKey, nValue));
+    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
+}
+
+bool CWallet::CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
+{
+    // Collecting only one QAI scriptPubKey
+    if(vecSend.size() != 1)
+        return false;
+
+    return CreateTransactionAllBalancesToQAI(vecSend[0].first, wtxNew, reservekey, nFeeRet, coinControl);
+}
+
+bool CWallet::CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
+{
+    if(GetUnconfirmedBalance() > 0)
+        return false;
+    if(GetStake() > 0)
+        return false;
+    if(coinControl)
+        return false;
+
+    int64_t nValue = GetBalance();
+    {
+        int64_t nFeeCheck = 0;
+        std::vector<std::pair<CScript, int64_t> > vecSendCheck;
+        vecSendCheck.push_back(std::make_pair(scriptPubKey, nValue));
+        CWalletTx wtxCheck;
+        (void)CreateTransaction(vecSendCheck, wtxCheck, reservekey, nFeeCheck, coinControl);
+        nValue -= nFeeCheck;
+
+        int64_t nFeeCheck2 = 0;
+        std::vector<std::pair<CScript, int64_t> > vecSendCheck2;
+        vecSendCheck2.push_back(std::make_pair(scriptPubKey, nValue));
+        CWalletTx wtxCheck2;
+        (void)CreateTransaction(vecSendCheck2, wtxCheck2, reservekey, nFeeCheck2, coinControl);
+
+        if(nFeeCheck2 > nFeeCheck) {
+            nValue -= nFeeCheck2 - nFeeCheck;
+        } else if (nFeeCheck2 < nFeeCheck) {
+            nValue += nFeeCheck2 - nFeeCheck;
+        }
+    }
+
     std::vector<std::pair<CScript, int64_t> > vecSend;
     vecSend.push_back(std::make_pair(scriptPubKey, nValue));
     return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
@@ -3003,7 +3251,7 @@ std::string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &
     }
 
     CReserveKey reservekey(this);
-    int64_t nFeeRequired;
+    int64_t nFeeRequired = 0;
 
     if (IsLocked()) {
         std::string strError = _("Error: Wallet locked, unable to create transaction  ");

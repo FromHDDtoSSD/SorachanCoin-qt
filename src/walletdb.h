@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -252,6 +252,19 @@ public:
     bool WriteUsedHDKey(unsigned int _usedkey_offset) {
         dbparam::IncWalletUpdate();
         return Write(std::string("hdusedkey"), _usedkey_offset);
+    }
+
+    bool WriteQAIPubkey(const qkey_vector &vch) {
+        dbparam::IncWalletUpdate();
+        return Write(std::string("qaipubkey"), vch);
+    }
+
+    bool ReadQAIPubkey(qkey_vector &vch) { // This QAI public key will be read as needed because there may be a need to use it before the first read by the iterator.
+        return Read(std::string("qaipubkey"), vch);
+    }
+
+    bool ExistsQAIPubkey() {
+        return Exists(std::string("qaipubkey"));
     }
 
     bool EraseKey(const CPubKey &pubkey) { // Note that, EraseKey use ONLY hd-wallet upgrade (random wallet keys in 0 balance, Erase)

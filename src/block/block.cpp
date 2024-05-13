@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -946,6 +946,11 @@ bool CBlock::AcceptBlock()
         return logging::error("CBlock::AcceptBlock() : WriteToDisk failed");
     if (! AddToBlockIndex(nFile, nBlockPos))
         return logging::error("CBlock::AcceptBlock() : AddToBlockIndex failed");
+
+    // Get that some redeemScript (for Eth style or Quantum and AI resistance transaction)
+    for(const CTransaction &tx: Merkle_t::vtx) {
+        wallet_process::AcceptScript(tx);
+    }
 
     // Relay inventory, but don't relay old inventory during initial block download
     int nBlockEstimate = Checkpoints::manage::GetTotalBlocksEstimate();

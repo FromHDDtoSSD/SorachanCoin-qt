@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -355,7 +355,7 @@ private:
     //
     static const CRPCTable tableRPC;
 
-private:
+public:
     //
     // Bitcoin RPC function
     // Note: Do not call them directly.(private method)
@@ -391,7 +391,8 @@ private:
 
     static json_spirit::Value getnewaddress(const json_spirit::Array &params, bool fHelp); // in rpcwallet.cpp
     static json_spirit::Value getnewethaddress(const json_spirit::Array &params, bool fHelp);
-    static json_spirit::Value getnewethlock(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getnewqaiaddress(const json_spirit::Array &params, bool fHelp);
+    //static json_spirit::Value getnewethlock(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getkeyentangle(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value gethdwalletinfo(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getqpubkey(const json_spirit::Array &params, bool fHelp);

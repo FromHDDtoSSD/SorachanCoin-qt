@@ -57,6 +57,20 @@ color: rgb(0, 170, 255);</string>
        </property>
       </widget>
      </item>
+     <item row="4" column="1">
+      <widget class="QCheckBox" name="ethcheckbutton">
+       <property name="text">
+        <string>Eth Style Address (0x ...)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QCheckBox" name="qaicheckbutton">
+       <property name="text">
+        <string>Quantum and AI resistance Address (bech32 sora ...)</string>
+       </property>
+      </widget>
+     </item>
     </layout>
    </item>
    <item>

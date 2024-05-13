@@ -25,6 +25,7 @@
 #include <QScrollBar>
 #include <QClipboard>
 #include <allocator/qtsecure.h>
+#include <rpc/bitcoinrpc.h>
 
 SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
     QDialog(parent, DIALOGWINDOWHINTS),
@@ -109,8 +110,8 @@ void SendCoinsDialog::setModel(WalletModel *model)
         }
     }
     if(model && model->getOptionsModel()) {
-        setBalance(model->getBalance(), model->getBalanceWatchOnly(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance());
-        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, qint64)));
+        setBalance(model->getBalance(), model->getBalanceWatchOnly(), model->getStake(), model->getUnconfirmedBalance(), model->getImmatureBalance(), model->getQaiBalance());
+        connect(model, SIGNAL(balanceChanged(qint64, qint64, qint64, qint64, qint64, qint64)), this, SLOT(setBalance(qint64, qint64, qint64, qint64, qint64, qint64)));
         connect(model->getOptionsModel(), SIGNAL(displayUnitChanged(int)), this, SLOT(updateDisplayUnit()));
 
         // Coin Control
@@ -130,6 +131,35 @@ SendCoinsDialog::~SendCoinsDialog()
 
 void SendCoinsDialog::on_sendButton_clicked()
 {
+    WalletModel::SendCoinsReturn sendstatus;
+    sendstatus.status = WalletModel::TransactionCreationFailed;
+
+    // Pay to myself, All balances send to my QAI scriptPubKey(Quantum and AI resistance) transaction
+    if(ui->checkBoxSendAllQAI->isChecked()) {
+
+    QList<SendCoinsRecipient> recqai;
+    try {
+        json_spirit::Array obj;
+        json_spirit::Value qaiAddress = CRPCTable::getnewqaiaddress(obj, false);
+        SendCoinsRecipient rv;
+        rv.address = QString(qaiAddress.get_str().c_str());
+        rv.label = qaiTransaction;
+        rv.amount = model->getBalance();
+        recqai.append(rv);
+        sendstatus = model->sendCoins(recqai);
+    } catch (const json_spirit::Object &s) {
+        QMessageBox::warning(this, tr("Send Coins"), QString(s.at(1).value_.get_str().c_str()), QMessageBox::Ok, QMessageBox::Ok);
+        sendstatus.status = WalletModel::TransactionCreationFailed;
+    } catch (const std::exception &) {
+        sendstatus.status = WalletModel::TransactionCreationFailed;
+    }
+    if(sendstatus.status == WalletModel::OK) {
+        ui->checkBoxSendAllQAI->setChecked(false);
+    }
+
+    // Normal transaction
+    } else {
+
     QList<SendCoinsRecipient> recipients;
     bool valid = true;
 
@@ -194,13 +224,15 @@ void SendCoinsDialog::on_sendButton_clicked()
         return;
     }
 
-    WalletModel::SendCoinsReturn sendstatus;
+    //WalletModel::SendCoinsReturn sendstatus;
 
     if (!model->getOptionsModel() || !model->getOptionsModel()->getCoinControlFeatures()) {
         sendstatus = model->sendCoins(recipients);
     } else {
         sendstatus = model->sendCoins(recipients, CoinControlDialog::coinControl);
     }
+
+    } // if(ui->checkBoxSendAllQAI->isChecked())
 
     switch(sendstatus.status)
     {
@@ -373,11 +405,12 @@ bool SendCoinsDialog::handleURI(const QString &uri)
     return false;
 }
 
-void SendCoinsDialog::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance)
+void SendCoinsDialog::setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 qaiBalance)
 {
     Q_UNUSED(stake);
     Q_UNUSED(unconfirmedBalance);
     Q_UNUSED(immatureBalance);
+    Q_UNUSED(qaiBalance);
     if(!model || !model->getOptionsModel()) {
         return;
     }

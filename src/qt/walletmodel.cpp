@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -22,7 +23,7 @@
 WalletModel::WalletModel(CWallet *wallet, OptionsModel *optionsModel, QObject *parent) :
     QObject(parent), wallet(wallet), optionsModel(optionsModel), addressTableModel(nullptr),
     transactionTableModel(nullptr),
-    cachedBalance(0), cachedStake(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0),
+    cachedBalance(0), cachedStake(0), cachedUnconfirmedBalance(0), cachedImmatureBalance(0), cachedQaiBalance(0),
     cachedNumTransactions(0),
     cachedEncryptionStatus(Unencrypted),
     cachedNumBlocks(0)
@@ -92,6 +93,11 @@ qint64 WalletModel::getImmatureBalance() const
     return wallet->GetImmatureBalance();
 }
 
+qint64 WalletModel::getQaiBalance() const
+{
+    return wallet->GetQaiBalance();
+}
+
 int WalletModel::getNumTransactions() const
 {
     int numTransactions = 0;
@@ -126,13 +132,15 @@ void WalletModel::checkBalanceChanged()
     qint64 newStake = getStake();
     qint64 newUnconfirmedBalance = getUnconfirmedBalance();
     qint64 newImmatureBalance = getImmatureBalance();
+    qint64 newQaiBalance = getQaiBalance();
 
-    if(cachedBalance != newBalanceTotal || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance) {
+    if(cachedBalance != newBalanceTotal || cachedStake != newStake || cachedUnconfirmedBalance != newUnconfirmedBalance || cachedImmatureBalance != newImmatureBalance || cachedQaiBalance != newQaiBalance) {
         cachedBalance = newBalanceTotal;
         cachedStake = newStake;
         cachedUnconfirmedBalance = newUnconfirmedBalance;
         cachedImmatureBalance = newImmatureBalance;
-        emit balanceChanged(newBalanceTotal, newBalanceWatchOnly, newStake, newUnconfirmedBalance, newImmatureBalance);
+        cachedQaiBalance = newQaiBalance;
+        emit balanceChanged(newBalanceTotal, newBalanceWatchOnly, newStake, newUnconfirmedBalance, newImmatureBalance, newQaiBalance);
     }
 }
 
@@ -236,7 +244,11 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CWalletTx wtx;
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
-        bool fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
+        bool fCreated = false;
+        if(recipients.size() == 1 && recipients[0].label == qaiTransaction)
+            fCreated = wallet->CreateTransactionAllBalancesToQAI(vecSend, wtx, keyChange, nFeeRequired, coinControl);
+        else
+            fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
 
         if(! fCreated) {
             if((total + nFeeRequired) > nBalance) { // FIXME: could cause collisions in the future

@@ -11,6 +11,7 @@
 #include <random/random.h>
 #include <init.h>
 #include <bip32/hdchain.h>
+#include <rpc/bitcoinrpc.h>
 
 namespace SeedCrypto {
     static const unsigned char civ[] = {'S','o','r','a','c','h','a','n','C','o','i','n','S','e','e','d'}; // AES_BLOCKSIZE: 16 bytes
@@ -97,8 +98,10 @@ bool hd_wallet::IsEmptyRandomWallet() {
         return false;
     if(entry::pwalletMain->GetImmatureWatchOnlyBalance() != 0)
         return false;
-    if(! entry::pwalletMain->IsEmptyRedeemScript())
+    if(entry::pwalletMain->GetQaiBalance() != 0)
         return false;
+    //if(! entry::pwalletMain->IsEmptyRedeemScript())
+    //    return false;
 
     return true;
 }
@@ -285,6 +288,7 @@ CqKeyID hd_wallet::GetKeyID() { // get a compact pubkey keyid (1024 bytes)
 }
 
 CqPubKey hd_wallet::GetPubKey() {
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
     if(! enable)
         throw std::runtime_error("invalid HD Wallet.");
     if(entry::pwalletMain->IsLocked())
@@ -301,6 +305,215 @@ CqPubKey hd_wallet::GetPubKey() {
 
     return pubkey;
 }
+
+CqPubKey hd_wallet::GetPubKeyQai() {
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    {
+        LOCK(entry::pwalletMain->cs_wallet);
+        if (walletdb.ExistsQAIPubkey()) {
+            qkey_vector qpubvch;
+            if(walletdb.ReadQAIPubkey(qpubvch)) {
+                CqPubKey qpub;
+                if(qpub.RecoverCompact(qpubvch)) {
+                    if(qpub.IsFullyValid_BIP66())
+                        return qpub;
+                }
+            }
+        }
+    }
+
+    if(! enable)
+        throw std::runtime_error("invalid HD Wallet.");
+    if(entry::pwalletMain->IsLocked())
+        throw std::runtime_error("locked HD Wallet.");
+
+    CqSecretKey qsecretkey = hd_wallet::GetSecretKey();
+    CqKey qkey(qsecretkey);
+    if(! qkey.IsValid())
+        throw std::runtime_error("invalid CqSecretKey.");
+
+    CqPubKey pubkey = qkey.GetPubKeyQai();
+    if(! pubkey.IsFullyValid_BIP66())
+        throw std::runtime_error("invalid CqPubKey.");
+
+    {
+        LOCK(entry::pwalletMain->cs_wallet);
+        if (!walletdb.ExistsQAIPubkey())
+            walletdb.WriteQAIPubkey(pubkey.GetVch());
+    }
+    return pubkey;
+}
+
+// called AppInit2
+/* valid OK
+void Debug_checking_sign_verify2() {
+    if(hd_wallet::get().enable == false)
+        return;
+
+    // 128 bytes sig Quantum check
+    const char *data = "SorachanCoin 128 bytes sig quantum sign";
+    const char *data2 = "SorachanCoin Qai transaction verify";
+    qkey_vector sig, sig2;
+    CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
+    CqKey qkey(hd_wallet::get().GetSecretKey());
+    uint256 hash;
+    latest_crypto::CHash256().Write((unsigned char *)data, ::strlen(data)).Finalize(hash.begin());
+    uint256 hash2;
+    latest_crypto::CHash256().Write((unsigned char *)data2, ::strlen(data2)).Finalize(hash2.begin());
+    qkey.SignQai(hash, sig);
+    qkey.SignQai(hash2, sig2);
+    assert(sig.size()==128 && sig2.size()==128);
+    assert(sig != sig2);
+    if(qpubkey.VerifyQai(hash, sig)) {
+        debugcs::instance() << "VerifyQai OK" << debugcs::endl();
+    }
+
+    // getvch check
+    qkey_vector vchqpub = qpubkey.GetVch();
+    CqPubKey qpubkey2;
+    qpubkey2.RecoverCompact(vchqpub);
+    if(qpubkey == qpubkey2) {
+        debugcs::instance() << "GetVch RecoverCompact OK" << debugcs::endl();
+    }
+
+    // verify check for signature
+    bool ret = true;
+    for(int i=0; i < 128; ++i) {
+        sig[i] += 0x0A;
+        if(qpubkey.VerifyQai(hash, sig)) {
+            ret = false;
+            break;
+        }
+    }
+    if(!ret) {
+        assert(!"Verify invalid in signature");
+    } else {
+        debugcs::instance() << "All verify valid OK in signature" << debugcs::endl();
+    }
+
+    // verify check for hash
+    ret = true;
+    for(int i=0; i < 32; ++i) {
+        *(hash.begin() + i) += 0x0A;
+        if(qpubkey.VerifyQai(hash, sig)) {
+            ret = false;
+            break;
+        }
+    }
+    if(!ret) {
+        assert(!"Verify invalid in target hash");
+    } else {
+        debugcs::instance() << "All verify valid OK in target hash" << debugcs::endl();
+    }
+
+    if(!qpubkey.VerifyQai(hash2, sig)) {
+        debugcs::instance() << "Verify check ok (invalid)" << debugcs::endl();
+    }
+    if(!qpubkey.VerifyQai(hash, sig2)) {
+        debugcs::instance() << "Verify check ok (invalid)" << debugcs::endl();
+    }
+
+    // for verify check
+    ret = true;
+    for(int i=0; i < 100000; ++i) {
+        unsigned char buf[32];
+        latest_crypto::random::GetStrongRandBytes(buf, 32);
+        uint256 hash3;
+        latest_crypto::CHash256().Write((unsigned char *)buf, 32).Finalize(hash3.begin());
+        qkey_vector sig3;
+        qkey.SignQai(hash, sig3);
+        assert(sig3.size() == 128);
+        if(!qpubkey.VerifyQai(hash, sig3)) {
+            ret = false;
+            break;
+        }
+    }
+    if(!ret) {
+        assert(!"for Verify some invalid");
+    } else {
+        debugcs::instance() << "for Verify All valid OK" << debugcs::endl();
+    }
+}
+*/
+
+class CSerDebug {
+public:
+    CSerDebug() {
+        flags = 0;
+    }
+
+    CSerDebug(const std::string &str1In, const std::string &str2In, const std::string &str3In) {
+        str1 = str1In;
+        str2 = str2In;
+        str3 = str3In;
+        flags = 0;
+    }
+
+    void insertflags(int flagsIn) {
+        flags = flagsIn;
+    }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        if(ser_action.ForRead()) {
+            if(flags == 0) {
+                READWRITE(str1);
+                READWRITE(str2);
+                READWRITE(str3);
+                assert(s.size() == 0);
+            } else if (flags == 1) {
+                READWRITE(str1);
+                assert(s.size() > 0);
+            }
+        } else {
+            if(flags == 0) {
+                assert(s.size() == 0);
+                READWRITE(str1);
+                READWRITE(str2);
+                READWRITE(str3);
+            } else if (flags == 1) {
+                assert(s.size() == 0);
+                READWRITE(str1);
+                READWRITE(str2);
+            }
+        }
+    }
+
+    std::string ToString() const {
+        std::string ret;
+        if(str1.size() > 0)
+            ret += str1;
+        if(str2.size() > 0)
+            ret += str2;
+        if(str3.size() > 0)
+            ret += str3;
+        return ret;
+    }
+
+private:
+    std::string str1, str2, str3;
+    int flags;
+};
+
+void Debug_checking_sign_verify() {
+    std::string str1 = "SorachanCoin";
+    std::string str2 = "SorachanCoin 2";
+    std::string str3 = "SorachanCoin 3";
+    CSerDebug obj1(str1, str2, str3);
+    CDataStream stream;
+    stream << obj1;
+
+    CSerDebug obj2;
+    obj2.insertflags(1);
+    stream >> obj2;
+
+    debugcs::instance() << obj2.ToString().c_str() << debugcs::endl();
+}
+
+
+
+void Debug_checking_sign_verify2() {}
 
 
 namespace hd_wallet_debug {
@@ -394,17 +607,64 @@ bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &se
         bool fRescan = false;
         while (retry_counter++ <= 3) {
             try {
-                const int rescan_begin = (!args_bool::fTestNet) ? 625000 : 0;
-                CBlockIndex *pnext = block_info::pindexGenesisBlock->set_pnext();
+                const int rescan_begin = (!args_bool::fTestNet) ? 625000 : 197000;
+                const CBlockIndex *pnext = block_info::pindexGenesisBlock->get_pnext();
                 for(int i=0; i < rescan_begin; ++i) { // mainnet, after 625000
                     if(! pnext)
                         break;
-                    pnext = pnext->set_pnext();
+                    pnext = pnext->get_pnext();
+                }
+                if(pnext) {
+                    entry::pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
+                    int ret = entry::pwalletMain->ScanForWalletTransactions(pnext, true);
+                    /*
+                    try {
+                        for(int i=0; i < ret; ++i) {
+                            json_spirit::Array obj;
+                            CRPCTable::getnewaddress(obj, false);
+                        }
+                    }
+                    catch (const json_spirit::Object &err) {
+                        // err.at(1).value_.get_str()
+                    }
+                    catch (const std::exception &) {}
+                    */
+                    //entry::pwalletMain->ReacceptWalletTransactions();
+                }
+                fRescan = true;
+                break;
+            } catch (const std::exception &) {
+                // do nothing, retry
+            }
+        }
+        if(! fRescan)
+            return false;
+
+        try {
+            for(int i=0; i < 30; ++i) {
+                json_spirit::Array obj;
+                CRPCTable::getnewqaiaddress(obj, false);
+            }
+        }
+        catch (const json_spirit::Object &err) {
+            // err.at(1).value_.get_str()
+        }
+        catch (const std::exception &) {}
+        retry_counter = 0;
+        fRescan = false;
+        while (retry_counter++ <= 3) {
+            try {
+                const int rescan_begin = (!args_bool::fTestNet) ? 625000 : 197000;
+                const CBlockIndex *pnext = block_info::pindexGenesisBlock->get_pnext();
+                for(int i=0; i < rescan_begin; ++i) { // mainnet, after 625000
+                    if(! pnext)
+                        break;
+                    pnext = pnext->get_pnext();
                 }
                 if(pnext) {
                     entry::pwalletMain->nTimeFirstKey = 1; // 0 would be considered 'no value'
                     entry::pwalletMain->ScanForWalletTransactions(pnext, true);
-                    //entry::pwalletMain->ReacceptWalletTransactions();
+                    entry::pwalletMain->ReacceptWalletTransactions();
                 }
                 fRescan = true;
                 break;

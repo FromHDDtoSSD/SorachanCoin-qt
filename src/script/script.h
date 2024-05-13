@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -271,7 +271,8 @@ namespace ScriptOpcodes
         OP_NOP2 = OP_CHECKLOCKTIMEVERIFY,
         OP_CHECKSEQUENCEVERIFY = 0xb2,
         OP_NOP3 = OP_CHECKSEQUENCEVERIFY,
-        OP_NOP4 = 0xb3,
+        OP_CHECKQAISIGVERIFY = 0xb3,
+        OP_NOP4 = OP_CHECKQAISIGVERIFY,
         OP_NOP5 = 0xb4,
         OP_NOP6 = 0xb5,
         OP_NOP7 = 0xb6,
@@ -440,9 +441,41 @@ public:
         return (*this) << vch;
     }
 
-    CScript &operator<<(const CPubKey &key) {
-        script_vector vchKey(key.begin(), key.end());
-        return (*this) << vchKey;
+    CScript &operator<<(const CPubKey &pubkey) {
+        script_vector vchpubKey(pubkey.begin(), pubkey.end());
+        return (*this) << vchpubKey;
+    }
+
+    /* unused
+    CScript &operator<<(const CqKeyID &qpubid) {
+        script_vector vchqpubKey = strenc::ParseHex(qpubid);
+        assert(vchqpubKey.size() == CqPubKey::QAI_PUBLIC_KEY_SIZE || vchqpubKey.size() == CqPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+
+        if(vchqpubKey.size() == CqPubKey::QAI_PUBLIC_KEY_SIZE) {
+            (*this) << vchqpubKey;
+        } else {
+            script_vector vchChunk(&vchqpubKey[0], &vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE]);
+            script_vector vchChunk2(&vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE], &vchqpubKey.back() + 1);
+            (*this) << vchChunk2;
+            (*this) << vchChunk;
+        }
+        return *this;
+    }
+    */
+
+    CScript &operator<<(const CqPubKey &qpubkey) {
+        script_vector vchqpubKey = qpubkey.GetVch();
+        assert(vchqpubKey.size() == CqPubKey::QAI_PUBLIC_KEY_SIZE || vchqpubKey.size() == CqPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+
+        if(vchqpubKey.size() == CqPubKey::QAI_PUBLIC_KEY_SIZE) {
+            (*this) << vchqpubKey;
+        } else {
+            script_vector vchChunk(&vchqpubKey[0], &vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE]);
+            script_vector vchChunk2(&vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE], &vchqpubKey.back() + 1);
+            (*this) << vchChunk2;
+            (*this) << vchChunk;
+        }
+        return *this;
     }
 
     CScript &operator<<(const CBigNum &b) {
@@ -565,6 +598,11 @@ public:
     // If EthID Locked Transaction
     //
     bool IsLockToEthID() const;
+
+    //
+    // If SORA L1 Quantum and AI Resistance transaction
+    //
+    bool IsPayToQAIResistance() const;
 
     //
     // witness transactions:

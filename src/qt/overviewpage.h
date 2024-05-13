@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -36,7 +37,7 @@ public:
     void showOutOfSyncWarning(bool fShow);
 
 public slots:
-    void setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
+    void setBalance(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 qaiBalance);
     void setNumTransactions(int count);
 
 signals:
@@ -50,6 +51,7 @@ private:
     qint64 currentStake;
     qint64 currentUnconfirmedBalance;
     qint64 currentImmatureBalance;
+    qint64 currentQaiBalance;
 
     TxViewDelegate *txdelegate;
     TransactionFilterProxy *filter;
@@ -61,7 +63,7 @@ private slots:
 #ifndef CLI_MODE_ENABLE
     void on_BenchmarkCommandLinkButton_clicked();
 #endif
-    void on_DriveVerifyCommandLinkButton_clicked();
+    //void on_DriveVerifyCommandLinkButton_clicked();
     //void on_pushButton_clicked();
     //void on_pushButton_2_clicked();
 };

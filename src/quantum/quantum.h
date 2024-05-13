@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -616,6 +616,7 @@ namespace Lamport {
 
         static void Sign(const byte *data, size_t size, const CPrivateKey &pKey, byte *signatured);
         static bool Verify(const byte *data, size_t size, const CPublicKey &pubKey, const byte *signatured);
+        static bool VerifyQai(const byte *data, size_t size, const CPublicKey &pubKey, const byte *signatured);
 
         bool Verify(const byte *data, size_t size, std::shared_ptr<const CPublicKey> pubKey);
 
@@ -648,6 +649,7 @@ namespace Lamport {
 
         // pubkey and privkey.
         CPublicKey GetPubKey() const;
+        CPublicKey GetPubKeyQai() const;
         bool CmpPrivKey(const CLamport &obj) const;
         const CSecureSegment<byte> *GetPrivKey() const;
 
@@ -702,6 +704,7 @@ class CqPubKey : public latest_crypto::Lamport::CPublicKey {
 public:
     constexpr static int FULLY_PUBLIC_KEY_SIZE = 16384;
     constexpr static int COMPRESSED_PUBLIC_KEY_SIZE = 1024;
+    constexpr static int QAI_PUBLIC_KEY_SIZE = 256;
 
     CqPubKey() : _valid(false) {}
 
@@ -736,12 +739,21 @@ public:
     // verify can by "data" and "signatured" then ... "pubkey".
     bool Verify(const qkey_vector &data, const qkey_vector &vchSig) const;
     bool Verify(const uint256 &data, const qkey_vector &vchSig) const;
+    bool VerifyQai(const uint256 &data, const qkey_vector &vchSig) const;
 
     bool IsFullyValid_BIP66() const;
     bool IsCompressed() const;
+    bool RecoverCompact(const qkey_vector &vchSig);
     bool RecoverCompact(const CqKeyID &pubkeyid);
 
+    uint256 GetHash() const;
+    qkey_vector GetVch() const;
     CqKeyID GetID() const;
+    qkey_vector GetQaiHash() const;
+    bool CmpQaiHash(const qkey_vector &hashvch) const;
+    static bool IsQaiHash(const qkey_vector &hashvch);
+    static qkey_vector GetRandHash();
+    static bool IsRandHash(const qkey_vector &randvch);
 
 private:
     bool _valid;
@@ -758,11 +770,13 @@ public:
     }
 
     CqPubKey GetPubKey(bool fCompact = true) const;
+    CqPubKey GetPubKeyQai() const;
     CqSecretKey GetSecret() const;
 
     // data signed by "privkey", output to signatured.
     void Sign(const qkey_vector &data, qkey_vector &vchSig) const;
     void Sign(const uint256 &hash, qkey_vector &vchSig) const;
+    void SignQai(const uint256 &hash, qkey_vector &vchSig) const;
 
     // check this privkey's pubkey
     bool VerifyPubKey(const CqPubKey &pubkey) const;

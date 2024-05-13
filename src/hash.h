@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2013 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -19,6 +19,7 @@
 #include <crypto/sha256.h>
 #include <crypto/qhash65536.h>
 #include <crypto/keccak256.h>
+#include <crypto/common.h>
 
 // BIP32
 # include <crypto/hmac_sha512.h>
@@ -37,15 +38,17 @@ namespace bip32 {
 template<typename CTX, typename UINTOBJ>
 class CHashWriter_q
 {
-private:
     CHashWriter_q()=delete;
     CHashWriter_q(const CHashWriter_q &)=delete;
     CHashWriter_q(CHashWriter_q &&)=delete;
     CHashWriter_q &operator=(const CHashWriter_q &)=delete;
     CHashWriter_q &operator=(CHashWriter_q &&)=delete;
+
+private:
     CTX ctx;
     const int nType;
-    const int nVersion; // witness
+    const int nVersion;
+
 public:
     CHashWriter_q(int _nType, int _nVersion) : nType(_nType), nVersion(_nVersion) {}
     int GetType() const {return nType;}
@@ -56,15 +59,25 @@ public:
         return *this;
     }
 
-    // invalidates the object
+    // Double hash
     UINTOBJ GetHash() {
-        UINTOBJ hash1;
-        ctx.Finalize((unsigned char *)&hash1);
-        ctx.Reset();
-        ctx.Write((const unsigned char *)&hash1, sizeof(hash1));
-        UINTOBJ hash2;
-        ctx.Finalize((unsigned char *)&hash2);
-        return hash2;
+        UINTOBJ hash;
+        ctx.Finalize(hash.begin());
+        ctx.Reset().Write(hash.begin(), sizeof(UINTOBJ)).Finalize(hash.begin());
+        return hash;
+    }
+
+    // Single hash (GetSHA256, GetSHA512 ...)
+    UINTOBJ GetSingleHash() {
+        UINTOBJ result;
+        ctx.Finalize(result.begin());
+        return result;
+    }
+
+    // Returns the first 64 bits from the resulting hash
+    inline uint64_t GetCheapHash() {
+        UINTOBJ result = GetHash();
+        return latest_crypto::ReadLE64(result.begin());
     }
 
     // Serialize to this stream

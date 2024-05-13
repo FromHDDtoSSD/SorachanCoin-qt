@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -42,6 +43,7 @@ public:
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
+const QString qaiTransaction("QAI_scriptPubKey_Transaction");
 class WalletModel : public QObject
 {
     Q_OBJECT
@@ -85,6 +87,7 @@ public:
     qint64 getStake() const;
     qint64 getUnconfirmedBalance() const;
     qint64 getImmatureBalance() const;
+    qint64 getQaiBalance() const;
     int getNumTransactions() const;
     EncryptionStatus getEncryptionStatus() const;
 
@@ -171,6 +174,7 @@ private:
     qint64 cachedUnconfirmedBalance;
     qint64 cachedImmatureBalance;
     qint64 cachedNumTransactions;
+    qint64 cachedQaiBalance;
     EncryptionStatus cachedEncryptionStatus;
     int cachedNumBlocks;
 
@@ -194,7 +198,7 @@ public slots:
 
 signals:
     // Signal that balance in wallet changed
-    void balanceChanged(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance);
+    void balanceChanged(qint64 total, qint64 watchOnly, qint64 stake, qint64 unconfirmedBalance, qint64 immatureBalance, qint64 qaiBalance);
 
     // Number of transactions in wallet changed
     void numTransactionsChanged(int count);

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <prevector/prevector.h>
+#include <script/script.h>
 
 struct CScriptWitness
 {
@@ -30,6 +31,34 @@ struct CScriptWitness
     void SetNull() { stack.clear(); stack.shrink_to_fit(); }
 
     std::string ToString() const;
+
+    //
+    // If stack size is 0, building witness field
+    //
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        if(ser_action.ForRead()) {
+            int16_t size = 0;
+            READWRITE(size);
+            if(size > 0) {
+                this->stack.resize(size);
+                for(auto &vch: this->stack) {
+                    READWRITE(vch);
+                }
+            } else {
+                SetNull();
+            }
+        } else {
+            int16_t size = (int16_t)this->stack.size();
+            READWRITE(size);
+            if(size > 0) {
+                for(auto &vch: this->stack) {
+                    READWRITE(vch);
+                }
+            }
+        }
+    }
 };
 
 #endif

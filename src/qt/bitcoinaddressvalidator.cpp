@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -54,6 +55,7 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co
     }
 
     // Validation
+    /*
     QValidator::State state = QValidator::Acceptable;
     for(int idx=0; idx<input.size(); ++idx) {
         int ch = input.at(idx).unicode();
@@ -61,6 +63,22 @@ QValidator::State BitcoinAddressValidator::validate(QString &input, int &pos) co
            (ch >= 'a' && ch<='z') ||
            (ch >= 'A' && ch<='Z')) &&
            ch != 'l' && ch != 'I' && ch != '0' && ch != 'O')
+        {
+            // Alphanumeric and not a 'forbidden' character
+        } else {
+            state = QValidator::Invalid;
+        }
+    }
+    */
+
+    // Validation
+    QValidator::State state = QValidator::Acceptable;
+    for(int idx=0; idx<input.size(); ++idx) {
+        int ch = input.at(idx).unicode();
+        if(((ch >= '0' && ch<='9') ||
+           (ch >= 'a' && ch<='z') ||
+           (ch >= 'A' && ch<='Z')) &&
+           ch != 'I' && ch != 'O')
         {
             // Alphanumeric and not a 'forbidden' character
         } else {

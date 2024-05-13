@@ -1,6 +1,6 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -207,7 +207,8 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[102] =
     { "scaninput",                  &scaninput,                   true,   true },
     { "getnewaddress",              &getnewaddress,               true,   false },
     { "getnewethaddress",           &getnewethaddress,            true,   false },
-    { "getnewethlock",              &getnewethlock,               true,   false },
+    { "getnewqaiaddress",           &getnewqaiaddress,            true,   false },
+    //{ "getnewethlock",              &getnewethlock,               true,   false },
     { "getkeyentangle",             &getkeyentangle,              true,   false },
     { "gethdwalletinfo",            &gethdwalletinfo,             true,   false },
     { "getqpubkey",                 &getqpubkey,                  true,   false },

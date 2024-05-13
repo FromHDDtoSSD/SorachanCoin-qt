@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -227,7 +227,8 @@ bool CTxMemPool::accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *
 
     // Rather not work on nonstandard transactions (unless -testnet)
     std::string strNonStd;
-    if (!args_bool::fTestNet && !tx.IsStandard(strNonStd))
+    //if (!args_bool::fTestNet && !tx.IsStandard(strNonStd))
+    if (!tx.IsStandard(strNonStd))
         return logging::error("CTxMemPool::accept() : nonstandard transaction (%s)", strNonStd.c_str());
 
     // Do we already have it?
@@ -278,7 +279,8 @@ bool CTxMemPool::accept(CTxDB &txdb, CTransaction &tx, bool fCheckInputs, bool *
         }
 
         // Check for non-standard pay-to-script-hash in inputs
-        if (!tx.AreInputsStandard(mapInputs) && !args_bool::fTestNet)
+        //if (!tx.AreInputsStandard(mapInputs) && !args_bool::fTestNet)
+        if (!tx.AreInputsStandard(mapInputs))
             return logging::error("CTxMemPool::accept() : nonstandard transaction input");
 
         // Note: if you modify this code to accept non-standard transactions, then
@@ -477,6 +479,50 @@ bool CTransaction::IsStandard() const {
 // expensive-to-check-upon-redemption script like:
 //   DUP CHECKSIG DROP ... repeated 100 times... OP_1
 bool CTransaction::AreInputsStandard(const MapPrevTx &mapInputs) const
+{
+    if (IsCoinBase())
+        return true; // Coinbases don't use vin normally
+    for (unsigned int i = 0; i < vin.size(); ++i) {
+        const CTxOut &prev = GetOutputFor(vin[i], mapInputs);
+        Script_util::statype vSolutions;
+        TxnOutputType::txnouttype whichType;
+
+        // get the scriptPubKey corresponding to this input:
+        const CScript &prevScript = prev.get_scriptPubKey();
+        if (! Script_util::Solver(prevScript, whichType, vSolutions))
+            return false;
+        int nArgsExpected = Script_util::ScriptSigArgsExpected(whichType, vSolutions);
+        if (nArgsExpected < 0)
+            return false;
+
+        // Transactions with extra stuff in their scriptSigs are
+        // non-standard. Note that this EvalScript() call will
+        // be quick, because if there are any operations
+        // beside "push data" in the scriptSig the
+        // IsStandard() call returns false
+        Script_util::statype stack;
+        if (! Script_util::EvalScript(stack, vin[i].get_scriptSig(), *this, i, false, 0))
+            return false;
+        if (whichType == TxnOutputType::TX_SCRIPTHASH) {
+            if (stack.empty()) return false;
+            CScript subscript(stack.back().begin(), stack.back().end());
+            Script_util::statype vSolutions2;
+            TxnOutputType::txnouttype whichType2;
+            if (! Script_util::Solver(subscript, whichType2, vSolutions2)) return false;
+            if (whichType2 == TxnOutputType::TX_SCRIPTHASH) return false;
+            int tmpExpected = Script_util::ScriptSigArgsExpected(whichType2, vSolutions2);
+            if (tmpExpected < 0) return false;
+            nArgsExpected += tmpExpected;
+        }
+        if (stack.size() != (unsigned int)nArgsExpected)
+            return false;
+    }
+
+    return true;
+}
+
+// old core standard transaction
+bool CTransaction::AreInputsBaseStandard(const MapPrevTx &mapInputs) const
 {
     if (IsCoinBase())
         return true; // Coinbases don't use vin normally

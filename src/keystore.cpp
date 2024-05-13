@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -35,7 +36,7 @@ static uint256 SignatureHash(const CScript &scriptCodeIn, const CTransaction &tx
         return uint256(1);
 
     CScript scriptCode(scriptCodeIn);
-    CTransaction txTmp(txTo);
+    CTransaction txTmp(txTo); // Already the txTmp is no operation because CTransaction has changed serialize structure
     scriptCode.FindAndDelete(CScript(ScriptOpcodes::OP_CODESEPARATOR));
     for (auto &d: txTmp.set_vin()) {
         d.set_scriptSig(CScript());

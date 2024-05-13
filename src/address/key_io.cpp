@@ -1,4 +1,5 @@
 // Copyright (c) 2014-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -37,11 +38,83 @@ bool CBase58Data::SetString(const std::string &str) {
     return SetString(str.c_str());
 }
 
+//
+// SORA L1 Quantum and AI resistance transaction for Bech32
+//
+static bech32_vector EncodeToSoraL1QAItxBech32(const bech32_vector &data) {
+    bech32_vector bits5;
+    int bitCount = 0;
+    uint8_t currentByte = 0;
+    for (unsigned char byte: data) {
+        for (int i = 7; i >= 0; --i) {
+            currentByte = (currentByte << 1) | ((byte >> i) & 1);
+            bitCount++;
+            if (bitCount == 5) {
+                bits5.push_back(currentByte);
+                bitCount = 0;
+                currentByte = 0;
+            }
+        }
+    }
+    if (bitCount > 0) {
+        bits5.push_back(currentByte << (5 - bitCount));
+    }
+
+    return bits5;
+}
+
+static bech32_vector DecodeFromSoraL1QAItxBech32(const bech32_vector &bits5) {
+    bech32_vector bytes;
+    int bitCount = 0;
+    unsigned char currentByte = 0;
+    for (uint8_t bitGroup: bits5) {
+        for (int i = 4; i >= 0; --i) {
+            currentByte = (currentByte << 1) | ((bitGroup >> i) & 1);
+            bitCount++;
+            if (bitCount == 8) {
+                bytes.push_back(currentByte);
+                bitCount = 0;
+                currentByte = 0;
+            }
+        }
+    }
+
+    if (bitCount > 0) {
+        bytes.push_back(currentByte << (8 - bitCount));
+    }
+
+    return bytes;
+}
+
+static std::string GetHrpBech32() {
+    return args_bool::fTestNet ? hrp_test: hrp_main;
+}
+
+std::map<base58_vector, std::string> mapWaitForRedeem;
+static void waitForRedeemScript(const base58_vector &vchData, const std::string &address) {
+    mapWaitForRedeem.insert(std::make_pair(vchData, address));
+}
+static bool getForRedeemScript(const base58_vector &vchData, std::string &ret) {
+    if(mapWaitForRedeem.count(vchData)) {
+        ret = mapWaitForRedeem[vchData];
+        return true;
+    } else
+        return false;
+}
+
 std::string CBase58Data::ToString(bool fhidden) const {
     if(! fhidden) {
         CEthID ethid;
         if(entry::pwalletMain->GetEthID(CKeyID(uint160(vchData)), ethid))
             return hasheth::HexStr(ethid);
+    }
+
+    // until AcceptBlock, instead use getForRedeemScript
+    {
+        std::string address;
+        if(getForRedeemScript(vchData, address)) {
+            return address;
+        }
     }
 
     CScript redeemScript;
@@ -50,6 +123,13 @@ std::string CBase58Data::ToString(bool fhidden) const {
     if(entry::pwalletMain->GetCScript(CScriptID(uint160(vchData)), redeemScript, keyid, ethid)) {
         if(redeemScript.IsPayToEthID() || redeemScript.IsLockToEthID())
             return hasheth::HexStr(ethid);
+        else if (redeemScript.IsPayToQAIResistance()) {
+            std::string enc = bech32::Encode(GetHrpBech32(), EncodeToSoraL1QAItxBech32(vchData));
+            const auto ret = bech32::Decode(enc);
+            assert(ret.first == GetHrpBech32());
+            assert(vchData == DecodeFromSoraL1QAItxBech32(ret.second));
+            return enc;
+        }
     }
 
     base58_vector vch((uint32_t)1, (uint8_t)nVersion);
@@ -57,10 +137,14 @@ std::string CBase58Data::ToString(bool fhidden) const {
     return base58::manage::EncodeBase58Check(vch);
 }
 
-bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID
+// when called input address, address is checked by called SetString
+bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID or bech32
+    if(!psz) return false;
     base58_vector vchTemp;
+    std::string address(psz);
+    const std::string b32prefix = GetHrpBech32() + std::to_string(1);
     if(psz[0]=='0' && psz[1]=='x') {
-        CEthID ethid = hasheth::ParseHex(std::string(psz));
+        CEthID ethid = hasheth::ParseHex(address);
         if(ethid == CEthID())
             return false;
         CScriptID scriptid;
@@ -68,7 +152,16 @@ bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID
             return false;
         unsigned char prefix = args_bool::fTestNet ? key_io::SCRIPT_ADDRESS_TEST : key_io::SCRIPT_ADDRESS;
         vchTemp.push_back(prefix);
-        vchTemp.insert(vchTemp.end(), BEGIN(scriptid), END(scriptid));
+        vchTemp.insert(vchTemp.end(), scriptid.begin(), scriptid.end());
+    } else if (address.compare(0, b32prefix.length(), b32prefix) == 0) {
+        const auto ret = bech32::Decode(address);
+        if(ret.first != GetHrpBech32())
+            return false;
+        unsigned char prefix = args_bool::fTestNet ? key_io::SCRIPT_ADDRESS_TEST : key_io::SCRIPT_ADDRESS;
+        vchTemp.push_back(prefix);
+        bech32_vector vchBech = DecodeFromSoraL1QAItxBech32(ret.second);
+        vchTemp.insert(vchTemp.end(), vchBech.begin(), vchBech.end());
+        waitForRedeemScript(vchBech, address);
     } else {
         base58::manage::DecodeBase58Check(psz, vchTemp);
     }
@@ -83,7 +176,7 @@ bool CBase58Data::SetString(const char *psz) { // psz is base58 or CEthID
         if (! vchData.empty()) {
             std::memcpy(&vchData[0], &vchTemp[1], vchData.size());
         }
-        cleanse::OPENSSL_cleanse(&vchTemp[0], vchData.size());
+        cleanse::OPENSSL_cleanse(&vchTemp[0], vchTemp.size());
         return true;
     }
 }
@@ -333,9 +426,9 @@ bool CBitcoinAddress_impl<ENC>::IsPair() const {
 }
 
 template class CBitcoinAddress_impl<CBase58Data>;
-template class CBitcoinAddress_impl<CBech32Data>;
+//template class CBitcoinAddress_impl<CBech32Data>;
 template class CBitcoinSecret_impl<CBase58Data>;
-template class CBitcoinSecret_impl<CBech32Data>;
+//template class CBitcoinSecret_impl<CBech32Data>;
 
 
 namespace {

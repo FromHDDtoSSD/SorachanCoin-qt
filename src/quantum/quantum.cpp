@@ -1,4 +1,4 @@
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -442,6 +442,51 @@ bool CSignature::Verify(const byte *data, size_t size, const CPublicKey &pubKey,
     return (std::memcmp(pubKeySignature, hashedSignature, kSize) == 0) ? true : false;
 }
 
+// static method (Verify) signatured size is 128bytes (for blockchain)
+bool CSignature::VerifyQai(const byte *data, size_t size, const CPublicKey &pubKey, const byte *signatured) {
+    //
+    // Collecting hashed data signature.
+    //
+    byte messageHash[hashSize]; // 32 bytes
+    quantum_hash::blake2_generichash(messageHash, hashSize, data, size);
+
+    //
+    // Collecting pub key signature.
+    //
+    byte pubKeySignature[kSize]; // 32 * 512 / 2 = 8192 bytes
+    collectSignature(pubKeySignature, pubKey.get_addr(), messageHash);
+
+    //
+    // Collecting hashed signature.
+    //
+    qkey_vector sigOrg;
+    sigOrg.resize(kSize);
+    ::memset(&sigOrg.front(), 0x00, sigOrg.size());
+    ::memcpy(&sigOrg.front(), signatured, 128);
+    byte hashedSignature[kSize]; // 32 * 512 / 2 = 8192 bytes
+    const byte *originalSignatureOffset = sigOrg.data();
+    byte *hashedSignatureOffset = hashedSignature;
+    for (size_t i = 0; i < hashCount / 2; ++i) {
+        quantum_hash::blake2_generichash(hashedSignatureOffset, hashSize, originalSignatureOffset, hashSize);
+        originalSignatureOffset += hashSize;
+        hashedSignatureOffset += hashSize;
+    }
+
+    if(std::memcmp(pubKeySignature, hashedSignature, 128) == 0) {
+        if(std::memcmp(pubKeySignature, hashedSignature, 129) != 0) {
+            debugcs::instance() << "Signature invalid check OK" << debugcs::endl();
+        }
+        debugcs::instance() << "qpubkey 264 bytes:\n" << strenc::HexStr(qkey_vector(pubKey.get_addr(), pubKey.get_addr() + 264)).c_str() << debugcs::endl();
+        debugcs::instance() << "qpubkey sig 136 bytes:\n" << strenc::HexStr(qkey_vector(BEGIN(pubKeySignature), END(pubKeySignature))).substr(0, 136).c_str() << debugcs::endl();
+        debugcs::instance() << "hashed sig 136 bytes" << strenc::HexStr(qkey_vector(BEGIN(hashedSignature), END(hashedSignature))).substr(0, 136).c_str() << debugcs::endl();
+    }
+
+    //
+    // Comparing results.
+    //
+    return (std::memcmp(pubKeySignature, hashedSignature, 128) == 0) ? true: false; // address space is 2 ^ (128 * 8)
+}
+
 bool CSignature::Verify(const byte *dataIn, size_t dataSize, std::shared_ptr<const CPublicKey> pubKey) {
     if (dataIn == nullptr || dataSize == 0 || pubKey == nullptr)
         return false;
@@ -554,6 +599,13 @@ CPublicKey CLamport::GetPubKey() const {
     return *pubKey.get();
 }
 
+CPublicKey CLamport::GetPubKeyQai() const {
+    std::shared_ptr<CPublicKey> pubKey = _privkey.derivePublicKey();
+    CPublicKey pubkey = *pubKey.get();
+    std::memset(pubkey.get_addr() + CqPubKey::QAI_PUBLIC_KEY_SIZE, 0x00, pubkey.get_size() - CqPubKey::QAI_PUBLIC_KEY_SIZE);
+    return pubkey;
+}
+
 bool CLamport::CmpPrivKey(const CLamport &obj) const {
     return this->_privkey == obj._privkey;
 }
@@ -609,6 +661,14 @@ CqPubKey CqKey::GetPubKey(bool fCompact /*= true*/) const {
     return pubkey;
 }
 
+CqPubKey CqKey::GetPubKeyQai() const {
+    if(! _valid)
+        throw std::runtime_error("CqKey::GetPubKeyQai invalid.");
+    latest_crypto::Lamport::CPublicKey pubkey = _lamport->GetPubKeyQai();
+    assert(pubkey.get_size() == 16384);
+    return pubkey;
+}
+
 CqSecretKey CqKey::GetSecret() const {
     if(! _valid)
         throw std::runtime_error("CqKey::GetSecret invalid.");
@@ -629,26 +689,48 @@ bool CqPubKey::Verify(const uint256 &data, const qkey_vector &vchSig) const {
     return latest_crypto::Lamport::CLamport::Verify(data.begin(), sizeof(uint256), *this, vchSig.data());
 }
 
-CqKeyID CqPubKey::GetID() const { // compact: 1024 bytes, fully: 16384 bytes
+bool CqPubKey::VerifyQai(const uint256 &data, const qkey_vector &vchSig) const {
+    assert(sizeof(uint256)==32);
+    if(vchSig.size() != 128)
+        return false;
+
+    return latest_crypto::Lamport::CLamport::VerifyQai(data.begin(), sizeof(uint256), *this, vchSig.data());
+}
+
+qkey_vector CqPubKey::GetVch() const { // qai: 256 bytes, compact: 1024 bytes, fully: 16384 bytes
+    unsigned char qaicmp[32];
+    ::memset(qaicmp, 0x00, 32);
     latest_crypto::Lamport::CPublicKey pubkey = *(static_cast<const latest_crypto::Lamport::CPublicKey *>(this));
+    if(::memcmp(pubkey.get_addr() + QAI_PUBLIC_KEY_SIZE, qaicmp, 32) == 0) {
+        qkey_vector vchqai;
+        vchqai.resize(QAI_PUBLIC_KEY_SIZE);
+        ::memcpy(&vchqai.front(), pubkey.get_addr(), QAI_PUBLIC_KEY_SIZE);
+        return vchqai;
+    }
+
     bool fCompact = true;
     const unsigned char objnull[32 - latest_crypto::Lamport::compactpubkey] = {0};
-    std::string strcompact;
-    strcompact.resize((pubkey.get_size()/32) * latest_crypto::Lamport::compactpubkey);
+    qkey_vector compact;
+    compact.resize((pubkey.get_size()/32) * latest_crypto::Lamport::compactpubkey);
     for(int i=0, k=0; i < pubkey.get_size(); i+=32) {
-        std::memcpy(&strcompact.front() + ((uintptr_t)k++ * latest_crypto::Lamport::compactpubkey), pubkey.get_addr() + i, latest_crypto::Lamport::compactpubkey);
+        std::memcpy(&compact.front() + ((uintptr_t)k++ * latest_crypto::Lamport::compactpubkey), pubkey.get_addr() + i, latest_crypto::Lamport::compactpubkey);
         if(std::memcmp(pubkey.get_addr() + i + latest_crypto::Lamport::compactpubkey, objnull, 32 - latest_crypto::Lamport::compactpubkey) != 0) {
             fCompact = false;
             break;
         }
     }
-    if(fCompact)
-        return CqKeyID(strenc::HexStr(strcompact));
+    if(fCompact) {
+        return compact;
+    }
 
-    std::vector<unsigned char> vchpub;
+    qkey_vector vchpub;
     vchpub.resize(pubkey.get_size());
     ::memcpy(&vchpub.front(), pubkey.get_addr(), pubkey.get_size());
-    return CqKeyID(strenc::HexStr(vchpub));
+    return vchpub;
+}
+
+CqKeyID CqPubKey::GetID() const {
+    return CqKeyID(strenc::HexStr(GetVch()));
 }
 
 bool CqPubKey::IsFullyValid_BIP66() const {
@@ -662,10 +744,18 @@ bool CqPubKey::IsCompressed() const {
     return ((id.size() / 2) == COMPRESSED_PUBLIC_KEY_SIZE);
 }
 
-bool CqPubKey::RecoverCompact(const CqKeyID &pubkeyid) {
-    qkey_vector vchSig = strenc::ParseHex(pubkeyid);
+bool CqPubKey::RecoverCompact(const qkey_vector &vchSig) {
     //::printf("RecoverCompact size: %d\n", (int)vchSig.size());
-    if(vchSig.size() == COMPRESSED_PUBLIC_KEY_SIZE) {
+    if(vchSig.size() == QAI_PUBLIC_KEY_SIZE) {
+        qkey_vector vchSig2;
+        vchSig2.resize(FULLY_PUBLIC_KEY_SIZE, 0x00);
+        const unsigned char *psig = vchSig.data();
+
+        ::memcpy(&vchSig2.front(), psig, QAI_PUBLIC_KEY_SIZE);
+        this->operator=(latest_crypto::Lamport::CPublicKey(vchSig2.data(), vchSig2.size()));
+        _valid = true;
+        return true;
+    } else if(vchSig.size() == COMPRESSED_PUBLIC_KEY_SIZE) {
         qkey_vector vchSig2;
         vchSig2.resize(FULLY_PUBLIC_KEY_SIZE, 0x00);
         const unsigned char *psig = vchSig.data();
@@ -688,6 +778,75 @@ bool CqPubKey::RecoverCompact(const CqKeyID &pubkeyid) {
     return false;
 }
 
+bool CqPubKey::RecoverCompact(const CqKeyID &pubkeyid) {
+    return RecoverCompact(strenc::ParseHex(pubkeyid));
+}
+
+uint256 CqPubKey::GetHash() const {
+    qkey_vector qvch = GetVch();
+    uint256 hash;
+    latest_crypto::CHash256().Write((const unsigned char *)qvch.data(), qvch.size()).Finalize(hash.begin());
+    return hash;
+}
+
+qkey_vector CqPubKey::GetQaiHash() const {
+    qkey_vector qvch = GetVch();
+    uint160 hash;
+    latest_crypto::CHash160().Write((const unsigned char *)qvch.data(), qvch.size()).Finalize(hash.begin());
+
+    //uint256 hash256;
+    //uint160 hash160;
+    //latest_crypto::CSHA256().Write((const unsigned char *)qvch.data(), qvch.size()).Finalize(hash256.begin());
+    //latest_crypto::CRIPEMD160().Write((const unsigned char *)hash256.begin(), hash256.size()).Finalize(hash160.begin());
+    //assert(hash == hash160);
+
+    qkey_vector qhash;
+    qhash.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
+    ::memset(&qhash.front(), 0x00, 33);
+    qhash[0] = 0x02;
+    ::memcpy(&qhash.front() + 1, hash.begin(), sizeof(uint160));
+    return qhash;
+}
+
+bool CqPubKey::CmpQaiHash(const qkey_vector &hashvch) const {
+    return (GetQaiHash() == hashvch);
+}
+
+bool CqPubKey::IsQaiHash(const qkey_vector &hashvch) {
+    if(hashvch.size() != 33)
+        return false;
+
+    for(int i=21; i < 33; ++i) { // [0] 0x02, [1] - [20] uint160, [21] - [32] 0x00
+        if(hashvch[i] != 0x00)
+            return false;
+    }
+    return true;
+}
+
+static unsigned char QaiVersion = (unsigned char)0x01;
+qkey_vector CqPubKey::GetRandHash() {
+    qkey_vector buf;
+    buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
+    ::memset(&buf.front(), 0xFF, 33);
+    buf[0] = 0x02;
+    buf[1] = QaiVersion;
+    if(!map_arg::GetBoolArg(std::string("-restorehdwallet"))) {
+        latest_crypto::random::GetStrongRandBytes(&buf[2], 20);
+    }
+    return buf;
+}
+
+bool CqPubKey::IsRandHash(const qkey_vector &randvch) {
+    if(randvch.size() != 33)
+        return false;
+
+    for(int i=22; i < 33; ++i) { // [0] 0x02, [1] version, [2] - [21] rand, [22] - [32] 0xFF
+        if(randvch[i] != 0xFF)
+            return false;
+    }
+    return true;
+}
+
 void CqKey::Sign(const qkey_vector &data, qkey_vector &vchSig) const {
     vchSig.resize(_lamport->GetSize());
     _lamport->Sign(data.data(), data.size(), &vchSig.front());
@@ -697,6 +856,16 @@ void CqKey::Sign(const uint256 &hash, qkey_vector &vchSig) const {
     vchSig.resize(_lamport->GetSize());
     assert(sizeof(uint256)==32);
     _lamport->Sign(hash.begin(), sizeof(uint256), &vchSig.front());
+}
+
+void CqKey::SignQai(const uint256 &hash, qkey_vector &vchSig) const {
+    assert(sizeof(uint256)==32);
+    qkey_vector vchOrg;
+    vchOrg.resize(_lamport->GetSize());
+    _lamport->Sign(hash.begin(), sizeof(uint256), &vchOrg.front());
+    assert(vchOrg.size() == 8192);
+    vchSig.resize(_lamport->GetSize() / 64); // vchSig is 128bytes
+    ::memcpy(&vchSig.front(), vchOrg.data(), _lamport->GetSize() / 64);
 }
 
 bool CqKey::VerifyPubKey(const CqPubKey &pubkey) const {

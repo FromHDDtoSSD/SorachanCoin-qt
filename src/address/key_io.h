@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2023 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -99,6 +99,8 @@ public:
 };
 
 /** vchData: CKeyID and Eth address Hybrid */
+const std::string hrp_main = "sora";
+const std::string hrp_test = "soratest";
 class CBase58Data : public IKeyData {
 protected:
     CBase58Data() {}
@@ -119,9 +121,7 @@ public:
     bool operator> (const CBase58Data &b58) const { return CompareTo(b58) >  0; }
 };
 
-/** vchData: CKeyID */
-const std::string hrp_main = "sora";
-const std::string hrp_test = "soratest";
+/*
 class CBech32Data : public IKeyData {
 protected:
     CBech32Data() {}
@@ -159,6 +159,7 @@ public:
         return bech32::Encode(hrp, vchData);
     }
 };
+*/
 
 /** base58-encoded or bech32-encoded Bitcoin addresses.
  * Public-key-hash-addresses have version 0 (or 111 testnet).
@@ -219,8 +220,8 @@ private:
 //using CBitcoinPubkey  = CBitcoinAddress_impl<CBase58Data>; // P2PK 'F' '7' CPubKey 65bytes
 using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>; // P2PKH 'S' '2' CHash160 to CPubKey 20bytes
 //using CScriptAddress  = CBitcoinAddress_impl<CBase58Data>; // P2SH '9' '2' CHash160 to CScript 20bytes
-using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest' CHash160 to CPubKey 20bytes
-using CWitnessScript  = CBitcoinAddress_impl<CBech32Data>; // P2WSH 'sora' 'soratest' CSHA256 to CScript 32bytes
+//using CWitnessAddress = CBitcoinAddress_impl<CBech32Data>; // P2WPKH 'sora' 'soratest' CHash160 to CPubKey 20bytes
+//using CWitnessScript  = CBitcoinAddress_impl<CBech32Data>; // P2WSH 'sora' 'soratest' CSHA256 to CScript 32bytes
 
 /** base58-encoded or bech32-encoded secret key */
 template <typename ENC>
@@ -278,7 +279,7 @@ public:
     }
 };
 using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data>;
-using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
+//using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 
 // BIP32 and WIF
 namespace key_io {

@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.50.14
+VERSION = 3.67.14
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -9,6 +9,12 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 # Qt informations
 #
 message(Qt version: $$[QT_VERSION])
+
+#
+# Development version
+# Only testnet, even if configuration is mainnet
+#
+ONLYTESTNET=0
 
 #
 # RELEASE
@@ -35,6 +41,10 @@ contains (CLI_MODE, 0) {
     TARGET = SorachanCoin-Core
 } else {
     TARGET = SorachanCoin-cli
+}
+
+contains (ONLYTESTNET, 1) {
+    DEFINES += ONLY_TESTNET_MODE
 }
 
 #

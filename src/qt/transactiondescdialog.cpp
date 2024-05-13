@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +11,7 @@
 #include <QModelIndex>
 #include <QKeyEvent>
 #include <allocator/qtsecure.h>
+#include <block/block.h>
 
 TransactionDescDialog::TransactionDescDialog(const QModelIndex &idx, QWidget *parent) :
     QWidget(parent, DIALOGWINDOWHINTS),
@@ -17,6 +19,11 @@ TransactionDescDialog::TransactionDescDialog(const QModelIndex &idx, QWidget *pa
 {
     if(! ui){
         throw qt_error("TransactionDescDialog Failed to allocate memory.", this);
+    }
+
+    if (block_notify::IsInitialBlockDownload()) {
+        QMessageBox::question(this, tr("Please wait within synced blockchain."), tr("Confirmation"), QMessageBox::Ok);
+        return;
     }
 
     ui->setupUi(this);

@@ -2,7 +2,7 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef CLI_MODE_ENABLE
+#if !defined(CLI_MODE_ENABLE) && defined(QT_GUI) && defined(WIN32)
 
 #ifndef SORACHANCOIN_COMMON_H
 #define SORACHANCOIN_COMMON_H

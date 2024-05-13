@@ -71,6 +71,7 @@ public:
     // quantum resistance
     CqSecretKey GetSecretKey();
     CqPubKey GetPubKey();
+    CqPubKey GetPubKeyQai();
     CqKeyID GetKeyID();
 
 private:

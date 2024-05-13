@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -276,7 +277,7 @@ public:
     void ClearOrphans();
 
     void WalletUpdateSpent(const CTransaction &prevout, bool fBlock = false);
-    int ScanForWalletTransactions(CBlockIndex* pindexStart, bool fUpdate = false);
+    int ScanForWalletTransactions(const CBlockIndex* pindexStart, bool fUpdate = false);
     int ScanForWalletTransaction(const uint256& hashTx);
     void ReacceptWalletTransactions();
     void ResendWalletTransactions(int64_t nBestBlockTime);
@@ -287,6 +288,7 @@ public:
     int64_t GetUnconfirmedBalance() const;
     int64_t GetUnconfirmedWatchOnlyBalance() const;
     int64_t GetImmatureBalance() const;
+    int64_t GetQaiBalance() const;
     int64_t GetImmatureWatchOnlyBalance() const;
     int64_t GetStake() const;
     int64_t GetNewMint() const;
@@ -298,6 +300,12 @@ public:
     bool CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl=NULL);
     bool CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey);
     void GetStakeWeightFromValue(const int64_t &nTime, const int64_t &nValue, uint64_t &nWeight);
+
+    //
+    // QAI Transaction
+    //
+    bool CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl);
+    bool CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl);
 
     //
     // Stake, Merge
@@ -483,6 +491,7 @@ public:
     mutable bool fImmatureCreditCached;
     mutable bool fImmatureWatchCreditCached;
     mutable bool fAvailableWatchCreditCached;
+    mutable bool fAvailableQaiCreditCached;
     mutable bool fChangeCached;
     mutable int64_t nDebitCached;
     mutable int64_t nWatchDebitCached;
@@ -492,6 +501,7 @@ public:
     mutable int64_t nImmatureCreditCached;
     mutable int64_t nImmatureWatchCreditCached;
     mutable int64_t nAvailableWatchCreditCached;
+    mutable int64_t nAvailableQaiCreditCached;
     mutable int64_t nChangeCached;
 
     CWalletTx() {
@@ -529,6 +539,7 @@ public:
         fAvailableWatchCreditCached = false;
         fImmatureCreditCached = false;
         fImmatureWatchCreditCached = false;
+        fAvailableQaiCreditCached = false;
         fChangeCached = false;
         nDebitCached = 0;
         nWatchDebitCached = 0;
@@ -538,6 +549,7 @@ public:
         nAvailableWatchCreditCached = 0;
         nImmatureCreditCached = 0;
         nImmatureWatchCreditCached = 0;
+        nAvailableQaiCreditCached = 0;
         nChangeCached = 0;
         nOrderPos = -1;
     }
@@ -624,6 +636,7 @@ public:
     int64_t GetImmatureWatchOnlyCredit(bool fUseCache=true) const;
     int64_t GetAvailableCredit(bool fUseCache=true) const;        // hold coin
     int64_t GetAvailableWatchCredit(bool fUseCache=true) const;
+    int64_t GetAvailableQaiCredit(bool fUseCache=true) const;
     int64_t GetChange() const;
 
     void GetAmounts(int64_t &nGeneratedImmature, int64_t &nGeneratedMature, std::list<std::pair<CBitcoinAddress, int64_t> > &listReceived,

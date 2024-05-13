@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -538,18 +538,16 @@ using MapPrevTx = std::map<uint256, std::pair<CTxIndex, CTransaction> >;
 class CTransaction
 {
     friend class CMutableTransaction;
-    //CTransaction(const CTransaction &)=delete;
-    //CTransaction(CTransaction &&)=delete;
-    //CTransaction &operator=(const CTransaction &)=delete;
-    //CTransaction &operator=(CTransaction &&)=delete;
 public:
     enum GetMinFee_mode {
         GMF_BLOCK,
         GMF_RELAY,
         GMF_SEND
     };
+
 protected: // CMerkleTx => CWalletTx
     const CTxOut &GetOutputFor(const CTxIn &input, const MapPrevTx &inputs) const;
+
 private:
     // Default transaction version.
     static constexpr int CURRENT_VERSION = 1;
@@ -570,12 +568,9 @@ private:
     std::vector<CTxIn> vin;
     std::vector<CTxOut> vout;
     uint32_t nLockTime;
+
 private:
-    /** CURRENT_VERSION == 1: hash */
     mutable uint256 hash_v1;
-    /** Memory only. */
-    //const uint256 hash;
-    //const uint256 m_witness_hash;
     uint256 hash;
     uint256 m_witness_hash;
 
@@ -599,9 +594,7 @@ public:
 
     void set_nTime(uint32_t _InTime) {nTime = _InTime;}
     uint32_t &set_nTime() {return nTime;}
-    int &set_nVersion() {
-        return nVersion;
-    }
+    int &set_nVersion() {return nVersion;}
     std::vector<CTxIn> &set_vin() {return vin;}
     CTxIn &set_vin(int index) {return vin[index];}
     std::vector<CTxOut> &set_vout() {return vout;}
@@ -627,9 +620,6 @@ public:
     bool IsNull() const {
         return (vin.empty() && vout.empty());
     }
-    //uint256 GetHash() const {
-    //    return hash_basis::SerializeHash(*this);
-    //}
 
     // Compute priority, given priority of inputs and (optionally) tx size
     double ComputePriority(double dPriorityInputs, unsigned int nTxSize=0) const;
@@ -715,6 +705,7 @@ public:
     //    @return True if all inputs (scriptSigs) use only standard transaction forms
     //    @see CTransaction::FetchInputs
     bool AreInputsStandard(const MapPrevTx &mapInputs) const;
+    bool AreInputsBaseStandard(const MapPrevTx &mapInputs) const;
 
     // [2] Count ECDSA signature operations the old-fashioned (pre-0.6) way
     //    @return number of sigops this transaction's outputs will produce when spent
@@ -835,27 +826,34 @@ public:
         return false;
     }
 
-    // CURRENT_VERSION==1 serialize methods
-    size_t GetSerializeSize() const {
-        if(this->nVersion == 1) {
-            size_t size = 0;
-            size += ::GetSerializeSize(this->nVersion);
-            size += ::GetSerializeSize(this->nTime);
-            size += ::GetSerializeSize(this->vin);
-            size += ::GetSerializeSize(this->vout);
-            size += ::GetSerializeSize(this->nLockTime);
-            return size;
-        } else {
-            assert(!"Only using CTransaction::GetSerializeSize is (nVersion == 1)");
-            throw std::runtime_error("Only using CTransaction::GetSerializeSize is (nVersion == 1)");
+    /**
+     * Get the total transaction size in bytes, including witness data.
+     * "Total Size" defined in BIP141 and BIP144.
+     * @return Total transaction size in bytes
+     */
+    unsigned int GetTotalSize() const {
+        return ::GetSerializeSize(*this);
+    }
 
-            size_t size = 0;
-            size += ::GetSerializeSize(this->nVersion);
-            size += ::GetSerializeSize(this->vin);
-            size += ::GetSerializeSize(this->vout);
-            size += ::GetSerializeSize(this->nLockTime);
-            return size;
+    /**
+     * Get the total transaction size in bytes, for proof of stake
+     * @return Total transaction size in bytes for proof of stake
+     */
+    size_t GetSerializeSize() const {
+        size_t size = 0;
+        size += ::GetSerializeSize(this->nVersion);
+        size += ::GetSerializeSize(this->nTime);
+        size += ::GetSerializeSize(this->vin);
+        size += ::GetSerializeSize(this->vout);
+        size += ::GetSerializeSize(this->nLockTime);
+
+        if(HasWitness()) {
+            for(const auto &txIn: this->vin) {
+                size += ::GetSerializeSize(txIn.get_scriptWitness());
+            }
         }
+
+        return size;
     }
 
     template <typename Stream>
@@ -868,23 +866,11 @@ public:
     }
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        if(this->nVersion == 1 || this->nVersion == 2) {
-            if(this->nVersion == 2) {
-                debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
-            }
-            READWRITE(this->nVersion);
-            READWRITE(this->nTime);
-            READWRITE(this->vin);
-            READWRITE(this->vout);
-            READWRITE(this->nLockTime);
-        } else {
-            debugcs::instance() << "CTransaction nVersion: " << this->nVersion << debugcs::endl();
-            assert(!"Only using CTransaction::Unserialize is (2 < nVersion)");
-            READWRITE(this->nVersion);
-            READWRITE(this->vin);
-            READWRITE(this->vout);
-            READWRITE(this->nLockTime);
-        }
+        READWRITE(this->nVersion);
+        READWRITE(this->nTime);
+        READWRITE(this->vin);
+        READWRITE(this->vout);
+        READWRITE(this->nLockTime);
     }
 };
 

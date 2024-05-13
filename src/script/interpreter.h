@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -13,7 +13,6 @@
 #include <const/amount.h>
 #include <prevector/prevector.h>
 #include <script/standard.h>
-
 #include <vector>
 #include <stdint.h>
 #include <string>
@@ -22,7 +21,8 @@ class CPubKey;
 class CScript;
 class uint256;
 
-class Script_util : private no_instance {
+class Script_util : private no_instance
+{
 public:
 #ifdef CSCRIPT_PREVECTOR_ENABLE
     using valtype = prevector<PREVECTOR_N, uint8_t>;
@@ -31,36 +31,65 @@ public:
     using valtype = std::vector<uint8_t>;
     using statype = std::vector<std::vector<uint8_t> >;
 #endif
+
 private:
 
-    static uint256 SignatureHash(CScript scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
+    //////////////////////////////////////////////
+    // Key types
+    // ECDSA: CTransaction Base
+    // Quantum and AI resistance: Multisig
+    // Ed25519: Multisig
+    // schnorr: Tapscript
+    //////////////////////////////////////////////
+
+    // CTransaction Base(P2PK, P2PKH, P2SH) SignatureHash, CheckSig
+    static uint256 SignatureHash(const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType);
     static bool CheckSig(const script_vector &vchSig, const script_vector &vchPubKey, const uint256 &hash);
     static bool CheckSig(script_vector vchSig, const script_vector &vchPubKey, const CScript &scriptCode, const CTransaction &txTo, unsigned int nIn, int nHashType, int flags);
+
+    // The HaveKeys indicates num of myself public key in keystore
     static unsigned int HaveKeys(const std::vector<valtype> &pubkeys, const CKeyStore &keystore);
 
+    // Checking ECDSA DER signature's structure, ECDSA pubkey structure
     static bool IsCanonicalSignature(const valtype &vchSig, unsigned int flags);
     static bool IsCanonicalPubKey(const valtype &vchPubKey, unsigned int flags);
-    static bool Solver(const CKeyStore &keystore, const CScript &scriptPubKey, const uint256& hash, int nHashType, CScript &scriptSigRet, TxnOutputType::txnouttype &whichTypeRet);
 
+    // CTransaction Base(P2PK, P2PKH, P2SH) scriptPubKey Solver
+    static bool Solver(const CKeyStore &keystore, const CScript &scriptPubKey, const uint256 &hash, int nHashType, CScript &scriptSigRet, TxnOutputType::txnouttype &whichTypeRet);
+
+    // Sign1: Single ECDSA, SignQAI: Single Quantum and AI resistance, SignR: Single pubkey-R ECDSA, SignN: Multisig ECDSA
     static bool Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
+    static bool SignQAI(const CqKey &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet);
     static bool SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
 
+    // CTransaction Base(P2PK, P2PKH, P2SH) combine blockchain ope_code stack(type: std::vector<std::vector<unsigned char>>)
     static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2);
 
 public:
+
+    // Strict Checking ECDSA DER signature
     static bool IsDERSignature(const valtype &vchSig, bool fWithHashType=false, bool fCheckLow=false);
+
+    // Creating blockchain ope_code stack and Checking script
     static bool EvalScript(statype &stack, const CScript &script, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
+
+    // Convert from scriptPubKey to blockchain ope_code stack
     static bool Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype &typeRet, statype &vSolutionsRet);
+
+    // Checking require num of ope_code stack, scriptPubKey indicates standard transaction
     static int ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statype &vSolutions);
     static bool IsStandard(const CScript &scriptPubKey, TxnOutputType::txnouttype &whichType);
 
+    // CTransaction Base(P2PK, P2PKH, P2SH) Checking spendable
     static isminetype IsMine(const CKeyStore &keystore, const CBitcoinAddress &dest);
     static isminetype IsMine(const CKeyStore &keystore, const CScript &scriptPubKey);
-    static void ExtractAffectedKeys(const CKeyStore &keystore, const CScript &scriptPubKey, std::vector<CKeyID> &vKeys);
 
+    // Checking and Extracting destination BicoinAddress
+    static void ExtractAffectedKeys(const CKeyStore &keystore, const CScript &scriptPubKey, std::vector<CKeyID> &vKeys);
     static bool ExtractAddress(const CKeyStore &keystore, const CScript &scriptPubKey, CBitcoinAddress &addressRet);
 
+    // Sign and Verify
     static bool SignSignature(const CKeyStore &keystore, const CScript &fromPubKey, CTransaction &txTo, unsigned int nIn, int nHashType=Script_param::SIGHASH_ALL);
     static bool SignSignature(const CKeyStore &keystore, const CTransaction &txFrom, CTransaction &txTo, unsigned int nIn, int nHashType=Script_param::SIGHASH_ALL);
     static bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType);
@@ -207,12 +236,10 @@ private:
     static uint256 GetOutputsHash(const T &txTo);
 
     // witness program
-    static bool VerifyWitnessProgram(const CScriptWitness &witness, int witversion, const valtype &program, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror);
     static size_t WitnessSigOps(int witversion, const valtype &witprogram, const CScriptWitness &witness);
 public:
     static bool CheckSignatureEncoding(const valtype &vchSig, unsigned int flags, ScriptError *serror);
     static int FindAndDelete(CScript &script, const CScript &b);
-    static bool EvalScript(statype &stack, const CScript &script, unsigned int flags, const BaseSignatureChecker &checker, SigVersion sigversion, ScriptError *error = nullptr);
 
     struct PrecomputedTransactionData {
         PrecomputedTransactionData()=delete;
@@ -225,9 +252,6 @@ public:
         template <class T>
         explicit PrecomputedTransactionData(const T &tx);
     };
-
-    template <class T>
-    static uint256 SignatureHash(const CScript &scriptCode, const T &txTo, unsigned int nIn, int nHashType, const CAmount &amount, SigVersion sigversion, const PrecomputedTransactionData *cache = nullptr);
 
     /** Signature hash sizes */
     static constexpr size_t WITNESS_V0_SCRIPTHASH_SIZE = 32;
@@ -246,14 +270,14 @@ public:
     public:
         GenericTransactionSignatureChecker(const T *txToIn, unsigned int nInIn, const CAmount &amountIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(nullptr) {}
         GenericTransactionSignatureChecker(const T *txToIn, unsigned int nInIn, const CAmount &amountIn, const PrecomputedTransactionData& txdataIn) : txTo(txToIn), nIn(nInIn), amount(amountIn), txdata(&txdataIn) {}
-        bool CheckSig(const valtype &scriptSig, const valtype &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const override;
+        //bool CheckSig(const valtype &scriptSig, const valtype &vchPubKey, const CScript &scriptCode, SigVersion sigversion) const override;
         bool CheckLockTime(const CScriptNum &nLockTime) const override;
         bool CheckSequence(const CScriptNum &nSequence) const override;
     };
 
     using TransactionSignatureChecker = GenericTransactionSignatureChecker<CTransaction>;
     using MutableTransactionSignatureChecker = GenericTransactionSignatureChecker<CMutableTransaction>;
-    static bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CScriptWitness *witness, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror = nullptr);
+    //static bool VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CScriptWitness *witness, unsigned int flags, const BaseSignatureChecker &checker, ScriptError *serror = nullptr);
     static size_t CountWitnessSigOps(const CScript &scriptSig, const CScript &scriptPubKey, const CScriptWitness *witness, unsigned int flags);
 
     /**

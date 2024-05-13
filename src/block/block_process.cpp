@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -23,6 +23,56 @@ int64_t block_process::manage::nPingInterval = 30 * 60;
 CCriticalSection block_process::cs_main;
 std::map<uint256, CBlock *> block_process::mapOrphanBlocks;
 std::map<uint256, uint256> block_process::mapProofOfStake;
+
+void wallet_process::AcceptScript(const CTransaction &tx)
+{
+    for(const CTxIn &txin: tx.get_vin()) {
+        const CScript &script = txin.get_scriptSig();
+        if(script.size() >= 33) {
+            CScript::const_iterator it = script.begin();
+            for(int i=0; i < 30; ++i) { // up to 30
+                ScriptOpcodes::opcodetype opcode;
+                script_vector data;
+                if(!script.GetOp(it, opcode, data))
+                    break;
+                CScript redeemScript(data.begin(), data.end());
+                if(redeemScript.IsPayToQAIResistance()) {
+                    CScript::const_iterator it2 = redeemScript.begin();
+                    ScriptOpcodes::opcodetype opcode1, opcode2;
+                    script_vector data1, data2;
+                    if(!redeemScript.GetOp(it2, opcode1, data1))
+                        continue;
+                    if(!redeemScript.GetOp(it2, opcode2, data2))
+                        continue;
+                    if(opcode1 == ScriptOpcodes::OP_1 && data2.size() == 33) {
+                        CPubKey pubkey(data2.begin(), data2.end());
+                        if(pubkey.IsFullyValid_BIP66()) {
+                            if(!entry::pwalletMain->HaveCScript(redeemScript.GetID()))
+                                entry::pwalletMain->AddCScript(redeemScript, pubkey);
+                            //break;
+                        }
+                    }
+                } else if (redeemScript.IsPayToEthID()) {
+                    CScript::const_iterator it2 = redeemScript.begin();
+                    ScriptOpcodes::opcodetype opcode1, opcode2;
+                    script_vector data1, data2;
+                    if(!redeemScript.GetOp(it2, opcode1, data1))
+                        continue;
+                    if(!redeemScript.GetOp(it2, opcode2, data2))
+                        continue;
+                    if(opcode1 == ScriptOpcodes::OP_1 && data2.size() == 33) {
+                        CPubKey pubkey(data2.begin(), data2.end());
+                        if(pubkey.IsFullyValid_BIP66()) {
+                            if(!entry::pwalletMain->HaveCScript(redeemScript.GetID()))
+                                entry::pwalletMain->AddCScript(redeemScript, pubkey);
+                            //break;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 // The message start string is designed to be unlikely to occur in normal data.
 // The characters are rarely used upper ASCII, not valid as UTF-8, and produce
