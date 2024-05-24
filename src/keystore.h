@@ -31,7 +31,6 @@ public:
     virtual ~CKeyStore() {}
 
     // Add a key to the store.
-    virtual bool AddKey(const CKey &key) =0;
     virtual bool AddKey(const CFirmKey &key) =0;
 
     // Add a malleable key to store.
@@ -40,11 +39,10 @@ public:
 
     // Check whether a key corresponding to a given address is present in the store.
     virtual bool HaveKey(const CKeyID &address) const =0;
-    virtual bool GetKey(const CKeyID &address, CKey &keyOut) const =0;
     virtual bool GetKey(const CKeyID &address, CFirmKey &keyOut) const =0;
     virtual void GetKeys(std::set<CKeyID> &setAddress) const =0;
     virtual bool GetPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const {
-        CKey key;
+        CFirmKey key;
         if (! GetKey(address, key)) {
             return false;
         }
@@ -66,7 +64,7 @@ public:
     virtual bool HaveWatchOnly(const CScript &dest) const =0;
     virtual bool HaveWatchOnly() const =0;
     virtual bool GetSecret(const CKeyID &address, CSecret &vchSecret, bool &fCompressed) const {
-        CKey key;
+        CFirmKey key;
         if (! GetKey(address, key)) {
             return false;
         }
@@ -76,7 +74,7 @@ public:
 
     virtual bool CheckOwnership(const CPubKey &pubKeyVariant, const CPubKey &R) const =0;
     virtual bool CheckOwnership(const CPubKey &pubKeyVariant, const CPubKey &R, CMalleableKeyView &view) const =0;
-    virtual bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CKey &privKey) const =0;
+    virtual bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CFirmKey &privKey) const =0;
     virtual void ListMalleableViews(std::list<CMalleableKeyView> &malleableViewList) const =0;
 };
 
@@ -107,7 +105,6 @@ protected:
 public:
     bool EraseBasicKey();
 
-    bool AddKey(const CKey &key);
     bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView &keyView, const CSecret &vchSecretH);
     bool GetMalleableKey(const CMalleableKeyView &keyView, CMalleableKey &mKey) const {
@@ -151,18 +148,6 @@ public:
                 setAddress.insert((*mi).first);
             }
         }
-    }
-
-    bool GetKey(const CKeyID &address, CKey &keyOut) const {
-        {
-            LOCK(cs_KeyStore);
-            KeyMap::const_iterator mi = mapKeys.find(address);
-            if (mi != mapKeys.end()) {
-                keyOut.SetSecret((*mi).second.first, (*mi).second.second);
-                return true;
-            }
-        }
-        return false;
     }
 
     bool GetKey(const CKeyID &address, CFirmKey &keyOut) const {
@@ -248,7 +233,7 @@ public:
         return false;
     }
 
-    bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CKey &privKey) const {
+    bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CFirmKey &privKey) const {
         {
             LOCK(cs_KeyStore);
             for (MalleableKeyMap::const_iterator mi = mapMalleableKeys.begin(); mi != mapMalleableKeys.end(); mi++)
@@ -352,7 +337,6 @@ public:
     virtual bool AddCryptedKey(const CPubKey &vchPubKey, const std::vector<unsigned char> &vchCryptedSecret);
     virtual bool AddCryptedMalleableKey(const CMalleableKeyView& keyView, const std::vector<unsigned char> &vchCryptedSecretH);
 
-    bool AddKey(const CKey &key);
     bool AddKey(const CFirmKey &key);
     bool AddMalleableKey(const CMalleableKeyView& keyView, const CSecret &vchSecretH);
     bool HaveKey(const CKeyID &address) const {
@@ -364,7 +348,7 @@ public:
             return mapCryptedKeys.count(address) > 0;
         }
     }
-    bool GetKey(const CKeyID &address, CKey &keyOut) const;
+
     bool GetKey(const CKeyID &address, CFirmKey &keyOut) const;
     bool GetPubKey(const CKeyID &address, CPubKey &vchPubKeyOut) const;
     void GetKeys(std::set<CKeyID> &setAddress) const {
@@ -422,7 +406,7 @@ public:
         return GetMalleableView(mpk, view);
     }
 
-    bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CKey &privKey) const;
+    bool CreatePrivKey(const CPubKey &pubKeyVariant, const CPubKey &R, CFirmKey &privKey) const;
 
     void ListMalleableViews(std::list<CMalleableKeyView> &malleableViewList) const {
         malleableViewList.clear();

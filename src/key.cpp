@@ -522,7 +522,7 @@ bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVa
 }
 
 // Check ownership and restore private key
-bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant, CKey &privKeyVariant) const
+bool CMalleableKey::CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant, CFirmKey &privKeyVariant) const
 {
     if (IsNull()) {
         throw key_error("CMalleableKey::CheckKeyVariant() : Attempting to run on NULL key object.");

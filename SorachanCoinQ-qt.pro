@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.67.14
+VERSION = 3.68.14
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -755,6 +755,7 @@ HEADERS += \
     src/util/args.h \
     src/util/c_overload.h \
     src/util/exception.h \
+    src/util/span.h \
     src/thread/threadsafety.h \
     src/address/bech32.h \
     src/address/hasheth.h \
@@ -918,6 +919,7 @@ SOURCES += \
     src/rpc/rpcblockchain.cpp \
     src/rpc/rpcrawtransaction.cpp \
     src/bip32/hdchain.cpp \
+    src/bip32/keydebug.cpp \
     src/key/pubkey.cpp \
     src/key/privkey.cpp \
     src/cleanse/cleanse.cpp \

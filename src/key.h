@@ -19,6 +19,7 @@
 #include <openssl/ec.h> // for EC_KEY definition
 
 class CScript;
+class CFirmKey;
 
 class key_error : public std::runtime_error
 {
@@ -375,7 +376,7 @@ public:
     }
 
     bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant) const;
-    bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant, CKey &privKeyVariant) const;
+    bool CheckKeyVariant(const CPubKey &R, const CPubKey &vchPubKeyVariant, CFirmKey &privKeyVariant) const;
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>

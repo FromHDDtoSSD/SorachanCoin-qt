@@ -443,20 +443,15 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmu
 
 /* Setup blinding values for secp256k1_ecmult_gen. */
 bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const unsigned char *seed32) {
+    if(!seed32) return false;
     CPubKey::secp256k1_unit b;
     CPubKey::ecmult::secp256k1_gej gb;
     CPubKey::ecmult::secp256k1_fe s;
     unsigned char nonce32[32];
     CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_t rng;
-    int retry;
-    unsigned char keydata[64] = {0};
-    if (seed32 == nullptr) {
-        /* When seed is NULL, reset the initial point and blinding value. */
-        CPubKey::ecmult::secp256k1_gej_set_ge(&initial_, CPubKey::ecmult::secp256k1_get_ge_const_g());
-        CFirmKey::ecmult::secp256k1_gej_neg(&initial_, &initial_);
-        CPubKey::secp256k1_scalar_set_int(&blind_, 1);
-        // return true; // debug: Confirmed normal operation at this location.
-    }
+    CPubKey::ecmult::secp256k1_gej_set_ge(&initial_, CPubKey::ecmult::secp256k1_get_ge_const_g());
+    CFirmKey::ecmult::secp256k1_gej_neg(&initial_, &initial_);
+    CPubKey::secp256k1_scalar_set_int(&blind_, 1);
 
     /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
     CPubKey::secp256k1_scalar_get_be32(nonce32, &blind_);
@@ -464,14 +459,16 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
      *   and guards against weak or adversarial seeds.  This is a simpler and safer interface than
      *   asking the caller for blinding values directly and expecting them to retry on failure.
      */
-    std::memcpy(keydata, nonce32, 32);
-    if (seed32 != nullptr) {
+    {
+        unsigned char keydata[64] = {0};
+        std::memcpy(keydata, nonce32, 32);
         std::memcpy(keydata + 32, seed32, 32);
+        CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, 64);
+        cleanse::memory_cleanse(keydata, sizeof(keydata));
     }
-    CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, seed32 ? 64 : 32);
-    std::memset(keydata, 0, sizeof(keydata));
 
     /* Retry for out of range results to achieve uniformity. */
+    int retry;
     do {
         CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
         retry = !CPubKey::ecmult::secp256k1_fe_set_be32(&s, nonce32);
@@ -488,17 +485,15 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
         /* A blinding value of 0 works, but would undermine the projection hardening. */
         retry |= CPubKey::secp256k1_scalar_is_zero(&b);
     } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > order. */
-    CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(&rng);
 
-    std::memset(nonce32, 0, 32);
     if(! secp256k1_ecmult_gen(&gb, &b))
         return false;
 
     CPubKey::secp256k1_scalar_negate(&b, &b);
     blind_ = b;
     initial_ = gb;
-    CFirmKey::secp256k1_scalar_clear(&b);
-    CFirmKey::ecmult::secp256k1_gej_clear(&gb);
+    cleanse::memory_cleanse(&b, sizeof(b));
+    cleanse::memory_cleanse(&gb, sizeof(gb));
     return true;
 }
 
@@ -580,13 +575,18 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() {
     prec_ = (CPubKey::ecmult::secp256k1_ge_storage (*)[64][16])secp256k1_ecmult_static_context;
 #endif
 
-    return secp256k1_ecmult_gen_blind(nullptr);
+    debugcs::instance() << "CFirmKey: called prevent side channel attack" << debugcs::endl();
+    unsigned char seed32[32];
+    latest_crypto::random::GetStrongRandBytes(seed32, 32);
+    bool ret = secp256k1_ecmult_gen_blind(seed32);
+    cleanse::memory_cleanse(seed32, sizeof(seed32));
+    return ret;
 }
 
 void CFirmKey::ecmult::secp256k1_gen_context::clear() {
 #ifndef USE_ECMULT_STATIC_PRECOMPUTATION
     if(prec_) {
-        cleanse::OPENSSL_cleanse(prec_, sizeof(*prec_));
+        cleanse::memory_cleanse(prec_, sizeof(*prec_));
         ::free(prec_);
     }
 #endif
@@ -594,7 +594,10 @@ void CFirmKey::ecmult::secp256k1_gen_context::clear() {
 }
 
 CFirmKey::ecmult::secp256k1_gen_context::~secp256k1_gen_context() {
+    debugcs::instance() << "CFirmKey: cleanse prevent side channel attack " << sizeof(initial_) << ":" << sizeof(blind_) << debugcs::endl();
     clear();
+    cleanse::memory_cleanse(&initial_, sizeof(initial_));
+    cleanse::memory_cleanse(&blind_, sizeof(blind_));
 }
 
 
@@ -1212,6 +1215,64 @@ bool CFirmKey::Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSki
         return true;
 
     return VerifyPubKey(vchPubKey);
+}
+
+bool CFirmKey::SetPrivKey(const CPrivKey &privkey) {
+    if(!(privkey.size() == CFirmKey::COMPRESSED_PRIVATE_KEY_SIZE || privkey.size() == CFirmKey::PRIVATE_KEY_SIZE))
+        return false;
+    if (ec_privkey_import_der((unsigned char *)begin(), privkey.data(), privkey.size()) == 0)
+        return false;
+    fCompressed_ = privkey.size() == CFirmKey::COMPRESSED_PRIVATE_KEY_SIZE ? true: false;
+    if(fCompressed_) {
+        key_vector pubvch;
+        pubvch.resize(CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+        ::memcpy(&pubvch.front(), privkey.data() + 181, CPubKey::COMPRESSED_PUBLIC_KEY_SIZE);
+        fValid_ = true;
+        CPubKey pubkey;
+        pubkey.Set(pubvch);
+        debugcs::instance() << strenc::HexStr(pubkey.GetPubVch()) << debugcs::endl();
+        debugcs::instance() << strenc::HexStr(this->GetPubKey().GetPubVch()) << debugcs::endl();
+        if(!VerifyPubKey(pubkey)) {
+            fValid_ = false;
+            return false;
+        }
+    } else {
+        key_vector pubvch;
+        pubvch.resize(CPubKey::PUBLIC_KEY_SIZE);
+        ::memcpy(&pubvch.front(), privkey.data() + 214, CPubKey::PUBLIC_KEY_SIZE);
+        fValid_ = true;
+        CPubKey pubkey;
+        pubkey.Set(pubvch);
+        debugcs::instance() << strenc::HexStr(pubkey.GetPubVch()) << debugcs::endl();
+        debugcs::instance() << strenc::HexStr(this->GetPubKey().GetPubVch()) << debugcs::endl();
+        if(!VerifyPubKey(pubkey)) {
+            fValid_ = false;
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool CFirmKey::WritePEM(const std::string &fileName, const SecureString &strPassKey) const {
+    CSecret secret = GetSecret();
+    CKey key;
+    key.SetSecret(secret, IsCompressed());
+
+    BIO *pemOut = BIO_new_file(fileName.c_str(), "w");
+    if (pemOut == nullptr) {
+        return logging::error("GetPEM() : failed to create file %s\n", fileName.c_str());
+    }
+    bool ret = key.WritePEM(pemOut, strPassKey);
+    BIO_free(pemOut);
+    return ret;
+}
+
+void CFirmKey::DecryptData(const key_vector &encrypted, key_vector &data) const {
+    CSecret secret = GetSecret();
+    CKey key;
+    key.SetSecret(secret, IsCompressed());
+    key.DecryptData(encrypted, data);
 }
 
 /////////////////////////////////////////////////////////////////////////////////

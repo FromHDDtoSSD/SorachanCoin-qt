@@ -34,7 +34,7 @@ json_spirit::Value CRPCTable::decryptdata(const json_spirit::Array &params, bool
     }
 
     EnsureWalletIsUnlocked();
-    CKey key;
+    CFirmKey key;
     CBitcoinAddress addr(params[0].get_str());
     if (addr.IsValid()) {
         CKeyID keyID;
@@ -86,7 +86,7 @@ json_spirit::Value CRPCTable::decryptmessage(const json_spirit::Array &params, b
 
     EnsureWalletIsUnlocked();
 
-    CKey key;
+    CFirmKey key;
     CBitcoinAddress addr(params[0].get_str());
     if (addr.IsValid()) {
         CKeyID keyID;

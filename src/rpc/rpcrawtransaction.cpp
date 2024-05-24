@@ -478,7 +478,7 @@ json_spirit::Value CRPCTable::signrawtransaction(const json_spirit::Array &param
                 throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Invalid private key");
             }
 
-            CKey key;
+            CFirmKey key;
             bool fCompressed;
             CSecret secret = vchSecret.GetSecret(fCompressed);
             key.SetSecret(secret, fCompressed);

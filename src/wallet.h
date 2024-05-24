@@ -189,12 +189,11 @@ public:
     CMalleableKeyView GenerateNewMalleableKey();
 
     // Adds a key to the store, and saves it to disk.
-    bool AddKey(const CKey &key);
     bool AddKey(const CFirmKey &key);
     bool AddKey(const CMalleableKey &mKey);
 
     // Adds a key to the store, without saving it to disk (used by LoadWallet)
-    bool LoadKey(const CKey &key) {
+    bool LoadKey(const CFirmKey &key) {
         return CCryptoKeyStore::AddKey(key);
     }
 
@@ -310,7 +309,7 @@ public:
     //
     // Stake, Merge
     //
-    bool CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nTime, uint32_t nBits, CTransaction &txNew, CKey &key);
+    bool CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nTime, uint32_t nBits, CTransaction &txNew, CFirmKey &key);
     bool MergeCoins(const int64_t &nAmount, const int64_t &nMinValue, const int64_t &nMaxValue, std::list<uint256> &listMerged);
 
     std::string SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &wtxNew, bool fAskFee=false);

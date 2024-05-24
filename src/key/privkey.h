@@ -233,6 +233,15 @@ public:
     //! Load private key and check that public key matches.
     bool Load(const CPrivKey &privkey, const CPubKey &vchPubKey, bool fSkipCheck);
 
+    //! Load private key
+    bool SetPrivKey(const CPrivKey &privkey);
+
+    //! from SecretKey to file
+    bool WritePEM(const std::string &fileName, const SecureString &strPassKey) const;
+
+    //! Decrypt data
+    void DecryptData(const key_vector &encrypted, key_vector &data) const;
+
     //! PrivKey ERROR callback
     static int PrivKey_ERROR_callback(void (*fn)()=nullptr) {if(fn) fn(); return 0;}
 };

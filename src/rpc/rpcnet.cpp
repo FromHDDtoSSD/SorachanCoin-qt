@@ -308,7 +308,7 @@ json_spirit::Value CRPCTable::sendalert(const json_spirit::Array &params, bool f
     }
 
     CAlert alert;
-    CKey key;
+    CFirmKey key;
 
     alert.strStatusBar = params[0].get_str();
     alert.nMinVer = params[2].get_int();

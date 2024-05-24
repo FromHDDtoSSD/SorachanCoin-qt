@@ -83,7 +83,7 @@ CPubKey CWallet::GenerateNewKey()
         }
     }
 
-    CKey key;
+    CFirmKey key;
     key.MakeNewKey(fCompressed);
 
     // Compressed public keys were introduced in version 0.6.0
@@ -170,22 +170,6 @@ CMalleableKeyView CWallet::GenerateNewMalleableKey()
     }
 
     return CMalleableKeyView(mKey);
-}
-
-bool CWallet::AddKey(const CKey &key)
-{
-    CPubKey pubkey = key.GetPubKey();
-    if (! CCryptoKeyStore::AddKey(key)) {
-        return false;
-    }
-    if (! fFileBacked) {
-        return true;
-    }
-    if (! IsCrypted()) {
-        return CWalletDB(strWalletFile, strWalletLevelDB, strWalletSqlFile).WriteKey(pubkey, key.GetPrivKey(), mapKeyMetadata[CBitcoinAddress(pubkey.GetID())]);
-    }
-
-    return true;
 }
 
 bool CWallet::AddKey(const CFirmKey &key)
@@ -748,7 +732,7 @@ bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
             KeyMap::const_iterator mi = mapKeys.begin();
             while (mi != mapKeys.end())
             {
-                CKey key;
+                CFirmKey key;
                 key.SetSecret((*mi).second.first, (*mi).second.second);
                 pwalletdbDecryption->EraseCryptedKey(key.GetPubKey());
                 pwalletdbDecryption->WriteKey(key.GetPubKey(), key.GetPrivKey(), mapKeyMetadata[CBitcoinAddress(mi->first)]);
@@ -796,6 +780,7 @@ bool CWallet::DecryptWallet(const SecureString &strWalletPassphrase)
     return true;
 }
 
+/*
 bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const SecureString &strPassKey) const
 {
     BIO *pemOut = BIO_new_file(fileName.c_str(), "w");
@@ -811,6 +796,17 @@ bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const Sec
     bool result = key.WritePEM(pemOut, strPassKey);
     BIO_free(pemOut);
     return result;
+}
+*/
+
+bool CWallet::GetPEM(const CKeyID &keyID, const std::string &fileName, const SecureString &strPassKey) const
+{
+    CFirmKey key;
+    if (! GetKey(keyID, key)) {
+        return logging::error("GetPEM() : failed to get key for address=%s\n", CBitcoinAddress(keyID).ToString().c_str());
+    }
+
+    return key.WritePEM(fileName, strPassKey);
 }
 
 bool CWallet::UnlockHDSeed(const SecureString &strWalletPassphrase, CSeedSecret *poutdecvchextkey) {
@@ -2968,7 +2964,7 @@ bool CWallet::MergeCoins(const int64_t &nAmount, const int64_t &nMinValue, const
     return true;
 }
 
-bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerationTime, uint32_t nBits, CTransaction &txNew, CKey &key)
+bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerationTime, uint32_t nBits, CTransaction &txNew, CFirmKey &key)
 {
     CWalletTx wtx;
     if (! GetTransaction(hashTx, wtx)) {

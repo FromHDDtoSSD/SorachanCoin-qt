@@ -63,7 +63,7 @@ json_spirit::Value CRPCTable::importprivkey(const json_spirit::Array &params, bo
         throw bitjson::JSONRPCError(RPC_WALLET_UNLOCK_NEEDED, "Wallet is unlocked for minting only.");
     }
 
-    CKey key;
+    CFirmKey key;
     bool fCompressed;
     CSecret secret = vchSecret.GetSecret(fCompressed);
     key.SetSecret(secret, fCompressed);
@@ -134,7 +134,7 @@ json_spirit::Value CRPCTable::importprivethkey(const json_spirit::Array &params,
         strSecret.erase(strSecret.begin(), strSecret.begin() + 1);
 
     strenc::hex_vector vec = strenc::ParseHex(strSecret);
-    CKey key;
+    CFirmKey key;
     key.SetSecret(CSecret(vec.data(), vec.data() + vec.size()));
     cleanse::OPENSSL_cleanse(&strSecret.front(), strSecret.size());
     cleanse::OPENSSL_cleanse(&vec.front(), vec.size());

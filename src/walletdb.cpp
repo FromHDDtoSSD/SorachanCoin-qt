@@ -467,7 +467,7 @@ bool CWalletDB::ReadKeyValue(CWallet *pwallet, CDataStream &ssKey, CDataStream &
             ssValue >> hd_wallet::get()._usedkey_offset;
 
         } else if (strType == "key" || strType == "wkey") {
-            CKey key;
+            CFirmKey key;
             CPubKey vchPubKey;
             ssKey >> vchPubKey;
             if (strType == "key") {
@@ -1037,7 +1037,7 @@ bool wallet_dispatch::DumpWallet(CWallet *pwallet, const std::string &strDest)
             CKeyID keyid;
             addr.GetKeyID(keyid);
             bool IsCompressed;
-            CKey key;
+            CFirmKey key;
             if (! pwallet->GetKey(keyid, key)) {
                 continue;
             }
@@ -1122,7 +1122,7 @@ bool wallet_dispatch::ImportWallet(CWallet *pwallet, const std::string &strLocat
             // Simple private key
             //
             bool fCompressed;
-            CKey key;
+            CFirmKey key;
             CSecret secret = vchSecret.GetSecret(fCompressed);
             key.SetSecret(secret, fCompressed);
             CKeyID keyid = key.GetPubKey().GetID();

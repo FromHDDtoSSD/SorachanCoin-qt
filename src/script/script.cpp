@@ -2331,7 +2331,7 @@ bool Script_util::Solver(const CScript &scriptPubKey, TxnOutputType::txnouttype 
 }
 
 bool Script_util::Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
-    CKey key;
+    CFirmKey key;
     if (! keystore.GetKey(address, key)) {
         return false;
     }
@@ -2393,7 +2393,7 @@ bool Script_util::SignQAI(const CqKey &qkey, const uint256 &qaihash, const uint2
 }
 
 bool Script_util::SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
-    CKey key;
+    CFirmKey key;
     if (! keystore.CreatePrivKey(pubKey, R, key)) {
         return false;
     }

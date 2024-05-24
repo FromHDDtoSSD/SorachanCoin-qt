@@ -2491,7 +2491,7 @@ json_spirit::Value CRPCTable::makekeypair(const json_spirit::Array &params, bool
         strPrefix = params[0].get_str();
     }
 
-    CKey key;
+    CFirmKey key;
     key.MakeNewKey(true);
 
     CPrivKey vchPrivKey = key.GetPrivKey();
@@ -2552,7 +2552,7 @@ json_spirit::Value CRPCTable::adjustmalleablekey(const json_spirit::Array &param
     CMalleableKey malleableKey;
     malleableKey.SetString(params[0].get_str());
 
-    CKey privKeyVariant;
+    CFirmKey privKeyVariant;
     CPubKey vchPubKeyVariant = CPubKey(strenc::ParseHex(params[1].get_str()));
 
     CPubKey R(strenc::ParseHex(params[2].get_str()));

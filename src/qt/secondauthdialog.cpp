@@ -101,7 +101,7 @@ void SecondAuthDialog::on_signMessageButton_clicked()
         return;
     }
 
-    CKey key;
+    CFirmKey key;
     if (! entry::pwalletMain->GetKey(keyID, key)) {
         ui->statusLabel->setStyleSheet("QLabel { color: red; }");
         ui->statusLabel->setText(tr("Private key for the entered address is not available."));

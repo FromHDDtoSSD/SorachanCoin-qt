@@ -1104,7 +1104,7 @@ void miner::ThreadStakeMiner(void *parg)
                 bitthread::SetThreadPriority(THREAD_PRIORITY_NORMAL);
                 inputsMap.erase(inputsMap.find(LuckyInput));
 
-                CKey key;
+                CFirmKey key;
                 CTransaction txCoinStake;
                 if (! pwallet->CreateCoinStake(LuckyInput.first, LuckyInput.second, solution.second, nBits, txCoinStake, key))    {        // Create new coinstake transaction
                     std::string strMessage = _("Warning: Unable to create coinstake transaction, see debug.log for the details. Mining thread has been stopped.");

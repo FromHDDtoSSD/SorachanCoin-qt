@@ -383,7 +383,7 @@ bool Checkpoints::manage::SetCheckpointPrivKey(std::string strPrivKey) {
 
     checkpoints_vector vchPrivKey = strenc::ParseHex(strPrivKey);
 
-    CKey key;
+    CFirmKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (! key.Sign(hash_basis::Hash(checkpoint.Get_vchMsg_begin(), checkpoint.Get_vchMsg_end()), checkpoint.Set_vchSig())) {
         return false;
@@ -406,7 +406,7 @@ bool Checkpoints::manage::SendSyncCheckpoint(uint256 hashCheckpoint) {
     }
     checkpoints_vector vchPrivKey = strenc::ParseHex(CSyncCheckpoint::Get_strMasterPrivKey());
 
-    CKey key;
+    CFirmKey key;
     key.SetPrivKey(CPrivKey(vchPrivKey.begin(), vchPrivKey.end())); // if key is not correct openssl may crash
     if (! key.Sign(hash_basis::Hash(checkpoint.Get_vchMsg_begin(), checkpoint.Get_vchMsg_end()), checkpoint.Set_vchSig())) {
         return logging::error("Checkpoints::manage::SendSyncCheckpoint: Unable to sign checkpoint, check private key?");
