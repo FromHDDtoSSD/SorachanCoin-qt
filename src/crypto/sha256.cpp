@@ -697,6 +697,12 @@ CSHA256& CSHA256::Reset()
     return *this;
 }
 
+void CSHA256::InitSet(const uint32_t dIn[], uint64_t bytesIn) {
+    for(int i=0; i < 8; ++i)
+        s[i] = dIn[i];
+    bytes = bytesIn;
+}
+
 void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks)
 {
     if (TransformD64_8way) {

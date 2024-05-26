@@ -58,18 +58,25 @@ private:
     //! Check whether the 32-byte(PRIVATE_BYTE_VECTOR_SIZE) array pointed to by vch is valid keydata.
     static bool Check(const unsigned char *vch);
 
+public:
     class hash {
     public:
+        using secp256k1_sha256 = latest_crypto::CSHA256;
+        using secp256k1_hmac_sha256 = latest_crypto::CHMAC_SHA256;
         typedef struct {
             unsigned char v[32];
             unsigned char k[32];
             int retry;
         } secp256k1_rfc6979_hmac_sha256_t;
-    private:
-        static void secp256k1_hmac_sha256_initialize(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *key, size_t size);
-        static void secp256k1_hmac_sha256_write(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *data, size_t size);
-        static void secp256k1_hmac_sha256_finalize(latest_crypto::CHMAC_SHA256 *hash, unsigned char *out32);
-    public:
+
+        static void secp256k1_sha256_initialize(secp256k1_sha256 *hash);
+        static void secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *data, size_t size);
+        static void secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32);
+
+        static void secp256k1_hmac_sha256_initialize(secp256k1_hmac_sha256 *hash, const unsigned char *key, size_t size);
+        static void secp256k1_hmac_sha256_write(secp256k1_hmac_sha256 *hash, const unsigned char *data, size_t size);
+        static void secp256k1_hmac_sha256_finalize(secp256k1_hmac_sha256 *hash, unsigned char *out32);
+
         static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen);
         static void secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen);
         static void secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng);

@@ -139,15 +139,27 @@ bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_g
 }
 
 // hash
-void CFirmKey::hash::secp256k1_hmac_sha256_initialize(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *key, size_t size) {
-    hash->Init(key, size);
+void CFirmKey::hash::secp256k1_sha256_initialize(secp256k1_sha256 *hash) {
+    hash->Reset();
 }
 
-void CFirmKey::hash::secp256k1_hmac_sha256_write(latest_crypto::CHMAC_SHA256 *hash, const unsigned char *data, size_t size) {
+void CFirmKey::hash::secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *data, size_t size) {
     hash->Write(data, size);
 }
 
-void CFirmKey::hash::secp256k1_hmac_sha256_finalize(latest_crypto::CHMAC_SHA256 *hash, unsigned char *out32) {
+void CFirmKey::hash::secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32) {
+    hash->Finalize(out32);
+}
+
+void CFirmKey::hash::secp256k1_hmac_sha256_initialize(secp256k1_hmac_sha256 *hash, const unsigned char *key, size_t size) {
+    hash->Init(key, size);
+}
+
+void CFirmKey::hash::secp256k1_hmac_sha256_write(secp256k1_hmac_sha256 *hash, const unsigned char *data, size_t size) {
+    hash->Write(data, size);
+}
+
+void CFirmKey::hash::secp256k1_hmac_sha256_finalize(secp256k1_hmac_sha256 *hash, unsigned char *out32) {
     hash->Finalize(out32);
 }
 

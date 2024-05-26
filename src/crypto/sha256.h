@@ -28,6 +28,8 @@ public:
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CSHA256& Reset();
 
+    void InitSet(const uint32_t dIn[], uint64_t bytesIn); // for schnorr
+
     static constexpr size_t Size() {return OUTPUT_SIZE;}
     void Clean() {
         cleanse::OPENSSL_cleanse(s, sizeof(s));
