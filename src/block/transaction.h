@@ -33,7 +33,15 @@ class CScriptCheck;
 class COutPoint;
 class CTransaction;
 
+/**
+ * A flag that is ORed into the protocol version to designate that a transaction
+ * should be (un)serialized without witness data.
+ * Make sure that this does not collide with any of the values in `version.h`
+ * or with `ADDRV2_FORMAT`.
+ */
+static constexpr int SERIALIZE_NO_QAI = 0x80000000;
 static constexpr int SERIALIZE_TRANSACTION_NO_WITNESS = 0x40000000;
+static constexpr int SERIALIZE_NO_MWEB = 0x20000000;
 
 namespace block_transaction
 {
@@ -309,18 +317,21 @@ private:
     CScript scriptSig;
     uint32_t nSequence;
     CScriptWitness scriptWitness; //!< Only serialized through CTransaction
+    CScriptQai scriptQai; //!< Only serialized through CTransaction
 
 public:
     const COutPoint &get_prevout() const {return prevout;}
     const CScript &get_scriptSig() const {return scriptSig;}
     uint32_t get_nSequence() const {return nSequence;}
     const CScriptWitness &get_scriptWitness() const {return scriptWitness;}
+    const CScriptQai &get_scriptQai() const {return scriptQai;}
 
     COutPoint &set_prevout() {return prevout;}
     CScript &set_scriptSig() {return scriptSig;}
     void set_nSequence(uint32_t _seq) {nSequence = _seq;}
     void set_scriptSig(const CScript &_sig) {scriptSig = _sig;}
     CScriptWitness &set_scriptWitness() {return scriptWitness;}
+    CScriptQai &set_scriptQai() {return scriptQai;}
 
     // script <valtype>
     template <typename valtype>
@@ -818,8 +829,17 @@ public:
     const uint256 &GetWitnessHash() const { return m_witness_hash; }
 
     bool HasWitness() const {
-        for (size_t i = 0; i < vin.size(); i++) {
-            if (! vin[i].get_scriptWitness().IsNull()) {
+        for (const auto &txIn: vin) {
+            if (!txIn.get_scriptWitness().IsNull()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool HasQaiTransaction() const {
+        for (const auto &txIn: vin) {
+            if (!txIn.get_scriptQai().IsNull()) {
                 return true;
             }
         }
@@ -853,6 +873,12 @@ public:
             }
         }
 
+        if(HasQaiTransaction()) {
+            for(const auto &txIn: this->vin) {
+                size += ::GetSerializeSize(txIn.get_scriptQai());
+            }
+        }
+
         return size;
     }
 
@@ -860,17 +886,95 @@ public:
     inline void Serialize(Stream &s) const {
         NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
     }
+
     template <typename Stream>
     inline void Unserialize(Stream &s) {
         this->SerializationOp(s, CSerActionUnserialize());
     }
+
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(this->nVersion);
-        READWRITE(this->nTime);
-        READWRITE(this->vin);
-        READWRITE(this->vout);
-        READWRITE(this->nLockTime);
+        const bool fAllowWitness = !(s.GetVersion() & SERIALIZE_TRANSACTION_NO_WITNESS);
+        const bool fAllowQai = !(s.GetVersion() & SERIALIZE_NO_QAI);
+
+        unsigned char flags = 0;
+        if(ser_action.ForRead()) {
+            READWRITE(this->nVersion);
+            READWRITE(this->nTime);
+            READWRITE(this->vin);
+            if(this->vin.empty()) {
+                READWRITE(flags);
+                if(flags != 0) {
+                    READWRITE(this->vin);
+                    READWRITE(this->vout);
+                }
+            } else {
+                READWRITE(this->vout);
+            }
+
+            if ((flags & 1) && fAllowWitness) {
+                /* The witness flag is present, and we support witnesses. */
+                flags ^= 1;
+                for (auto &txIn: this->vin) {
+                    READWRITE(txIn.set_scriptWitness());
+                }
+                if (!HasWitness()) {
+                    /* It's illegal to encode witnesses when all witness stacks are empty. */
+                    throw std::ios_base::failure("Superfluous witness record");
+                }
+            }
+
+            if ((flags & 2) && fAllowWitness) {
+                /* The witness flag is present, and we support witnesses. */
+                flags ^= 2;
+                for (auto &txIn: this->vin) {
+                    READWRITE(txIn.set_scriptQai());
+                }
+                if (!HasWitness()) {
+                    /* It's illegal to encode witnesses when all witness stacks are empty. */
+                    throw std::ios_base::failure("Superfluous witness record");
+                }
+            }
+
+            if (flags) {
+                /* Unknown flag in the serialization */
+                throw std::ios_base::failure("Unknown transaction optional data");
+            }
+
+            READWRITE(this->nLockTime);
+        } else {
+            const bool fWitness = HasWitness();
+            const bool fQai = HasQaiTransaction();
+            if(fWitness && fAllowWitness)
+                flags |= 1;
+            if(fQai && fAllowQai)
+                flags |= 2;
+
+            READWRITE(this->nVersion);
+            READWRITE(this->nTime);
+            if(flags) {
+                /* Use extended format in case witnesses are to be serialized. */
+                std::vector<CTxIn> dummy;
+                READWRITE(dummy);
+                READWRITE(flags);
+            }
+            READWRITE(this->vin);
+            READWRITE(this->vout);
+
+            if (flags & 1) {
+                for (auto &txIn: this->vin) {
+                    READWRITE(const_cast<CScriptWitness &>(txIn.get_scriptWitness()));
+                }
+            }
+
+            if (flags & 2) {
+                for (auto &txIn: this->vin) {
+                    READWRITE(const_cast<CScriptQai &>(txIn.get_scriptQai()));
+                }
+            }
+
+            READWRITE(this->nLockTime);
+        }
     }
 };
 

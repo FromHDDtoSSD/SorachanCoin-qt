@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -11,6 +11,65 @@
 #include <key/pubkey.h>
 #include <script/script.h>
 #include <uint256.h>
+
+namespace {
+
+/** Compute the (single) SHA256 of the concatenation of all prevouts of a tx. */
+template <class T>
+uint256 GetPrevoutsSHA256(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txin : txTo.vin) {
+        ss << txin.get_prevout();
+    }
+    return ss.GetSingleHash();
+}
+
+/** Compute the (single) SHA256 of the concatenation of all nSequences of a tx. */
+template <class T>
+uint256 GetSequencesSHA256(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txin : txTo.vin) {
+        ss << txin.get_nSequence();
+    }
+    return ss.GetSingleHash();
+}
+
+/** Compute the (single) SHA256 of the concatenation of all txouts of a tx. */
+template <class T>
+uint256 GetOutputsSHA256(const T& txTo)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txout : txTo.vout) {
+        ss << txout;
+    }
+    return ss.GetSingleHash();
+}
+
+/** Compute the (single) SHA256 of the concatenation of all amounts spent by a tx. */
+uint256 GetSpentAmountsSHA256(const std::vector<CTxOut>& outputs_spent)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txout : outputs_spent) {
+        ss << txout.get_nValue();
+    }
+    return ss.GetSingleHash();
+}
+
+/** Compute the (single) SHA256 of the concatenation of all scriptPubKeys spent by a tx. */
+uint256 GetSpentScriptsSHA256(const std::vector<CTxOut>& outputs_spent)
+{
+    CHashWriter ss(SER_GETHASH, 0);
+    for (const auto& txout : outputs_spent) {
+        ss << txout.get_scriptPubKey();
+    }
+    return ss.GetSingleHash();
+}
+
+} // namespace
+
+
 
 bool Script_util::set_success(ScriptError *ret)
 {
@@ -30,14 +89,6 @@ bool Script_util::set_error(ScriptError *ret, const ScriptError serror)
 // returning a bool indicating valid or not.  There are no loops.
 #define stacktop(i)  (stack.at(stack.size()+(i)))
 #define altstacktop(i)  (altstack.at(altstack.size()+(i)))
-/*
-void Script_util::popstack(statype &stack)
-{
-    if (stack.empty())
-        throw std::runtime_error("popstack(): stack empty");
-    stack.pop_back();
-}
-*/
 
 bool Script_util::IsCompressedOrUncompressedPubKey(const valtype &vchPubKey) {
     if (vchPubKey.size() < CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {

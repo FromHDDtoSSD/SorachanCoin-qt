@@ -761,10 +761,10 @@ class CDBStream
     CDBStream &operator=(const CDBStream &)=delete;
     CDBStream &operator=(CDBStream &&)=delete;
 public:
-    explicit CDBStream(char *beginIn, uint32_t sizeIn) : wpos(0), rpos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize iterator init
+    explicit CDBStream(char *beginIn, uint32_t sizeIn) : nType(0), nVersion(0), wpos(0), rpos(0), pbegin(beginIn), pend(beginIn+sizeIn), pvch(nullptr) { // Unserialize iterator init
         assert(pbegin!=pend);
     }
-    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) : wpos(0), rpos(0), pend(nullptr), pvch(vch) { // Serialize object to bytearray, Unserialize bytearray to object
+    explicit CDBStream(std::vector<char> *vch, int vch_reserve=1000) : nType(0), nVersion(0), wpos(0), rpos(0), pend(nullptr), pvch(vch) { // Serialize object to bytearray, Unserialize bytearray to object
         vch->reserve(vch_reserve);
         vch->resize(128);
         pbegin = vch->data();
@@ -814,7 +814,12 @@ public:
         }
     }
 
+    int GetType() const {return nType;}
+    int GetVersion() const {return nVersion;}
+
 private:
+    const int nType;
+    const int nVersion;
     uint32_t wpos, rpos;
     char *pbegin;
     char *pend;

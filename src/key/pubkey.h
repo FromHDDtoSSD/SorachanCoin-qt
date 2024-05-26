@@ -13,11 +13,13 @@
 #include <uint256.h>
 #include <hash.h>
 #include <serialize.h>
+#include <util/span.h>
 #include <openssl/ecdsa.h>
 #include <openssl/ec.h>
 #include <cleanse/cleanse.h>
 
 class CKey;
+class XOnlyPubKey;
 
 #ifdef CSCRIPT_PREVECTOR_ENABLE
 using key_vector = prevector<PREVECTOR_N, uint8_t>;
@@ -51,6 +53,7 @@ public:
 class CPubKey
 {
     friend class CKey;
+    friend class XOnlyPubKey;
 public:
     //! secp256k1
     //structure: struct secp256k1_data {BIGNUM *r; BIGNUM *s;};
@@ -515,6 +518,35 @@ public:
 
     //! vch_ to string
     std::string ToString() const;
+};
+
+// schnorr public key
+// liner - key, size: exactly 32 bytes, signature: exactly 64 bytes
+class XOnlyPubKey
+{
+private:
+    uint256 m_keydata;
+
+public:
+    static constexpr unsigned int XONLY_PUBLIC_KEY_SIZE = 32;
+    static constexpr unsigned int SCHNORR_SIGNATURE_SIZE = 64;
+
+    /** Construct an x-only pubkey from exactly 32 bytes. */
+    XOnlyPubKey(Span<const unsigned char> bytes) {
+        assert(bytes.size() == XONLY_PUBLIC_KEY_SIZE);
+        std::copy(bytes.begin(), bytes.end(), m_keydata.begin());
+    }
+
+    /** Verify a Schnorr signature against this public key.
+     *
+     * sigbytes must be exactly 64 bytes.
+     */
+    //bool VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const;
+    //bool CheckPayToContract(const XOnlyPubKey& base, const uint256& hash, bool parity) const;
+
+    const unsigned char& operator[](int pos) const { return *(m_keydata.begin() + pos); }
+    const unsigned char* data() const { return m_keydata.begin(); }
+    size_t size() const { return m_keydata.size(); }
 };
 
 // BIP32

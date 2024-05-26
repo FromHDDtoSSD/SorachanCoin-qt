@@ -18,23 +18,22 @@
 #endif
 
 bool CPubKey::IsValid() const {
-    //DEBUGCS_CHECK("by size check only");
     return size() > 0;
 }
 
 bool CPubKey::IsFullyValid() const {
-    //DEBUGCS_CHECK("by OpenSSL");
     const unsigned char *pbegin = &vch_[0];
     EC_KEY *pkey = ::EC_KEY_new_by_curve_name(NID_secp256k1);
+    if(! pkey) return false;
     if (::o2i_ECPublicKey(&pkey, &pbegin, size())) {
         ::EC_KEY_free(pkey);
         return true;
     }
+    ::EC_KEY_free(pkey);
     return false;
 }
 
 bool CPubKey::IsFullyValid_BIP66() const {
-    //DEBUGCS_CHECK("by secp256k1");
     if (! IsValid())
         return false;
     secp256k1_pubkey pubkey;
@@ -46,7 +45,6 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const {
         return Verify_BIP66(hash, vchSig);
     };
     auto openssl = [this, &hash, &vchSig]() {
-        DEBUGCS_CHECK("by OpenSSL");
         if (vchSig.empty() || !IsValid())
             return false;
 
@@ -86,51 +84,11 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const {
         return ret;
     };
 
-    //static CCriticalSection cs;
-    //LOCK(cs);
-    //debugcs::instance() << "CPubKey " << __func__ << " Bip66 mode: " << entry::b66mode << debugcs::endl();
-    //debugcs::instance() << "BlockHeight " << __func__ << " height: " << block_info::nBestHeight << debugcs::endl();
-    static int sw_blockheight = 0;
-    if(sw_blockheight==0) {
-        const MapCheckpoints &ckpoints = args_bool::fTestNet ? Checkpoints::manage::getMapCheckpointsTestnet(): Checkpoints::manage::getMapCheckpoints();
-        for(auto ite: ckpoints) {
-            if(sw_blockheight<ite.first)
-                sw_blockheight = ite.first;
-        }
-    }
-    debugcs::instance() << "CPubKey Verify sw_blockheight " << __func__ << " sw_blockheight: " << sw_blockheight << debugcs::endl();
-    if(sw_blockheight<block_info::nBestHeight) {
-        if(entry::b66mode == entry::Bip66_STRICT) {
-            return bip66() && openssl();
-        } else if (entry::b66mode == entry::Bip66_ADVISORY) {
-            return bip66();
-        } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
-            return openssl();
-        } else
-            return false;
-    } else {
-        if(entry::b66mode == entry::Bip66_STRICT) {
-            return bip66();
-        } else if (entry::b66mode == entry::Bip66_ADVISORY) {
-            return openssl();
-            /*
-            if(bip66())
-                return true;
-            else {
-                logging::LogPrintf("bip66 false, recheck openssl\n");
-                return openssl();
-            }
-            */
-        } else if (entry::b66mode == entry::Bip66_PERMISSIVE) {
-            return openssl();
-        } else
-            return false;
-    }
+    return openssl() || bip66();
 }
 
 bool CPubKey::Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const {
-    //DEBUGCS_CHECK("by libsecp256k1");
-    if (! IsValid())
+    if (vchSig.empty() || !IsValid())
         return false;
     secp256k1_pubkey pubkey;
     secp256k1_signature sig;

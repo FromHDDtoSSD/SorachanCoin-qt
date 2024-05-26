@@ -99,6 +99,13 @@ typedef CHashWriter_q<latest_crypto::CSHA256, uint256> CHashWriter_q256;
 typedef CHashWriter_q<latest_crypto::CSHA512, uint512> CHashWriter_q512;
 typedef CHashWriter_q<latest_crypto::CQHASH65536, uint65536> CHashWriter_q65536;
 
+inline uint256 SHA256Uint256(const uint256& input)
+{
+    uint256 result;
+    latest_crypto::CSHA256().Write(input.begin(), 32).Finalize(result.begin());
+    return result;
+}
+
 class hash_basis : private no_instance // SorachanCoin Lamport
 {
 private:
