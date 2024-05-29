@@ -7,7 +7,7 @@
 
 namespace schnorr_openssl {
 
-int normal_schnorr_sha256(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
+int schnorr_sha256_standard(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
     unsigned char hash[SHA256_DIGEST_LENGTH];
     SHA256_CTX sha256;
     SHA256_Init(&sha256);
@@ -21,7 +21,7 @@ int normal_schnorr_sha256(BIGNUM *e, const unsigned char *r32, const unsigned ch
     return 1;
 }
 
-int bitcoin_schnorr_sha256(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
+int schnorr_sha256_bitcoin(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
     uint32_t d[8];
     d[0] = 0x9cecba11ul;
     d[1] = 0x23925381ul;
@@ -141,7 +141,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         unsigned char pub_bin_x[32];
         if(BN_bn2bin(pub_x, pub_bin_x) != 32)
             break;
-        if(normal_schnorr_sha256(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
+        if(schnorr_sha256_bitcoin(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
             break;
 
         // s = k + e * privkey
@@ -219,7 +219,7 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
         unsigned char pub_bin_x[32];
         if(BN_bn2bin(pubkey_x, pub_bin_x) != 32)
             break;
-        if(normal_schnorr_sha256(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
+        if(schnorr_sha256_bitcoin(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
             break;
 
         // lhs = s * G(EC base point)
@@ -374,7 +374,7 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
  */
 typedef struct {
     unsigned char data[64];
-} secp256k1_xonly_pubkey;
+} secp256k1_xonly_pubkey; // X: 32bytes, Y: 32bytes = 64bytes
 
 typedef struct {
     void (*fn)(const char *text, void* data);
@@ -654,10 +654,60 @@ static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const uns
     return 1;
 }
 
+/* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+ * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
+static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+{
+    uint32_t d[8];
+    d[0] = 0x9cecba11ul;
+    d[1] = 0x23925381ul;
+    d[2] = 0x11679112ul;
+    d[3] = 0xd1627e0ful;
+    d[4] = 0x97c87550ul;
+    d[5] = 0x003cc765ul;
+    d[6] = 0x90f61164ul;
+    d[7] = 0x33e9b66aul;
+
+    CFirmKey::hash::secp256k1_sha256_initialize(sha);
+    sha->InitSet(d, 64);
+}
+
+static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_unit* e, const unsigned char* r32, const unsigned char* msg32, const unsigned char* pubkey32)
+{
+    unsigned char hash[32];
+    CFirmKey::hash::secp256k1_sha256 sha;
+
+    /* tagged hash(r.x, pk.x, msg32) */
+    secp256k1_schnorrsig_sha256_tagged(&sha);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+    CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+    /* Set scalar e to the challenge hash modulo the curve order as per
+     * BIP340. */
+    secp256k1_scalar_set_b32(e, hash, NULL);
+}
+
+static void secp256k1_schnorrsig_standard(CPubKey::secp256k1_unit* e, const unsigned char* r32, const unsigned char* msg32, const unsigned char* pubkey32)
+{
+    unsigned char hash[32];
+    CFirmKey::hash::secp256k1_sha256 sha;
+
+    /* standard hash(r.x, pk.x, msg32) */
+    CFirmKey::hash::secp256k1_sha256_initialize(&sha);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+    CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+    /* Set scalar e to the challenge hash modulo the curve order as per
+     * BIP340. */
+    secp256k1_scalar_set_b32(e, hash, NULL);
+}
+
 /** Create a Schnorr signature.
  *
  * Returns 1 on success, 0 on failure.
- *  Args:    ctx: pointer to a context object, initialized for signing (cannot be NULL)
+ *  Args:
  *  Out:     sig: pointer to the returned signature (cannot be NULL)
  *       nonce_is_negated: a pointer to an integer indicates if signing algorithm negated the
  *                nonce (can be NULL)
@@ -667,77 +717,95 @@ static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const uns
  *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
  */
 static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata) {
-    CPubKey::secp256k1_unit x;
-    CPubKey::secp256k1_unit e;
-    CPubKey::secp256k1_unit k;
-    CPubKey::ecmult::secp256k1_gej pkj;
-    CPubKey::ecmult::secp256k1_gej rj;
-    CPubKey::ecmult::secp256k1_ge pk;
-    CPubKey::ecmult::secp256k1_ge r;
-    CFirmKey::hash::secp256k1_sha256 sha;
-    int overflow;
-    unsigned char buf[33];
-    size_t buflen = sizeof(buf);
-
     ARG_CHECK(sig != NULL);
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(seckey != NULL);
 
-    if (noncefp == NULL) {
-        noncefp = secp256k1_nonce_function_bipschnorr;
-    }
+    // get secret key (from seckey to x)
+    CPubKey::secp256k1_unit x;
+    int overflow;
     secp256k1_scalar_set_b32(&x, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
-        memset(sig, 0, sizeof(*sig));
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
         return 0;
     }
 
+    // get public key (pubkey = x * G)
+    CPubKey::ecmult::secp256k1_gej pkj;
+    CPubKey::ecmult::secp256k1_ge pk;
     CFirmKey::ecmult::secp256k1_gen_context ctx;
-    if(!ctx.build()) {
+    if(!ctx.build())
         return 0;
-    }
-
     ctx.secp256k1_ecmult_gen(&pkj, &x);
     CPubKey::ecmult::secp256k1_ge_set_gej(&pk, &pkj);
 
-    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0)) {
+    // get nonce k (random number for signature)
+    CPubKey::secp256k1_unit k;
+    CPubKey::ecmult::secp256k1_gej rj;
+    CPubKey::ecmult::secp256k1_ge r;
+    unsigned char buf[32];
+    if (noncefp == NULL)
+        noncefp = secp256k1_nonce_function_bipschnorr;
+    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0))
         return 0;
-    }
     secp256k1_scalar_set_b32(&k, buf, NULL);
-    if (CPubKey::secp256k1_scalar_is_zero(&k)) {
+    if (CPubKey::secp256k1_scalar_is_zero(&k))
         return 0;
-    }
-
     ctx.secp256k1_ecmult_gen(&rj, &k);
     CPubKey::ecmult::secp256k1_ge_set_gej(&r, &rj);
-
-    if (nonce_is_negated != NULL) {
+    if (nonce_is_negated != NULL)
         *nonce_is_negated = 0;
-    }
     if (!secp256k1_fe_is_quad_var(&r.y)) {
         CPubKey::secp256k1_scalar_negate(&k, &k);
-        if (nonce_is_negated != NULL) {
+        if (nonce_is_negated != NULL)
             *nonce_is_negated = 1;
-        }
     }
+
+    // store signature [(r.x) | s]
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
     secp256k1_fe_get_b32(&sig->data[0], &r.x);
 
+    /* Compute e. */
+    CPubKey::secp256k1_unit e;
+    unsigned char pub_buf[33];
+    size_t pub_buflen;
+    CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
+    if(pub_buflen != 33)
+        return 0;
+    secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
+
+    // sha256
+    /*
+    CFirmKey::hash::secp256k1_sha256 sha;
+    unsigned char pub_buf[33];
+    unsigned char hash[32];
+    size_t pub_buflen;
+    CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
+    if(pub_buflen != 33)
+        return 0;
     CFirmKey::hash::secp256k1_sha256_initialize(&sha);
     CFirmKey::hash::secp256k1_sha256_write(&sha, &sig->data[0], 32);
-    CPubKey::secp256k1_eckey_pubkey_serialize(&pk, buf, &buflen, 1);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, buf, buflen);
+    //CFirmKey::hash::secp256k1_sha256_write(&sha, pub_buf, pub_buflen);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, pub_buf + 1, pub_buflen - 1);
     CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, buf);
+    CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+    */
 
-    secp256k1_scalar_set_b32(&e, buf, NULL);
+    // generate s = k + e * privkey
+    //CPubKey::secp256k1_unit e;
+    //secp256k1_scalar_set_b32(&e, hash, NULL);
     CPubKey::secp256k1_scalar_mul(&e, &e, &x);
     CPubKey::secp256k1_scalar_add(&e, &e, &k);
 
+    // store signature [r.x | (s)]
     secp256k1_scalar_get_b32(&sig->data[32], &e);
+
+    // clean up
     CFirmKey::secp256k1_scalar_clear(&k);
     CFirmKey::secp256k1_scalar_clear(&x);
+    cleanse::memory_cleanse(&k, sizeof(k));
+    cleanse::memory_cleanse(&x, sizeof(x));
 
     return 1;
 }
@@ -765,84 +833,50 @@ static SECP256K1_INLINE int secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256
     return CPubKey::secp256k1_pubkey_load(ge, (const CPubKey::secp256k1_pubkey *) pubkey);
 }
 
-/* Initializes SHA256 with fixed midstate. This midstate was computed by applying
- * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
-static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
-{
-    uint32_t d[8];
-    d[0] = 0x9cecba11ul;
-    d[1] = 0x23925381ul;
-    d[2] = 0x11679112ul;
-    d[3] = 0xd1627e0ful;
-    d[4] = 0x97c87550ul;
-    d[5] = 0x003cc765ul;
-    d[6] = 0x90f61164ul;
-    d[7] = 0x33e9b66aul;
-
-    CFirmKey::hash::secp256k1_sha256_initialize(sha);
-    sha->InitSet(d, 64);
-}
-
-static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_unit* e, const unsigned char* r32, const unsigned char* msg32, const unsigned char* pubkey32)
-{
-    unsigned char buf[32];
-    CFirmKey::hash::secp256k1_sha256 sha;
-
-    /* tagged hash(r.x, pk.x, msg32) */
-    secp256k1_schnorrsig_sha256_tagged(&sha);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, buf);
-    /* Set scalar e to the challenge hash modulo the curve order as per
-     * BIP340. */
-    secp256k1_scalar_set_b32(e, buf, NULL);
-}
-
 static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey)
 {
-    CPubKey::secp256k1_unit s;
-    CPubKey::secp256k1_unit e;
-    CPubKey::ecmult::secp256k1_gej rj;
-    CPubKey::ecmult::secp256k1_ge pk;
-    CPubKey::ecmult::secp256k1_gej pkj;
-    CPubKey::ecmult::secp256k1_fe rx;
-    CPubKey::ecmult::secp256k1_ge r;
-    unsigned char buf[32];
-    int overflow;
-
     ARG_CHECK(sig64 != NULL);
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(pubkey != NULL);
 
-    if (!secp256k1_fe_set_b32(&rx, &sig64[0])) {
+    // get pub_x
+    CPubKey::ecmult::secp256k1_fe rx;
+    if (!secp256k1_fe_set_b32(&rx, &sig64[0]))
         return 0;
-    }
 
+    // get s
+    CPubKey::secp256k1_unit s;
+    int overflow;
     secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
-    if (overflow) {
+    if (overflow)
         return 0;
-    }
 
-    if (!secp256k1_xonly_pubkey_load(&pk, pubkey)) {
+    // get pubkey (pk: affine X and Y)
+    CPubKey::ecmult::secp256k1_ge pk;
+    if (!secp256k1_xonly_pubkey_load(&pk, pubkey))
         return 0;
-    }
 
     /* Compute e. */
-    secp256k1_fe_get_b32(buf, &pk.x);
-    secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, buf);
+    CPubKey::secp256k1_unit e;
+    unsigned char pub_x[32];
+    secp256k1_fe_get_b32(pub_x, &pk.x);
+    secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, pub_x);
 
     /* Compute rj =  s*G + (-e)*pkj */
-    CPubKey::secp256k1_scalar_negate(&e, &e);
+    CPubKey::secp256k1_unit neg_e;
+    CPubKey::ecmult::secp256k1_gej pkj;
+    CPubKey::ecmult::secp256k1_gej rj;
+    CPubKey::ecmult::secp256k1_ge r;
+    CPubKey::secp256k1_scalar_negate(&neg_e, &e);
     CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
-    CPubKey::secp256k1_ecmult(&rj, &pkj, &e, &s);
-
-    CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
-    if (CPubKey::ecmult::secp256k1_ge_is_infinity(&r)) {
+    if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &neg_e, &s))
         return 0;
-    }
+    CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
+    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
+        return 0;
 
     CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
+    debugcs::instance() << __func__ << " pubkey y: " << (CPubKey::ecmult::secp256k1_fe_is_odd(&r.y) ? "odd": "even") << debugcs::endl();
     return !CPubKey::ecmult::secp256k1_fe_is_odd(&r.y) &&
            CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
 }
@@ -1012,7 +1046,25 @@ void Debug_checking_sign_verify() {
             debugcs::instance() << __func__ << " OpenSSL sig1: " << strenc::HexStr(sig1) << debugcs::endl();
             debugcs::instance() << __func__ << " libsecp256k1 sig1: " << strenc::HexStr(std::vector<unsigned char>(BEGIN(sig.data), END(sig.data))) << debugcs::endl();
 
-            // Verify from now on ... please wait
+            CPubKey pubkey = secpkey->GetPubKey();
+            secp256k1_xonly_pubkey pub_xy;
+            pubkey.Decompress();
+            ::memcpy(&pub_xy.data[0], pubkey.data() + 1, 64);
+            if(secp256k1_schnorrsig_verify(&sig.data[0], hash2.begin(), &pub_xy))
+                debugcs::instance() << __func__ << " secp256k1_schnorr valid" << debugcs::endl();
+            else
+                debugcs::instance() << __func__ << " secp256k1_schnorr invalid" << debugcs::endl();
+
+            BIGNUM *pub_x_only = BN_new();
+            BN_bin2bn(pubkey.data() + 1, 32, pub_x_only);
+            std::vector<unsigned char> vchsig;
+            vchsig.resize(64);
+            ::memcpy(&vchsig.front(), &sig.data[0], 64);
+            if(schnorr_openssl::verify(pub_x_only, hash2, vchsig))
+                debugcs::instance() << __func__ << " schnorr_openssl valid" << debugcs::endl();
+            else
+                debugcs::instance() << __func__ << " schnorr_openssl invalid" << debugcs::endl();
+            BN_free(pub_x_only);
         }
 
         ++checking;
