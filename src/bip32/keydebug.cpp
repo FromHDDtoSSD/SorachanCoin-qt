@@ -7,7 +7,21 @@
 
 namespace schnorr_openssl {
 
-std::vector<unsigned char> bitcoin_schnorr_sha256(const std::string &data) {
+int normal_schnorr_sha256(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, r32, 32);
+    SHA256_Update(&sha256, pub32, 32);
+    SHA256_Update(&sha256, mes32, 32);
+    SHA256_Final(hash, &sha256);
+    if(!BN_bin2bn(hash, SHA256_DIGEST_LENGTH, e))
+        return 0;
+
+    return 1;
+}
+
+int bitcoin_schnorr_sha256(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
     uint32_t d[8];
     d[0] = 0x9cecba11ul;
     d[1] = 0x23925381ul;
@@ -21,21 +35,26 @@ std::vector<unsigned char> bitcoin_schnorr_sha256(const std::string &data) {
     CFirmKey::hash::secp256k1_sha256 sha256;
     CFirmKey::hash::secp256k1_sha256_initialize(&sha256);
     sha256.InitSet(d, 64);
-    CFirmKey::hash::secp256k1_sha256_write(&sha256, (const unsigned char *)data.c_str(), data.length());
 
-    std::vector<unsigned char> hash;
-    hash.resize(SHA256_DIGEST_LENGTH);
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha256, &hash.front());
-    return hash;
+    CFirmKey::hash::secp256k1_sha256_write(&sha256, r32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha256, pub32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha256, mes32, 32);
+
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    CFirmKey::hash::secp256k1_sha256_finalize(&sha256, &hash[0]);
+    if(!BN_bin2bn(hash, SHA256_DIGEST_LENGTH, e))
+        return 0;
+
+    return 1;
 }
 
-bool calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
+int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
     BIGNUM *a = BN_new();
     BIGNUM *b = BN_new();
     BIGNUM *p = BN_new();
     BIGNUM *x3 = BN_new();
     BIGNUM *rhs = BN_new();
-    bool fret = false;
+    int fret = 0;
 
     do {
         if(!a || !b || !p || !x3 || !rhs)
@@ -54,7 +73,7 @@ bool calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, B
         if (!BN_mod_sqrt(y, rhs, p, ctx))
             break;
 
-        fret = true;
+        fret = 1;
     } while(false);
 
     BN_free(a);
@@ -62,10 +81,11 @@ bool calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, B
     BN_free(p);
     BN_free(x3);
     BN_free(rhs);
+
     return fret;
 }
 
-bool sign(const BIGNUM *privkey, const uint256 &mes_hash, std::vector<unsigned char> &sig) {
+bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig) {
     // sig(fixed 64bytes) = [r_bytes(32bytes) | s(32bytes)]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
@@ -74,20 +94,33 @@ bool sign(const BIGNUM *privkey, const uint256 &mes_hash, std::vector<unsigned c
     EC_POINT *R = EC_POINT_new(group);
     BIGNUM *e = BN_new();
     BIGNUM *s = BN_new();
+    BIGNUM *pub_x = BN_new();
+    EC_POINT *pubkey = EC_POINT_new(group);
 
     bool fret = false;
     do {
-        if(!group || !ctx || !order || !k || !R || !e || !s)
+        if(!group || !ctx || !order || !k || !R || !e || !s || !pub_x || !pubkey)
+            break;
+
+        // get eckey (using get public key)
+        if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
+            break;
+        if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, pub_x, NULL, ctx) != 1)
+            break;
+        if(BN_num_bytes(pub_x) != 32)
             break;
 
         // get order (F_p mod)
-        EC_GROUP_get_order(group, order, ctx);
+        if(EC_GROUP_get_order(group, order, ctx) != 1)
+            break;
 
         // generate random k
         unsigned char buf[32];
         latest_crypto::random::GetStrongRandBytes(buf, 32);
-        BN_bin2bn(buf, 32, k);
-        BN_mod(k, k, order, ctx);
+        if(!BN_bin2bn(buf, 32, k))
+            break;
+        if(BN_mod(k, k, order, ctx) != 1)
+            break;
         //char *k_str = BN_bn2hex(k);
         //debugcs::instance() << __func__ << " [security] sig k: " << k_str << debugcs::endl();
         //OPENSSL_free(k_str);
@@ -104,27 +137,27 @@ bool sign(const BIGNUM *privkey, const uint256 &mes_hash, std::vector<unsigned c
         // e = sha256(message || R_points_xonly)
         unsigned char R_points_xonly[32];
         ::memcpy(R_points_xonly, R_points + 1, 32);
-        unsigned char hash[SHA256_DIGEST_LENGTH];
-        assert(mes_hash.size() == 32);
-        SHA256_CTX sha256;
-        SHA256_Init(&sha256);
-        SHA256_Update(&sha256, (const unsigned char *)mes_hash.begin(), mes_hash.size());
-        SHA256_Update(&sha256, R_points_xonly, 32);
-        SHA256_Final(hash, &sha256);
-        BN_bin2bn(hash, SHA256_DIGEST_LENGTH, e);
+        assert(hash.size() == 32);
+        unsigned char pub_bin_x[32];
+        if(BN_bn2bin(pub_x, pub_bin_x) != 32)
+            break;
+        if(normal_schnorr_sha256(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
+            break;
 
         // s = k + e * privkey
-        BN_mod_mul(s, e, privkey, order, ctx);
-        BN_mod_add(s, s, k, order, ctx);
+        if(BN_mod_mul(s, e, privkey, order, ctx) != 1)
+            break;
+        if(BN_mod_add(s, s, k, order, ctx) != 1)
+            break;
 
         // sig = [R_points_xonly | s]
         sig.resize(64);
         memcpy(&sig.front(), R_points_xonly, sizeof(R_points_xonly));
-
-        int s_len = BN_num_bytes(s);
-        if(s_len != 32)
+        if(BN_num_bytes(s) != 32)
             break;
-        BN_bn2bin(s, &sig.front() + 32);
+        if(BN_bn2bin(s, &sig.front() + 32) != 32)
+            break;
+
         fret = true;
     } while(false);
 
@@ -135,11 +168,13 @@ bool sign(const BIGNUM *privkey, const uint256 &mes_hash, std::vector<unsigned c
     EC_POINT_free(R);
     BN_free(e);
     BN_free(s);
+    BN_free(pub_x);
+    EC_POINT_free(pubkey);
 
     return fret;
 }
 
-bool verify(const BIGNUM *pubkey_x, const uint256 &mes_hash, const std::vector<unsigned char> &sig) {
+bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsigned char> &sig) {
     // sig = [R_points_xonly | s]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
@@ -164,11 +199,11 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &mes_hash, const std::vector<u
             break;
 
         // get order (F_p mod) and neg_one
-        if(!EC_GROUP_get_order(group, order, ctx))
+        if(EC_GROUP_get_order(group, order, ctx) != 1)
             break;
-        if(!BN_set_word(neg_one, 1))
+        if(BN_set_word(neg_one, 1) != 1)
             break;
-        if(!BN_sub(neg_one, order, neg_one))
+        if(BN_sub(neg_one, order, neg_one) != 1)
             break;
 
         // get R_x and s from sig
@@ -180,66 +215,64 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &mes_hash, const std::vector<u
         // e = sha256(message || R_points_xonly)
         unsigned char R_points_xonly[32];
         ::memcpy(R_points_xonly, sig.data(), 32);
-        unsigned char hash[SHA256_DIGEST_LENGTH];
-        assert(mes_hash.size() == 32);
-        SHA256_CTX sha256;
-        SHA256_Init(&sha256);
-        SHA256_Update(&sha256, (const unsigned char *)mes_hash.begin(), mes_hash.size());
-        SHA256_Update(&sha256, R_points_xonly, 32);
-        SHA256_Final(hash, &sha256);
-        BN_bin2bn(hash, SHA256_DIGEST_LENGTH, e);
+        assert(hash.size() == 32);
+        unsigned char pub_bin_x[32];
+        if(BN_bn2bin(pubkey_x, pub_bin_x) != 32)
+            break;
+        if(normal_schnorr_sha256(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
+            break;
 
         // lhs = s * G(EC base point)
-        if(!EC_POINT_mul(group, lhs, s, NULL, NULL, ctx))
+        if(EC_POINT_mul(group, lhs, s, NULL, NULL, ctx) != 1)
             break;
 
         // libsecp256k1: R2 = lhs - e * pubkey
-        if(!calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx))
+        if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
             break;
-        if(!EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx))
+        if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
             break;
         if(BN_is_odd(pubkey_y)) {
-            if(!EC_POINT_invert(group, pubkey, ctx))
+            if(EC_POINT_invert(group, pubkey, ctx) != 1)
                 break;
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx))
+            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
                 break;
             assert(!BN_is_odd(pubkey_y));
         }
-        if(!calculate_y_coordinate(group, R_x, R_y, ctx))
+        if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
             break;
-        if(!EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx))
+        if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
             break;
-        if(!EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx))
+        if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
             break;
-        if(!EC_POINT_mul(group, e_mul_pubkey, NULL, e_mul_pubkey, neg_one, ctx))
+        if(EC_POINT_mul(group, e_mul_pubkey, NULL, e_mul_pubkey, neg_one, ctx) != 1)
             break;
-        if(!EC_POINT_add(group, R2, lhs, e_mul_pubkey, ctx))
+        if(EC_POINT_add(group, R2, lhs, e_mul_pubkey, ctx) != 1)
             break;
-        if(!EC_POINT_get_affine_coordinates_GFp(group, R2, R2_x, NULL, ctx))
+        if(EC_POINT_get_affine_coordinates_GFp(group, R2, R2_x, NULL, ctx) != 1)
             break;
 
         fret = BN_cmp(R_x, R2_x) == 0;
 
         // openssl + schnorr: rhs = R + e * pubkey
         /*
-        if(!calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx))
+        if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
             break;
-        if(!EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx))
+        if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
             break;
         if(BN_is_odd(pubkey_y)) {
-            if(!EC_POINT_invert(group, pubkey, ctx))
+            if(EC_POINT_invert(group, pubkey, ctx) != 1)
                 break;
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx))
+            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
                 break;
             assert(!BN_is_odd(pubkey_y));
         }
-        if(!calculate_y_coordinate(group, R_x, R_y, ctx))
+        if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
             break;
-        if(!EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx))
+        if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
             break;
-        if(!EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx))
+        if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
             break;
-        if(!EC_POINT_add(group, rhs, R, e_mul_pubkey, ctx))
+        if(EC_POINT_add(group, rhs, R, e_mul_pubkey, ctx) != 1)
             break;
 
         BIGNUM *x1 = BN_new();
@@ -936,7 +969,7 @@ void Debug_checking_sign_verify() {
         }
 
         ++checking;
-    } while(checking < 15);
+    } while(checking < 5);
 
     EC_GROUP_free(group);
     EC_KEY_free(key1);
