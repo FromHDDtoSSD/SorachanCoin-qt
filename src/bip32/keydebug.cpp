@@ -847,6 +847,86 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
            CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
 }
 
+EC_KEY *Create_pub_y_even_eckey(const EC_GROUP *group, BN_CTX *ctx) {
+    BIGNUM *privkey = BN_new();
+    EC_POINT *pubkey = EC_POINT_new(group);
+    BIGNUM *pub_y = BN_new();
+    EC_KEY *eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
+
+    do {
+        bool fret = false;
+        do {
+            unsigned char r[32];
+            latest_crypto::random::GetStrongRandBytes(r, 32);
+            if(!BN_bin2bn(r, 32, privkey))
+                break;
+            OPENSSL_cleanse(r, 32);
+            if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
+                break;
+            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pub_y, ctx) != 1)
+                break;
+            if(!BN_is_odd(pub_y)) {
+                fret = true;
+                break;
+            }
+        } while(true);
+        if(!fret)
+            break;
+
+        if(EC_KEY_set_private_key(eckey, privkey) != 1)
+            break;
+        if(EC_KEY_set_public_key(eckey, pubkey) != 1)
+            break;
+    } while(false);
+
+    BN_free(privkey);
+    EC_POINT_free(pubkey);
+    BN_free(pub_y);
+
+    return eckey;
+}
+
+// args: privkey is nullptr(this case is random) or must be public_y even
+std::shared_ptr<CFirmKey> Create_pub_y_even_key(const unsigned char *privkey = nullptr) {
+    std::shared_ptr<CFirmKey> key(new (std::nothrow) CFirmKey);
+    if(!key.get())
+        return key;
+    do {
+        CSecret secret;
+        secret.resize(32);
+        if(!privkey)
+            latest_crypto::random::GetStrongRandBytes(&secret.front(), 32);
+        else // privkey must be public_y even
+            ::memcpy(&secret.front(), privkey, 32);
+        key.get()->SetSecret(secret);
+        CPubKey pubkey = key.get()->GetPubKey();
+        pubkey.Compress();
+        if(pubkey.data()[0] == 0x02)
+            return key;
+        else {
+            // if exists privkey, this privkey must be even, therefore key is reset and return
+            if(privkey) {
+                key.reset();
+                return key;
+            }
+        }
+    } while(true);
+}
+
+uint256 Create_random_hash() {
+    unsigned char buf[32];
+    latest_crypto::random::GetStrongRandBytes(buf, 32);
+    uint256 hash;
+    latest_crypto::CSHA256().Write((const unsigned char *)buf, 32).Finalize(hash.begin());
+    return hash;
+}
+
+void Print_hash_and_priv(const uint256 &hash, const BIGNUM *priv1, const CSecret &priv2) {
+    debugcs::instance() << __func__ << " hash:" << hash.ToString() << debugcs::endl();
+    debugcs::instance() << __func__ << " priv1:" << BN_bn2hex(priv1) << debugcs::endl();
+    debugcs::instance() << __func__ << " priv2:" << strenc::HexStr(priv2) << debugcs::endl();
+}
+
 // called AppInit2
 void Debug_checking_sign_verify() {
     uint256 v;
@@ -867,82 +947,33 @@ void Debug_checking_sign_verify() {
     Debug_secp256k1_print(&c);
 
     std::string message = "hello schnorr and sora-qai and ai";
-    uint256 hash;
-    latest_crypto::CSHA256().Write((const unsigned char *)message.data(), message.size()).Finalize(hash.begin());
+    uint256 hash1;
+    latest_crypto::CSHA256().Write((const unsigned char *)message.data(), message.size()).Finalize(hash1.begin());
 
-    // schnorr by OpenSSL
+    // schnorr signature
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    EC_KEY *key1 = EC_KEY_new_by_curve_name(NID_secp256k1);
-    EC_KEY *key2 = EC_KEY_new_by_curve_name(NID_secp256k1);
+    BN_CTX *ctx = BN_CTX_new();
     BIGNUM *xonly_pubkey1 = BN_new();
     BIGNUM *xonly_pubkey2 = BN_new();
-    BN_CTX *ctx = BN_CTX_new();
-
-    /* check ok
-    int checking = 0;
-    do {
-        EC_KEY_generate_key(key1);
-        BIGNUM *x = BN_new();
-        BIGNUM *y = BN_new();
-        BIGNUM *y2 = BN_new();
-        const EC_POINT *pubkey = EC_KEY_get0_public_key(key1);
-        EC_POINT_get_affine_coordinates_GFp(group, pubkey, x, y, ctx);
-        schnorr_openssl::calculate_y_coordinate(group, x, y2, ctx);
-        if(BN_cmp(y, y2) != 0) {
-            EC_POINT *pubkey_copy = EC_POINT_dup(pubkey, group);
-            EC_POINT_invert(group, pubkey_copy, ctx);
-            EC_POINT_get_affine_coordinates_GFp(group, pubkey_copy, x, y, ctx);
-            schnorr_openssl::calculate_y_coordinate(group, x, y2, ctx);
-            EC_POINT_free(pubkey_copy);
-        }
-        char *y_bn_str = BN_bn2hex(y);
-        debugcs::instance() << __func__ << " y: " << y_bn_str << debugcs::endl();
-        char *y2_bn_str = BN_bn2hex(y2);
-        debugcs::instance() << __func__ << " y2: " << y2_bn_str << debugcs::endl();
-        if(BN_cmp(y, y2) != 0) {
-            assert(!"invalid y y2");
-        }
-
-        BN_free(x);
-        BN_free(y);
-        BN_free(y2);
-        OPENSSL_free(y_bn_str);
-        OPENSSL_free(y2_bn_str);
-        ++checking;
-    } while(checking < 100);
-    */
+    EC_KEY *key1 = NULL;
+    EC_KEY *key2 = NULL;
+    if(!group || !ctx || !xonly_pubkey1 || !xonly_pubkey2) {
+        EC_GROUP_free(group);
+        BN_free(xonly_pubkey1);
+        BN_free(xonly_pubkey2);
+        BN_CTX_free(ctx);
+        return;
+    }
 
     int checking = 0;
     do {
-        unsigned char buf[32];
-        latest_crypto::random::GetStrongRandBytes(buf, 32);
-        uint256 hash2;
-        latest_crypto::CSHA256().Write((const unsigned char *)buf, 32).Finalize(hash2.begin());
+        EC_KEY_free(key1);
+        EC_KEY_free(key2);
+        key1 = Create_pub_y_even_eckey(group, ctx);
+        key2 = Create_pub_y_even_eckey(group, ctx);
+        uint256 hash2 = Create_random_hash();
 
-        bool fodd = true;
-        do {
-            EC_KEY_generate_key(key1);
-            BIGNUM *y = BN_new();
-            const EC_POINT *pubkey = EC_KEY_get0_public_key(key1);
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, y, NULL))
-                break;
-            if(!BN_is_odd(y))
-                fodd = false;
-            BN_free(y);
-        } while(fodd);
-
-        fodd = true;
-        do {
-            EC_KEY_generate_key(key2);
-            BIGNUM *y = BN_new();
-            const EC_POINT *pubkey = EC_KEY_get0_public_key(key2);
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, y, NULL))
-                break;
-            if(!BN_is_odd(y))
-                fodd = false;
-            BN_free(y);
-        } while(fodd);
-
+        // OpenSSL
         std::vector<unsigned char> sig1, sig2;
         const BIGNUM *privkey1 = EC_KEY_get0_private_key(key1);
         bool ret1 = schnorr_openssl::sign(privkey1, hash2, sig1);
@@ -950,22 +981,38 @@ void Debug_checking_sign_verify() {
         bool ret2 = schnorr_openssl::sign(privkey2, hash2, sig2);
         if(ret1 && ret2) {
             const EC_POINT *pubkey1 = EC_KEY_get0_public_key(key1);
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey1, xonly_pubkey1, NULL, NULL))
+            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey1, xonly_pubkey1, NULL, ctx))
                 break;
 
             const EC_POINT *pubkey2 = EC_KEY_get0_public_key(key2);
-            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey2, xonly_pubkey2, NULL, NULL))
+            if(!EC_POINT_get_affine_coordinates_GFp(group, pubkey2, xonly_pubkey2, NULL, ctx))
                 break;
 
             bool valid1 = schnorr_openssl::verify(xonly_pubkey1, hash2, sig1); // valid
             bool valid2 = schnorr_openssl::verify(xonly_pubkey2, hash2, sig2); // valid
-            bool valid3 = schnorr_openssl::verify(xonly_pubkey1, hash, sig1); // invalid
+            bool valid3 = schnorr_openssl::verify(xonly_pubkey1, hash1, sig1); // invalid
             bool valid4 = schnorr_openssl::verify(xonly_pubkey2, hash2, sig1); // invalid
             assert(valid1 && valid2 && !valid3 && !valid4);
             debugcs::instance() << "Signature 1 valid: " << valid1 << debugcs::endl();
             debugcs::instance() << "Signature 2 valid: " << valid2 << debugcs::endl();
             debugcs::instance() << "Signature 3 valid: " << valid3 << debugcs::endl();
             debugcs::instance() << "Signature 4 valid: " << valid4 << debugcs::endl();
+        }
+
+        // libsecp256k1
+        secp256k1_schnorrsig sig;
+        unsigned char priv_buf[32];
+        if(BN_bn2bin(privkey1, priv_buf) != 32)
+            break;
+        std::shared_ptr<CFirmKey> secpkey = Create_pub_y_even_key(priv_buf);
+        OPENSSL_cleanse(priv_buf, 32);
+        CSecret secret = secpkey.get()->GetSecret();
+        Print_hash_and_priv(hash2, privkey1, secret);
+        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash2.begin(), secret.data(), nullptr, nullptr)) {
+            debugcs::instance() << __func__ << " OpenSSL sig1: " << strenc::HexStr(sig1) << debugcs::endl();
+            debugcs::instance() << __func__ << " libsecp256k1 sig1: " << strenc::HexStr(std::vector<unsigned char>(BEGIN(sig.data), END(sig.data))) << debugcs::endl();
+
+            // Verify from now on ... please wait
         }
 
         ++checking;
@@ -977,15 +1024,6 @@ void Debug_checking_sign_verify() {
     BN_free(xonly_pubkey1);
     BN_free(xonly_pubkey2);
     BN_CTX_free(ctx);
-
-    // schnorr by libsecp256k1
-    secp256k1_schnorrsig sig;
-    CFirmKey secpkey;
-    secpkey.MakeNewKey(true);
-    CSecret seckey = secpkey.GetSecret();
-    if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), seckey.data(), nullptr, nullptr)) {
-        // Verify from now on ... please wait
-    }
 }
 
 // called AppInit2
