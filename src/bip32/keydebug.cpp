@@ -381,11 +381,9 @@ typedef struct {
     const void* data;
 } secp256k1_callback;
 
-/*
 static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * const cb, const char * const text) {
     cb->fn(text, (void*)cb->data);
 }
-*/
 
 #ifdef HAVE_BUILTIN_EXPECT
 #define EXPECT(x,c) __builtin_expect((x),(c))
@@ -650,6 +648,216 @@ static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const uns
     if (algo16 != NULL) {
         CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
     }
+    CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+    return 1;
+}
+
+static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_t size) {
+    void *ret = malloc(size);
+    if (ret == NULL) {
+        secp256k1_callback_call(cb, "Out of memory");
+    }
+    return ret;
+}
+
+static SECP256K1_INLINE void *checked_realloc(const secp256k1_callback* cb, void *ptr, size_t size) {
+    void *ret = realloc(ptr, size);
+    if (ret == NULL) {
+        secp256k1_callback_call(cb, "Out of memory");
+    }
+    return ret;
+}
+
+/* Extract the sign of an int64, take the abs and return a uint64, constant time. */
+SECP256K1_INLINE static int secp256k1_sign_and_abs64(uint64_t *out, int64_t in) {
+    uint64_t mask0, mask1;
+    int ret;
+    ret = in < 0;
+    mask0 = ret + ~((uint64_t)0);
+    mask1 = ~mask0;
+    *out = (uint64_t)in;
+    *out = (*out & mask0) | ((~*out + 1) & mask1);
+    return ret;
+}
+
+SECP256K1_INLINE static int secp256k1_clz64_var(uint64_t x) {
+    int ret;
+    if (!x) {
+        return 64;
+    }
+# if defined(HAVE_BUILTIN_CLZLL)
+    ret = __builtin_clzll(x);
+# else
+    /*FIXME: debruijn fallback. */
+    for (ret = 0; ((x & (1ULL << 63)) == 0); x <<= 1, ret++);
+# endif
+    return ret;
+}
+
+/* Zero memory if flag == 1. Flag must be 0 or 1. Constant time. */
+static SECP256K1_INLINE void memczero(void* s, size_t len, int flag)
+{
+    unsigned char* p = (unsigned char*)s;
+    /* Access flag with a volatile-qualified lvalue.
+       This prevents clang from figuring out (after inlining) that flag can
+       take only be 0 or 1, which leads to variable time code. */
+    volatile int vflag = flag;
+    unsigned char mask = -(unsigned char)vflag;
+    while (len) {
+        *p &= ~mask;
+        p++;
+        len--;
+    }
+}
+
+/** Semantics like memcmp. Variable-time.
+ *
+ * We use this to avoid possible compiler bugs with memcmp, e.g.
+ * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
+ */
+static SECP256K1_INLINE int secp256k1_memcmp_var(const void* s1, const void* s2, size_t n)
+{
+    const unsigned char *p1 = (unsigned char *)s1, *p2 = (unsigned char *)s2;
+    size_t i;
+
+    for (i = 0; i < n; i++) {
+        int diff = p1[i] - p2[i];
+        if (diff != 0) {
+            return diff;
+        }
+    }
+    return 0;
+}
+
+/** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized and non-negative.*/
+static SECP256K1_INLINE void secp256k1_int_cmov(int* r, const int* a, int flag)
+{
+    unsigned int mask0, mask1, r_masked, a_masked;
+    /* Access flag with a volatile-qualified lvalue.
+       This prevents clang from figuring out (after inlining) that flag can
+       take only be 0 or 1, which leads to variable time code. */
+    volatile int vflag = flag;
+
+    /* Casting a negative int to unsigned and back to int is implementation defined behavior */
+    VERIFY_CHECK(*r >= 0 && *a >= 0);
+
+    mask0 = (unsigned int)vflag + ~0u;
+    mask1 = ~mask0;
+    r_masked = ((unsigned int)*r & mask0);
+    a_masked = ((unsigned int)*a & mask1);
+
+    *r = (int)(r_masked | a_masked);
+}
+
+/* Initializes a sha256 struct and writes the 64 byte string
+ * SHA256(tag)||SHA256(tag) into it. */
+static void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256* hash, const unsigned char* tag, size_t taglen)
+{
+    unsigned char buf[32];
+    CFirmKey::hash::secp256k1_sha256_initialize(hash);
+    CFirmKey::hash::secp256k1_sha256_write(hash, tag, taglen);
+    CFirmKey::hash::secp256k1_sha256_finalize(hash, buf);
+
+    CFirmKey::hash::secp256k1_sha256_initialize(hash);
+    CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
+    CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
+}
+
+int secp256k1_schnorrsig_serialize(unsigned char *out64, const secp256k1_schnorrsig* sig) {
+    ARG_CHECK(out64 != NULL);
+    ARG_CHECK(sig != NULL);
+    memcpy(out64, sig->data, 64);
+    return 1;
+}
+
+int secp256k1_schnorrsig_parse(secp256k1_schnorrsig* sig, const unsigned char *in64) {
+    ARG_CHECK(sig != NULL);
+    ARG_CHECK(in64 != NULL);
+    memcpy(sig->data, in64, 64);
+    return 1;
+}
+
+/* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+ * SHA256 to SHA256("BIP0340/nonce")||SHA256("BIP0340/nonce"). */
+static void secp256k1_nonce_function_bip340_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+{
+    uint32_t d[8];
+    d[0] = 0x46615b35ul;
+    d[1] = 0xf4bfbff7ul;
+    d[2] = 0x9f8dc671ul;
+    d[3] = 0x83627ab3ul;
+    d[4] = 0x60217180ul;
+    d[5] = 0x57358661ul;
+    d[6] = 0x21a29e54ul;
+    d[7] = 0x68b07b4cul;
+
+    CFirmKey::hash::secp256k1_sha256_initialize(sha);
+    sha->InitSet(d, 64);
+}
+
+/* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+ * SHA256 to SHA256("BIP0340/aux")||SHA256("BIP0340/aux"). */
+static void secp256k1_nonce_function_bip340_sha256_tagged_aux(CFirmKey::hash::secp256k1_sha256* sha)
+{
+    uint32_t d[8];
+    d[0] = 0x24dd3219ul;
+    d[1] = 0x4eba7e70ul;
+    d[2] = 0xca0fabb9ul;
+    d[3] = 0x0fa3166dul;
+    d[4] = 0x3afbe4b1ul;
+    d[5] = 0x4c44df97ul;
+    d[6] = 0x4aac2739ul;
+    d[7] = 0x249e850aul;
+
+    CFirmKey::hash::secp256k1_sha256_initialize(sha);
+    sha->InitSet(d, 64);
+}
+
+/* algo16 argument for nonce_function_bip340 to derive the nonce exactly as stated in BIP-340
+ * by using the correct tagged hash function. */
+static const unsigned char bip340_algo16[16] = {'B','I','P','0','3','4','0','/','n','o','n','c','e','\0','\0','\0'};
+
+static int nonce_function_bip340(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* xonly_pk32, const unsigned char* algo16, void* data)
+{
+    CFirmKey::hash::secp256k1_sha256 sha;
+    unsigned char masked_key[32];
+    int i;
+
+    if (algo16 == NULL) {
+        return 0;
+    }
+
+    if (data != NULL) {
+        secp256k1_nonce_function_bip340_sha256_tagged_aux(&sha);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, (const unsigned char *)data, 32);
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, masked_key);
+        for (i = 0; i < 32; i++) {
+            masked_key[i] ^= key32[i];
+        }
+    }
+
+    /* Tag the hash with algo16 which is important to avoid nonce reuse across
+     * algorithms. If this nonce function is used in BIP-340 signing as defined
+     * in the spec, an optimized tagging implementation is used. */
+    if (secp256k1_memcmp_var(algo16, bip340_algo16, 16) == 0) {
+        secp256k1_nonce_function_bip340_sha256_tagged(&sha);
+    } else {
+        int algo16_len = 16;
+        /* Remove terminating null bytes */
+        while (algo16_len > 0 && !algo16[algo16_len - 1]) {
+            algo16_len--;
+        }
+        secp256k1_sha256_initialize_tagged(&sha, algo16, algo16_len);
+    }
+
+    /* Hash (masked-)key||pk||msg using the tagged hash as per the spec */
+    if (data != NULL) {
+        CFirmKey::hash::secp256k1_sha256_write(&sha, masked_key, 32);
+    } else {
+        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+    }
+    CFirmKey::hash::secp256k1_sha256_write(&sha, xonly_pk32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
     CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
     return 1;
 }
