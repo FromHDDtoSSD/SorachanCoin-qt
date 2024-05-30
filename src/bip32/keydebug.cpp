@@ -49,12 +49,15 @@ int schnorr_sha256_bitcoin(BIGNUM *e, const unsigned char *r32, const unsigned c
 }
 
 void nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16) {
+    unsigned char buf32[32];
+    latest_crypto::random::GetStrongRandBytes(buf32, 32);
     CFirmKey::hash::secp256k1_sha256 sha;
 
     /* Hash x||msg as per the spec */
     CFirmKey::hash::secp256k1_sha256_initialize(&sha);
     CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
     CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+    CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
     /* Hash in algorithm, which is not in the spec, but may be critical to
      * users depending on it to avoid nonce reuse across algorithms. */
     if (algo16 != NULL) {
@@ -100,7 +103,7 @@ int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN
     return fret;
 }
 
-bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig) {
+bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig, bool k_negate = false) {
     // sig(fixed 64bytes) = [r_bytes(32bytes) | s(32bytes)]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
@@ -153,20 +156,23 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // if R.y cannot get sqrt, compute negate k
         if(!EC_POINT_get_affine_coordinates_GFp(group, R, NULL, R_y, ctx))
             break;
-        if(!BN_mod_sqrt(sqrt_R_y, R_y, order, ctx)) {
-            if(BN_set_word(neg_one, 1) != 1)
-                break;
-            if(BN_sub(neg_one, order, neg_one) != 1)
-                break;
-            if(BN_mod_mul(k, k, neg_one, order, ctx) != 1)
-                break;
+        if(k_negate) {
+            if(!BN_mod_sqrt(sqrt_R_y, R_y, order, ctx)) {
+                if(BN_set_word(neg_one, 1) != 1)
+                    break;
+                if(BN_sub(neg_one, order, neg_one) != 1)
+                    break;
+                if(BN_mod_mul(k, k, neg_one, order, ctx) != 1)
+                    break;
+                debugcs::instance() << __func__ << " k is negate" << debugcs::endl();
+            }
         }
 
         unsigned char R_points[33];
         if(EC_POINT_point2oct(group, R, POINT_CONVERSION_COMPRESSED, R_points, sizeof(R_points), ctx) != sizeof(R_points))
             break;
 
-        // e = sha256(message || R_points_xonly)
+        // e = sha256(R_points_xonly || pub_x || message)
         unsigned char R_points_xonly[32];
         ::memcpy(R_points_xonly, R_points + 1, 32);
         assert(hash.size() == 32);
@@ -179,8 +185,10 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // s = k + e * privkey
         if(BN_mod_mul(s, e, privkey, order, ctx) != 1)
             break;
-        if(BN_mod_add(s, s, k, order, ctx) != 1)
+        if(BN_mod_add(s, s, k, order, ctx) != 1) {
+            debugcs::instance() << __func__ << " failure k + e * privkey" << debugcs::endl();
             break;
+        }
 
         // sig = [R_points_xonly | s]
         sig.resize(64);
@@ -209,7 +217,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
     return fret;
 }
 
-bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsigned char> &sig) {
+bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsigned char> &sig, bool fstrict = false) {
     // sig = [R_points_xonly | s]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
@@ -247,7 +255,7 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
         if(!BN_bin2bn(sig.data() + 32, 32, s))
             break;
 
-        // e = sha256(message || R_points_xonly)
+        // e = sha256(R_points_xonly || pub_x || message)
         unsigned char R_points_xonly[32];
         ::memcpy(R_points_xonly, sig.data(), 32);
         assert(hash.size() == 32);
@@ -261,79 +269,79 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
         if(EC_POINT_mul(group, lhs, s, NULL, NULL, ctx) != 1)
             break;
 
-        // libsecp256k1: R2 = lhs - e * pubkey
-        if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
-            break;
-        if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
-            break;
-        if(BN_is_odd(pubkey_y)) {
-            if(EC_POINT_invert(group, pubkey, ctx) != 1)
+        if(!fstrict) {
+            // libsecp256k1: R2 = lhs - e * pubkey
+            if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
                 break;
-            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
+            if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
                 break;
-            assert(!BN_is_odd(pubkey_y));
+            if(BN_is_odd(pubkey_y)) {
+                if(EC_POINT_invert(group, pubkey, ctx) != 1)
+                    break;
+                if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
+                    break;
+                assert(!BN_is_odd(pubkey_y));
+            }
+            if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
+                break;
+            if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
+                break;
+            if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
+                break;
+            if(EC_POINT_mul(group, e_mul_pubkey, NULL, e_mul_pubkey, neg_one, ctx) != 1)
+                break;
+            if(EC_POINT_add(group, R2, lhs, e_mul_pubkey, ctx) != 1)
+                break;
+            if(EC_POINT_get_affine_coordinates_GFp(group, R2, R2_x, NULL, ctx) != 1)
+                break;
+
+            fret = BN_cmp(R_x, R2_x) == 0;
+        } else {
+            // schnorr strict mode: rhs = R + e * pubkey
+            if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
+                break;
+            if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
+                break;
+            if(BN_is_odd(pubkey_y)) {
+                if(EC_POINT_invert(group, pubkey, ctx) != 1)
+                    break;
+                if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
+                    break;
+                assert(!BN_is_odd(pubkey_y));
+            }
+            if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
+                break;
+            if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
+                break;
+            if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
+                break;
+            if(EC_POINT_add(group, rhs, R, e_mul_pubkey, ctx) != 1)
+                break;
+
+            BIGNUM *x1 = BN_new();
+            BIGNUM *y1 = BN_new();
+            EC_POINT_get_affine_coordinates_GFp(group, lhs, x1, y1, ctx);
+            char *x1_str = BN_bn2hex(x1);
+            char *y1_str = BN_bn2hex(y1);
+            debugcs::instance() << __func__ << " schnorr strict mode lhs Coordinates:\nX: " << x1_str << "\nY: " << y1_str << debugcs::endl();
+            BN_free(x1);
+            BN_free(y1);
+            OPENSSL_free(x1_str);
+            OPENSSL_free(y1_str);
+
+            BIGNUM *x2 = BN_new();
+            BIGNUM *y2 = BN_new();
+            EC_POINT_get_affine_coordinates_GFp(group, rhs, x2, y2, ctx);
+            char *x2_str = BN_bn2hex(x2);
+            char *y2_str = BN_bn2hex(y2);
+            debugcs::instance() << __func__ << " schnorr strict mode rhs Coordinates:\nX: " << x2_str << "\nY: " << y2_str << debugcs::endl();
+            BN_free(x2);
+            BN_free(y2);
+            OPENSSL_free(x2_str);
+            OPENSSL_free(y2_str);
+
+            fret = EC_POINT_cmp(group, lhs, rhs, ctx) == 0;
         }
-        if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
-            break;
-        if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
-            break;
-        if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
-            break;
-        if(EC_POINT_mul(group, e_mul_pubkey, NULL, e_mul_pubkey, neg_one, ctx) != 1)
-            break;
-        if(EC_POINT_add(group, R2, lhs, e_mul_pubkey, ctx) != 1)
-            break;
-        if(EC_POINT_get_affine_coordinates_GFp(group, R2, R2_x, NULL, ctx) != 1)
-            break;
-
-        fret = BN_cmp(R_x, R2_x) == 0;
-
-        // openssl + schnorr: rhs = R + e * pubkey
-        /*
-        if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
-            break;
-        if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
-            break;
-        if(BN_is_odd(pubkey_y)) {
-            if(EC_POINT_invert(group, pubkey, ctx) != 1)
-                break;
-            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
-                break;
-            assert(!BN_is_odd(pubkey_y));
-        }
-        if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
-            break;
-        if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
-            break;
-        if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
-            break;
-        if(EC_POINT_add(group, rhs, R, e_mul_pubkey, ctx) != 1)
-            break;
-
-        BIGNUM *x1 = BN_new();
-        BIGNUM *y1 = BN_new();
-        EC_POINT_get_affine_coordinates_GFp(group, lhs, x1, y1, ctx);
-        char *x1_str = BN_bn2hex(x1);
-        char *y1_str = BN_bn2hex(y1);
-        debugcs::instance() << __func__ << " lhs Coordinates:\nX: " << x1_str << "\nY: " << y1_str << debugcs::endl();
-        BN_free(x1);
-        BN_free(y1);
-        OPENSSL_free(x1_str);
-        OPENSSL_free(y1_str);
-
-        BIGNUM *x2 = BN_new();
-        BIGNUM *y2 = BN_new();
-        EC_POINT_get_affine_coordinates_GFp(group, rhs, x2, y2, ctx);
-        char *x2_str = BN_bn2hex(x2);
-        char *y2_str = BN_bn2hex(y2);
-        debugcs::instance() << __func__ << " rhs Coordinates:\nX: " << x2_str << "\nY: " << y2_str << debugcs::endl();
-        BN_free(x2);
-        BN_free(y2);
-        OPENSSL_free(x2_str);
-        OPENSSL_free(y2_str);
-
-        fret = BN_cmp(x1, x2) == 0;
-        */
     } while(false);
 
     EC_GROUP_free(group);
@@ -674,10 +682,14 @@ static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const uns
     (void)counter;
     VERIFY_CHECK(counter == 0);
 
+    //unsigned char buf32[32];
+    //latest_crypto::random::GetStrongRandBytes(buf32, 32);
+
     /* Hash x||msg as per the spec */
     CFirmKey::hash::secp256k1_sha256_initialize(&sha);
     CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
     CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+    //CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
     /* Hash in algorithm, which is not in the spec, but may be critical to
      * users depending on it to avoid nonce reuse across algorithms. */
     if (algo16 != NULL) {
@@ -1121,16 +1133,19 @@ EC_KEY *Create_pub_y_even_eckey(const EC_GROUP *group, BN_CTX *ctx) {
                 break;
             OPENSSL_cleanse(r, 32);
             if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
-                break;
+                continue;
             if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pub_y, ctx) != 1)
-                break;
+                continue;
             if(!BN_is_odd(pub_y)) {
                 fret = true;
                 break;
             }
         } while(true);
-        if(!fret)
+        if(!fret) {
+            EC_KEY_free(eckey);
+            eckey = NULL;
             break;
+        }
 
         if(EC_KEY_set_private_key(eckey, privkey) != 1)
             break;
@@ -1266,10 +1281,12 @@ void Debug_checking_sign_verify() {
         if(BN_bn2bin(privkey1, priv_buf) != 32)
             break;
         std::shared_ptr<CFirmKey> secpkey = Create_pub_y_even_key(priv_buf);
+        if(!secpkey.get())
+            break;
         OPENSSL_cleanse(priv_buf, 32);
         CSecret secret = secpkey.get()->GetSecret();
         //Print_hash_and_priv(hash2, privkey1, secret);
-        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash2.begin(), secret.data(), nullptr, nullptr)) {
+        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash2.begin(), secret.data(), nullptr, nullptr) == 1) {
             debugcs::instance() << __func__ << " OpenSSL sig1: " << strenc::HexStr(sig1) << debugcs::endl();
             debugcs::instance() << __func__ << " libsecp256k1 sig1: " << strenc::HexStr(std::vector<unsigned char>(BEGIN(sig.data), END(sig.data))) << debugcs::endl();
 
@@ -1296,6 +1313,37 @@ void Debug_checking_sign_verify() {
 
         ++checking;
     } while(checking < 5);
+
+    checking = 0;
+    do {
+        std::shared_ptr<CFirmKey> secpkey = Create_pub_y_even_key();
+        if(!secpkey.get())
+            break;
+        CSecret secret = secpkey.get()->GetSecret();
+        secp256k1_schnorrsig sig;
+        uint256 hash = Create_random_hash();
+        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), secret.data(), nullptr, nullptr) != 1) {
+            assert(!"failure secp256k1_schnorrsig_sign");
+            break;
+        }
+
+        CPubKey pubkey = secpkey->GetPubKey();
+        pubkey.Compress();
+        BIGNUM *pub_x_only = BN_new();
+        BN_bin2bn(pubkey.data() + 1, 32, pub_x_only);
+        std::vector<unsigned char> vchsig;
+        vchsig.resize(64);
+        ::memcpy(&vchsig.front(), &sig.data[0], 64);
+        if(schnorr_openssl::verify(pub_x_only, hash, vchsig, true))
+            debugcs::instance() << __func__ << " verify strict mode(cmp both XY) valid" << debugcs::endl();
+        else {
+            debugcs::instance() << __func__ << " verify strict mode(cmp both XY) invalid" << debugcs::endl();
+            assert(!"verify strict mode(cmp both XY) invalid");
+        }
+        BN_free(pub_x_only);
+
+        ++checking;
+    } while(checking < 10);
 
     EC_GROUP_free(group);
     EC_KEY_free(key1);
