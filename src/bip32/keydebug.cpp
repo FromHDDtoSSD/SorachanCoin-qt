@@ -96,12 +96,13 @@ int schnorr_sha256_bitcoin(BIGNUM *e, const unsigned char *r32, const unsigned c
     return 1;
 }
 
-int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
+int calculate_even_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
     BIGNUM *a = BN_new();
     BIGNUM *b = BN_new();
     BIGNUM *p = BN_new();
     BIGNUM *x3 = BN_new();
     BIGNUM *rhs = BN_new();
+    BIGNUM *neg = BN_new();
     int fret = 0;
 
     do {
@@ -121,6 +122,14 @@ int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN
         if (!BN_mod_sqrt(y, rhs, p, ctx))
             break;
 
+        if(BN_is_odd(y)) {
+            if(!BN_sub(neg, p, y))
+                break;
+            assert(!BN_is_odd(neg));
+            if(!BN_copy(y, neg))
+                break;
+        }
+
         fret = 1;
     } while(false);
 
@@ -129,6 +138,7 @@ int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN
     BN_free(p);
     BN_free(x3);
     BN_free(rhs);
+    BN_free(neg);
 
     return fret;
 }
@@ -144,7 +154,7 @@ int BN_bn2bin_padded(const BIGNUM *bn, unsigned char *out, int size) {
     return 1;
 }
 
-bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig, bool k_negate = false) {
+bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig, bool *is_negated = nullptr) {
     // sig(fixed 64bytes) = [r_bytes(32bytes) | s(32bytes)]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
@@ -154,6 +164,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
     BIGNUM *e = BN_new();
     BIGNUM *s = BN_new();
     BIGNUM *pub_x = BN_new();
+    BIGNUM *pub_y = BN_new();
     EC_POINT *pubkey = EC_POINT_new(group);
     BIGNUM *neg_one = BN_new();
     BIGNUM *R_y = BN_new();
@@ -161,19 +172,23 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
 
     bool fret = false;
     do {
-        if(!group || !ctx || !order || !k || !R || !e || !s || !pub_x || !pubkey || !neg_one || !R_y || !sqrt_R_y)
-            break;
-
-        // get eckey (using get public key)
-        if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
-            break;
-        if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, pub_x, NULL, ctx) != 1)
-            break;
-        if(BN_num_bytes(pub_x) != 32)
+        if(!group || !ctx || !order || !k || !R || !e || !s || !pub_x || !pub_y || !pubkey || !neg_one || !R_y || !sqrt_R_y)
             break;
 
         // get order (F_p mod)
         if(EC_GROUP_get_order(group, order, ctx) != 1)
+            break;
+
+        // get neg_one
+        if(BN_set_word(neg_one, 1) != 1)
+            break;
+        if(BN_sub(neg_one, order, neg_one) != 1)
+            break;
+
+        // get public key
+        if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
+            break;
+        if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, pub_x, pub_y, ctx) != 1)
             break;
 
         // generate random:nonce_function_bipschnorr k
@@ -195,19 +210,16 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         if(EC_POINT_mul(group, R, k, NULL, NULL, ctx) != 1)
             break;
 
-        // if R.y cannot get sqrt, compute negate k
+        // if R_y cannot get sqrt, compute negate k
         if(!EC_POINT_get_affine_coordinates_GFp(group, R, NULL, R_y, ctx))
             break;
-        if(k_negate) {
-            if(!BN_mod_sqrt(sqrt_R_y, R_y, order, ctx)) {
-                if(BN_set_word(neg_one, 1) != 1)
-                    break;
-                if(BN_sub(neg_one, order, neg_one) != 1)
-                    break;
-                if(BN_mod_mul(k, k, neg_one, order, ctx) != 1)
-                    break;
-                debugcs::instance() << __func__ << " k is negate" << debugcs::endl();
-            }
+        if(is_negated)
+            *is_negated = false;
+        if(!BN_mod_sqrt(sqrt_R_y, R_y, order, ctx)) {
+            if(BN_mod_mul(k, k, neg_one, order, ctx) != 1)
+                break;
+            if(is_negated)
+                *is_negated = true;
         }
 
         unsigned char R_points[33];
@@ -224,7 +236,12 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         if(schnorr_sha256_bitcoin(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
             break;
 
-        // s = k + e * privkey
+        // if pub_y is even: s = k + e * privkey
+        // if pub_y is odd: s = k + invert(e) * privkey
+        if(BN_is_odd(pub_y)) {
+            if(!BN_sub(e, order, e)) // invert: sub from mod p
+                break;
+        }
         if(BN_mod_mul(s, e, privkey, order, ctx) != 1)
             break;
         if(BN_mod_add(s, s, k, order, ctx) != 1)
@@ -233,8 +250,6 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // sig = [R_points_xonly | s]
         sig.resize(64);
         ::memcpy(&sig.front(), R_points_xonly, sizeof(R_points_xonly));
-        if(BN_num_bytes(s) != 32)
-            break;
         if(BN_bn2bin_padded(s, &sig.front() + 32, 32) != 1)
             break;
 
@@ -249,6 +264,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
     BN_clear_free(e);
     BN_free(s);
     BN_free(pub_x);
+    BN_free(pub_y);
     EC_POINT_free(pubkey);
     BN_free(neg_one);
     BN_free(R_y);
@@ -311,18 +327,11 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 
         if(!fstrict) {
             // libsecp256k1: R2 = lhs - e * pubkey
-            if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
+            if(calculate_even_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
                 break;
             if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
                 break;
-            if(BN_is_odd(pubkey_y)) {
-                if(EC_POINT_invert(group, pubkey, ctx) != 1)
-                    break;
-                if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
-                    break;
-                assert(!BN_is_odd(pubkey_y));
-            }
-            if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
+            if(calculate_even_y_coordinate(group, R_x, R_y, ctx) != 1)
                 break;
             if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
                 break;
@@ -338,18 +347,11 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
             fret = BN_cmp(R_x, R2_x) == 0;
         } else {
             // schnorr strict mode: rhs = R + e * pubkey
-            if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
+            if(calculate_even_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
                 break;
             if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
                 break;
-            if(BN_is_odd(pubkey_y)) {
-                if(EC_POINT_invert(group, pubkey, ctx) != 1)
-                    break;
-                if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pubkey_y, ctx) != 1)
-                    break;
-                assert(!BN_is_odd(pubkey_y));
-            }
-            if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
+            if(calculate_even_y_coordinate(group, R_x, R_y, ctx) != 1)
                 break;
             if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
                 break;
@@ -1131,6 +1133,48 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
            CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
 }
 
+EC_KEY *Create_pub_y_odd_eckey(const EC_GROUP *group, BN_CTX *ctx) {
+    BIGNUM *privkey = BN_new();
+    EC_POINT *pubkey = EC_POINT_new(group);
+    BIGNUM *pub_y = BN_new();
+    EC_KEY *eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
+
+    do {
+        bool fret = false;
+        do {
+            unsigned char r[32];
+            latest_crypto::random::GetStrongRandBytes(r, 32);
+            if(!BN_bin2bn(r, 32, privkey))
+                break;
+            OPENSSL_cleanse(r, 32);
+            if(EC_POINT_mul(group, pubkey, privkey, NULL, NULL, ctx) != 1)
+                continue;
+            if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, NULL, pub_y, ctx) != 1)
+                continue;
+            if(BN_is_odd(pub_y)) {
+                fret = true;
+                break;
+            }
+        } while(true);
+        if(!fret) {
+            EC_KEY_free(eckey);
+            eckey = NULL;
+            break;
+        }
+
+        if(EC_KEY_set_private_key(eckey, privkey) != 1)
+            break;
+        if(EC_KEY_set_public_key(eckey, pubkey) != 1)
+            break;
+    } while(false);
+
+    BN_free(privkey);
+    EC_POINT_free(pubkey);
+    BN_free(pub_y);
+
+    return eckey;
+}
+
 EC_KEY *Create_pub_y_even_eckey(const EC_GROUP *group, BN_CTX *ctx) {
     BIGNUM *privkey = BN_new();
     EC_POINT *pubkey = EC_POINT_new(group);
@@ -1257,7 +1301,7 @@ void Debug_checking_sign_verify() {
         EC_KEY_free(key1);
         EC_KEY_free(key2);
         key1 = Create_pub_y_even_eckey(group, ctx);
-        key2 = Create_pub_y_even_eckey(group, ctx);
+        key2 = Create_pub_y_odd_eckey(group, ctx);
         uint256 hash2 = Create_random_hash();
 
         // OpenSSL
@@ -1279,11 +1323,11 @@ void Debug_checking_sign_verify() {
             bool valid2 = schnorr_openssl::verify(xonly_pubkey2, hash2, sig2); // valid
             bool valid3 = schnorr_openssl::verify(xonly_pubkey1, hash1, sig1); // invalid
             bool valid4 = schnorr_openssl::verify(xonly_pubkey2, hash2, sig1); // invalid
-            assert(valid1 && valid2 && !valid3 && !valid4);
             debugcs::instance() << "Signature 1 valid: " << valid1 << debugcs::endl();
             debugcs::instance() << "Signature 2 valid: " << valid2 << debugcs::endl();
             debugcs::instance() << "Signature 3 valid: " << valid3 << debugcs::endl();
             debugcs::instance() << "Signature 4 valid: " << valid4 << debugcs::endl();
+            assert(valid1 && valid2 && !valid3 && !valid4);
         } else {
             assert(!"failure schnorr sign");
         }
@@ -1325,7 +1369,7 @@ void Debug_checking_sign_verify() {
         }
 
         ++checking;
-    } while(checking < 5);
+    } while(checking < 50);
 
     checking = 0;
     do {
@@ -1343,11 +1387,20 @@ void Debug_checking_sign_verify() {
         CPubKey pubkey = secpkey->GetPubKey();
         pubkey.Compress();
         BIGNUM *pub_x_only = BN_new();
+        assert(pubkey.data()[0] == 0x02);
         BN_bin2bn(pubkey.data() + 1, 32, pub_x_only);
+        BIGNUM *pub_y = BN_new();
+        schnorr_openssl::calculate_even_y_coordinate(group, pub_x_only, pub_y, ctx);
+        pubkey.Decompress();
+        BIGNUM *pub_y_check = BN_new();
+        BN_bin2bn(pubkey.data() + 33, 32, pub_y_check);
+        assert(BN_cmp(pub_y, pub_y_check) == 0);
+        BN_free(pub_y);
+        BN_free(pub_y_check);
         std::vector<unsigned char> vchsig;
         vchsig.resize(64);
         ::memcpy(&vchsig.front(), &sig.data[0], 64);
-        if(schnorr_openssl::verify(pub_x_only, hash, vchsig, true))
+        if(schnorr_openssl::verify(pub_x_only, hash, vchsig))
             debugcs::instance() << __func__ << " verify strict mode(cmp both XY) valid" << debugcs::endl();
         else {
             debugcs::instance() << __func__ << " verify strict mode(cmp both XY) invalid" << debugcs::endl();
@@ -1358,7 +1411,7 @@ void Debug_checking_sign_verify() {
         BN_free(pub_x_only);
 
         ++checking;
-    } while(checking < 5);
+    } while(checking < 50);
 
     EC_GROUP_free(group);
     EC_KEY_free(key1);
