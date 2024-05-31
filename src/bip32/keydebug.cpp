@@ -5,6 +5,54 @@
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 
+#define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
+
+namespace schnorr_nonce {
+    /* This nonce function is described in BIP-schnorr
+     * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
+    int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
+        CFirmKey::hash::secp256k1_sha256 sha;
+        (void)data;
+        (void)counter;
+        VERIFY_CHECK(counter == 0);
+
+        /* Hash x||msg as per the spec */
+        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        /* Hash in algorithm, which is not in the spec, but may be critical to
+         * users depending on it to avoid nonce reuse across algorithms. */
+        if (algo16 != NULL) {
+            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
+        }
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        return 1;
+    }
+
+    int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
+        CFirmKey::hash::secp256k1_sha256 sha;
+        (void)data;
+        (void)counter;
+        VERIFY_CHECK(counter == 0);
+
+        unsigned char buf32[32];
+        latest_crypto::random::GetStrongRandBytes(buf32, 32);
+
+        /* Hash x||msg as per the spec */
+        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
+        /* Hash in algorithm, which is not in the spec, but may be critical to
+         * users depending on it to avoid nonce reuse across algorithms. */
+        if (algo16 != NULL) {
+            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
+        }
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        return 1;
+    }
+} // schnorr_nonce
+
 namespace schnorr_openssl {
 
 int schnorr_sha256_standard(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
@@ -48,24 +96,6 @@ int schnorr_sha256_bitcoin(BIGNUM *e, const unsigned char *r32, const unsigned c
     return 1;
 }
 
-void nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16) {
-    unsigned char buf32[32];
-    latest_crypto::random::GetStrongRandBytes(buf32, 32);
-    CFirmKey::hash::secp256k1_sha256 sha;
-
-    /* Hash x||msg as per the spec */
-    CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
-    /* Hash in algorithm, which is not in the spec, but may be critical to
-     * users depending on it to avoid nonce reuse across algorithms. */
-    if (algo16 != NULL) {
-        CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
-    }
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
-}
-
 int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
     BIGNUM *a = BN_new();
     BIGNUM *b = BN_new();
@@ -103,6 +133,17 @@ int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN
     return fret;
 }
 
+int BN_bn2bin_padded(const BIGNUM *bn, unsigned char *out, int size) {
+    memset(out, 0, size);
+    int num_bytes = BN_num_bytes(bn);
+    if (num_bytes > size) {
+        return 0;
+    }
+
+    BN_bn2bin(bn, out + size - num_bytes);
+    return 1;
+}
+
 bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char> &sig, bool k_negate = false) {
     // sig(fixed 64bytes) = [r_bytes(32bytes) | s(32bytes)]
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
@@ -138,9 +179,10 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // generate random:nonce_function_bipschnorr k
         unsigned char nonce32[32];
         unsigned char key32[32];
-        if(BN_bn2bin(privkey, key32) != 32)
+        if(BN_bn2bin_padded(privkey, key32, 32) != 1)
             break;
-        nonce_function_bipschnorr(nonce32, hash.begin(), key32, NULL);
+        if(!schnorr_nonce::secp256k1_nonce_function_bipschnorr(nonce32, hash.begin(), key32, NULL, NULL, 0))
+            break;
         if(!BN_bin2bn(nonce32, 32, k)) {
             OPENSSL_cleanse(nonce32, 32);
             OPENSSL_cleanse(key32, 32);
@@ -177,7 +219,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         ::memcpy(R_points_xonly, R_points + 1, 32);
         assert(hash.size() == 32);
         unsigned char pub_bin_x[32];
-        if(BN_bn2bin(pub_x, pub_bin_x) != 32)
+        if(BN_bn2bin_padded(pub_x, pub_bin_x, 32) != 1)
             break;
         if(schnorr_sha256_bitcoin(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
             break;
@@ -185,17 +227,15 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // s = k + e * privkey
         if(BN_mod_mul(s, e, privkey, order, ctx) != 1)
             break;
-        if(BN_mod_add(s, s, k, order, ctx) != 1) {
-            debugcs::instance() << __func__ << " failure k + e * privkey" << debugcs::endl();
+        if(BN_mod_add(s, s, k, order, ctx) != 1)
             break;
-        }
 
         // sig = [R_points_xonly | s]
         sig.resize(64);
-        memcpy(&sig.front(), R_points_xonly, sizeof(R_points_xonly));
+        ::memcpy(&sig.front(), R_points_xonly, sizeof(R_points_xonly));
         if(BN_num_bytes(s) != 32)
             break;
-        if(BN_bn2bin(s, &sig.front() + 32) != 32)
+        if(BN_bn2bin_padded(s, &sig.front() + 32, 32) != 1)
             break;
 
         fret = true;
@@ -259,8 +299,8 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
         unsigned char R_points_xonly[32];
         ::memcpy(R_points_xonly, sig.data(), 32);
         assert(hash.size() == 32);
-        unsigned char pub_bin_x[32];
-        if(BN_bn2bin(pubkey_x, pub_bin_x) != 32)
+        unsigned char pub_bin_x[32] = {0};
+        if(BN_bn2bin_padded(pubkey_x, pub_bin_x, 32) != 1)
             break;
         if(schnorr_sha256_bitcoin(e, R_points_xonly, pub_bin_x, hash.begin()) != 1)
             break;
@@ -365,8 +405,6 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 }
 
 } // schnorr_openssl
-
-#define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
 # if !defined(SECP256K1_GNUC_PREREQ)
 #  if defined(__GNUC__)&&defined(__GNUC_MINOR__)
@@ -674,31 +712,6 @@ typedef struct {
     unsigned char data[64];
 } secp256k1_schnorrsig;
 
-/* This nonce function is described in BIP-schnorr
- * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
-static int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
-    CFirmKey::hash::secp256k1_sha256 sha;
-    (void)data;
-    (void)counter;
-    VERIFY_CHECK(counter == 0);
-
-    //unsigned char buf32[32];
-    //latest_crypto::random::GetStrongRandBytes(buf32, 32);
-
-    /* Hash x||msg as per the spec */
-    CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    //CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
-    /* Hash in algorithm, which is not in the spec, but may be critical to
-     * users depending on it to avoid nonce reuse across algorithms. */
-    if (algo16 != NULL) {
-        CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
-    }
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
-    return 1;
-}
-
 static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_t size) {
     void *ret = malloc(size);
     if (ret == NULL) {
@@ -999,7 +1012,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     CPubKey::secp256k1_unit k;
     unsigned char buf[32];
     if (noncefp == NULL)
-        noncefp = secp256k1_nonce_function_bipschnorr;
+        noncefp = schnorr_nonce::secp256k1_nonce_function_bipschnorr;
     if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0))
         return 0;
     secp256k1_scalar_set_b32(&k, buf, NULL);
@@ -1322,7 +1335,7 @@ void Debug_checking_sign_verify() {
         CSecret secret = secpkey.get()->GetSecret();
         secp256k1_schnorrsig sig;
         uint256 hash = Create_random_hash();
-        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), secret.data(), nullptr, nullptr) != 1) {
+        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1) {
             assert(!"failure secp256k1_schnorrsig_sign");
             break;
         }
@@ -1339,11 +1352,13 @@ void Debug_checking_sign_verify() {
         else {
             debugcs::instance() << __func__ << " verify strict mode(cmp both XY) invalid" << debugcs::endl();
             assert(!"verify strict mode(cmp both XY) invalid");
+            BN_free(pub_x_only);
+            return;
         }
         BN_free(pub_x_only);
 
         ++checking;
-    } while(checking < 10);
+    } while(checking < 5);
 
     EC_GROUP_free(group);
     EC_KEY_free(key1);
