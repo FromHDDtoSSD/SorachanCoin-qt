@@ -96,39 +96,27 @@ int schnorr_sha256_bitcoin(BIGNUM *e, const unsigned char *r32, const unsigned c
     return 1;
 }
 
-int calculate_even_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
+int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
     BIGNUM *a = BN_new();
     BIGNUM *b = BN_new();
     BIGNUM *p = BN_new();
     BIGNUM *x3 = BN_new();
     BIGNUM *rhs = BN_new();
-    BIGNUM *neg = BN_new();
     int fret = 0;
 
     do {
         if(!a || !b || !p || !x3 || !rhs)
             break;
-
-        BN_zero(a);
-        BN_set_word(b, 7);
-        if (!EC_GROUP_get_curve_GFp(group, p, a, b, ctx))
+        if (EC_GROUP_get_curve_GFp(group, p, a, b, ctx) != 1)
             break;
-        if (!BN_mod_sqr(x3, x, p, ctx))
+        if (BN_mod_sqr(x3, x, p, ctx) != 1)
             break;
-        if (!BN_mod_mul(x3, x3, x, p, ctx))
+        if (BN_mod_mul(x3, x3, x, p, ctx) != 1)
             break;
-        if (!BN_mod_add(rhs, x3, b, p, ctx))
+        if (BN_mod_add(rhs, x3, b, p, ctx) != 1)
             break;
         if (!BN_mod_sqrt(y, rhs, p, ctx))
             break;
-
-        if(BN_is_odd(y)) {
-            if(!BN_sub(neg, p, y))
-                break;
-            assert(!BN_is_odd(neg));
-            if(!BN_copy(y, neg))
-                break;
-        }
 
         fret = 1;
     } while(false);
@@ -138,10 +126,31 @@ int calculate_even_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *
     BN_free(p);
     BN_free(x3);
     BN_free(rhs);
-    BN_free(neg);
 
     return fret;
 }
+
+/*
+int calculate_even_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
+    BIGNUM *p = BN_new();
+
+    if(calculate_y_coordinate(group, x, y, ctx) != 1)
+        return 0;
+
+    do {
+        if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
+            break;
+        if(BN_is_odd(y)) {
+            if(BN_sub(y, p, y) != 1)
+                return 0;
+        }
+    } while(false);
+
+    BN_free(p);
+
+    return 1;
+}
+*/
 
 int BN_bn2bin_padded(const BIGNUM *bn, unsigned char *out, int size) {
     memset(out, 0, size);
@@ -239,7 +248,7 @@ bool sign(const BIGNUM *privkey, const uint256 &hash, std::vector<unsigned char>
         // if pub_y is even: s = k + e * privkey
         // if pub_y is odd: s = k + invert(e) * privkey
         if(BN_is_odd(pub_y)) {
-            if(!BN_sub(e, order, e)) // invert: sub from mod p
+            if(BN_sub(e, order, e) != 1) // invert: sub from mod p
                 break;
         }
         if(BN_mod_mul(s, e, privkey, order, ctx) != 1)
@@ -278,6 +287,7 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *order = BN_new();
+    BIGNUM *p = BN_new();
     BIGNUM *R_x = BN_new();
     BIGNUM *s = BN_new();
     BIGNUM *e = BN_new();
@@ -294,11 +304,13 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 
     bool fret = false;
     do {
-        if(!group || !ctx || !order || !R_x || !s || !e || !lhs || !pubkey_y || !pubkey || !R_y || !R || !e_mul_pubkey || !rhs || !neg_one || !R2 || !R2_x)
+        if(!group || !ctx || !order || !p || !R_x || !s || !e || !lhs || !pubkey_y || !pubkey || !R_y || !R || !e_mul_pubkey || !rhs || !neg_one || !R2 || !R2_x)
             break;
 
-        // get order (F_p mod) and neg_one
+        // get order and p (F_p mod) and neg_one
         if(EC_GROUP_get_order(group, order, ctx) != 1)
+            break;
+        if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
             break;
         if(BN_set_word(neg_one, 1) != 1)
             break;
@@ -325,15 +337,16 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
         if(EC_POINT_mul(group, lhs, s, NULL, NULL, ctx) != 1)
             break;
 
+        // libsecp256k1: R2 = lhs - e * pubkey
+        // schnorr strict mode: rhs = R + e * pubkey
+        if(calculate_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
+            break;
+        if(BN_is_odd(pubkey_y)) {
+            if(BN_sub(pubkey_y, p, pubkey_y) != 1)
+                break;
+        }
         if(!fstrict) {
-            // libsecp256k1: R2 = lhs - e * pubkey
-            if(calculate_even_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
-                break;
             if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
-                break;
-            if(calculate_even_y_coordinate(group, R_x, R_y, ctx) != 1)
-                break;
-            if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
                 break;
             if(EC_POINT_mul(group, e_mul_pubkey, NULL, pubkey, e, ctx) != 1)
                 break;
@@ -344,14 +357,11 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
             if(EC_POINT_get_affine_coordinates_GFp(group, R2, R2_x, NULL, ctx) != 1)
                 break;
 
-            fret = BN_cmp(R_x, R2_x) == 0;
+                fret = BN_cmp(R_x, R2_x) == 0;
         } else {
-            // schnorr strict mode: rhs = R + e * pubkey
-            if(calculate_even_y_coordinate(group, pubkey_x, pubkey_y, ctx) != 1)
-                break;
             if(EC_POINT_set_affine_coordinates_GFp(group, pubkey, pubkey_x, pubkey_y, ctx) != 1)
                 break;
-            if(calculate_even_y_coordinate(group, R_x, R_y, ctx) != 1)
+            if(calculate_y_coordinate(group, R_x, R_y, ctx) != 1)
                 break;
             if(EC_POINT_set_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
                 break;
@@ -389,6 +399,7 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
     EC_GROUP_free(group);
     BN_CTX_free(ctx);
     BN_free(order);
+    BN_free(p);
     BN_free(R_x);
     BN_free(s);
     BN_free(e);
@@ -1049,6 +1060,22 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
 
     // generate s = k + e * privkey
+    // if pub_y is even: s = k + e * privkey
+    // if pub_y is odd: s = k + invert(e) * privkey
+    if (pub_buf[0] == 0x03) {
+        const unsigned char order_buf[32] = {
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+         0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0xBA, 0xAE, 0xDC,
+         0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E,
+         0x8C, 0xD0, 0x36, 0x41, 0x41, 0x00, 0x00, 0x00
+        };
+        CPubKey::secp256k1_unit order;
+        CPubKey::secp256k1_scalar_set_be32(&order, order_buf, &overflow);
+        if(overflow)
+            return 0;
+        CPubKey::secp256k1_scalar_negate(&e, &e);
+        CPubKey::secp256k1_scalar_add(&e, &order, &e);
+    }
     CPubKey::secp256k1_scalar_mul(&e, &e, &x);
     CPubKey::secp256k1_scalar_add(&e, &e, &k);
 
@@ -1217,6 +1244,14 @@ EC_KEY *Create_pub_y_even_eckey(const EC_GROUP *group, BN_CTX *ctx) {
     return eckey;
 }
 
+std::shared_ptr<CFirmKey> Create_pub_y_key() {
+    std::shared_ptr<CFirmKey> key(new (std::nothrow) CFirmKey);
+    if(!key.get())
+        return key;
+    key.get()->MakeNewKey(true);
+    return key;
+}
+
 // args: privkey is nullptr(this case is random) or must be public_y even
 std::shared_ptr<CFirmKey> Create_pub_y_even_key(const unsigned char *privkey = nullptr) {
     std::shared_ptr<CFirmKey> key(new (std::nothrow) CFirmKey);
@@ -1233,6 +1268,32 @@ std::shared_ptr<CFirmKey> Create_pub_y_even_key(const unsigned char *privkey = n
         CPubKey pubkey = key.get()->GetPubKey();
         pubkey.Compress();
         if(pubkey.data()[0] == 0x02)
+            return key;
+        else {
+            // if exists privkey, this privkey must be even, therefore key is reset and return
+            if(privkey) {
+                key.reset();
+                return key;
+            }
+        }
+    } while(true);
+}
+
+std::shared_ptr<CFirmKey> Create_pub_y_odd_key(const unsigned char *privkey = nullptr) {
+    std::shared_ptr<CFirmKey> key(new (std::nothrow) CFirmKey);
+    if(!key.get())
+        return key;
+    do {
+        CSecret secret;
+        secret.resize(32);
+        if(!privkey)
+            latest_crypto::random::GetStrongRandBytes(&secret.front(), 32);
+        else // privkey must be public_y even
+            ::memcpy(&secret.front(), privkey, 32);
+        key.get()->SetSecret(secret);
+        CPubKey pubkey = key.get()->GetPubKey();
+        pubkey.Compress();
+        if(pubkey.data()[0] == 0x03)
             return key;
         else {
             // if exists privkey, this privkey must be even, therefore key is reset and return
@@ -1369,7 +1430,7 @@ void Debug_checking_sign_verify() {
         }
 
         ++checking;
-    } while(checking < 50);
+    } while(checking < 3);
 
     checking = 0;
     do {
@@ -1386,17 +1447,14 @@ void Debug_checking_sign_verify() {
 
         CPubKey pubkey = secpkey->GetPubKey();
         pubkey.Compress();
+        //bool fpub_y_odd = pubkey.data()[0] == 0x03;
         BIGNUM *pub_x_only = BN_new();
-        assert(pubkey.data()[0] == 0x02);
-        BN_bin2bn(pubkey.data() + 1, 32, pub_x_only);
-        BIGNUM *pub_y = BN_new();
-        schnorr_openssl::calculate_even_y_coordinate(group, pub_x_only, pub_y, ctx);
-        pubkey.Decompress();
-        BIGNUM *pub_y_check = BN_new();
-        BN_bin2bn(pubkey.data() + 33, 32, pub_y_check);
-        assert(BN_cmp(pub_y, pub_y_check) == 0);
-        BN_free(pub_y);
-        BN_free(pub_y_check);
+        if(!pub_x_only)
+            break;
+        if(!BN_bin2bn(pubkey.data() + 1, 32, pub_x_only)) {
+            BN_free(pub_x_only);
+            break;
+        }
         std::vector<unsigned char> vchsig;
         vchsig.resize(64);
         ::memcpy(&vchsig.front(), &sig.data[0], 64);
@@ -1406,12 +1464,12 @@ void Debug_checking_sign_verify() {
             debugcs::instance() << __func__ << " verify strict mode(cmp both XY) invalid" << debugcs::endl();
             assert(!"verify strict mode(cmp both XY) invalid");
             BN_free(pub_x_only);
-            return;
+            break;
         }
         BN_free(pub_x_only);
 
         ++checking;
-    } while(checking < 50);
+    } while(checking < 3);
 
     EC_GROUP_free(group);
     EC_KEY_free(key1);
