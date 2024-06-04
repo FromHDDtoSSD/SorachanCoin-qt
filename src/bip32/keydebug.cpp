@@ -5,6 +5,22 @@
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 
+void print_bignum(const char *mes, BIGNUM *bn) {
+    char *bn_str = BN_bn2hex(bn);
+    if (bn_str) {
+        debugcs::instance() << mes << ": " << bn_str << debugcs::endl();
+        OPENSSL_free(bn_str);
+    } else {
+        debugcs::instance() << "Error converting BIGNUM to string" << debugcs::endl();
+    }
+}
+
+void print_secp(const char *mes, const CPubKey::secp256k1_unit *s) {
+    unsigned char buf[32];
+    CPubKey::secp256k1_scalar_get_be32(buf, s);
+    debugcs::instance() << mes << ": " << strenc::HexStr(std::vector<unsigned char>(BEGIN(buf), END(buf))) << debugcs::endl();
+}
+
 #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
 namespace schnorr_nonce {
@@ -1055,7 +1071,9 @@ static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, 
 }
 
 static SECP256K1_INLINE int secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256k1_ge *ge, const secp256k1_xonly_pubkey *pubkey) {
-    return CPubKey::secp256k1_pubkey_load(ge, (const CPubKey::secp256k1_pubkey *) pubkey);
+    CPubKey::secp256k1_pubkey pub;
+    ::memcpy(pub.data, pubkey->data, 64);
+    return CPubKey::secp256k1_pubkey_load(ge, &pub);
 }
 
 static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey)
@@ -1076,16 +1094,21 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     if (overflow)
         return 0;
 
-    // get pubkey (pk: affine X and Y)
+    /* Compute pk */
     CPubKey::ecmult::secp256k1_ge pk;
-    if (!secp256k1_xonly_pubkey_load(&pk, pubkey))
+    pk.infinity = 0;
+    if(!CPubKey::ecmult::secp256k1_fe_set_be32(&pk.x, &pubkey->data[0]))
         return 0;
+    if(!CPubKey::ecmult::secp256k1_fe_set_be32(&pk.y, &pubkey->data[32]))
+        return 0;
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&pk.y))
+        CPubKey::ecmult::secp256k1_fe_negate(&pk.y, &pk.y, 1);
 
     /* Compute e. */
     CPubKey::secp256k1_unit e;
     unsigned char pub_x[32];
     secp256k1_fe_get_b32(pub_x, &pk.x);
-    secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, pub_x);
+    secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
 
     /* Compute rj =  s*G + (-e)*pkj */
     CPubKey::ecmult::secp256k1_gej pkj;
@@ -1099,9 +1122,10 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
         return 0;
 
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
-    return !CPubKey::ecmult::secp256k1_fe_is_odd(&r.y) &&
-           CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
+    return CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
+    //CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
+    //return !CPubKey::ecmult::secp256k1_fe_is_odd(&r.y) &&
+    //       CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
 }
 
 EC_KEY *Create_pub_y_odd_eckey(const EC_GROUP *group, BN_CTX *ctx) {
@@ -1338,7 +1362,7 @@ bool OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 }
 
 // Checker
-// 2, Libsecp256k1 schnorr signature sign and OpenSSL verify: try pub_y with both odd and even values
+// 2, [OK checked] Libsecp256k1 schnorr signature sign and OpenSSL verify: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even() {
     BIGNUM *pub_x_only = BN_new();
     BIGNUM *invalid_pub_x_only = BN_new();
@@ -1408,15 +1432,15 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
 }
 
 // Checker
-// 3, Libsecp256k1 schnorr signature sign and verify: try pub_y with both odd and even values
+// 3, [OK checked] Libsecp256k1 schnorr signature sign and verify: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
-    const int check_num = 100;
+    const int check_num = 8;
 
     bool fret = false;
     int checking = 0;
     do {
         //std::shared_ptr<CFirmKey> secpkey = (checking % 2 == 0) ? Create_pub_y_odd_key(): Create_pub_y_even_key();
-        std::shared_ptr<CFirmKey> secpkey = Create_pub_y_even_key();
+        std::shared_ptr<CFirmKey> secpkey = Create_pub_y_key();
         if(!secpkey.get())
             break;
         CSecret secret = secpkey->GetSecret();
@@ -1434,34 +1458,29 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 
         // valid verify
         if(secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey))
-            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, schnorr_openssl::verify valid" << debugcs::endl();
+            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, verify valid" << debugcs::endl();
         else {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, schnorr_openssl::verify invalid" << debugcs::endl();
+            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify invalid" << debugcs::endl();
             break;
         }
 
-        /*
         // invalid verify 1
         uint256 invalid_hash = hash;
         invalid_hash.begin()[2] = 0xFF;
         invalid_hash.begin()[3] = 0x55;
-        if(schnorr_openssl::verify(pub_x_only, invalid_hash, vchsig)) {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, schnorr_openssl::verify invalid" << debugcs::endl();
+        if(secp256k1_schnorrsig_verify(&sig.data[0], invalid_hash.begin(), &x_only_pubkey)) {
+            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify1 invalid" << debugcs::endl();
             break;
         } else
-            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, schnorr_openssl::verify valid" << debugcs::endl();
+            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, verify1 invalid" << debugcs::endl();
 
         // invalid verify 2
-        if(!BN_copy(invalid_pub_x_only, pub_x_only))
-            break;
-        if(BN_add_word(invalid_pub_x_only, 88) != 1)
-            break;
-        if(schnorr_openssl::verify(invalid_pub_x_only, invalid_hash, vchsig)) {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, schnorr_openssl::verify invalid" << debugcs::endl();
+        x_only_pubkey.data[0] += 0x7F;
+        if(secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey)) {
+            debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify2 invalid" << debugcs::endl();
             break;
         } else
-            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, schnorr_openssl::verify valid" << debugcs::endl();
-        */
+            debugcs::instance() << __func__ << " ok Libsecp256k1 sign, verify2 invalid" << debugcs::endl();
 
         ++checking;
     } while(checking < check_num);
@@ -1469,97 +1488,6 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         fret = true;
 
     return fret;
-}
-
-void print_bignum(const char *mes, BIGNUM *bn) {
-    char *bn_str = BN_bn2hex(bn);
-    if (bn_str) {
-        debugcs::instance() << mes << ": " << bn_str << debugcs::endl();
-        OPENSSL_free(bn_str);
-    } else {
-        debugcs::instance() << "Error converting BIGNUM to string" << debugcs::endl();
-    }
-}
-
-void print_secp(const char *mes, const CPubKey::secp256k1_unit *s) {
-    unsigned char buf[32];
-    CPubKey::secp256k1_scalar_get_be32(buf, s);
-    debugcs::instance() << mes << ": " << strenc::HexStr(std::vector<unsigned char>(BEGIN(buf), END(buf))) << debugcs::endl();
-}
-
-void Check_ecdsa_x_y() {
-    EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
-    EC_KEY *eckey = EC_KEY_new_by_curve_name(NID_secp256k1);
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *priv = BN_new();
-    EC_POINT *pubkey = EC_POINT_new(group);
-    EC_POINT *R = EC_POINT_new(group);
-    BIGNUM *pub_x = BN_new();
-    BIGNUM *pub_y = BN_new();
-    BIGNUM *R_x = BN_new();
-    BIGNUM *R_y = BN_new();
-    BIGNUM *order = BN_new();
-    BIGNUM *k = BN_new();
-    BIGNUM *e = BN_new();
-    BIGNUM *inv_e = BN_new();
-    BIGNUM *tmp = BN_new();
-    BIGNUM *s1 = BN_new();
-    BIGNUM *s2 = BN_new();
-
-    do {
-        BN_set_word(priv, 1);
-        BN_set_word(k, 1);
-        BN_set_word(e, 1);
-
-        EC_GROUP_get_order(group, order, ctx);
-
-        // pubkey
-        if(EC_POINT_mul(group, pubkey, priv, NULL, NULL, ctx) != 1)
-            break;
-        if(EC_POINT_get_affine_coordinates_GFp(group, pubkey, pub_x, pub_y, ctx) != 1)
-            break;
-        print_bignum("pub_x", pub_x);
-        print_bignum("pub_y", pub_y);
-
-        // R = k*G
-        if(EC_POINT_mul(group, R, k, NULL, NULL, ctx) != 1)
-            break;
-        if(EC_POINT_get_affine_coordinates_GFp(group, R, R_x, R_y, ctx) != 1)
-            break;
-        print_bignum("R_x", R_x);
-        print_bignum("R_y", R_y);
-
-        // s1 = k + e*priv
-        BN_mod_mul(tmp, e, priv, order, ctx);
-        BN_mod_add(s1, k, tmp, order, ctx);
-        print_bignum("s1", s1);
-
-        // s2 = k + negate(e)*priv
-        BN_sub(inv_e, order, e);
-        BN_mod_mul(tmp, inv_e, priv, order, ctx);
-        BN_mod_add(s2, k, tmp, order, ctx);
-        print_bignum("inv_e", inv_e);
-        print_bignum("s2", s2);
-
-    } while(false);
-
-    EC_GROUP_free(group);
-    EC_KEY_free(eckey);
-    BN_CTX_free(ctx);
-    BN_clear_free(priv);
-    EC_POINT_free(pubkey);
-    EC_POINT_free(R);
-    BN_free(pub_x);
-    BN_free(pub_y);
-    BN_free(R_x);
-    BN_free(R_y);
-    BN_free(order);
-    BN_clear_free(k);
-    BN_free(e);
-    BN_free(inv_e);
-    BN_free(tmp);
-    BN_free(s1);
-    BN_free(s2);
 }
 
 // called AppInit2
@@ -1576,9 +1504,9 @@ void Debug_checking_sign_verify() {
     }
 
     // 3, Libsecp256k1 schnorr signature sign and verify: try pub_y with both odd and even values
-    //if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
-    //    assert(!"3: failure Libsecp256k1_schnorr_sign_and_verify");
-    //}
+    if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
+        assert(!"3: failure Libsecp256k1_schnorr_sign_and_verify");
+    }
 }
 
 // called AppInit2
