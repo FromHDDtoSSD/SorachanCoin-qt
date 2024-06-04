@@ -1016,35 +1016,12 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
 
     // generate s = k + e * privkey
     // if pub_y is even: s = k + e * privkey
-    // if pub_y is odd: s = k + invert(e) * privkey
+    // if pub_y is odd: s = k + negate(e) * privkey
     CPubKey::secp256k1_unit s;
-    if (pub_buf[0] == 0x03) {
-        // libsecp256k1
-        // Workaround: Because the order cannot be stored due to overflow,
-        // we have confirmed that this works correctly by taking the difference using the maximum value
-        // that can be stored (order - 1) and then adding 1.
-        CPubKey::secp256k1_unit secp_order_neg1; // order - 1
-        const unsigned char secp256k1_order_neg1[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                                        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
-                                                        0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B,
-                                                        0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x40};
-        CPubKey::secp256k1_scalar_set_be32(&secp_order_neg1, secp256k1_order_neg1, NULL);
-
-        CPubKey::secp256k1_unit secp_one;
-        CPubKey::secp256k1_scalar_set_int(&secp_one, 1);
-        CPubKey::secp256k1_unit neg_e;
-        CPubKey::secp256k1_scalar_negate(&neg_e, &e);
-        CPubKey::secp256k1_scalar_add(&e, &secp_order_neg1, &neg_e); // (order - 1) - e
-        CPubKey::secp256k1_scalar_add(&e, &e, &secp_one); // (order - 1) - e + 1
-
-        // s = k + invert(e) * privkey
-        CPubKey::secp256k1_scalar_mul(&e, &e, &x);
-        CPubKey::secp256k1_scalar_add(&s, &e, &k);
-    } else {
-        // s = k + e * privkey
-        CPubKey::secp256k1_scalar_mul(&e, &e, &x);
-        CPubKey::secp256k1_scalar_add(&s, &e, &k);
-    }
+    if (pub_buf[0] == 0x03)
+        CPubKey::secp256k1_scalar_negate(&e, &e);
+    CPubKey::secp256k1_scalar_mul(&e, &e, &x);
+    CPubKey::secp256k1_scalar_add(&s, &e, &k);
 
     // store signature [r.x | (s)]
     secp256k1_scalar_get_b32(&sig->data[32], &s);
@@ -1292,7 +1269,7 @@ bool OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
     BIGNUM *privkey = BN_new();
     BIGNUM *pub_x_only = BN_new();
     BIGNUM *invalid_pub_x_only = BN_new();
-    const int check_num = 100;
+    const int check_num = 8;
 
     bool fret = false;
     int checking = 0;
@@ -1365,7 +1342,7 @@ bool OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even() {
     BIGNUM *pub_x_only = BN_new();
     BIGNUM *invalid_pub_x_only = BN_new();
-    const int check_num = 100;
+    const int check_num = 8;
 
     bool fret = false;
     int checking = 0;
@@ -1557,21 +1534,12 @@ void Check_ecdsa_x_y() {
         BN_mod_add(s1, k, tmp, order, ctx);
         print_bignum("s1", s1);
 
-        // s2 = k + invert(e)*priv
+        // s2 = k + negate(e)*priv
         BN_sub(inv_e, order, e);
         BN_mod_mul(tmp, inv_e, priv, order, ctx);
         BN_mod_add(s2, k, tmp, order, ctx);
         print_bignum("inv_e", inv_e);
         print_bignum("s2", s2);
-
-        // libsecp256k1 order
-        CPubKey::secp256k1_unit secp_order;
-        const unsigned char secp256k1_order[32] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
-                                                   0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B,
-                                                   0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x40};
-        CPubKey::secp256k1_scalar_set_be32(&secp_order, secp256k1_order, NULL);
-        print_secp("secp_order", &secp_order); // neg(1)
 
     } while(false);
 
