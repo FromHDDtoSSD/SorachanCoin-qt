@@ -1587,8 +1587,19 @@ void check_bignum_ecdsa() {
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *order = BN_new();
     BIGNUM *p = BN_new();
-    BIGNUM *a = BN_new();
-    BIGNUM *y = BN_new();
+    BIGNUM *s1 = BN_new();
+    BIGNUM *s2 = BN_new();
+    BIGNUM *k = BN_new();
+    BIGNUM *e = BN_new();
+    BIGNUM *neg_e = BN_new();
+    BIGNUM *t = BN_new();
+    BIGNUM *m = BN_new();
+    BIGNUM *n = BN_new();
+    EC_POINT *q1 = EC_POINT_new(group);
+    EC_POINT *q2 = EC_POINT_new(group);
+    EC_POINT *r1 = EC_POINT_new(group);
+    EC_POINT *r2 = EC_POINT_new(group);
+    EC_POINT *r3 = EC_POINT_new(group);
 
     do {
         if(!group || !ctx || !order || !p)
@@ -1600,9 +1611,20 @@ void check_bignum_ecdsa() {
         if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
             break;
 
-        BN_set_word(a, 1234567);
-        BN_set_word(y, 346739);
-        solve_mod::check_x(a, y, p);
+        // both k and t are secret
+        // s1 = k + e*t
+        BN_set_word(e, 1);
+
+        // s2 = k + negate(e)*t
+        BN_set_word(neg_e, 1);
+        BN_sub(neg_e, p, neg_e);
+
+        // r1 = k^G
+        // r2 = s1^G - e^q1 [q1: y is even]
+        // r3 = s2^G - neg_e^invert(q2) [q2: y is odd]
+        // r2.x = r3.x (r1.x = r2.x, r1.x = r3.x)
+        // r2.y = m*r3.y mod p
+        // r1.y = n*r3.y mod p
 
     } while(false);
 
@@ -1610,8 +1632,19 @@ void check_bignum_ecdsa() {
     BN_CTX_free(ctx);
     BN_free(order);
     BN_free(p);
-    BN_free(a);
-    BN_free(y);
+    BN_free(s1);
+    BN_free(s2);
+    BN_free(k);
+    BN_free(e);
+    BN_free(neg_e);
+    BN_free(t);
+    BN_free(m);
+    BN_free(n);
+    EC_POINT_free(q1);
+    EC_POINT_free(q2);
+    EC_POINT_free(r1);
+    EC_POINT_free(r2);
+    EC_POINT_free(r3);
 }
 
 // called AppInit2
