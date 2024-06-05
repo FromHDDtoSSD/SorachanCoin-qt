@@ -21,6 +21,30 @@ void print_secp(const char *mes, const CPubKey::secp256k1_unit *s) {
     debugcs::instance() << mes << ": " << strenc::HexStr(std::vector<unsigned char>(BEGIN(buf), END(buf))) << debugcs::endl();
 }
 
+void print_ecpoint(const EC_GROUP *group, const EC_POINT *point) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    do {
+        if (!ctx || !x || !y)
+            break;
+        if (EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) != 1)
+            break;
+
+        char *x_str = BN_bn2dec(x);
+        char *y_str = BN_bn2dec(y);
+        debugcs::instance() << "EC Point Coordinates:" << debugcs::endl();
+        debugcs::instance() << "x: " << x_str << debugcs::endl();
+        debugcs::instance() << "y: " << y_str << debugcs::endl();
+        OPENSSL_free(x_str);
+        OPENSSL_free(y_str);
+    } while(false);
+
+    BN_free(x);
+    BN_free(y);
+    BN_CTX_free(ctx);
+}
+
 #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
 namespace schnorr_nonce {
@@ -1587,6 +1611,7 @@ void check_bignum_ecdsa() {
     BN_CTX *ctx = BN_CTX_new();
     BIGNUM *order = BN_new();
     BIGNUM *p = BN_new();
+    BIGNUM *neg_one = BN_new();
     BIGNUM *s1 = BN_new();
     BIGNUM *s2 = BN_new();
     BIGNUM *k = BN_new();
@@ -1596,32 +1621,75 @@ void check_bignum_ecdsa() {
     BIGNUM *m = BN_new();
     BIGNUM *n = BN_new();
     EC_POINT *q1 = EC_POINT_new(group);
+    BIGNUM *q1_x = BN_new();
+    BIGNUM *q1_y = BN_new();
     EC_POINT *q2 = EC_POINT_new(group);
+    BIGNUM *q2_x = BN_new();
+    BIGNUM *q2_y = BN_new();
     EC_POINT *r1 = EC_POINT_new(group);
     EC_POINT *r2 = EC_POINT_new(group);
     EC_POINT *r3 = EC_POINT_new(group);
+    EC_POINT *tmp = EC_POINT_new(group);
 
     do {
-        if(!group || !ctx || !order || !p)
-            break;
-
         // get order and p (F_p mod) and neg_one
         if(EC_GROUP_get_order(group, order, ctx) != 1)
             break;
         if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
             break;
 
-        // both k and t are secret
+        // neg_one
+        if(BN_set_word(neg_one, 1) != 1)
+            break;
+        if(BN_sub(neg_one, order, neg_one) != 1)
+            break;
+
+        // both k and t are secret (Insert 1 for each of them here)
+        BN_set_word(k, 1);
+        BN_set_word(t, 1);
+
+        // q1, q2
+        EC_POINT_mul(group, q1, t, NULL, NULL, ctx);
+        if(EC_POINT_get_affine_coordinates_GFp(group, q1, q1_x, q1_y, ctx) != 1)
+            break;
+        if(BN_is_odd(q1_y))
+            EC_POINT_invert(group, q1, ctx);
+        EC_POINT_mul(group, q2, t, NULL, NULL, ctx);
+        if(EC_POINT_get_affine_coordinates_GFp(group, q2, q2_x, q2_y, ctx) != 1)
+            break;
+        if(!BN_is_odd(q2_y))
+            EC_POINT_invert(group, q2, ctx);
+
         // s1 = k + e*t
         BN_set_word(e, 1);
+        BN_mod_mul(s1, e, t, p, ctx);
+        BN_mod_add(s1, k, s1, p, ctx);
 
         // s2 = k + negate(e)*t
         BN_set_word(neg_e, 1);
         BN_sub(neg_e, p, neg_e);
+        BN_mod_mul(s2, neg_e, t, p, ctx);
+        BN_mod_add(s2, k, s2, p, ctx);
 
         // r1 = k^G
+        EC_POINT_mul(group, r1, k, NULL, NULL, ctx);
+
         // r2 = s1^G - e^q1 [q1: y is even]
+        EC_POINT_mul(group, r2, s1, NULL, NULL, ctx);
+        EC_POINT_mul(group, tmp, NULL, q1, e, ctx);
+        EC_POINT_mul(group, tmp, NULL, tmp, neg_one, ctx);
+        EC_POINT_add(group, r2, r2, tmp, ctx);
+
         // r3 = s2^G - neg_e^invert(q2) [q2: y is odd]
+        EC_POINT_mul(group, r3, s2, NULL, NULL, ctx);
+        EC_POINT_mul(group, tmp, NULL, q2, neg_e, ctx);
+        EC_POINT_mul(group, tmp, NULL, tmp, neg_one, ctx);
+        EC_POINT_add(group, r3, r3, tmp, ctx);
+
+        print_ecpoint(group, r1);
+        print_ecpoint(group, r2);
+        print_ecpoint(group, r3);
+
         // r2.x = r3.x (r1.x = r2.x, r1.x = r3.x)
         // r2.y = m*r3.y mod p
         // r1.y = n*r3.y mod p
@@ -1632,6 +1700,7 @@ void check_bignum_ecdsa() {
     BN_CTX_free(ctx);
     BN_free(order);
     BN_free(p);
+    BN_free(neg_one);
     BN_free(s1);
     BN_free(s2);
     BN_free(k);
@@ -1641,10 +1710,15 @@ void check_bignum_ecdsa() {
     BN_free(m);
     BN_free(n);
     EC_POINT_free(q1);
+    BN_free(q1_x);
+    BN_free(q1_y);
     EC_POINT_free(q2);
+    BN_free(q2_x);
+    BN_free(q2_y);
     EC_POINT_free(r1);
     EC_POINT_free(r2);
     EC_POINT_free(r3);
+    EC_POINT_free(tmp);
 }
 
 // called AppInit2
