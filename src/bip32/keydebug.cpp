@@ -1565,16 +1565,10 @@ int solve_mod_equation(BIGNUM *x, const BIGNUM *a, const BIGNUM *y, const BIGNUM
     return 1;
 }
 
-int check_x() {
+// y = a * x mod p, compute x (polynomial time)
+void check_x(const BIGNUM *a, const BIGNUM *y, const BIGNUM *p) {
     BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *a = BN_new();
-    BIGNUM *y = BN_new();
-    BIGNUM *p = BN_new();
     BIGNUM *x = BN_new();
-
-    BN_dec2bn(&a, "3");
-    BN_dec2bn(&y, "7");
-    BN_dec2bn(&p, "11");
 
     if (solve_mod_equation(x, a, y, p, ctx)) {
         char *result_str = BN_bn2dec(x);
@@ -1582,16 +1576,43 @@ int check_x() {
         OPENSSL_free(result_str);
     }
 
-    BN_free(a);
-    BN_free(y);
-    BN_free(p);
     BN_free(x);
     BN_CTX_free(ctx);
-
-    return 0;
 }
 
 } // solve_mod
+
+void check_bignum_ecdsa() {
+    EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *order = BN_new();
+    BIGNUM *p = BN_new();
+    BIGNUM *a = BN_new();
+    BIGNUM *y = BN_new();
+
+    do {
+        if(!group || !ctx || !order || !p)
+            break;
+
+        // get order and p (F_p mod) and neg_one
+        if(EC_GROUP_get_order(group, order, ctx) != 1)
+            break;
+        if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
+            break;
+
+        BN_set_word(a, 1234567);
+        BN_set_word(y, 346739);
+        solve_mod::check_x(a, y, p);
+
+    } while(false);
+
+    EC_GROUP_free(group);
+    BN_CTX_free(ctx);
+    BN_free(order);
+    BN_free(p);
+    BN_free(a);
+    BN_free(y);
+}
 
 // called AppInit2
 void Debug_checking_sign_verify() {
@@ -1612,7 +1633,7 @@ void Debug_checking_sign_verify() {
     }
 
     // check mod_inv
-    solve_mod::check_x();
+    check_bignum_ecdsa();
 }
 
 // called AppInit2
