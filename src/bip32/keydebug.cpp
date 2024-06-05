@@ -1490,6 +1490,109 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
     return fret;
 }
 
+// y = a * x mod p (solve x)
+namespace solve_mod {
+
+int extended_gcd(const BIGNUM *a, const BIGNUM *b, BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
+    if (BN_is_zero(a)) {
+        BN_zero(x);
+        BN_one(y);
+        return 1;
+    }
+
+    BIGNUM *x1 = BN_new();
+    BIGNUM *y1 = BN_new();
+    BIGNUM *b_mod_a = BN_new();
+    BIGNUM *a_copy = BN_new();
+    BIGNUM *b_copy = BN_new();
+    BN_copy(a_copy, a);
+    BN_copy(b_copy, b);
+
+    BN_mod(b_mod_a, b_copy, a_copy, ctx);
+    extended_gcd(b_mod_a, a, x1, y1, ctx);
+
+    BIGNUM *b_div_a = BN_new();
+    BN_div(b_div_a, NULL, b_copy, a_copy, ctx);
+
+    BIGNUM *temp = BN_new();
+    BN_mul(temp, b_div_a, x1, ctx);
+    BN_sub(x, y1, temp);
+    BN_copy(y, x1);
+
+    BN_free(x1);
+    BN_free(y1);
+    BN_free(b_mod_a);
+    BN_free(a_copy);
+    BN_free(b_copy);
+    BN_free(b_div_a);
+    BN_free(temp);
+
+    return 1;
+}
+
+// a*a^-1 is 1, mod p
+int mod_inverse(BIGNUM *result, const BIGNUM *a, const BIGNUM *p, BN_CTX *ctx) {
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *g = BN_new();
+
+    extended_gcd(a, p, x, y, ctx);
+    BN_gcd(g, a, p, ctx);
+    if (!BN_is_one(g)) {
+        BN_free(x);
+        BN_free(y);
+        BN_free(g);
+        return 0;
+    } else {
+        BN_nnmod(result, x, p, ctx);
+        BN_free(x);
+        BN_free(y);
+        BN_free(g);
+        return 1;
+    }
+}
+
+int solve_mod_equation(BIGNUM *x, const BIGNUM *a, const BIGNUM *y, const BIGNUM *p, BN_CTX *ctx) {
+    BIGNUM *inv = BN_new();
+    if (!mod_inverse(inv, a, p, ctx)) {
+        debugcs::instance() << "no exists a*a^-1" << debugcs::endl();
+        BN_free(inv);
+        return 0;
+    }
+
+    BN_mod_mul(x, inv, y, p, ctx);
+    BN_free(inv);
+    return 1;
+}
+
+int check_x() {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *a = BN_new();
+    BIGNUM *y = BN_new();
+    BIGNUM *p = BN_new();
+    BIGNUM *x = BN_new();
+
+    BN_dec2bn(&a, "3");
+    BN_dec2bn(&y, "7");
+    BN_dec2bn(&p, "11");
+
+    if (solve_mod_equation(x, a, y, p, ctx)) {
+        char *result_str = BN_bn2dec(x);
+        debugcs::instance() << "x is " << result_str << debugcs::endl();
+        OPENSSL_free(result_str);
+    }
+
+    BN_free(a);
+    BN_free(y);
+    BN_free(p);
+    BN_free(x);
+    BN_CTX_free(ctx);
+
+    return 0;
+}
+
+} // solve_mod
+
 // called AppInit2
 void Debug_checking_sign_verify() {
     // schnorr signature
@@ -1507,6 +1610,9 @@ void Debug_checking_sign_verify() {
     if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
         assert(!"3: failure Libsecp256k1_schnorr_sign_and_verify");
     }
+
+    // check mod_inv
+    solve_mod::check_x();
 }
 
 // called AppInit2
