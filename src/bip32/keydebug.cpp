@@ -1633,32 +1633,30 @@ void check_bignum_ecdsa() {
 
     do {
         // get order and p (F_p mod) and neg_one
-        if(EC_GROUP_get_order(group, order, ctx) != 1)
-            break;
-        if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
-            break;
+        EC_GROUP_get_order(group, order, ctx);
+        EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx);
 
         // neg_one
-        if(BN_set_word(neg_one, 1) != 1)
-            break;
-        if(BN_sub(neg_one, order, neg_one) != 1)
-            break;
+        BN_set_word(neg_one, 1);
+        BN_sub(neg_one, order, neg_one);
 
-        // both k and t are secret (Insert 1 for each of them here)
+        // both k and t are secret
         BN_set_word(k, 1);
         BN_set_word(t, 1);
 
         // q1, q2
         EC_POINT_mul(group, q1, t, NULL, NULL, ctx);
-        if(EC_POINT_get_affine_coordinates_GFp(group, q1, q1_x, q1_y, ctx) != 1)
-            break;
-        if(BN_is_odd(q1_y))
+        EC_POINT_get_affine_coordinates_GFp(group, q1, q1_x, q1_y, ctx);
+        if(BN_is_odd(q1_y)) {
+            debugcs::instance() << "q1 is from odd to even" << debugcs::endl();
             EC_POINT_invert(group, q1, ctx);
+        }
         EC_POINT_mul(group, q2, t, NULL, NULL, ctx);
-        if(EC_POINT_get_affine_coordinates_GFp(group, q2, q2_x, q2_y, ctx) != 1)
-            break;
-        if(!BN_is_odd(q2_y))
+        EC_POINT_get_affine_coordinates_GFp(group, q2, q2_x, q2_y, ctx);
+        if(!BN_is_odd(q2_y)) {
+            debugcs::instance() << "q2 is from even to odd" << debugcs::endl();
             EC_POINT_invert(group, q2, ctx);
+        }
 
         // s1 = k + e*t
         BN_set_word(e, 1);
@@ -1667,7 +1665,7 @@ void check_bignum_ecdsa() {
 
         // s2 = k + negate(e)*t
         BN_set_word(neg_e, 1);
-        BN_sub(neg_e, p, neg_e);
+        BN_sub(neg_e, order, neg_e);
         BN_mod_mul(s2, neg_e, t, p, ctx);
         BN_mod_add(s2, k, s2, p, ctx);
 
