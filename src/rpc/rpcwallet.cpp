@@ -231,166 +231,16 @@ json_spirit::Value CRPCTable::getnewqaiaddress(const json_spirit::Array &params,
             "so payments received with the address will be credited to [account].");
     }
 
-    if(! hd_wallet::get().enable)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
-    if (entry::pwalletMain->IsLocked())
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
-
     // Parse the account first so we don't generate a key if there's an error
     std::string strAccount;
     if (params.size() > 0) {
         strAccount = AccountFromValue(params[0]);
     }
 
-    //
-    // Generate a new key that is added to wallet
-    //
-    CPubKey newKey;
-    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
-        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
-    }
-    newKey.Compress();
-    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
-        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
-
-    script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
-    script_vector qrandvch = hd_wallet::get().GetPubKeyQai().GetRandHash();
-
-    // SORA L1 Quantum and AI resistance transaction:
-    // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
-    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
-    entry::pwalletMain->AddCScript(redeemScript, newKey);
-    CBitcoinAddress address(redeemScript.GetID());
-
-    // qsig check
-    // if changed 1 byte in signature, verify firmly is failure.
-    CqKey qkey(hd_wallet::get().GetSecretKey());
-    if(qkey.IsValid()) {
-        std::string check = redeemScript.ToString();
-        uint256 h256;
-        latest_crypto::CHash256().Write((const unsigned char *)check.data(), check.size()).Finalize(h256.begin());
-        qkey_vector sig;
-        qkey.SignQai(h256, sig);
-        if(sig.size() == 128) {
-            CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
-            bool ret1 = qpubkey.VerifyQai(h256, sig);
-            bool ret2[128];
-            for(int i=0; i < 128; ++i) {
-                sig[i] += 0x2f;
-                ret2[i] = qpubkey.VerifyQai(h256, sig);
-            }
-            bool ret3 = true;
-            for(int i=0; i < 128; ++i) {
-                if(ret2[i] != false) {
-                    ret3 = false;
-                    break;
-                }
-            }
-            if(!(ret1 && ret3)) {
-                throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public key is invalid");
-            }
-        } else {
-            throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public sig size is invalid");
-        }
-    }
-
+    CBitcoinAddress address = CreateNewQaiAddress();
     entry::pwalletMain->SetAddressBookName(address, strAccount);
     return address.ToString();
 }
-
-/*
-json_spirit::Value CRPCTable::getnewethlock(const json_spirit::Array &params, bool fHelp)
-{
-    using namespace ScriptOpcodes;
-    if (fHelp || params.size() != 3) {
-        throw std::runtime_error(
-            "getnewethlock [account] [target: SORA style address] [lock: Eth style address]\n"
-            "Returns a new ETH style address for lockcing.  "
-            "If [account] is specified (recommended), it is added to the address book "
-            "so payments locked with the address will be credited to [account].");
-    }
-
-    if(! hd_wallet::get().enable)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
-
-    if(! args_bool::fTestNet)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, ("Invalid " + std::string(strCoinName) + " only testnet now").c_str());
-
-    std::string strAccount = AccountFromValue(params[0]);
-
-    // target
-    CPubKey targetPubkey;
-    {
-        CBitcoinAddress target(params[1].get_str());
-        CKeyID keyid;
-        if(! target.GetKeyID(keyid))
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " keyid").c_str());
-        CSecret secret;
-        bool fcompress = true;
-        if(! entry::pwalletMain->GetSecret(keyid, secret, fcompress))
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " privkey").c_str());
-        CFirmKey fikey;
-        fikey.SetSecret(secret, fcompress);
-        targetPubkey = fikey.GetPubKey();
-        targetPubkey.Compress();
-        if(targetPubkey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
-        if(! targetPubkey.IsFullyValid_BIP66())
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
-    }
-
-    // Eth style lock
-    CPubKey ethPubkey;
-    {
-        std::string strAddress = params[2].get_str();
-        CEthID ethid;
-        ethid.SetHex(strAddress.c_str());
-        CScriptID scriptid;
-        if(! entry::pwalletMain->GetScriptID(ethid, scriptid))
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " EthID").c_str());
-        CScript redeem;
-        CKeyID keyid;
-        CEthID ethid2;
-        entry::pwalletMain->GetCScript(scriptid, redeem, keyid, ethid2);
-        if(ethid != ethid2)
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " EthID2").c_str());
-        if(! redeem.IsPayToEthID())
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, "Eth style address is not PayToEth type");
-        CSecret secret;
-        bool fcompress = true;
-        if(! entry::pwalletMain->GetSecret(keyid, secret, fcompress))
-            throw bitjson::JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, ("Invalid " + std::string(strCoinName) + " privkey").c_str());
-        CFirmKey fikey;
-        fikey.SetSecret(secret, fcompress);
-        ethPubkey = fikey.GetPubKey();
-        ethPubkey.Compress();
-        if(ethPubkey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
-        if(! ethPubkey.IsFullyValid_BIP66())
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
-    }
-
-    CScript redeemScript = CScript() << OP_2 << targetPubkey.GetPubVch() << ethPubkey.GetPubVch() << OP_2 << OP_CHECKMULTISIG;
-    entry::pwalletMain->AddCScript(redeemScript, ethPubkey);
-    CBitcoinAddress address(redeemScript.GetID());
-
-    // redeemScript checking
-    {
-        //debugcs::instance() << "redeemScript size: " << redeemScript.size() << debugcs::endl();
-        CScript redeemScript2;
-        CKeyID keyid2;
-        CEthID ethid2;
-        if(! entry::pwalletMain->GetCScript(redeemScript.GetID(), redeemScript2, keyid2, ethid2))
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: redeemScript is invalid");
-        if(redeemScript != redeemScript2)
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: redeemScript is invalid");
-    }
-
-    //debugcs::instance() << "address: " << address.ToString() << debugcs::endl();
-    entry::pwalletMain->SetAddressBookName(address, strAccount);
-    return hasheth::EncodeHashEth2(ethPubkey);
-}
-*/
 
 json_spirit::Value CRPCTable::getkeyentangle(const json_spirit::Array &params, bool fHelp)
 {

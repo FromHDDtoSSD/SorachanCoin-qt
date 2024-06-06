@@ -1455,6 +1455,119 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
     return fret;
 }
 
+namespace schnorr_collect {
+
+bool aggregate_keys(const std::vector<CPubKey> &pubkeysIn, CPubKey &agg_pubkey, EC_GROUP *group, BN_CTX *ctx) {
+    assert(0 < pubkeysIn.size());
+    std::vector<CPubKey> pubkeys = pubkeysIn;
+    EC_POINT *point = EC_POINT_new(group);
+    EC_POINT *tmp = EC_POINT_new(group);
+    if(!point || !tmp)
+        return false;
+
+    unsigned char pub_points[33];
+    bool fret = true;
+    do {
+        if(!pubkeys[0].Compress()) {
+            fret = false;
+            break;
+        }
+        if(EC_POINT_oct2point(group, point, pubkeys[0].data(), 33, ctx) != 1) {
+            fret = false;
+            break;
+        }
+
+        for (int i = 1; i < pubkeys.size(); i++) {
+            if(!pubkeys[i].Compress()) {
+                fret = false;
+                break;
+            }
+            if(EC_POINT_oct2point(group, point, pubkeys[i].data(), 33, ctx) != 1) {
+                fret = false;
+                break;
+            }
+            if(EC_POINT_add(group, point, point, tmp, ctx) != 1) {
+                fret = false;
+                break;
+            }
+        }
+        if(!fret)
+            break;
+
+        if(EC_POINT_point2oct(group, point, POINT_CONVERSION_COMPRESSED, pub_points, sizeof(pub_points), ctx) != sizeof(pub_points)) {
+            fret = false;
+            break;
+        }
+    } while(false);
+
+    EC_POINT_free(point);
+    EC_POINT_free(tmp);
+    if(!fret)
+        return false;
+
+    agg_pubkey.Set(BEGIN(pub_points), END(pub_points));
+    return agg_pubkey.IsFullyValid_BIP66();
+}
+
+void aggregate_signatures(unsigned char *agg_r_x, BIGNUM *agg_s, const uint8_t **signatures) {
+
+}
+
+} // schnorr_collect
+
+class CSchnorrKey {
+public:
+
+    CSchnorrKey() {}
+    ~CSchnorrKey() {}
+
+    void collect_make_newkeys(int num) {
+        assert(num > 0 || num < 80);
+        keys.clear();
+        keys.reserve(num);
+        for(int i=0; i < num; ++i) {
+            CFirmKey key;
+            key.MakeNewKey(true);
+            keys.emplace_back(key);
+        }
+    }
+
+    bool collect_pubkey(CPubKey &agg_pubkey) const {
+        assert(0 < keys.size());
+        std::vector<CPubKey> pubkeys;
+        for(const auto &key: keys) {
+            CPubKey pubkey = key.GetPubKey();
+            pubkeys.emplace_back(pubkey);
+        }
+
+        EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
+        BN_CTX *ctx = BN_CTX_new();
+        if(!group || !ctx) {
+            EC_GROUP_free(group);
+            BN_CTX_free(ctx);
+            return false;
+        }
+
+        bool fret = schnorr_collect::aggregate_keys(pubkeys, agg_pubkey, group, ctx);
+        EC_GROUP_free(group);
+        BN_CTX_free(ctx);
+        return fret;
+    }
+
+    const std::vector<CFirmKey> &get_keys() const {
+        return keys;
+    }
+
+private:
+    std::vector<CFirmKey> keys;
+};
+
+std::shared_ptr<CSchnorrKey> Create_collect_75_keys() {
+    std::shared_ptr<CSchnorrKey> schnorr_keys(new (std::nothrow) CSchnorrKey);
+    schnorr_keys->collect_make_newkeys(75);
+    return schnorr_keys;
+}
+
 // Checker
 // 3, [OK checked] Libsecp256k1 schnorr signature sign and verify: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
@@ -1721,26 +1834,32 @@ void check_bignum_ecdsa() {
 
 // called AppInit2
 void Debug_checking_sign_verify() {
-    return;
-
     // schnorr signature
     // 1, OpenSSL schnorr signature sign and Verify: try pub_y with both odd and even values
-    if(!OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
-        assert(!"1: failure OpenSSL_schnorr_sign_and_verify");
-    }
+    //if(!OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
+    //    assert(!"1: failure OpenSSL_schnorr_sign_and_verify");
+    //}
 
     // 2, Libsecp256k1 schnorr signature sign and OpenSSL verify: try pub_y with both odd and even values
-    if(!Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()) {
-        assert(!"2: failure Libsecp256k1_schnorr_sign_and_openssl_verify");
-    }
+    //if(!Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()) {
+    //    assert(!"2: failure Libsecp256k1_schnorr_sign_and_openssl_verify");
+    //}
 
     // 3, Libsecp256k1 schnorr signature sign and verify: try pub_y with both odd and even values
-    if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
-        assert(!"3: failure Libsecp256k1_schnorr_sign_and_verify");
-    }
+    //if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {
+    //    assert(!"3: failure Libsecp256k1_schnorr_sign_and_verify");
+    //}
 
     // check mod_inv
-    check_bignum_ecdsa();
+    //check_bignum_ecdsa();
+
+    // Schnorr aggregation check
+    std::shared_ptr<CSchnorrKey> schnorr = Create_collect_75_keys();
+    CPubKey collect_pubkey;
+    if(schnorr->collect_pubkey(collect_pubkey))
+        debugcs::instance() << __func__ << " : " << strenc::HexStr(collect_pubkey.GetPubVch()) << debugcs::endl();
+    else
+        debugcs::instance() << __func__ << " pubkey collect failure" << debugcs::endl();
 }
 
 // called AppInit2
