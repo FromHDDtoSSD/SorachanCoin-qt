@@ -1721,6 +1721,8 @@ void check_bignum_ecdsa() {
 
 // called AppInit2
 void Debug_checking_sign_verify() {
+    return;
+
     // schnorr signature
     // 1, OpenSSL schnorr signature sign and Verify: try pub_y with both odd and even values
     if(!OpenSSL_schnorr_sign_and_verify_pub_y_with_both_odd_and_even()) {

@@ -733,15 +733,10 @@ public:
 //
 // Account information.
 // Stored in wallet with key "acc"+string account name.
+// GetAccountAddress is only used to check the existence of existing accounts.
 //
 class CAccount
 {
-private:
-    CAccount(const CAccount &)=delete;
-    CAccount &operator=(const CAccount &)=delete;
-    CAccount(CAccount &&)=delete;
-    CAccount &operator=(CAccount &&)=delete;
-
 public:
     CPubKey vchPubKey;
 
@@ -757,9 +752,35 @@ public:
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
         int nVersion = 0;
-        READWRITE(nVersion); // new core takes over old core in the nVersion (unused).
-
+        READWRITE(nVersion);
         READWRITE(this->vchPubKey);
+    }
+};
+
+//
+// Accountqai information.
+// Stored in wallet with key "acc"+string account name.
+// GetAccountQaiAddress is only used to check the existence of existing accounts.
+//
+class CAccountqai
+{
+public:
+    CScript redeemScript;
+
+    CAccountqai() {
+        SetNull();
+    }
+
+    void SetNull() {
+        redeemScript = CScript();
+    }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        int nVersion = 0;
+        READWRITE(nVersion);
+        READWRITE(this->redeemScript);
     }
 };
 

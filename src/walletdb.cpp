@@ -124,8 +124,17 @@ bool CWalletDB::ReadAccount(const std::string &strAccount, CAccount &account) {
     return Read(std::make_pair(std::string("acc"), strAccount), account);
 }
 
+bool CWalletDB::ReadQaiAccount(const std::string &strAccount, CAccountqai &account) {
+    account.SetNull();
+    return Read(std::make_pair(std::string("accqai"), strAccount), account);
+}
+
 bool CWalletDB::WriteAccount(const std::string &strAccount, const CAccount &account) {
     return Write(std::make_pair(std::string("acc"), strAccount), account);
+}
+
+bool CWalletDB::WriteQaiAccount(const std::string &strAccount, const CAccountqai &account) {
+    return Write(std::make_pair(std::string("accqai"), strAccount), account);
 }
 
 bool CWalletDB::WriteAccountingEntry(const uint64_t nAccEntryNum, const CAccountingEntry &acentry)

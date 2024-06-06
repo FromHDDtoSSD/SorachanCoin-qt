@@ -551,6 +551,126 @@ json_spirit::Value CRPCTable::getaccountaddress(const json_spirit::Array &params
     return ret;
 }
 
+CBitcoinAddress CRPCTable::CreateNewQaiAddress(CScript *create_redeem/* = nullptr */) {
+    using namespace ScriptOpcodes;
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+    if (entry::pwalletMain->IsLocked())
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
+
+    //
+    // Generate a new key that is added to wallet
+    //
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+    newKey.Compress();
+    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
+
+    script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
+    script_vector qrandvch = hd_wallet::get().GetPubKeyQai().GetRandHash();
+
+    // SORA L1 Quantum and AI resistance transaction:
+    // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
+    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
+    entry::pwalletMain->AddCScript(redeemScript, newKey);
+    CBitcoinAddress address(redeemScript.GetID());
+    if(create_redeem)
+        *create_redeem = redeemScript;
+
+    // qsig check
+    // if changed 1 byte in signature, verify firmly is failure.
+    CqKey qkey(hd_wallet::get().GetSecretKey());
+    if(qkey.IsValid()) {
+        std::string check = redeemScript.ToString();
+        uint256 h256;
+        latest_crypto::CHash256().Write((const unsigned char *)check.data(), check.size()).Finalize(h256.begin());
+        qkey_vector sig;
+        qkey.SignQai(h256, sig);
+        if(sig.size() == 128) {
+            CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
+            bool ret1 = qpubkey.VerifyQai(h256, sig);
+            bool ret2[128];
+            for(int i=0; i < 128; ++i) {
+                sig[i] += 0x2f;
+                ret2[i] = qpubkey.VerifyQai(h256, sig);
+            }
+            bool ret3 = true;
+            for(int i=0; i < 128; ++i) {
+                if(ret2[i] != false) {
+                    ret3 = false;
+                    break;
+                }
+            }
+            if(!(ret1 && ret3)) {
+                throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public key is invalid");
+            }
+        } else {
+            throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public sig size is invalid");
+        }
+    }
+
+    return address;
+}
+
+CBitcoinAddress CRPCTable::GetAccountQaiAddress(std::string strAccount, bool bForceNew/* =false */)
+{
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    CAccountqai account;
+
+    walletdb.ReadQaiAccount(strAccount, account);
+    bool bKeyUsed = false;
+
+    // Check if the current key has been used
+    if (account.redeemScript != CScript()) {
+        CScript scriptPubKey;
+        scriptPubKey.SetDestination(account.redeemScript.GetID());
+        for (std::map<uint256, CWalletTx>::iterator it = entry::pwalletMain->mapWallet.begin(); it != entry::pwalletMain->mapWallet.end(); ++it)
+        {
+            const CWalletTx &wtx = (*it).second;
+            for(const CTxOut &txout: wtx.get_vout())
+            {
+                if (scriptPubKey == txout.get_scriptPubKey()) {
+                    bKeyUsed = true;
+                    break;
+                }
+            }
+            if(bKeyUsed)
+                break;
+        }
+    }
+
+    // Generate a new key
+    if (account.redeemScript == CScript() || bForceNew || bKeyUsed) {
+        CBitcoinAddress address = CreateNewQaiAddress(&account.redeemScript);
+        entry::pwalletMain->SetAddressBookName(address, strAccount);
+        walletdb.WriteQaiAccount(strAccount, account);
+        return address;
+    }
+
+    return CBitcoinAddress(account.redeemScript.GetID());
+}
+
+json_spirit::Value CRPCTable::getaccountqaiaddress(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 1) {
+        throw std::runtime_error(
+            ("getaccountqaiaddress <account>\n"
+            "Returns the current " + std::string(strCoinName) + " address for receiving payments to this account.").c_str());
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount = AccountFromValue(params[0]);
+
+    json_spirit::Value ret;
+    ret = GetAccountQaiAddress(strAccount).ToString();
+
+    return ret;
+}
+
 json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2) {

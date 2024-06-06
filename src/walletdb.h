@@ -13,6 +13,7 @@
 
 class CKeyPool;
 class CAccount;
+class CAccountqai;
 class CAccountingEntry;
 
 // Error statuses for the wallet database
@@ -322,7 +323,9 @@ public:
     }
 
     bool ReadAccount(const std::string &strAccount, CAccount &account);
+    bool ReadQaiAccount(const std::string &strAccount, CAccountqai &account);
     bool WriteAccount(const std::string &strAccount, const CAccount &account);
+    bool WriteQaiAccount(const std::string &strAccount, const CAccountqai &account);
 
     bool WriteAccountingEntry(const CAccountingEntry &acentry);
     int64_t GetAccountCreditDebit(const std::string &strAccount);
