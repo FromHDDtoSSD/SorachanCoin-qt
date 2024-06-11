@@ -13,6 +13,19 @@ void print_secp256k1_fe(const char *mes, const CPubKey::ecmult::secp256k1_fe *v)
     debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
 }
 
+void print_secp256k1_scalar(const char *mes, const CPubKey::secp256k1_unit *s) {
+    unsigned char buf[32];
+    CPubKey::secp256k1_scalar_get_be32(buf, s);
+    debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
+}
+
+void print_bytes(const char *mes, const unsigned char *buf, int size) {
+    std::vector<unsigned char> vch;
+    vch.resize(size);
+    ::memcpy(&vch.front(), buf, size);
+    debugcs::instance() << mes << ": " << strenc::HexStr(vch) << debugcs::endl();
+}
+
 void print_bignum(const char *mes, BIGNUM *bn) {
     char *bn_str = BN_bn2hex(bn);
     if (bn_str) {
@@ -1482,6 +1495,66 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
 
 namespace schnorr_collect {
 
+int aggregate_public_keys(const std::vector<CPubKey::secp256k1_pubkey> &pubkeys, CPubKey::secp256k1_pubkey *aggregated_pubkey) {
+    CPubKey::ecmult::secp256k1_gej aggregated_point;
+    CPubKey::ecmult::secp256k1_ge point;
+    if (!CPubKey::secp256k1_pubkey_load(&point, &pubkeys[0])) {
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_gej_set_ge(&aggregated_point, &point);
+    debugcs::instance() << __func__ << " 1: " << strenc::HexStr(key_vector(BEGIN(pubkeys[0].data), END(pubkeys[0].data))) << debugcs::endl();
+
+    //CPubKey::ecmult::secp256k1_fe rzr;
+    for (size_t i = 1; i < pubkeys.size(); i++) {
+        if (!CPubKey::secp256k1_pubkey_load(&point, &pubkeys[i])) {
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_gej_add_ge_var(&aggregated_point, &aggregated_point, &point, NULL);
+    }
+
+    CPubKey::ecmult::secp256k1_ge aggregated_ge;
+    CPubKey::ecmult::secp256k1_ge_set_gej(&aggregated_ge, &aggregated_point);
+    CPubKey::secp256k1_pubkey_save(aggregated_pubkey, &aggregated_ge);
+    debugcs::instance() << __func__ << " 2: " << strenc::HexStr(key_vector(BEGIN(aggregated_pubkey->data), END(aggregated_pubkey->data))) << debugcs::endl();
+
+    return 1;
+}
+
+int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signatures, CPubKey::secp256k1_signature *aggregated_signature) {
+    CPubKey::ecmult::secp256k1_gej r_j;
+    CPubKey::ecmult::secp256k1_gej_set_infinity(&r_j);
+    CPubKey::secp256k1_unit aggregated_s;
+    CPubKey::secp256k1_scalar_set_int(&aggregated_s, 0);
+
+    //CPubKey::ecmult::secp256k1_fe rzr;
+    for (size_t i = 0; i < signatures.size(); i++) {
+        // r
+        CPubKey::ecmult::secp256k1_fe r_x;
+        CPubKey::ecmult::secp256k1_ge r_aff;
+        CPubKey::ecmult::secp256k1_fe_set_be32(&r_x, &signatures[i].data[0]);
+        print_secp256k1_fe("agg_r_1", &r_x);
+        CPubKey::ecmult::secp256k1_ge_set_xo_var(&r_aff, &r_x, 1);
+        CPubKey::ecmult::secp256k1_gej_add_ge_var(&r_j, &r_j, &r_aff, NULL);
+
+        // s
+        CPubKey::secp256k1_unit s;
+        CPubKey::secp256k1_ecdsa_signature_load(NULL, &s, &signatures[i]);
+        CPubKey::secp256k1_scalar_add(&aggregated_s, &aggregated_s, &s);
+        print_secp256k1_scalar("agg_s_1", &aggregated_s);
+    }
+
+    CPubKey::ecmult::secp256k1_ge r_ret;
+    CPubKey::ecmult::secp256k1_ge_set_gej(&r_ret, &r_j);
+    CPubKey::ecmult::secp256k1_fe_normalize(&r_ret.x);
+    print_secp256k1_fe("agg_r_2", &r_ret.x);
+    CPubKey::ecmult::secp256k1_fe_get_be32(&aggregated_signature->data[0], &r_ret.x);
+
+    print_secp256k1_scalar("agg_s_2", &aggregated_s);
+    CPubKey::secp256k1_scalar_get_be32(&aggregated_signature->data[32], &aggregated_s);
+
+    return 1;
+}
+
 bool aggregate_pubkeys(const std::vector<CPubKey> &pubkeysIn, CPubKey &agg_pubkey) {
     assert(0 < pubkeysIn.size());
     EC_GROUP *group = EC_GROUP_new_by_curve_name(NID_secp256k1);
@@ -1831,7 +1904,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 // Checker
 // 4, Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation() {
-    const int check_num = 5;
+    const int check_num = 30;
 
     bool fret = false;
     int checking = 0;
@@ -1854,49 +1927,38 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
 
         CPubKey pubkey1 = secpkey1->GetPubKey();
         CPubKey pubkey2 = secpkey2->GetPubKey();
-        secp256k1_xonly_pubkey x_only_pubkey1;
-        secp256k1_xonly_pubkey x_only_pubkey2;
-        pubkey1.Compress();
-        pubkey2.Compress();
-        ::memset(x_only_pubkey1.data, 0x00, 64);
-        ::memcpy(x_only_pubkey1.data, pubkey1.data() + 1, 32);
-        ::memset(x_only_pubkey2.data, 0x00, 64);
-        ::memcpy(x_only_pubkey2.data, pubkey2.data() + 1, 32);
-        // valid verify
-        if(secp256k1_schnorrsig_verify(&sig1.data[0], hash.begin(), &x_only_pubkey1))
-            debugcs::instance() << __func__ << " ok Libsecp256k1 sign1, verify valid" << debugcs::endl();
-        else {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 sign1, verify invalid" << debugcs::endl();
-            break;
-        }
-        if(secp256k1_schnorrsig_verify(&sig2.data[0], hash.begin(), &x_only_pubkey2))
-            debugcs::instance() << __func__ << " ok Libsecp256k1 sign2, verify valid" << debugcs::endl();
-        else {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 sign2, verify invalid" << debugcs::endl();
-            break;
-        }
-
-        std::vector<CPubKey> pubkeys;
-        std::vector<secp256k1_schnorrsig> signatures;
-        CPubKey agg_pubkey;
-        secp256k1_schnorrsig agg_sig;
-        secp256k1_xonly_pubkey x_only_agg_pubkey;
-        pubkeys.push_back(pubkey1);
-        pubkeys.push_back(pubkey2);
-        if(!schnorr_collect::aggregate_pubkeys(pubkeys, agg_pubkey)) {
+        std::vector<CPubKey::secp256k1_pubkey> pubkeys;
+        CPubKey::secp256k1_pubkey tmp;
+        pubkey1.Decompress();
+        ::memcpy(&tmp.data[0], pubkey1.data() + 1, 64);
+        pubkeys.push_back(tmp);
+        pubkey2.Decompress();
+        ::memcpy(&tmp.data[0], pubkey2.data() + 1, 64);
+        //pubkeys.push_back(tmp);
+        CPubKey::secp256k1_pubkey agg_pubkey;
+        if(!schnorr_collect::aggregate_public_keys(pubkeys, &agg_pubkey)) {
             debugcs::instance() << __func__ << " failure Libsecp256k1 aggregate_pubkeys" << debugcs::endl();
             break;
         }
-        signatures.push_back(sig1);
-        signatures.push_back(sig2);
-        if(!schnorr_collect::aggregate_signature(signatures, agg_sig)) {
+        secp256k1_xonly_pubkey x_only_agg_pubkey;
+        ::memset(&x_only_agg_pubkey.data[0], 0x00, 64);
+        ::memcpy(&x_only_agg_pubkey.data[0], &agg_pubkey.data[0], 32);
+
+        std::vector<CPubKey::secp256k1_signature> signatures;
+        CPubKey::secp256k1_signature sig;
+        ::memcpy(sig.data, sig1.data, 64);
+        signatures.push_back(sig);
+        ::memcpy(sig.data, sig2.data, 64);
+        //signatures.push_back(sig);
+        CPubKey::secp256k1_signature agg_sig;
+        if(!schnorr_collect::aggregate_signatures(signatures, &agg_sig)) {
             debugcs::instance() << __func__ << " failure Libsecp256k1 aggregate_signature" << debugcs::endl();
             break;
         }
-        agg_pubkey.Compress();
-        ::memset(x_only_agg_pubkey.data, 0x00, 64);
-        ::memcpy(x_only_agg_pubkey.data, agg_pubkey.data() + 1, 32);
+
         // valid agg verify
+        print_bytes("   sig1_bytes", sig1.data, 64);
+        print_bytes("agg_sig_bytes", agg_sig.data, 64);
         if(secp256k1_schnorrsig_verify(&agg_sig.data[0], hash.begin(), &x_only_agg_pubkey))
             debugcs::instance() << __func__ << " ok Libsecp256k1 agg sign, verify valid" << debugcs::endl();
         else {

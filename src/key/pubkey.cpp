@@ -496,20 +496,16 @@ void CPubKey::secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_unit
 
 void CPubKey::secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_unit *r, const secp256k1_unit *s) {
     VERIFY_CHECK(sizeof(secp256k1_unit)==32);
-    std::memcpy(&sig->data[0], r, 32);
-    std::memcpy(&sig->data[32], s, 32);
-    // otherwise (sizeof(secp256k1_unit)!=32))
-    //secp256k1_scalar_get_be32(&sig->data[0], r);
-    //secp256k1_scalar_get_be32(&sig->data[32], s);
+    secp256k1_scalar_get_be32(&sig->data[0], r);
+    secp256k1_scalar_get_be32(&sig->data[32], s);
 }
 
 void CPubKey::secp256k1_ecdsa_signature_load(secp256k1_unit *r, secp256k1_unit *s, const secp256k1_signature *sig) {
     VERIFY_CHECK(sizeof(secp256k1_unit)==32);
-    std::memcpy(r, &sig->data[0], 32);
-    std::memcpy(s, &sig->data[32], 32);
-    // otherwise (sizeof(secp256k1_unit)!=32)
-    //secp256k1_scalar_set_be32(r, &sig->data[0], nullptr);
-    //secp256k1_scalar_set_be32(s, &sig->data[32], nullptr);
+    if(r)
+        secp256k1_scalar_set_be32(r, &sig->data[0], nullptr);
+    if(s)
+        secp256k1_scalar_set_be32(s, &sig->data[32], nullptr);
 }
 
 int CPubKey::secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, unsigned char *input64) {
