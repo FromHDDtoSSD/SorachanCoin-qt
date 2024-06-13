@@ -79,7 +79,7 @@ namespace schnorr_nonce {
 
         /* Hash x||msg as per the spec */
         CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        //CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
         CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
         /* Hash in algorithm, which is not in the spec, but may be critical to
          * users depending on it to avoid nonce reuse across algorithms. */
@@ -1061,8 +1061,8 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
         if(CPubKey::ecmult::secp256k1_fe_is_odd(&r.y)) {
             CPubKey::secp256k1_scalar_add(&k, &k, &one); // if r.y is odd, k is added 1
         } else {
-            print_secp256k1_fe("sign r.x", &r.x);
-            print_secp256k1_fe("sign r.y", &r.y);
+            //print_secp256k1_fe("sign r.x", &r.x);
+            //print_secp256k1_fe("sign r.y", &r.y);
             break;
         }
     } while(true);
@@ -1139,12 +1139,26 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(pubkey != NULL);
 
-    // get R_x
+    /* y^2 = x^3 + 7 */
+    CPubKey::ecmult::secp256k1_fe sc7;
+    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
+
+    /* Get R_x */
     CPubKey::ecmult::secp256k1_fe rx;
     if (!secp256k1_fe_set_b32(&rx, &sig64[0]))
         return 0;
 
-    // get s
+    /* Compute R_y */
+    CPubKey::ecmult::secp256k1_fe ry;
+    CPubKey::ecmult::secp256k1_fe_sqr(&ry, &rx);
+    CPubKey::ecmult::secp256k1_fe_mul(&ry, &ry, &rx);
+    CPubKey::ecmult::secp256k1_fe_add(&ry, &sc7);
+    CPubKey::ecmult::secp256k1_fe_sqrt(&ry, &ry);
+    CPubKey::ecmult::secp256k1_fe_normalize(&ry);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&ry))
+        CPubKey::ecmult::secp256k1_fe_negate(&ry, &ry, 1);
+
+    /* Get s */
     CPubKey::secp256k1_unit s;
     int overflow;
     secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
@@ -1157,9 +1171,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
         return 0;
 
     /* Compute pub_y */
-    CPubKey::ecmult::secp256k1_fe sc7;
     CPubKey::ecmult::secp256k1_fe pub_y;
-    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
     CPubKey::ecmult::secp256k1_fe_sqr(&pub_y, &pub_x);
     CPubKey::ecmult::secp256k1_fe_mul(&pub_y, &pub_y, &pub_x);
     CPubKey::ecmult::secp256k1_fe_add(&pub_y, &sc7);
@@ -1167,8 +1179,6 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_fe_normalize(&pub_y);
     if(CPubKey::ecmult::secp256k1_fe_is_odd(&pub_y))
         CPubKey::ecmult::secp256k1_fe_negate(&pub_y, &pub_y, 1);
-    print_secp256k1_fe("verify pub_x", &pub_x);
-    print_secp256k1_fe("verify pub_y", &pub_y);
     CPubKey::ecmult::secp256k1_ge pk;
     CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &pub_x, &pub_y);
 
@@ -1187,10 +1197,25 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
     if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
         return 0;
+    //print_secp256k1_fe("verify  rx", &rx);
+    //print_secp256k1_fe("verify  ry", &ry);
+    //print_secp256k1_fe("verify r.x", &r.x);
+    //print_secp256k1_fe("verify r.y", &r.y);
+    CPubKey::ecmult::secp256k1_fe_normalize(&rx);
+    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
+    CPubKey::ecmult::secp256k1_fe_normalize(&ry);
+    CPubKey::ecmult::secp256k1_fe_normalize(&r.y);
+    if(CPubKey::ecmult::secp256k1_fe_cmp(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp(&ry, &r.y) == 0)
+        return 1;
 
-    print_secp256k1_fe("verify  rx", &rx);
-    print_secp256k1_fe("verify r.x", &r.x);
-    return CPubKey::ecmult::secp256k1_fe_equal_var(&rx, &r.x);
+    CPubKey::ecmult::secp256k1_fe neg_ry;
+    CPubKey::ecmult::secp256k1_fe_negate(&neg_ry, &ry, 1);
+    //print_secp256k1_fe("verify neg_ry", &neg_ry);
+    CPubKey::ecmult::secp256k1_fe_normalize(&rx);
+    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
+    CPubKey::ecmult::secp256k1_fe_normalize(&neg_ry);
+    CPubKey::ecmult::secp256k1_fe_normalize(&r.y);
+    return (CPubKey::ecmult::secp256k1_fe_cmp(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp(&neg_ry, &r.y) == 0) ? 1: 0;
 }
 
 EC_KEY *Create_pub_y_odd_eckey(const EC_GROUP *group, BN_CTX *ctx) {
@@ -1517,7 +1542,7 @@ int aggregate_public_keys(const std::vector<CPubKey::secp256k1_pubkey> &pubkeys,
     CPubKey::ecmult::secp256k1_ge aggregated_ge;
     CPubKey::ecmult::secp256k1_ge_set_gej(&aggregated_ge, &aggregated_point);
     CPubKey::secp256k1_pubkey_save(aggregated_pubkey, &aggregated_ge);
-    debugcs::instance() << __func__ << ": " << strenc::HexStr(key_vector(BEGIN(aggregated_pubkey->data), END(aggregated_pubkey->data))) << debugcs::endl();
+    //debugcs::instance() << __func__ << ": " << strenc::HexStr(key_vector(BEGIN(aggregated_pubkey->data), END(aggregated_pubkey->data))) << debugcs::endl();
 
     return 1;
 }
@@ -1535,28 +1560,28 @@ int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signat
         CPubKey::ecmult::secp256k1_fe r_x;
         CPubKey::ecmult::secp256k1_ge r_aff;
         CPubKey::ecmult::secp256k1_fe_set_be32(&r_x, &signatures[i].data[0]);
-        print_secp256k1_fe("agg_r_x", &r_x);
+        //print_secp256k1_fe("agg_r_x", &r_x);
         CPubKey::ecmult::secp256k1_ge_set_xo_var(&r_aff, &r_x, 0);
         if(r_j.infinity)
             CPubKey::ecmult::secp256k1_gej_add_ge_var(&r_j, &r_j, &r_aff, NULL);
         else
             CPubKey::ecmult::secp256k1_gej_add_ge_var(&r_j, &r_j, &r_aff, &rzr);
-        print_secp256k1_fe("agg_r_y", &r_aff.y);
+        //print_secp256k1_fe("agg_r_y", &r_aff.y);
 
         // s
         CPubKey::secp256k1_unit s;
         CPubKey::secp256k1_ecdsa_signature_load(NULL, &s, &signatures[i]);
         CPubKey::secp256k1_scalar_add(&aggregated_s, &aggregated_s, &s);
-        print_secp256k1_scalar("agg_s_1", &aggregated_s);
+        //print_secp256k1_scalar("agg_s_1", &aggregated_s);
     }
 
     CPubKey::ecmult::secp256k1_ge r_ret;
     CPubKey::ecmult::secp256k1_ge_set_gej(&r_ret, &r_j);
     CPubKey::ecmult::secp256k1_fe_normalize(&r_ret.x);
-    print_secp256k1_fe("agg_r_2", &r_ret.x);
+    //print_secp256k1_fe("agg_r_2", &r_ret.x);
     CPubKey::ecmult::secp256k1_fe_get_be32(&aggregated_signature->data[0], &r_ret.x);
 
-    print_secp256k1_scalar("agg_s_2", &aggregated_s);
+    //print_secp256k1_scalar("agg_s_2", &aggregated_s);
     CPubKey::secp256k1_scalar_get_be32(&aggregated_signature->data[32], &aggregated_s);
 
     return 1;
@@ -1911,7 +1936,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 // Checker
 // 4, Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation() {
-    const int check_num = 5;
+    const int check_num = 30;
 
     bool fret = false;
     int checking = 0;
@@ -1944,7 +1969,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         //pubkeys.push_back(tmp);
         CPubKey::secp256k1_pubkey agg_pubkey;
         if(!schnorr_collect::aggregate_public_keys(pubkeys, &agg_pubkey)) {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 aggregate_pubkeys" << debugcs::endl();
+            debugcs::instance() << "Failure Libsecp256k1 aggregate_pubkeys" << debugcs::endl();
             break;
         }
         secp256k1_xonly_pubkey x_only_agg_pubkey;
@@ -1959,19 +1984,30 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         //signatures.push_back(sig);
         CPubKey::secp256k1_signature agg_sig;
         if(!schnorr_collect::aggregate_signatures(signatures, &agg_sig)) {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 aggregate_signature" << debugcs::endl();
+            debugcs::instance() << "Failure Libsecp256k1 aggregate_signature" << debugcs::endl();
             break;
         }
 
         // valid agg verify
-        print_bytes("   pubkey1_x_bytes", pubkey1.data() + 1, 32);
-        print_bytes("agg_pubkey_x_bytes", agg_pubkey.data, 32);
-        print_bytes("   sig1_bytes", sig1.data, 64);
-        print_bytes("agg_sig_bytes", agg_sig.data, 64);
+        //print_bytes("   pubkey1_x_bytes", pubkey1.data() + 1, 32);
+        //print_bytes("agg_pubkey_x_bytes", agg_pubkey.data, 32);
+        //print_bytes("   sig1_bytes", sig1.data, 64);
+        //print_bytes("agg_sig_bytes", agg_sig.data, 64);
         if(secp256k1_schnorrsig_verify(&agg_sig.data[0], hash.begin(), &x_only_agg_pubkey))
-            debugcs::instance() << __func__ << " ok Libsecp256k1 agg sign, verify valid" << debugcs::endl();
+            debugcs::instance() << "OK Libsecp256k1 agg sign, verify valid" << debugcs::endl();
         else {
-            debugcs::instance() << __func__ << " failure Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
+            debugcs::instance() << "Failure Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
+            break;
+        }
+
+        // invalid agg verify
+        uint256 hash2 = hash;
+        *hash2.begin() = 0x7E;
+        *(hash2.begin() + 1) = 0x7E;
+        if(!secp256k1_schnorrsig_verify(&agg_sig.data[0], hash2.begin(), &x_only_agg_pubkey))
+            debugcs::instance() << "OK Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
+        else {
+            debugcs::instance() << "Failure Libsecp256k1 agg sign, verify valid" << debugcs::endl();
             break;
         }
 
