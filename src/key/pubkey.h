@@ -75,9 +75,7 @@ public:
     struct secp256k1_unit {
         uint32_t d[8];
     };
-    struct secp256k1_signed {
-        int32_t d[8];
-    };
+    using secp256k1_scalar = secp256k1_unit;
 
     // signature unsigned char array
     struct secp256k1_signature {
@@ -521,7 +519,7 @@ public:
 };
 
 // schnorr public key
-// liner - key, size: exactly 32 bytes, signature: exactly 64 bytes
+//
 class XOnlyPubKey
 {
 private:

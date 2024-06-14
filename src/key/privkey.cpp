@@ -417,10 +417,10 @@ bool CFirmKey::ecmult::secp256k1_gej_rescale(CPubKey::ecmult::secp256k1_gej *r, 
 }
 
 // gen_context
-bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_unit *gn) const {
+bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_scalar *gn) const {
     CPubKey::ecmult::secp256k1_ge add;
     CPubKey::ecmult::secp256k1_ge_storage adds;
-    CPubKey::secp256k1_unit gnb;
+    CPubKey::secp256k1_scalar gnb;
     int bits;
     int i, j;
     std::memset(&adds, 0, sizeof(adds));
@@ -456,7 +456,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen(CPubKey::ecmu
 /* Setup blinding values for secp256k1_ecmult_gen. */
 bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const unsigned char *seed32) {
     if(!seed32) return false;
-    CPubKey::secp256k1_unit b;
+    CPubKey::secp256k1_scalar b;
     CPubKey::ecmult::secp256k1_gej gb;
     CPubKey::ecmult::secp256k1_fe s;
     unsigned char nonce32[32];
@@ -614,9 +614,9 @@ CFirmKey::ecmult::secp256k1_gen_context::~secp256k1_gen_context() {
 
 
 
-void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) {
+void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_scalar *r) {
     //! if used -03, the above process will be eliminated.
-    cleanse::memory_cleanse(r, sizeof(CPubKey::secp256k1_unit));
+    cleanse::memory_cleanse(r, sizeof(CPubKey::secp256k1_scalar));
     r->d[0] = 0;
     r->d[1] = 0;
     r->d[2] = 0;
@@ -629,7 +629,7 @@ void CFirmKey::secp256k1_scalar_clear(CPubKey::secp256k1_unit *r) {
 }
 
 int CFirmKey::secp256k1_ec_seckey_verify(const unsigned char *seckey) {
-    CPubKey::secp256k1_unit sec;
+    CPubKey::secp256k1_scalar sec;
     int overflow;
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(seckey != nullptr);
@@ -657,7 +657,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_context_is_bu
 }
 
 int CFirmKey::secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, CPubKey::secp256k1_pubkey *pubkey, const unsigned char *seckey) {
-    CPubKey::secp256k1_unit sec;
+    CPubKey::secp256k1_scalar sec;
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(pubkey != nullptr);
     std::memset(pubkey, 0, sizeof(*pubkey));
@@ -843,11 +843,11 @@ int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsign
    return 1;
 }
 
-int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_unit *sigr, CPubKey::secp256k1_unit *sigs, const CPubKey::secp256k1_unit *seckey, const CPubKey::secp256k1_unit *message, const CPubKey::secp256k1_unit *nonce, int *recid) {
+int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_scalar *sigr, CPubKey::secp256k1_scalar *sigs, const CPubKey::secp256k1_scalar *seckey, const CPubKey::secp256k1_scalar *message, const CPubKey::secp256k1_scalar *nonce, int *recid) {
     unsigned char b[32];
     CPubKey::ecmult::secp256k1_gej rp;
     CPubKey::ecmult::secp256k1_ge r;
-    CPubKey::secp256k1_unit n;
+    CPubKey::secp256k1_scalar n;
     int overflow = 0;
 
     gen_ctx->secp256k1_ecmult_gen(&rp, nonce);
@@ -886,8 +886,8 @@ int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_con
 }
 
 int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_signature *signature, const unsigned char *msg32, const unsigned char *seckey, CFirmKey::secp256k1_nonce_function noncefp, const void *noncedata) {
-    CPubKey::secp256k1_unit r, s;
-    CPubKey::secp256k1_unit sec, non, msg;
+    CPubKey::secp256k1_scalar r, s;
+    CPubKey::secp256k1_scalar sec, non, msg;
     int ret = 0;
     ARG_CHECK(gen_ctx != nullptr);
     ARG_CHECK(CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_context_is_built(*gen_ctx));
@@ -933,7 +933,7 @@ int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context
 }
 
 int CFirmKey::secp256k1_ecdsa_signature_serialize_compact(unsigned char *output64, const CPubKey::secp256k1_signature *sig) {
-    CPubKey::secp256k1_unit r, s;
+    CPubKey::secp256k1_scalar r, s;
 
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(output64 != nullptr);
@@ -957,7 +957,7 @@ bool CFirmKey::SigHasLowR(const CPubKey::secp256k1_signature *sig) {
     return compact_sig[0] < 0x80;
 }
 
-int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_unit *ar, const CPubKey::secp256k1_unit *as) {
+int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_scalar *ar, const CPubKey::secp256k1_scalar *as) {
     unsigned char r[33] = {0}, s[33] = {0};
     unsigned char *rp = r, *sp = s;
     size_t lenR = 33, lenS = 33;
@@ -982,7 +982,7 @@ int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, co
 }
 
 int CFirmKey::secp256k1_ecdsa_signature_serialize_der(unsigned char *output, size_t *outputlen, const CPubKey::secp256k1_signature *sig) {
-    CPubKey::secp256k1_unit r, s;
+    CPubKey::secp256k1_scalar r, s;
 
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(output != nullptr);
@@ -1017,8 +1017,8 @@ bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_
 }
 
 int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void *noncedata) {
-    CPubKey::secp256k1_unit r, s;
-    CPubKey::secp256k1_unit sec, non, msg;
+    CPubKey::secp256k1_scalar r, s;
+    CPubKey::secp256k1_scalar sec, non, msg;
     int recid;
     int ret = 0;
     int overflow = 0;
@@ -1064,7 +1064,7 @@ int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1
 }
 
 int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned char *output64, int *recid, const CPubKey::secp256k1_ecdsa_recoverable_signature *sig) {
-    CPubKey::secp256k1_unit r, s;
+    CPubKey::secp256k1_scalar r, s;
 
     ARG_CHECK(output64 != nullptr);
     ARG_CHECK(sig != nullptr);
@@ -1092,14 +1092,14 @@ bool CFirmKey::SignCompact(const uint256 &hash, key_vector &vchSig) const {
     return true;
 }
 
-int CFirmKey::secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_unit *key, const CPubKey::secp256k1_unit *tweak) {
+int CFirmKey::secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_scalar *key, const CPubKey::secp256k1_scalar *tweak) {
     CPubKey::secp256k1_scalar_add(key, key, tweak);
     return CPubKey::secp256k1_scalar_is_zero(key)? 0: 1;
 }
 
 int CFirmKey::secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsigned char *tweak) {
-    CPubKey::secp256k1_unit term;
-    CPubKey::secp256k1_unit sec;
+    CPubKey::secp256k1_scalar term;
+    CPubKey::secp256k1_scalar sec;
     int ret = 0;
     int overflow = 0;
     //VERIFY_CHECK(ctx != nullptr);

@@ -119,10 +119,10 @@ public:
              * the intermediate sums while computing a*G.
              */
             CPubKey::ecmult::secp256k1_ge_storage (*prec_)[64][16]; /* prec[j][i] = 16^j * i * G + U_i */
-            CPubKey::secp256k1_unit blind_;
+            CPubKey::secp256k1_scalar blind_;
             CPubKey::ecmult::secp256k1_gej initial_;
 
-            bool secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_unit *gn) const;
+            bool secp256k1_ecmult_gen(CPubKey::ecmult::secp256k1_gej *r, const CPubKey::secp256k1_scalar *gn) const;
 
             void init();
             bool build();
@@ -137,19 +137,19 @@ public:
     };
 
     // PrivateKey: libsecp256k1
-    static void secp256k1_scalar_clear(CPubKey::secp256k1_unit *r);
+    static void secp256k1_scalar_clear(CPubKey::secp256k1_scalar *r);
     static int secp256k1_ec_seckey_verify(const unsigned char *seckey);
     static int secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, CPubKey::secp256k1_pubkey *pubkey, const unsigned char *seckey);
     static int ec_privkey_export_der(CFirmKey::ecmult::secp256k1_gen_context &gen_ctx, unsigned char *privkey, size_t *privkeylen, const unsigned char *key32, bool compressed);
-    static int secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_unit *ar, const CPubKey::secp256k1_unit *as);
+    static int secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, const CPubKey::secp256k1_scalar *ar, const CPubKey::secp256k1_scalar *as);
     static int secp256k1_ecdsa_signature_serialize_der(unsigned char *output, size_t *outputlen, const CPubKey::secp256k1_signature *sig);
     static int secp256k1_ecdsa_signature_serialize_compact(unsigned char *output64, const CPubKey::secp256k1_signature *sig);
     static bool SigHasLowR(const CPubKey::secp256k1_signature *sig);
-    static int secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_unit *sigr, CPubKey::secp256k1_unit *sigs, const CPubKey::secp256k1_unit *seckey, const CPubKey::secp256k1_unit *message, const CPubKey::secp256k1_unit *nonce, int *recid);
+    static int secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_scalar *sigr, CPubKey::secp256k1_scalar *sigs, const CPubKey::secp256k1_scalar *seckey, const CPubKey::secp256k1_scalar *message, const CPubKey::secp256k1_scalar *nonce, int *recid);
     static int secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_signature *signature, const unsigned char *msg32, const unsigned char *seckey, CFirmKey::secp256k1_nonce_function noncefp, const void *noncedata);
     static int secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned char *output64, int *recid, const CPubKey::secp256k1_ecdsa_recoverable_signature *sig);
     static int secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1_gen_context *gen_ctx, CPubKey::secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, const void *noncedata);
-    static int secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_unit *key, const CPubKey::secp256k1_unit *tweak);
+    static int secp256k1_eckey_privkey_tweak_add(CPubKey::secp256k1_scalar *key, const CPubKey::secp256k1_scalar *tweak);
     static int secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsigned char *tweak);
     static int ec_privkey_import_der(unsigned char *out32, const unsigned char *privkey, size_t privkeylen);
 

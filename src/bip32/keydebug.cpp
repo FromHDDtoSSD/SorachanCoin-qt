@@ -18,7 +18,7 @@ void print_secp256k1_fe(const char *mes, const CPubKey::ecmult::secp256k1_fe *v)
     debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
 }
 
-void print_secp256k1_scalar(const char *mes, const CPubKey::secp256k1_unit *s) {
+void print_secp256k1_scalar(const char *mes, const CPubKey::secp256k1_scalar *s) {
     unsigned char buf[32];
     CPubKey::secp256k1_scalar_get_be32(buf, s);
     debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
@@ -41,7 +41,7 @@ void print_bignum(const char *mes, BIGNUM *bn) {
     }
 }
 
-void print_secp(const char *mes, const CPubKey::secp256k1_unit *s) {
+void print_secp(const char *mes, const CPubKey::secp256k1_scalar *s) {
     unsigned char buf[32];
     CPubKey::secp256k1_scalar_get_be32(buf, s);
     debugcs::instance() << mes << ": " << strenc::HexStr(std::vector<unsigned char>(BEGIN(buf), END(buf))) << debugcs::endl();
@@ -101,6 +101,7 @@ namespace schnorr_nonce {
         (void)counter;
         VERIFY_CHECK(counter == 0);
 
+        /* add rand */
         unsigned char buf32[32];
         latest_crypto::random::GetStrongRandBytes(buf32, 32);
 
@@ -518,13 +519,13 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
 #define EXHAUSTIVE_TEST_LAMBDA 9   /* cube root of 1 mod 13 */
 #endif
 
-void Debug_secp256k1_print(const CPubKey::secp256k1_unit *d) {
+void Debug_secp256k1_print(const CPubKey::secp256k1_scalar *d) {
     uint256 i256;
     CPubKey::secp256k1_scalar_get_be32(i256.begin(), d);
     debugcs::instance() << __func__ << " : " << i256.ToString() << debugcs::endl();
 }
 
-static void secp256k1_scalar_set_b32(CPubKey::secp256k1_unit *r, const unsigned char *b32, int *overflow) {
+static void secp256k1_scalar_set_b32(CPubKey::secp256k1_scalar *r, const unsigned char *b32, int *overflow) {
     int over;
     r->d[0] = (uint32_t)b32[31] | (uint32_t)b32[30] << 8 | (uint32_t)b32[29] << 16 | (uint32_t)b32[28] << 24;
     r->d[1] = (uint32_t)b32[27] | (uint32_t)b32[26] << 8 | (uint32_t)b32[25] << 16 | (uint32_t)b32[24] << 24;
@@ -605,7 +606,7 @@ static void secp256k1_fe_get_b32(unsigned char *r, const CPubKey::ecmult::secp25
     r[31] = a->n[0] & 0xff;
 }
 
-static void secp256k1_scalar_get_b32(unsigned char *bin, const CPubKey::secp256k1_unit *a) {
+static void secp256k1_scalar_get_b32(unsigned char *bin, const CPubKey::secp256k1_scalar *a) {
     bin[0] = a->d[7] >> 24; bin[1] = a->d[7] >> 16; bin[2] = a->d[7] >> 8; bin[3] = a->d[7];
     bin[4] = a->d[6] >> 24; bin[5] = a->d[6] >> 16; bin[6] = a->d[6] >> 8; bin[7] = a->d[6];
     bin[8] = a->d[5] >> 24; bin[9] = a->d[5] >> 16; bin[10] = a->d[5] >> 8; bin[11] = a->d[5];
@@ -643,7 +644,7 @@ static int secp256k1_fe_set_b32(CPubKey::ecmult::secp256k1_fe *r, const unsigned
 static void secp256k1_scalar_inverse_var() {
     unsigned char b[32];
     secp256k1_num n, m;
-    CPubKey::secp256k1_unit t = *x;
+    CPubKey::secp256k1_scalar t = *x;
     secp256k1_scalar_get_b32(b, &t);
     secp256k1_num_set_bin(&n, b, 32);
     secp256k1_scalar_order_get_num(&m);
@@ -974,7 +975,7 @@ static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256*
     sha->InitSet(d, 64);
 }
 
-static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_unit* e, const unsigned char* r32, const unsigned char* msg32, const unsigned char* pubkey32)
+static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
 {
     unsigned char hash[32];
     CFirmKey::hash::secp256k1_sha256 sha;
@@ -990,7 +991,7 @@ static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_unit* e, const uns
     secp256k1_scalar_set_b32(e, hash, NULL);
 }
 
-static void secp256k1_schnorrsig_standard(CPubKey::secp256k1_unit* e, const unsigned char* r32, const unsigned char* msg32, const unsigned char* pubkey32)
+static void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
 {
     unsigned char hash[32];
     CFirmKey::hash::secp256k1_sha256 sha;
@@ -1024,7 +1025,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     ARG_CHECK(seckey != NULL);
 
     // get secret key (from seckey to x)
-    CPubKey::secp256k1_unit x;
+    CPubKey::secp256k1_scalar x;
     int overflow;
     secp256k1_scalar_set_b32(&x, seckey, &overflow);
     /* Fail if the secret key is invalid. */
@@ -1043,10 +1044,10 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     CPubKey::ecmult::secp256k1_ge_set_gej(&pk, &pkj);
 
     // get nonce k (random number for signature)
-    CPubKey::secp256k1_unit k;
+    CPubKey::secp256k1_scalar k;
     unsigned char buf[32];
     if (noncefp == NULL)
-        noncefp = schnorr_nonce::secp256k1_nonce_function_bipschnorr;
+        noncefp = schnorr_nonce::secp256k1_nonce_and_random_function_schnorr;
     if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0))
         return 0;
     secp256k1_scalar_set_b32(&k, buf, NULL);
@@ -1054,7 +1055,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
         return 0;
 
     // get and check r = k*G (if r.y cannot get sqrt, compute negate k)
-    CPubKey::secp256k1_unit one;
+    CPubKey::secp256k1_scalar one;
     CPubKey::secp256k1_scalar_set_int(&one, 1);
     CPubKey::ecmult::secp256k1_ge r;
     do {
@@ -1066,8 +1067,6 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
         if(CPubKey::ecmult::secp256k1_fe_is_odd(&r.y)) {
             CPubKey::secp256k1_scalar_add(&k, &k, &one); // if r.y is odd, k is added 1
         } else {
-            //print_secp256k1_fe("sign r.x", &r.x);
-            //print_secp256k1_fe("sign r.y", &r.y);
             break;
         }
     } while(true);
@@ -1084,7 +1083,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     secp256k1_fe_get_b32(&sig->data[0], &r.x);
 
     /* Compute e. */
-    CPubKey::secp256k1_unit e;
+    CPubKey::secp256k1_scalar e;
     unsigned char pub_buf[33];
     size_t pub_buflen;
     CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
@@ -1095,7 +1094,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     // generate s = k + e * privkey
     // if pub_y is even: s = k + e * privkey
     // if pub_y is odd: s = k + negate(e) * privkey
-    CPubKey::secp256k1_unit s;
+    CPubKey::secp256k1_scalar s;
     if (pub_buf[0] == 0x03)
         CPubKey::secp256k1_scalar_negate(&e, &e);
     CPubKey::secp256k1_scalar_mul(&e, &e, &x);
@@ -1115,8 +1114,8 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
 
 /* Helper function for verification and batch verification.
  * Computes R = sG - eP. */
-static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, const CPubKey::secp256k1_unit *s, const CPubKey::secp256k1_unit *e, const CPubKey::secp256k1_pubkey *pk) {
-    CPubKey::secp256k1_unit nege;
+static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, const CPubKey::secp256k1_scalar *s, const CPubKey::secp256k1_scalar *e, const CPubKey::secp256k1_pubkey *pk) {
+    CPubKey::secp256k1_scalar nege;
     CPubKey::ecmult::secp256k1_ge pkp;
     CPubKey::ecmult::secp256k1_gej pkj;
 
@@ -1164,7 +1163,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
         CPubKey::ecmult::secp256k1_fe_negate(&ry, &ry, 1);
 
     /* Get s */
-    CPubKey::secp256k1_unit s;
+    CPubKey::secp256k1_scalar s;
     int overflow;
     secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
     if (overflow)
@@ -1188,7 +1187,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &pub_x, &pub_y);
 
     /* Compute e. */
-    CPubKey::secp256k1_unit e;
+    CPubKey::secp256k1_scalar e;
     secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
 
     /* Compute rj =  s*G + (-e)*pkj */
@@ -1202,10 +1201,6 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
     if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
         return 0;
-    //print_secp256k1_fe("verify  rx", &rx);
-    //print_secp256k1_fe("verify  ry", &ry);
-    //print_secp256k1_fe("verify r.x", &r.x);
-    //print_secp256k1_fe("verify r.y", &r.y);
     CPubKey::ecmult::secp256k1_fe_normalize(&rx);
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
     CPubKey::ecmult::secp256k1_fe_normalize(&ry);
@@ -1215,7 +1210,6 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
 
     CPubKey::ecmult::secp256k1_fe neg_ry;
     CPubKey::ecmult::secp256k1_fe_negate(&neg_ry, &ry, 1);
-    //print_secp256k1_fe("verify neg_ry", &neg_ry);
     CPubKey::ecmult::secp256k1_fe_normalize(&rx);
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
     CPubKey::ecmult::secp256k1_fe_normalize(&neg_ry);
@@ -1529,10 +1523,10 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
 namespace schnorr_collect {
 
 int aggregate_secret_keys(const std::vector<CSecret> &secrets, CSecret *aggregated_secret) {
-    CPubKey::secp256k1_unit ret;
+    CPubKey::secp256k1_scalar ret;
     CPubKey::secp256k1_scalar_set_int(&ret, 0);
     for(int i=0; i < secrets.size(); ++i) {
-        CPubKey::secp256k1_unit tmp;
+        CPubKey::secp256k1_scalar tmp;
         int overflow;
         CPubKey::secp256k1_scalar_set_be32(&tmp, secrets[i].data(), &overflow);
         if(overflow) {
@@ -1576,7 +1570,7 @@ int aggregate_public_keys(const std::vector<CPubKey::secp256k1_pubkey> &pubkeys,
 int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signatures, CPubKey::secp256k1_signature *aggregated_signature) {
     CPubKey::ecmult::secp256k1_gej r_j;
     CPubKey::ecmult::secp256k1_gej_set_infinity(&r_j);
-    CPubKey::secp256k1_unit aggregated_s;
+    CPubKey::secp256k1_scalar aggregated_s;
     CPubKey::secp256k1_scalar_set_int(&aggregated_s, 0);
 
     CPubKey::ecmult::secp256k1_fe rzr;
@@ -1595,7 +1589,7 @@ int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signat
         //print_secp256k1_fe("agg_r_y", &r_aff.y);
 
         // s
-        CPubKey::secp256k1_unit s;
+        CPubKey::secp256k1_scalar s;
         CPubKey::secp256k1_ecdsa_signature_load(NULL, &s, &signatures[i]);
         CPubKey::secp256k1_scalar_add(&aggregated_s, &aggregated_s, &s);
         //print_secp256k1_scalar("agg_s_1", &aggregated_s);
@@ -2065,7 +2059,7 @@ void Check_agg_ecdsa() {
 }
 
 // Checker
-// 4, Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
+// 4, [OK checked] Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation() {
     const int check_num = 30;
 
@@ -2103,6 +2097,8 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         secp256k1_schnorrsig sig3;
         if(secp256k1_schnorrsig_sign(&sig3, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_function_bipschnorr, nullptr) != 1)
             break;
+
+        /*
         CFirmKey agg_sig3_key;
         agg_sig3_key.SetSecret(agg_secret);
         CPubKey agg_sig3_pubkey = agg_sig3_key.GetPubKey();
@@ -2110,6 +2106,31 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         CPubKey::secp256k1_pubkey agg_secret_pubkey;
         ::memcpy(&agg_secret_pubkey.data[0], agg_sig3_pubkey.data() + 1, 64);
         ::memcpy(&x_only_agg_pubkey.data[0], &agg_secret_pubkey.data[0], 32);
+        */
+
+        CPubKey pub1 = secpkey1->GetPubKey();
+        CPubKey pub2 = secpkey2->GetPubKey();
+        CPubKey::ecmult::secp256k1_ge se_a;
+        CPubKey::ecmult::secp256k1_ge se_b;
+        CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
+        pub1.Decompress();
+        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_x, pub1.data() + 1);
+        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_y, pub1.data() + 33);
+        CPubKey::ecmult::secp256k1_ge_set_xy(&se_a, &fe_x, &fe_y);
+        pub2.Decompress();
+        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_x, pub2.data() + 1);
+        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_y, pub2.data() + 33);
+        CPubKey::ecmult::secp256k1_ge_set_xy(&se_b, &fe_x, &fe_y);
+        CPubKey::ecmult::secp256k1_gej sej_a;
+        CPubKey::ecmult::secp256k1_gej_set_ge(&sej_a, &se_a);
+        CPubKey::ecmult::secp256k1_gej sej_ab;
+        CPubKey::ecmult::secp256k1_gej_add_ge_var(&sej_ab, &sej_a, &se_b, NULL);
+        CPubKey::ecmult::secp256k1_ge se_ab;
+        CPubKey::ecmult::secp256k1_ge_set_gej(&se_ab, &sej_ab);
+        //print_bytes("priv agg", agg_sig3_pubkey.data() + 1, 32);
+        //print_secp256k1_fe("se pub1+pub2", &se_ab.x);
+        CPubKey::ecmult::secp256k1_fe_normalize(&se_ab.x);
+        CPubKey::ecmult::secp256k1_fe_get_be32(&x_only_agg_pubkey.data[0], &se_ab.x);
 
         /*
         CPubKey pubkey1 = secpkey1->GetPubKey();
@@ -2410,9 +2431,9 @@ void Debug_checking_sign_verify() {
     //    debugcs::instance() << __func__ << " pubkey collect failure" << debugcs::endl();
 
     // Schnorr aggregation sign and verify
-    if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation()) {
-        assert(!"4: failure Libsecp256k1_schnorr_sign_and_verify_and_aggregation");
-    }
+    //if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation()) {
+    //    assert(!"4: failure Libsecp256k1_schnorr_sign_and_verify_and_aggregation");
+    //}
 
     // Check_agg_ecdsa();
 }

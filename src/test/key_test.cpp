@@ -6,7 +6,7 @@
 
 class key_test {
 public:
-    static std::string ToString(const CPubKey::secp256k1_unit &obj) {
+    static std::string ToString(const CPubKey::secp256k1_scalar &obj) {
         const char *p = (const char *)&obj.d[0];
         std::string str;
         for(int i=0; i<32; ++i) {
@@ -240,17 +240,17 @@ public:
     }
 
     // from secp256k1_scalar to uint256
-    uint256 secp256k1_scalar_get_uint256(const CPubKey::secp256k1_unit *unit) {
+    uint256 secp256k1_scalar_get_uint256(const CPubKey::secp256k1_scalar *unit) {
         uint256 value;
         CPubKey::secp256k1_scalar_get_be32((unsigned char *)&value, unit);
         return value;
     }
-    std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const CPubKey::secp256k1_unit *re, const CPubKey::secp256k1_unit *im) {
+    std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const CPubKey::secp256k1_scalar *re, const CPubKey::secp256k1_scalar *im) {
         return std::make_pair(secp256k1_scalar_get_uint256(re), secp256k1_scalar_get_uint256(im));
     }
     std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const gai_t *gai) {
         int overflow = 0;
-        CPubKey::secp256k1_unit unit_re, unit_im;
+        CPubKey::secp256k1_scalar unit_re, unit_im;
         CPubKey::secp256k1_scalar_set_int(&unit_re, 0);
         CPubKey::secp256k1_scalar_set_int(&unit_im, 0);
         CPubKey::secp256k1_scalar_set_be32(&unit_re, (const unsigned char *)&gai->re, &overflow);
@@ -273,7 +273,7 @@ public:
         debugcs::instance() << "key_test" << debugcs::endl();
 
         /*
-        CPubKey::secp256k1_unit r, s;
+        CPubKey::secp256k1_scalar r, s;
         int overflow=0;
         int ret=1;
         std::vector<unsigned char> vchRS;
