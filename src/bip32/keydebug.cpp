@@ -434,96 +434,6 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
 #define EXHAUSTIVE_TEST_LAMBDA 9   /* cube root of 1 mod 13 */
 #endif
 
-static void secp256k1_scalar_set_b32(CPubKey::secp256k1_scalar *r, const unsigned char *b32, int *overflow) {
-    int over;
-    r->d[0] = (uint32_t)b32[31] | (uint32_t)b32[30] << 8 | (uint32_t)b32[29] << 16 | (uint32_t)b32[28] << 24;
-    r->d[1] = (uint32_t)b32[27] | (uint32_t)b32[26] << 8 | (uint32_t)b32[25] << 16 | (uint32_t)b32[24] << 24;
-    r->d[2] = (uint32_t)b32[23] | (uint32_t)b32[22] << 8 | (uint32_t)b32[21] << 16 | (uint32_t)b32[20] << 24;
-    r->d[3] = (uint32_t)b32[19] | (uint32_t)b32[18] << 8 | (uint32_t)b32[17] << 16 | (uint32_t)b32[16] << 24;
-    r->d[4] = (uint32_t)b32[15] | (uint32_t)b32[14] << 8 | (uint32_t)b32[13] << 16 | (uint32_t)b32[12] << 24;
-    r->d[5] = (uint32_t)b32[11] | (uint32_t)b32[10] << 8 | (uint32_t)b32[9] << 16 | (uint32_t)b32[8] << 24;
-    r->d[6] = (uint32_t)b32[7] | (uint32_t)b32[6] << 8 | (uint32_t)b32[5] << 16 | (uint32_t)b32[4] << 24;
-    r->d[7] = (uint32_t)b32[3] | (uint32_t)b32[2] << 8 | (uint32_t)b32[1] << 16 | (uint32_t)b32[0] << 24;
-    over = CPubKey::secp256k1_scalar_reduce(r, CPubKey::secp256k1_scalar_check_overflow(r));
-    if (overflow) {
-        *overflow = over;
-    }
-}
-
-/** Convert a field element to a 32-byte big endian value. Requires the input to be normalized */
-static void secp256k1_fe_get_b32(unsigned char *r, const CPubKey::ecmult::secp256k1_fe *a) {
-#ifdef VERIFY
-    VERIFY_CHECK(a->normalized);
-    CPubKey::ecmult::secp256k1_fe_verify(a);
-#endif
-    r[0] = (a->n[9] >> 14) & 0xff;
-    r[1] = (a->n[9] >> 6) & 0xff;
-    r[2] = ((a->n[9] & 0x3F) << 2) | ((a->n[8] >> 24) & 0x3);
-    r[3] = (a->n[8] >> 16) & 0xff;
-    r[4] = (a->n[8] >> 8) & 0xff;
-    r[5] = a->n[8] & 0xff;
-    r[6] = (a->n[7] >> 18) & 0xff;
-    r[7] = (a->n[7] >> 10) & 0xff;
-    r[8] = (a->n[7] >> 2) & 0xff;
-    r[9] = ((a->n[7] & 0x3) << 6) | ((a->n[6] >> 20) & 0x3f);
-    r[10] = (a->n[6] >> 12) & 0xff;
-    r[11] = (a->n[6] >> 4) & 0xff;
-    r[12] = ((a->n[6] & 0xf) << 4) | ((a->n[5] >> 22) & 0xf);
-    r[13] = (a->n[5] >> 14) & 0xff;
-    r[14] = (a->n[5] >> 6) & 0xff;
-    r[15] = ((a->n[5] & 0x3f) << 2) | ((a->n[4] >> 24) & 0x3);
-    r[16] = (a->n[4] >> 16) & 0xff;
-    r[17] = (a->n[4] >> 8) & 0xff;
-    r[18] = a->n[4] & 0xff;
-    r[19] = (a->n[3] >> 18) & 0xff;
-    r[20] = (a->n[3] >> 10) & 0xff;
-    r[21] = (a->n[3] >> 2) & 0xff;
-    r[22] = ((a->n[3] & 0x3) << 6) | ((a->n[2] >> 20) & 0x3f);
-    r[23] = (a->n[2] >> 12) & 0xff;
-    r[24] = (a->n[2] >> 4) & 0xff;
-    r[25] = ((a->n[2] & 0xf) << 4) | ((a->n[1] >> 22) & 0xf);
-    r[26] = (a->n[1] >> 14) & 0xff;
-    r[27] = (a->n[1] >> 6) & 0xff;
-    r[28] = ((a->n[1] & 0x3f) << 2) | ((a->n[0] >> 24) & 0x3);
-    r[29] = (a->n[0] >> 16) & 0xff;
-    r[30] = (a->n[0] >> 8) & 0xff;
-    r[31] = a->n[0] & 0xff;
-}
-
-static void secp256k1_scalar_get_b32(unsigned char *bin, const CPubKey::secp256k1_scalar *a) {
-    bin[0] = a->d[7] >> 24; bin[1] = a->d[7] >> 16; bin[2] = a->d[7] >> 8; bin[3] = a->d[7];
-    bin[4] = a->d[6] >> 24; bin[5] = a->d[6] >> 16; bin[6] = a->d[6] >> 8; bin[7] = a->d[6];
-    bin[8] = a->d[5] >> 24; bin[9] = a->d[5] >> 16; bin[10] = a->d[5] >> 8; bin[11] = a->d[5];
-    bin[12] = a->d[4] >> 24; bin[13] = a->d[4] >> 16; bin[14] = a->d[4] >> 8; bin[15] = a->d[4];
-    bin[16] = a->d[3] >> 24; bin[17] = a->d[3] >> 16; bin[18] = a->d[3] >> 8; bin[19] = a->d[3];
-    bin[20] = a->d[2] >> 24; bin[21] = a->d[2] >> 16; bin[22] = a->d[2] >> 8; bin[23] = a->d[2];
-    bin[24] = a->d[1] >> 24; bin[25] = a->d[1] >> 16; bin[26] = a->d[1] >> 8; bin[27] = a->d[1];
-    bin[28] = a->d[0] >> 24; bin[29] = a->d[0] >> 16; bin[30] = a->d[0] >> 8; bin[31] = a->d[0];
-}
-
-static int secp256k1_fe_set_b32(CPubKey::ecmult::secp256k1_fe *r, const unsigned char *a) {
-    r->n[0] = (uint32_t)a[31] | ((uint32_t)a[30] << 8) | ((uint32_t)a[29] << 16) | ((uint32_t)(a[28] & 0x3) << 24);
-    r->n[1] = (uint32_t)((a[28] >> 2) & 0x3f) | ((uint32_t)a[27] << 6) | ((uint32_t)a[26] << 14) | ((uint32_t)(a[25] & 0xf) << 22);
-    r->n[2] = (uint32_t)((a[25] >> 4) & 0xf) | ((uint32_t)a[24] << 4) | ((uint32_t)a[23] << 12) | ((uint32_t)(a[22] & 0x3f) << 20);
-    r->n[3] = (uint32_t)((a[22] >> 6) & 0x3) | ((uint32_t)a[21] << 2) | ((uint32_t)a[20] << 10) | ((uint32_t)a[19] << 18);
-    r->n[4] = (uint32_t)a[18] | ((uint32_t)a[17] << 8) | ((uint32_t)a[16] << 16) | ((uint32_t)(a[15] & 0x3) << 24);
-    r->n[5] = (uint32_t)((a[15] >> 2) & 0x3f) | ((uint32_t)a[14] << 6) | ((uint32_t)a[13] << 14) | ((uint32_t)(a[12] & 0xf) << 22);
-    r->n[6] = (uint32_t)((a[12] >> 4) & 0xf) | ((uint32_t)a[11] << 4) | ((uint32_t)a[10] << 12) | ((uint32_t)(a[9] & 0x3f) << 20);
-    r->n[7] = (uint32_t)((a[9] >> 6) & 0x3) | ((uint32_t)a[8] << 2) | ((uint32_t)a[7] << 10) | ((uint32_t)a[6] << 18);
-    r->n[8] = (uint32_t)a[5] | ((uint32_t)a[4] << 8) | ((uint32_t)a[3] << 16) | ((uint32_t)(a[2] & 0x3) << 24);
-    r->n[9] = (uint32_t)((a[2] >> 2) & 0x3f) | ((uint32_t)a[1] << 6) | ((uint32_t)a[0] << 14);
-
-    if (r->n[9] == 0x3FFFFFUL && (r->n[8] & r->n[7] & r->n[6] & r->n[5] & r->n[4] & r->n[3] & r->n[2]) == 0x3FFFFFFUL && (r->n[1] + 0x40UL + ((r->n[0] + 0x3D1UL) >> 26)) > 0x3FFFFFFUL) {
-        return 0;
-    }
-#ifdef VERIFY
-    r->magnitude = 1;
-    r->normalized = 1;
-    CPubKey::ecmult::secp256k1_fe_verify(r);
-#endif
-    return 1;
-}
-
 /** Opaque data structure that holds context information (precomputed tables etc.).
  *
  *  The purpose of context structures is to cache large precomputed data tables
@@ -543,48 +453,6 @@ static int secp256k1_fe_set_b32(CPubKey::ecmult::secp256k1_fe *r, const unsigned
  *  you do not need any locking for the other calls), or use a read-write lock.
  */
 //typedef struct secp256k1_context_struct secp256k1_context;
-
-/** A pointer to a function to deterministically generate a nonce.
- *
- * Returns: 1 if a nonce was successfully generated. 0 will cause signing to fail.
- * Out:     nonce32:   pointer to a 32-byte array to be filled by the function.
- * In:      msg32:     the 32-byte message hash being verified (will not be NULL)
- *          key32:     pointer to a 32-byte secret key (will not be NULL)
- *          algo16:    pointer to a 16-byte array describing the signature
- *                     algorithm (will be NULL for ECDSA for compatibility).
- *          data:      Arbitrary data pointer that is passed through.
- *          attempt:   how many iterations we have tried to find a nonce.
- *                     This will almost always be 0, but different attempt values
- *                     are required to result in a different nonce.
- *
- * Except for test cases, this function should compute some cryptographic hash of
- * the message, the algorithm, the key and the attempt.
- */
-/*
-typedef int (*secp256k1_nonce_function)(
-    unsigned char *nonce32,
-    const unsigned char *msg32,
-    const unsigned char *key32,
-    const unsigned char *algo16,
-    void *data,
-    unsigned int attempt
-);
-*/
-
-/** Opaque data structure that holds a parsed Schnorr signature.
-  *
-  *  The exact representation of data inside is implementation defined and not
-  *  guaranteed to be portable between different platforms or versions. It is
-  *  however guaranteed to be 64 bytes in size, and can be safely copied/moved.
-  *  If you need to convert to a format suitable for storage, transmission, or
-  *  comparison, use the `secp256k1_schnorrsig_serialize` and
-  *  `secp256k1_schnorrsig_parse` functions.
-  */
-/*
-typedef struct {
-    unsigned char data[64];
-} secp256k1_schnorrsig;
-*/
 
 static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_t size) {
     void *ret = malloc(size);
@@ -798,56 +666,6 @@ static int nonce_function_bip340(unsigned char* nonce32, const unsigned char* ms
     return 1;
 }
 
-/* Initializes SHA256 with fixed midstate. This midstate was computed by applying
- * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
-static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
-{
-    uint32_t d[8];
-    d[0] = 0x9cecba11ul;
-    d[1] = 0x23925381ul;
-    d[2] = 0x11679112ul;
-    d[3] = 0xd1627e0ful;
-    d[4] = 0x97c87550ul;
-    d[5] = 0x003cc765ul;
-    d[6] = 0x90f61164ul;
-    d[7] = 0x33e9b66aul;
-
-    CFirmKey::hash::secp256k1_sha256_initialize(sha);
-    sha->InitSet(d, 64);
-}
-
-static void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
-{
-    unsigned char hash[32];
-    CFirmKey::hash::secp256k1_sha256 sha;
-
-    /* tagged hash(r.x, pk.x, msg32) */
-    secp256k1_schnorrsig_sha256_tagged(&sha);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
-    /* Set scalar e to the challenge hash modulo the curve order as per
-     * BIP340. */
-    secp256k1_scalar_set_b32(e, hash, NULL);
-}
-
-static void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
-{
-    unsigned char hash[32];
-    CFirmKey::hash::secp256k1_sha256 sha;
-
-    /* standard hash(r.x, pk.x, msg32) */
-    CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
-    CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-    CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
-    /* Set scalar e to the challenge hash modulo the curve order as per
-     * BIP340. */
-    secp256k1_scalar_set_b32(e, hash, NULL);
-}
-
 /** Create a Schnorr signature.
  *
  * Returns 1 on success, 0 on failure.
@@ -868,7 +686,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     // get secret key (from seckey to x)
     CPubKey::secp256k1_scalar x;
     int overflow;
-    secp256k1_scalar_set_b32(&x, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_be32(&x, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
         cleanse::memory_cleanse(sig->data, sizeof(sig->data));
@@ -891,7 +709,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
         noncefp = schnorr_nonce::secp256k1_nonce_and_random_function_schnorr;
     if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0))
         return 0;
-    secp256k1_scalar_set_b32(&k, buf, NULL);
+    CPubKey::secp256k1_scalar_set_be32(&k, buf, NULL);
     if (CPubKey::secp256k1_scalar_is_zero(&k))
         return 0;
 
@@ -921,7 +739,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
 
     // store signature [(r.x) | s]
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
-    secp256k1_fe_get_b32(&sig->data[0], &r.x);
+    CPubKey::ecmult::secp256k1_fe_get_be32(&sig->data[0], &r.x);
 
     /* Compute e. */
     CPubKey::secp256k1_scalar e;
@@ -930,7 +748,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
     if(pub_buflen != 33)
         return 0;
-    secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
+    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
 
     // generate s = k + e * privkey
     // if pub_y is even: s = k + e * privkey
@@ -942,7 +760,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     CPubKey::secp256k1_scalar_add(&s, &e, &k);
 
     // store signature [r.x | (s)]
-    secp256k1_scalar_get_b32(&sig->data[32], &s);
+    CPubKey::secp256k1_scalar_get_be32(&sig->data[32], &s);
 
     // clean up
     CFirmKey::secp256k1_scalar_clear(&k);
@@ -990,7 +808,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
 
     /* Get R_x */
     CPubKey::ecmult::secp256k1_fe rx;
-    if (!secp256k1_fe_set_b32(&rx, &sig64[0]))
+    if (!CPubKey::ecmult::secp256k1_fe_set_be32(&rx, &sig64[0]))
         return 0;
 
     /* Compute R_y */
@@ -1006,7 +824,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     /* Get s */
     CPubKey::secp256k1_scalar s;
     int overflow;
-    secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
+    CPubKey::secp256k1_scalar_set_be32(&s, &sig64[32], &overflow);
     if (overflow)
         return 0;
 
@@ -1029,7 +847,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
 
     /* Compute e. */
     CPubKey::secp256k1_scalar e;
-    secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
+    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
 
     /* Compute rj =  s*G + (-e)*pkj */
     CPubKey::ecmult::secp256k1_gej pkj;

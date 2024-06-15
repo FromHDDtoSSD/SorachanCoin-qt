@@ -576,6 +576,13 @@ namespace schnorr_nonce {
     int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter);
 }
 
+namespace schnorr_e_hash {
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
+    void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32);
+    void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32);
+}
+
 /** SORA's Schnorr Signatures - Key Properties:
  *
  * 1. **Public Key Y-Coordinate Flexibility**

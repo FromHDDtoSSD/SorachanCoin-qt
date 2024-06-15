@@ -4033,6 +4033,58 @@ namespace schnorr_nonce {
     }
 } // schnorr_nonce
 
+namespace schnorr_e_hash {
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
+    static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+    {
+        uint32_t d[8];
+        d[0] = 0x9cecba11ul;
+        d[1] = 0x23925381ul;
+        d[2] = 0x11679112ul;
+        d[3] = 0xd1627e0ful;
+        d[4] = 0x97c87550ul;
+        d[5] = 0x003cc765ul;
+        d[6] = 0x90f61164ul;
+        d[7] = 0x33e9b66aul;
+
+        CFirmKey::hash::secp256k1_sha256_initialize(sha);
+        sha->InitSet(d, 64);
+    }
+
+    void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
+    {
+        unsigned char hash[32];
+        CFirmKey::hash::secp256k1_sha256 sha;
+
+        /* tagged hash(r.x, pk.x, msg32) */
+        secp256k1_schnorrsig_sha256_tagged(&sha);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+        /* Set scalar e to the challenge hash modulo the curve order as per
+         * BIP340. */
+        CPubKey::secp256k1_scalar_set_be32(e, hash, NULL);
+    }
+
+    void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
+    {
+        unsigned char hash[32];
+        CFirmKey::hash::secp256k1_sha256 sha;
+
+        /* standard hash(r.x, pk.x, msg32) */
+        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+        /* Set scalar e to the challenge hash modulo the curve order as per
+         * BIP340. */
+        CPubKey::secp256k1_scalar_set_be32(e, hash, NULL);
+    }
+} // namespace schnorr_e_hash
+
 int XOnlyPubKey::secp256k1_schnorrsig_serialize(unsigned char *out64, const secp256k1_schnorrsig *sig) {
     ARG_CHECK(out64 != NULL);
     ARG_CHECK(sig != NULL);
