@@ -253,6 +253,12 @@ public:
     static int PrivKey_ERROR_callback(void (*fn)()=nullptr) {if(fn) fn(); return 0;}
 };
 
+// Schnorr signature
+class XOnlyFirmKey {
+public:
+    static int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecret *agg_secret, const std::vector<CPubKey> *pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey);
+};
+
 // BIP32
 struct CExtFirmKey {
     unsigned char nDepth_;

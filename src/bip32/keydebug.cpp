@@ -73,53 +73,6 @@ void print_ecpoint(const EC_GROUP *group, const EC_POINT *point) {
 
 #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
-namespace schnorr_nonce {
-    /* This nonce function is described in BIP-schnorr
-     * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
-    int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
-        CFirmKey::hash::secp256k1_sha256 sha;
-        (void)data;
-        (void)counter;
-        VERIFY_CHECK(counter == 0);
-
-        /* Hash x||msg as per the spec */
-        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        /* Hash in algorithm, which is not in the spec, but may be critical to
-         * users depending on it to avoid nonce reuse across algorithms. */
-        if (algo16 != NULL) {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
-        }
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
-        return 1;
-    }
-
-    int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
-        CFirmKey::hash::secp256k1_sha256 sha;
-        (void)data;
-        (void)counter;
-        VERIFY_CHECK(counter == 0);
-
-        /* add rand */
-        unsigned char buf32[32];
-        latest_crypto::random::GetStrongRandBytes(buf32, 32);
-
-        /* Hash x||msg as per the spec */
-        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
-        /* Hash in algorithm, which is not in the spec, but may be critical to
-         * users depending on it to avoid nonce reuse across algorithms. */
-        if (algo16 != NULL) {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
-        }
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
-        return 1;
-    }
-} // schnorr_nonce
-
 namespace schnorr_openssl {
 
 int schnorr_sha256_standard(BIGNUM *e, const unsigned char *r32, const unsigned char *pub32, const unsigned char *mes32) {
@@ -196,28 +149,6 @@ int calculate_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN
 
     return fret;
 }
-
-/*
-int calculate_even_y_coordinate(const EC_GROUP *group, const BIGNUM *x, BIGNUM *y, BN_CTX *ctx) {
-    BIGNUM *p = BN_new();
-
-    if(calculate_y_coordinate(group, x, y, ctx) != 1)
-        return 0;
-
-    do {
-        if(EC_GROUP_get_curve_GFp(group, p, NULL, NULL, ctx) != 1)
-            break;
-        if(BN_is_odd(y)) {
-            if(BN_sub(y, p, y) != 1)
-                return 0;
-        }
-    } while(false);
-
-    BN_free(p);
-
-    return 1;
-}
-*/
 
 int BN_bn2bin_padded(const BIGNUM *bn, unsigned char *out, int size) {
     memset(out, 0, size);
@@ -476,22 +407,6 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 #  define SECP256K1_INLINE inline
 # endif
 
-/** Opaque data structure that holds a parsed and valid "x-only" public key.
- *  An x-only pubkey encodes a point whose Y coordinate is even. It is
- *  serialized using only its X coordinate (32 bytes). See BIP-340 for more
- *  information about x-only pubkeys.
- *
- *  The exact representation of data inside is implementation defined and not
- *  guaranteed to be portable between different platforms or versions. It is
- *  however guaranteed to be 64 bytes in size, and can be safely copied/moved.
- *  If you need to convert to a format suitable for storage, transmission, or
- *  comparison, use secp256k1_xonly_pubkey_serialize and
- *  secp256k1_xonly_pubkey_parse.
- */
-typedef struct {
-    unsigned char data[64];
-} secp256k1_xonly_pubkey; // 0 - 31: X coordinate, 32 - 63: extend information
-
 typedef struct {
     void (*fn)(const char *text, void* data);
     const void* data;
@@ -519,12 +434,6 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
 #define EXHAUSTIVE_TEST_LAMBDA 9   /* cube root of 1 mod 13 */
 #endif
 
-void Debug_secp256k1_print(const CPubKey::secp256k1_scalar *d) {
-    uint256 i256;
-    CPubKey::secp256k1_scalar_get_be32(i256.begin(), d);
-    debugcs::instance() << __func__ << " : " << i256.ToString() << debugcs::endl();
-}
-
 static void secp256k1_scalar_set_b32(CPubKey::secp256k1_scalar *r, const unsigned char *b32, int *overflow) {
     int over;
     r->d[0] = (uint32_t)b32[31] | (uint32_t)b32[30] << 8 | (uint32_t)b32[29] << 16 | (uint32_t)b32[28] << 24;
@@ -539,31 +448,6 @@ static void secp256k1_scalar_set_b32(CPubKey::secp256k1_scalar *r, const unsigne
     if (overflow) {
         *overflow = over;
     }
-}
-
-static int secp256k1_fe_is_quad_var(const CPubKey::ecmult::secp256k1_fe *a) {
-#ifndef USE_NUM_NONE // using gmp
-    unsigned char b[32];
-    secp256k1_num n;
-    secp256k1_num m;
-    /* secp256k1 field prime, value p defined in "Standards for Efficient Cryptography" (SEC2) 2.7.1. */
-    static const unsigned char prime[32] = {
-        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-        0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,0xFF,
-        0xFF,0xFF,0xFF,0xFE,0xFF,0xFF,0xFC,0x2F
-    };
-
-    secp256k1_fe c = *a;
-    secp256k1_fe_normalize_var(&c);
-    secp256k1_fe_get_b32(b, &c);
-    secp256k1_num_set_bin(&n, b, 32);
-    secp256k1_num_set_bin(&m, prime, 32);
-    return secp256k1_num_jacobi(&n, &m) >= 0;
-#else
-    CPubKey::ecmult::secp256k1_fe r;
-    return CPubKey::ecmult::secp256k1_fe_sqrt(&r, a);
-#endif
 }
 
 /** Convert a field element to a 32-byte big endian value. Requires the input to be normalized */
@@ -640,55 +524,6 @@ static int secp256k1_fe_set_b32(CPubKey::ecmult::secp256k1_fe *r, const unsigned
     return 1;
 }
 
-/* using gmp
-static void secp256k1_scalar_inverse_var() {
-    unsigned char b[32];
-    secp256k1_num n, m;
-    CPubKey::secp256k1_scalar t = *x;
-    secp256k1_scalar_get_b32(b, &t);
-    secp256k1_num_set_bin(&n, b, 32);
-    secp256k1_scalar_order_get_num(&m);
-    secp256k1_num_mod_inverse(&n, &n, &m);
-    secp256k1_num_get_bin(b, 32, &n);
-    secp256k1_scalar_set_b32(r, b, NULL);
-    CPubKey::secp256k1_scalar_mul(&t, &t, r);
-    CHECK(secp256k1_scalar_is_one(&t));
-}
-*/
-
-/*
-static void default_illegal_callback_fn(const char* str, void* data) {
-    (void)data;
-    fprintf(stderr, "[libsecp256k1] illegal argument: %s\n", str);
-    abort();
-}
-
-static const secp256k1_callback default_illegal_callback = {
-    default_illegal_callback_fn,
-    NULL
-};
-
-static void default_error_callback_fn(const char* str, void* data) {
-    (void)data;
-    fprintf(stderr, "[libsecp256k1] internal consistency check failed: %s\n", str);
-    abort();
-}
-
-static const secp256k1_callback default_error_callback = {
-    default_error_callback_fn,
-    NULL
-};
-*/
-
-/*
-struct secp256k1_context_struct {
-    CPubKey::ecmult::secp256k1_context ecmult_ctx;
-    CFirmKey::ecmult::secp256k1_gen_context ecmult_gen_ctx;
-    secp256k1_callback illegal_callback;
-    secp256k1_callback error_callback;
-};
-*/
-
 /** Opaque data structure that holds context information (precomputed tables etc.).
  *
  *  The purpose of context structures is to cache large precomputed data tables
@@ -725,6 +560,7 @@ struct secp256k1_context_struct {
  * Except for test cases, this function should compute some cryptographic hash of
  * the message, the algorithm, the key and the attempt.
  */
+/*
 typedef int (*secp256k1_nonce_function)(
     unsigned char *nonce32,
     const unsigned char *msg32,
@@ -733,6 +569,7 @@ typedef int (*secp256k1_nonce_function)(
     void *data,
     unsigned int attempt
 );
+*/
 
 /** Opaque data structure that holds a parsed Schnorr signature.
   *
@@ -743,9 +580,11 @@ typedef int (*secp256k1_nonce_function)(
   *  comparison, use the `secp256k1_schnorrsig_serialize` and
   *  `secp256k1_schnorrsig_parse` functions.
   */
+/*
 typedef struct {
     unsigned char data[64];
 } secp256k1_schnorrsig;
+*/
 
 static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_t size) {
     void *ret = malloc(size);
@@ -824,6 +663,22 @@ static SECP256K1_INLINE int secp256k1_memcmp_var(const void* s1, const void* s2,
     return 0;
 }
 
+static SECP256K1_INLINE int secp256k1_memcmp(const void* s1, const void* s2, size_t n)
+{
+    const unsigned char *p1 = (unsigned char *)s1, *p2 = (unsigned char *)s2;
+    size_t i;
+
+    int fcmp = 0;
+    for (i = 0; i < n; i++) {
+        int diff = p1[i] - p2[i];
+        if (diff != 0) {
+            if(fcmp == 0)
+                fcmp = diff;
+        }
+    }
+    return fcmp;
+}
+
 /** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized and non-negative.*/
 static SECP256K1_INLINE void secp256k1_int_cmov(int* r, const int* a, int flag)
 {
@@ -856,20 +711,6 @@ static void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256*
     CFirmKey::hash::secp256k1_sha256_initialize(hash);
     CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
     CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
-}
-
-int secp256k1_schnorrsig_serialize(unsigned char *out64, const secp256k1_schnorrsig* sig) {
-    ARG_CHECK(out64 != NULL);
-    ARG_CHECK(sig != NULL);
-    memcpy(out64, sig->data, 64);
-    return 1;
-}
-
-int secp256k1_schnorrsig_parse(secp256k1_schnorrsig* sig, const unsigned char *in64) {
-    ARG_CHECK(sig != NULL);
-    ARG_CHECK(in64 != NULL);
-    memcpy(sig->data, in64, 64);
-    return 1;
 }
 
 /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
@@ -1072,7 +913,7 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     } while(true);
     if (nonce_is_negated != NULL)
         *nonce_is_negated = 0;
-    if (!secp256k1_fe_is_quad_var(&r.y)) {
+    if (!CPubKey::ecmult::secp256k1_fe_is_quad_var(&r.y)) {
         CPubKey::secp256k1_scalar_negate(&k, &k);
         if (nonce_is_negated != NULL)
             *nonce_is_negated = 1;
