@@ -84,7 +84,8 @@ bool CPubKey::Verify(const uint256 &hash, const key_vector &vchSig) const {
         return ret;
     };
 
-    return openssl() || bip66();
+    //return openssl() || bip66();
+    return bip66();
 }
 
 bool CPubKey::Verify_BIP66(const uint256 &hash, const key_vector &vchSig) const {
@@ -3992,6 +3993,127 @@ bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChildIn) const  {
     return pubkey_.Derive(out.pubkey_, out.chaincode_, _nChildIn, chaincode_);
 }
 
+/**
+ * secp256k1 util
+ */
+namespace secp256k1_util {
+    void *checked_malloc(void(*cb)(), size_t size) {
+        void *ret = malloc(size);
+        if (ret == NULL) {
+            CPubKey::PubKey_ERROR_callback(cb);
+        }
+        return ret;
+    }
+
+    void *checked_realloc(void(*cb)(), void *ptr, size_t size) {
+        void *ret = realloc(ptr, size);
+        if (ret == NULL) {
+            CPubKey::PubKey_ERROR_callback(cb);
+        }
+        return ret;
+    }
+
+    /* Extract the sign of an int64, take the abs and return a uint64, constant time. */
+    int secp256k1_sign_and_abs64(uint64_t *out, int64_t in) {
+        uint64_t mask0, mask1;
+        int ret;
+        ret = in < 0;
+        mask0 = ret + ~((uint64_t)0);
+        mask1 = ~mask0;
+        *out = (uint64_t)in;
+        *out = (*out & mask0) | ((~*out + 1) & mask1);
+        return ret;
+    }
+
+    int secp256k1_clz64_var(uint64_t x) {
+        int ret;
+        if (!x) {
+            return 64;
+        }
+# if defined(HAVE_BUILTIN_CLZLL)
+        ret = __builtin_clzll(x);
+# else
+        /*FIXME: debruijn fallback. */
+        for (ret = 0; ((x & (1ULL << 63)) == 0); x <<= 1, ret++);
+# endif
+        return ret;
+    }
+
+    /* Zero memory if flag == 1. Flag must be 0 or 1. Constant time. */
+    void memczero(void* s, size_t len, int flag)
+    {
+        unsigned char* p = (unsigned char*)s;
+        /* Access flag with a volatile-qualified lvalue.
+           This prevents clang from figuring out (after inlining) that flag can
+           take only be 0 or 1, which leads to variable time code. */
+        volatile int vflag = flag;
+        unsigned char mask = -(unsigned char)vflag;
+        while (len) {
+            *p &= ~mask;
+            p++;
+            len--;
+        }
+    }
+
+    /** Semantics like memcmp. Variable-time.
+     *
+     * We use this to avoid possible compiler bugs with memcmp, e.g.
+     * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
+     */
+    int secp256k1_memcmp_var(const void* s1, const void* s2, size_t n)
+    {
+        const unsigned char *p1 = (unsigned char *)s1, *p2 = (unsigned char *)s2;
+        size_t i;
+
+        for (i = 0; i < n; i++) {
+            int diff = p1[i] - p2[i];
+            if (diff != 0) {
+                return diff;
+            }
+        }
+        return 0;
+    }
+
+    int secp256k1_memcmp(const void* s1, const void* s2, size_t n)
+    {
+        const unsigned char *p1 = (unsigned char *)s1, *p2 = (unsigned char *)s2;
+        size_t i;
+
+        int fcmp = 0;
+        for (i = 0; i < n; i++) {
+            int diff = p1[i] - p2[i];
+            if (diff != 0) {
+                if(fcmp == 0)
+                    fcmp = diff;
+            }
+        }
+        return fcmp;
+    }
+
+    /** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized and non-negative.*/
+    void secp256k1_int_cmov(int* r, const int* a, int flag)
+    {
+        unsigned int mask0, mask1, r_masked, a_masked;
+        /* Access flag with a volatile-qualified lvalue.
+           This prevents clang from figuring out (after inlining) that flag can
+           take only be 0 or 1, which leads to variable time code. */
+        volatile int vflag = flag;
+
+        /* Casting a negative int to unsigned and back to int is implementation defined behavior */
+        VERIFY_CHECK(*r >= 0 && *a >= 0);
+
+        mask0 = (unsigned int)vflag + ~0u;
+        mask1 = ~mask0;
+        r_masked = ((unsigned int)*r & mask0);
+        a_masked = ((unsigned int)*a & mask1);
+
+        *r = (int)(r_masked | a_masked);
+    }
+} // namespace secp256k1_util
+
+/**
+ * SORA's Schnorr Signatures
+ */
 namespace schnorr_nonce {
     /* This nonce function is described in BIP-schnorr
      * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */

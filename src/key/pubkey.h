@@ -558,6 +558,26 @@ public:
     std::string ToString() const;
 };
 
+/** Opaque data structure that holds context information (precomputed tables etc.).
+ *
+ *  The purpose of context structures is to cache large precomputed data tables
+ *  that are expensive to construct, and also to maintain the randomization data
+ *  for blinding.
+ *
+ *  Do not create a new context object for each operation, as construction is
+ *  far slower than all other API calls (~100 times slower than an ECDSA
+ *  verification).
+ *
+ *  A constructed context can safely be used from multiple threads
+ *  simultaneously, but API call that take a non-const pointer to a context
+ *  need exclusive access to it. In particular this is the case for
+ *  secp256k1_context_destroy and secp256k1_context_randomize.
+ *
+ *  Regarding randomization, either do it once at creation time (in which case
+ *  you do not need any locking for the other calls), or use a read-write lock.
+ */
+//typedef struct secp256k1_context_struct secp256k1_context;
+
 /** Opaque data structure that holds a parsed and valid "x-only" public key.
  *  An x-only pubkey encodes a point whose Y coordinate is even. It is
  *  serialized using only its X coordinate (32 bytes). See BIP-340 for more
@@ -625,6 +645,29 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
 }
 */
 
+namespace secp256k1_util {
+    void *checked_malloc(void(*cb)(), size_t size);
+    void *checked_realloc(void(*cb)(), void *ptr, size_t size);
+
+    /* Extract the sign of an int64, take the abs and return a uint64, constant time. */
+    int secp256k1_sign_and_abs64(uint64_t *out, int64_t in);
+    int secp256k1_clz64_var(uint64_t x);
+
+    /* Zero memory if flag == 1. Flag must be 0 or 1. Constant time. */
+    void memczero(void* s, size_t len, int flag);
+
+    /** Semantics like memcmp. Variable-time.
+     *
+     * We use this to avoid possible compiler bugs with memcmp, e.g.
+     * https://gcc.gnu.org/bugzilla/show_bug.cgi?id=95189
+     */
+    int secp256k1_memcmp_var(const void* s1, const void* s2, size_t n);
+    int secp256k1_memcmp(const void* s1, const void* s2, size_t n);
+
+    /** If flag is true, set *r equal to *a; otherwise leave it. Constant-time.  Both *r and *a must be initialized and non-negative.*/
+    void secp256k1_int_cmov(int* r, const int* a, int flag);
+}
+
 namespace schnorr_nonce {
     int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter);
     int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter);
@@ -637,7 +680,8 @@ namespace schnorr_e_hash {
     void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32);
 }
 
-/* Numeric output function for debug console.
+/*
+ * Numeric output function for debug console.
  */
 inline void print_secp256k1_fe(const char *mes, const CPubKey::ecmult::secp256k1_fe *v) {
     CPubKey::ecmult::secp256k1_fe v2 = *v;

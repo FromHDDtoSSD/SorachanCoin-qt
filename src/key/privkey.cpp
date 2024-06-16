@@ -1288,6 +1288,111 @@ void CFirmKey::DecryptData(const key_vector &encrypted, key_vector &data) const 
 }
 
 /////////////////////////////////////////////////////////////////////////////////
+// BIP340
+/////////////////////////////////////////////////////////////////////////////////
+
+namespace bip340_tagged {
+    /* Initializes a sha256 struct and writes the 64 byte string
+     * SHA256(tag)||SHA256(tag) into it. */
+    void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256* hash, const unsigned char* tag, size_t taglen)
+    {
+        unsigned char buf[32];
+        CFirmKey::hash::secp256k1_sha256_initialize(hash);
+        CFirmKey::hash::secp256k1_sha256_write(hash, tag, taglen);
+        CFirmKey::hash::secp256k1_sha256_finalize(hash, buf);
+
+        CFirmKey::hash::secp256k1_sha256_initialize(hash);
+        CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
+        CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
+    }
+
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/nonce")||SHA256("BIP0340/nonce"). */
+    void secp256k1_nonce_function_bip340_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+    {
+        uint32_t d[8];
+        d[0] = 0x46615b35ul;
+        d[1] = 0xf4bfbff7ul;
+        d[2] = 0x9f8dc671ul;
+        d[3] = 0x83627ab3ul;
+        d[4] = 0x60217180ul;
+        d[5] = 0x57358661ul;
+        d[6] = 0x21a29e54ul;
+        d[7] = 0x68b07b4cul;
+
+        CFirmKey::hash::secp256k1_sha256_initialize(sha);
+        sha->InitSet(d, 64);
+    }
+
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/aux")||SHA256("BIP0340/aux"). */
+    void secp256k1_nonce_function_bip340_sha256_tagged_aux(CFirmKey::hash::secp256k1_sha256* sha)
+    {
+        uint32_t d[8];
+        d[0] = 0x24dd3219ul;
+        d[1] = 0x4eba7e70ul;
+        d[2] = 0xca0fabb9ul;
+        d[3] = 0x0fa3166dul;
+        d[4] = 0x3afbe4b1ul;
+        d[5] = 0x4c44df97ul;
+        d[6] = 0x4aac2739ul;
+        d[7] = 0x249e850aul;
+
+        CFirmKey::hash::secp256k1_sha256_initialize(sha);
+        sha->InitSet(d, 64);
+    }
+
+    /* algo16 argument for nonce_function_bip340 to derive the nonce exactly as stated in BIP-340
+     * by using the correct tagged hash function. */
+    static const unsigned char bip340_algo16[16] = {'B','I','P','0','3','4','0','/','n','o','n','c','e','\0','\0','\0'};
+
+    int nonce_function_bip340(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* xonly_pk32, const unsigned char* algo16, void* data)
+    {
+        CFirmKey::hash::secp256k1_sha256 sha;
+        unsigned char masked_key[32];
+        int i;
+
+        if (algo16 == NULL) {
+            return 0;
+        }
+
+        if (data != NULL) {
+            secp256k1_nonce_function_bip340_sha256_tagged_aux(&sha);
+            CFirmKey::hash::secp256k1_sha256_write(&sha, (const unsigned char *)data, 32);
+            CFirmKey::hash::secp256k1_sha256_finalize(&sha, masked_key);
+            for (i = 0; i < 32; i++) {
+                masked_key[i] ^= key32[i];
+            }
+        }
+
+        /* Tag the hash with algo16 which is important to avoid nonce reuse across
+         * algorithms. If this nonce function is used in BIP-340 signing as defined
+         * in the spec, an optimized tagging implementation is used. */
+        if (secp256k1_util::secp256k1_memcmp_var(algo16, bip340_algo16, 16) == 0) {
+            secp256k1_nonce_function_bip340_sha256_tagged(&sha);
+        } else {
+            int algo16_len = 16;
+            /* Remove terminating null bytes */
+            while (algo16_len > 0 && !algo16[algo16_len - 1]) {
+                algo16_len--;
+            }
+            secp256k1_sha256_initialize_tagged(&sha, algo16, algo16_len);
+        }
+
+        /* Hash (masked-)key||pk||msg using the tagged hash as per the spec */
+        if (data != NULL) {
+            CFirmKey::hash::secp256k1_sha256_write(&sha, masked_key, 32);
+        } else {
+            CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+        }
+        CFirmKey::hash::secp256k1_sha256_write(&sha, xonly_pk32, 32);
+        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        return 1;
+    }
+} // namespace bip340_tagged
+
+/////////////////////////////////////////////////////////////////////////////////
 // BIP32
 /////////////////////////////////////////////////////////////////////////////////
 

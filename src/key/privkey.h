@@ -253,6 +253,23 @@ public:
     static int PrivKey_ERROR_callback(void (*fn)()=nullptr) {if(fn) fn(); return 0;}
 };
 
+// bip340
+namespace bip340_tagged {
+    /* Initializes a sha256 struct and writes the 64 byte string
+     * SHA256(tag)||SHA256(tag) into it. */
+    void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256* hash, const unsigned char* tag, size_t taglen);
+
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/nonce")||SHA256("BIP0340/nonce"). */
+    void secp256k1_nonce_function_bip340_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha);
+
+    /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
+     * SHA256 to SHA256("BIP0340/aux")||SHA256("BIP0340/aux"). */
+    void secp256k1_nonce_function_bip340_sha256_tagged_aux(CFirmKey::hash::secp256k1_sha256* sha);
+
+    int nonce_function_bip340(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* xonly_pk32, const unsigned char* algo16, void* data);
+}
+
 // Schnorr signature
 class XOnlyFirmKey {
 public:
