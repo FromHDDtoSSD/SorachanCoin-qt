@@ -10,67 +10,6 @@
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 
-void print_secp256k1_fe(const char *mes, const CPubKey::ecmult::secp256k1_fe *v) {
-    CPubKey::ecmult::secp256k1_fe v2 = *v;
-    CPubKey::ecmult::secp256k1_fe_normalize(&v2);
-    unsigned char buf[32];
-    CPubKey::ecmult::secp256k1_fe_get_be32(buf, &v2);
-    debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
-}
-
-void print_secp256k1_scalar(const char *mes, const CPubKey::secp256k1_scalar *s) {
-    unsigned char buf[32];
-    CPubKey::secp256k1_scalar_get_be32(buf, s);
-    debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
-}
-
-void print_bytes(const char *mes, const unsigned char *buf, int size) {
-    std::vector<unsigned char> vch;
-    vch.resize(size);
-    ::memcpy(&vch.front(), buf, size);
-    debugcs::instance() << mes << ": " << strenc::HexStr(vch) << debugcs::endl();
-}
-
-void print_bignum(const char *mes, BIGNUM *bn) {
-    char *bn_str = BN_bn2hex(bn);
-    if (bn_str) {
-        debugcs::instance() << mes << ": " << bn_str << debugcs::endl();
-        OPENSSL_free(bn_str);
-    } else {
-        debugcs::instance() << "Error converting BIGNUM to string" << debugcs::endl();
-    }
-}
-
-void print_secp(const char *mes, const CPubKey::secp256k1_scalar *s) {
-    unsigned char buf[32];
-    CPubKey::secp256k1_scalar_get_be32(buf, s);
-    debugcs::instance() << mes << ": " << strenc::HexStr(std::vector<unsigned char>(BEGIN(buf), END(buf))) << debugcs::endl();
-}
-
-void print_ecpoint(const EC_GROUP *group, const EC_POINT *point) {
-    BN_CTX *ctx = BN_CTX_new();
-    BIGNUM *x = BN_new();
-    BIGNUM *y = BN_new();
-    do {
-        if (!ctx || !x || !y)
-            break;
-        if (EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) != 1)
-            break;
-
-        char *x_str = BN_bn2dec(x);
-        char *y_str = BN_bn2dec(y);
-        debugcs::instance() << "EC Point Coordinates:" << debugcs::endl();
-        debugcs::instance() << "x: " << x_str << debugcs::endl();
-        debugcs::instance() << "y: " << y_str << debugcs::endl();
-        OPENSSL_free(x_str);
-        OPENSSL_free(y_str);
-    } while(false);
-
-    BN_free(x);
-    BN_free(y);
-    BN_CTX_free(ctx);
-}
-
 #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
 namespace schnorr_openssl {
@@ -372,56 +311,6 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 
 } // schnorr_openssl
 
-# if !defined(SECP256K1_GNUC_PREREQ)
-#  if defined(__GNUC__)&&defined(__GNUC_MINOR__)
-#   define SECP256K1_GNUC_PREREQ(_maj,_min) \
- ((__GNUC__<<16)+__GNUC_MINOR__>=((_maj)<<16)+(_min))
-#  else
-#   define SECP256K1_GNUC_PREREQ(_maj,_min) 0
-#  endif
-# endif
-
-/**Warning attributes
-  * NONNULL is not used if SECP256K1_BUILD is set to avoid the compiler optimizing out
-  * some paranoid null checks. */
-# if defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
-#  define SECP256K1_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
-# else
-#  define SECP256K1_WARN_UNUSED_RESULT
-# endif
-# if !defined(SECP256K1_BUILD) && defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
-#  define SECP256K1_ARG_NONNULL(_x)  __attribute__ ((__nonnull__(_x)))
-# else
-#  define SECP256K1_ARG_NONNULL(_x)
-# endif
-
-# if (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L) )
-#  if SECP256K1_GNUC_PREREQ(2,7)
-#   define SECP256K1_INLINE __inline__
-#  elif (defined(_MSC_VER))
-#   define SECP256K1_INLINE __inline
-#  else
-#   define SECP256K1_INLINE
-#  endif
-# else
-#  define SECP256K1_INLINE inline
-# endif
-
-typedef struct {
-    void (*fn)(const char *text, void* data);
-    const void* data;
-} secp256k1_callback;
-
-static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * const cb, const char * const text) {
-    cb->fn(text, (void*)cb->data);
-}
-
-#ifdef HAVE_BUILTIN_EXPECT
-#define EXPECT(x,c) __builtin_expect((x),(c))
-#else
-#define EXPECT(x,c) (x)
-#endif
-
 #define ARG_CHECK(cond) do { \
     if (EXPECT(!(cond), 0)) { \
         return 0; \
@@ -454,6 +343,7 @@ static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * 
  */
 //typedef struct secp256k1_context_struct secp256k1_context;
 
+/*
 static SECP256K1_INLINE void *checked_malloc(const secp256k1_callback* cb, size_t size) {
     void *ret = malloc(size);
     if (ret == NULL) {
@@ -469,6 +359,7 @@ static SECP256K1_INLINE void *checked_realloc(const secp256k1_callback* cb, void
     }
     return ret;
 }
+*/
 
 /* Extract the sign of an int64, take the abs and return a uint64, constant time. */
 SECP256K1_INLINE static int secp256k1_sign_and_abs64(uint64_t *out, int64_t in) {
@@ -565,6 +456,19 @@ static SECP256K1_INLINE void secp256k1_int_cmov(int* r, const int* a, int flag)
     a_masked = ((unsigned int)*a & mask1);
 
     *r = (int)(r_masked | a_masked);
+}
+
+static SECP256K1_INLINE uint32_t secp256k1_check_overflow(uint32_t x, uint32_t y, uint32_t overflow) {
+    volatile uint32_t mask = overflow - 1;
+    return (x & mask) | (y & ~mask);
+}
+
+static SECP256K1_INLINE void secp256k1_scalar_memcpy(CPubKey::secp256k1_scalar *r, const CPubKey::secp256k1_scalar *a) {
+    uint32_t overflow = CPubKey::secp256k1_scalar_is_high(a);
+    uint32_t mask = secp256k1_check_overflow(0xFFFFFFFF, 0, overflow);
+    for (int i = 0; i < 8; i++) {
+        r->d[i] = secp256k1_check_overflow(a->d[i], 0, overflow & mask);
+    }
 }
 
 /* Initializes a sha256 struct and writes the 64 byte string
@@ -669,16 +573,17 @@ static int nonce_function_bip340(unsigned char* nonce32, const unsigned char* ms
 /** Create a Schnorr signature.
  *
  * Returns 1 on success, 0 on failure.
- *  Args:
+ *  Args:    ctx: pointer to the secp256k1_gen_ctx (can be NULL)
  *  Out:     sig: pointer to the returned signature (cannot be NULL)
  *       nonce_is_negated: a pointer to an integer indicates if signing algorithm negated the
  *                nonce (can be NULL)
  *  In:    msg32: the 32-byte message hash being signed (cannot be NULL)
  *        seckey: pointer to a 32-byte secret key (cannot be NULL)
- *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_function_bipschnorr is used
+ *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_and_random_function_schnorr is used
  *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
  */
-static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata) {
+static int secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata)
+{
     ARG_CHECK(sig != NULL);
     ARG_CHECK(msg32 != NULL);
     ARG_CHECK(seckey != NULL);
@@ -686,32 +591,50 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     // get secret key (from seckey to x)
     CPubKey::secp256k1_scalar x;
     int overflow;
-    CPubKey::secp256k1_scalar_set_be32(&x, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
         cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
         return 0;
     }
 
     // get public key (pubkey = x * G)
     CPubKey::ecmult::secp256k1_gej pkj;
     CPubKey::ecmult::secp256k1_ge pk;
-    CFirmKey::ecmult::secp256k1_gen_context ctx;
-    if(!ctx.build())
+    CFirmKey::ecmult::secp256k1_gen_context ctxobj;
+    if(ctx == NULL) {
+        ctx = &ctxobj;
+        if(!ctx->build()) {
+            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+    }
+    if(!ctx->secp256k1_ecmult_gen(&pkj, &x)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
         return 0;
-    ctx.secp256k1_ecmult_gen(&pkj, &x);
+    }
     CPubKey::ecmult::secp256k1_ge_set_gej(&pk, &pkj);
 
     // get nonce k (random number for signature)
-    CPubKey::secp256k1_scalar k;
     unsigned char buf[32];
     if (noncefp == NULL)
         noncefp = schnorr_nonce::secp256k1_nonce_and_random_function_schnorr;
-    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0))
+    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
         return 0;
-    CPubKey::secp256k1_scalar_set_be32(&k, buf, NULL);
-    if (CPubKey::secp256k1_scalar_is_zero(&k))
+    }
+    CPubKey::secp256k1_scalar k;
+    CPubKey::secp256k1_scalar_set_b32(&k, buf, NULL);
+    if (CPubKey::secp256k1_scalar_is_zero(&k)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        cleanse::memory_cleanse(&k, sizeof(k));
         return 0;
+    }
 
     // get and check r = k*G (if r.y cannot get sqrt, compute negate k)
     CPubKey::secp256k1_scalar one;
@@ -719,12 +642,22 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
     CPubKey::ecmult::secp256k1_ge r;
     do {
         CPubKey::ecmult::secp256k1_gej rj;
-        if(!ctx.secp256k1_ecmult_gen(&rj, &k))
+        if(!ctx->secp256k1_ecmult_gen(&rj, &k)) {
+            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+            cleanse::memory_cleanse(&x, sizeof(x));
+            cleanse::memory_cleanse(&k, sizeof(k));
             return 0;
+        }
         CPubKey::ecmult::secp256k1_ge_set_gej(&r, &rj);
-        CPubKey::ecmult::secp256k1_fe_normalize(&r.y); // Check r.y is odd
+        CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y); // Check r.y is odd
         if(CPubKey::ecmult::secp256k1_fe_is_odd(&r.y)) {
-            CPubKey::secp256k1_scalar_add(&k, &k, &one); // if r.y is odd, k is added 1
+            if(CPubKey::secp256k1_scalar_add(&k, &k, &one) == 1) { // if r.y is odd, k is added 1
+                // Fail if k is overflow
+                cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+                cleanse::memory_cleanse(&x, sizeof(x));
+                cleanse::memory_cleanse(&k, sizeof(k));
+                return 0;
+            }
         } else {
             break;
         }
@@ -739,61 +672,36 @@ static int secp256k1_schnorrsig_sign(secp256k1_schnorrsig *sig, int *nonce_is_ne
 
     // store signature [(r.x) | s]
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
-    CPubKey::ecmult::secp256k1_fe_get_be32(&sig->data[0], &r.x);
+    CPubKey::ecmult::secp256k1_fe_get_b32(&sig->data[0], &r.x);
 
     /* Compute e. */
     CPubKey::secp256k1_scalar e;
-    unsigned char pub_buf[33];
+    unsigned char pub_buf[CPubKey::COMPRESSED_PUBLIC_KEY_SIZE];
     size_t pub_buflen;
     CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
-    if(pub_buflen != 33)
+    if(pub_buflen != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        cleanse::memory_cleanse(&k, sizeof(k));
         return 0;
+    }
     schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
 
     // generate s = k + e * privkey
     // if pub_y is even: s = k + e * privkey
     // if pub_y is odd: s = k + negate(e) * privkey
     CPubKey::secp256k1_scalar s;
-    if (pub_buf[0] == 0x03)
+    if (pub_buf[0] == CPubKey::SECP256K1_TAG_PUBKEY_ODD)
         CPubKey::secp256k1_scalar_negate(&e, &e);
     CPubKey::secp256k1_scalar_mul(&e, &e, &x);
     CPubKey::secp256k1_scalar_add(&s, &e, &k);
 
     // store signature [r.x | (s)]
-    CPubKey::secp256k1_scalar_get_be32(&sig->data[32], &s);
+    CPubKey::secp256k1_scalar_get_b32(&sig->data[32], &s);
 
-    // clean up
-    CFirmKey::secp256k1_scalar_clear(&k);
-    CFirmKey::secp256k1_scalar_clear(&x);
     cleanse::memory_cleanse(&k, sizeof(k));
     cleanse::memory_cleanse(&x, sizeof(x));
-
     return 1;
-}
-
-/* Helper function for verification and batch verification.
- * Computes R = sG - eP. */
-static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, const CPubKey::secp256k1_scalar *s, const CPubKey::secp256k1_scalar *e, const CPubKey::secp256k1_pubkey *pk) {
-    CPubKey::secp256k1_scalar nege;
-    CPubKey::ecmult::secp256k1_ge pkp;
-    CPubKey::ecmult::secp256k1_gej pkj;
-
-    CPubKey::secp256k1_scalar_negate(&nege, e);
-
-    if (!CPubKey::secp256k1_pubkey_load(&pkp, pk)) {
-        return 0;
-    }
-    CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pkp);
-
-    /* rj =  s*G + (-e)*pkj */
-    CPubKey::secp256k1_ecmult(rj, &pkj, &nege, s);
-    return 1;
-}
-
-static SECP256K1_INLINE int secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256k1_ge *ge, const secp256k1_xonly_pubkey *pubkey) {
-    CPubKey::secp256k1_pubkey pub;
-    ::memcpy(pub.data, pubkey->data, 64);
-    return CPubKey::secp256k1_pubkey_load(ge, &pub);
 }
 
 static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey)
@@ -808,7 +716,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
 
     /* Get R_x */
     CPubKey::ecmult::secp256k1_fe rx;
-    if (!CPubKey::ecmult::secp256k1_fe_set_be32(&rx, &sig64[0]))
+    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&rx, &sig64[0]))
         return 0;
 
     /* Compute R_y */
@@ -817,20 +725,20 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_fe_mul(&ry, &ry, &rx);
     CPubKey::ecmult::secp256k1_fe_add(&ry, &sc7);
     CPubKey::ecmult::secp256k1_fe_sqrt(&ry, &ry);
-    CPubKey::ecmult::secp256k1_fe_normalize(&ry);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
     if(CPubKey::ecmult::secp256k1_fe_is_odd(&ry))
         CPubKey::ecmult::secp256k1_fe_negate(&ry, &ry, 1);
 
     /* Get s */
     CPubKey::secp256k1_scalar s;
     int overflow;
-    CPubKey::secp256k1_scalar_set_be32(&s, &sig64[32], &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
     if (overflow)
         return 0;
 
     /* Get pub_x */
     CPubKey::ecmult::secp256k1_fe pub_x;
-    if(!CPubKey::ecmult::secp256k1_fe_set_be32(&pub_x, &pubkey->data[0]))
+    if(!CPubKey::ecmult::secp256k1_fe_set_b32(&pub_x, &pubkey->data[0]))
         return 0;
 
     /* Compute pub_y */
@@ -839,7 +747,7 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_fe_mul(&pub_y, &pub_y, &pub_x);
     CPubKey::ecmult::secp256k1_fe_add(&pub_y, &sc7);
     CPubKey::ecmult::secp256k1_fe_sqrt(&pub_y, &pub_y);
-    CPubKey::ecmult::secp256k1_fe_normalize(&pub_y);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&pub_y);
     if(CPubKey::ecmult::secp256k1_fe_is_odd(&pub_y))
         CPubKey::ecmult::secp256k1_fe_negate(&pub_y, &pub_y, 1);
     CPubKey::ecmult::secp256k1_ge pk;
@@ -860,20 +768,21 @@ static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigne
     CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
     if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
         return 0;
-    CPubKey::ecmult::secp256k1_fe_normalize(&rx);
-    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
-    CPubKey::ecmult::secp256k1_fe_normalize(&ry);
-    CPubKey::ecmult::secp256k1_fe_normalize(&r.y);
-    if(CPubKey::ecmult::secp256k1_fe_cmp(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp(&ry, &r.y) == 0)
-        return 1;
 
+    /* Checking R_x == r.x && R_y == r.y */
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&rx);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.x);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
+    if(CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&ry, &r.y) == 0)
+        return 1;
     CPubKey::ecmult::secp256k1_fe neg_ry;
     CPubKey::ecmult::secp256k1_fe_negate(&neg_ry, &ry, 1);
-    CPubKey::ecmult::secp256k1_fe_normalize(&rx);
-    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
-    CPubKey::ecmult::secp256k1_fe_normalize(&neg_ry);
-    CPubKey::ecmult::secp256k1_fe_normalize(&r.y);
-    return (CPubKey::ecmult::secp256k1_fe_cmp(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp(&neg_ry, &r.y) == 0) ? 1: 0;
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&rx);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.x);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&neg_ry);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
+    return (CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&neg_ry, &r.y) == 0) ? 1: 0;
 }
 
 EC_KEY *Create_pub_y_odd_eckey(const EC_GROUP *group, BN_CTX *ctx) {
@@ -1128,7 +1037,7 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
         uint256 hash = Create_random_hash();
 
         // sign
-        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1187,7 +1096,7 @@ int aggregate_secret_keys(const std::vector<CSecret> &secrets, CSecret *aggregat
     for(int i=0; i < secrets.size(); ++i) {
         CPubKey::secp256k1_scalar tmp;
         int overflow;
-        CPubKey::secp256k1_scalar_set_be32(&tmp, secrets[i].data(), &overflow);
+        CPubKey::secp256k1_scalar_set_b32(&tmp, secrets[i].data(), &overflow);
         if(overflow) {
             cleanse::memory_cleanse(&ret, 32);
             cleanse::memory_cleanse(&tmp, 32);
@@ -1198,7 +1107,7 @@ int aggregate_secret_keys(const std::vector<CSecret> &secrets, CSecret *aggregat
     }
     aggregated_secret->resize(32);
     unsigned char *buf = &aggregated_secret->front();
-    CPubKey::secp256k1_scalar_get_be32(buf, &ret);
+    CPubKey::secp256k1_scalar_get_b32(buf, &ret);
     cleanse::memory_cleanse(&ret, 32);
     return 1;
 }
@@ -1238,7 +1147,7 @@ int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signat
         // r
         CPubKey::ecmult::secp256k1_fe r_x;
         CPubKey::ecmult::secp256k1_ge r_aff;
-        CPubKey::ecmult::secp256k1_fe_set_be32(&r_x, &signatures[i].data[0]);
+        CPubKey::ecmult::secp256k1_fe_set_b32(&r_x, &signatures[i].data[0]);
         //print_secp256k1_fe("agg_r_x", &r_x);
         CPubKey::ecmult::secp256k1_ge_set_xo_var(&r_aff, &r_x, 0);
         if(r_j.infinity)
@@ -1258,10 +1167,10 @@ int aggregate_signatures(const std::vector<CPubKey::secp256k1_signature> &signat
     CPubKey::ecmult::secp256k1_ge_set_gej(&r_ret, &r_j);
     CPubKey::ecmult::secp256k1_fe_normalize(&r_ret.x);
     //print_secp256k1_fe("agg_r_2", &r_ret.x);
-    CPubKey::ecmult::secp256k1_fe_get_be32(&aggregated_signature->data[0], &r_ret.x);
+    CPubKey::ecmult::secp256k1_fe_get_b32(&aggregated_signature->data[0], &r_ret.x);
 
     //print_secp256k1_scalar("agg_s_2", &aggregated_s);
-    CPubKey::secp256k1_scalar_get_be32(&aggregated_signature->data[32], &aggregated_s);
+    CPubKey::secp256k1_scalar_get_b32(&aggregated_signature->data[32], &aggregated_s);
 
     return 1;
 }
@@ -1572,7 +1481,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         uint256 hash = Create_random_hash();
 
         // sign
-        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1690,12 +1599,12 @@ void Check_agg_ecdsa() {
         CPubKey::ecmult::secp256k1_ge se_b;
         CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
         pub1.Decompress();
-        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_x, pub1.data() + 1);
-        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_y, pub1.data() + 33);
+        CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pub1.data() + 1);
+        CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pub1.data() + 33);
         CPubKey::ecmult::secp256k1_ge_set_xy(&se_a, &fe_x, &fe_y);
         pub2.Decompress();
-        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_x, pub2.data() + 1);
-        CPubKey::ecmult::secp256k1_fe_set_be32(&fe_y, pub2.data() + 33);
+        CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pub2.data() + 1);
+        CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pub2.data() + 33);
         CPubKey::ecmult::secp256k1_ge_set_xy(&se_b, &fe_x, &fe_y);
         CPubKey::ecmult::secp256k1_gej sej_a;
         CPubKey::ecmult::secp256k1_gej_set_ge(&sej_a, &se_a);
@@ -1726,7 +1635,7 @@ int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecre
         for(int i=0; i < secrets->size(); ++i) {
             CPubKey::secp256k1_scalar tmp;
             int overflow;
-            CPubKey::secp256k1_scalar_set_be32(&tmp, (*secrets)[i].data(), &overflow);
+            CPubKey::secp256k1_scalar_set_b32(&tmp, (*secrets)[i].data(), &overflow);
             if(overflow) {
                 cleanse::memory_cleanse(&ret, 32);
                 cleanse::memory_cleanse(&tmp, 32);
@@ -1737,7 +1646,7 @@ int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecre
         }
         agg_secret->resize(32);
         unsigned char *buf = &agg_secret->front();
-        CPubKey::secp256k1_scalar_get_be32(buf, &ret);
+        CPubKey::secp256k1_scalar_get_b32(buf, &ret);
         cleanse::memory_cleanse(&ret, 32);
     }
 
@@ -1753,8 +1662,8 @@ int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecre
             CPubKey::ecmult::secp256k1_ge ge_xy;
             CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
             pubkey.Decompress();
-            CPubKey::ecmult::secp256k1_fe_set_be32(&fe_x, pubkey.data() + 1);
-            CPubKey::ecmult::secp256k1_fe_set_be32(&fe_y, pubkey.data() + 33);
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pubkey.data() + 1);
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pubkey.data() + 33);
             CPubKey::ecmult::secp256k1_ge_set_xy(&ge_xy, &fe_x, &fe_y);
             if(CPubKey::ecmult::secp256k1_gej_is_infinity(&gej_ret))
                 CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, NULL);
@@ -1763,9 +1672,9 @@ int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecre
         }
         CPubKey::ecmult::secp256k1_ge ge_ret;
         CPubKey::ecmult::secp256k1_ge_set_gej(&ge_ret, &gej_ret);
-        CPubKey::ecmult::secp256k1_fe_normalize(&ge_ret.x);
+        CPubKey::ecmult::secp256k1_fe_normalize_var(&ge_ret.x);
         ::memset(&x_only_agg_pubkey->data[0], 0x00, 64);
-        CPubKey::ecmult::secp256k1_fe_get_be32(&x_only_agg_pubkey->data[0], &ge_ret.x);
+        CPubKey::ecmult::secp256k1_fe_get_b32(&x_only_agg_pubkey->data[0], &ge_ret.x);
     }
 
     return 1;
@@ -1801,7 +1710,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
             break;
         }
         secp256k1_schnorrsig sig;
-        if(secp256k1_schnorrsig_sign(&sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         // valid agg verify

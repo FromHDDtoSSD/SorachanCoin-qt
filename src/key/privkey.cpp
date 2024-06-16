@@ -466,7 +466,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     CPubKey::secp256k1_scalar_set_int(&blind_, 1);
 
     /* The prior blinding value (if not reset) is chained forward by including it in the hash. */
-    CPubKey::secp256k1_scalar_get_be32(nonce32, &blind_);
+    CPubKey::secp256k1_scalar_get_b32(nonce32, &blind_);
     /** Using a CSPRNG allows a failure free interface, avoids needing large amounts of random data,
      *   and guards against weak or adversarial seeds.  This is a simpler and safer interface than
      *   asking the caller for blinding values directly and expecting them to retry on failure.
@@ -483,7 +483,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     int retry;
     do {
         CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
-        retry = !CPubKey::ecmult::secp256k1_fe_set_be32(&s, nonce32);
+        retry = !CPubKey::ecmult::secp256k1_fe_set_b32(&s, nonce32);
         retry |= CPubKey::ecmult::secp256k1_fe_is_zero(&s);
     } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > Fp. */
     /* Randomize the projection to defend against multiplier sidechannels. */
@@ -493,7 +493,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     CPubKey::ecmult::secp256k1_fe_clear(&s);
     do {
         CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
-        CPubKey::secp256k1_scalar_set_be32(&b, nonce32, &retry);
+        CPubKey::secp256k1_scalar_set_b32(&b, nonce32, &retry);
         /* A blinding value of 0 works, but would undermine the projection hardening. */
         retry |= CPubKey::secp256k1_scalar_is_zero(&b);
     } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > order. */
@@ -538,7 +538,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() {
         CPubKey::ecmult::secp256k1_ge nums_ge;
         {
             int r;
-            r = CPubKey::ecmult::secp256k1_fe_set_be32(&nums_x, nums_b32);
+            r = CPubKey::ecmult::secp256k1_fe_set_b32(&nums_x, nums_b32);
             ARG_BOOL_CHECK(r);
             r = CPubKey::ecmult::secp256k1_ge_set_xo_var(&nums_ge, &nums_x, 0);
             ARG_BOOL_CHECK(r);
@@ -634,7 +634,7 @@ int CFirmKey::secp256k1_ec_seckey_verify(const unsigned char *seckey) {
     //VERIFY_CHECK(ctx != nullptr);
     ARG_CHECK(seckey != nullptr);
 
-    CPubKey::secp256k1_scalar_set_be32(&sec, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&sec, seckey, &overflow);
     int ret = !overflow && !CPubKey::secp256k1_scalar_is_zero(&sec);
     secp256k1_scalar_clear(&sec); // Note: should be used ::OPENSSL_Cleanse
     return ret;
@@ -665,7 +665,7 @@ int CFirmKey::secp256k1_ec_pubkey_create(CFirmKey::ecmult::secp256k1_gen_context
     ARG_CHECK(seckey != nullptr);
 
     int overflow;
-    CPubKey::secp256k1_scalar_set_be32(&sec, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&sec, seckey, &overflow);
     int ret = (!overflow) & (!CPubKey::secp256k1_scalar_is_zero(&sec));
     if (ret) {
         CPubKey::ecmult::secp256k1_gej pj;
@@ -854,8 +854,8 @@ int CFirmKey::secp256k1_ecdsa_sig_sign(const CFirmKey::ecmult::secp256k1_gen_con
     CPubKey::ecmult::secp256k1_ge_set_gej(&r, &rp);
     CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
     CPubKey::ecmult::secp256k1_fe_normalize(&r.y);
-    CPubKey::ecmult::secp256k1_fe_get_be32(b, &r.x);
-    CPubKey::secp256k1_scalar_set_be32(sigr, b, &overflow);
+    CPubKey::ecmult::secp256k1_fe_get_b32(b, &r.x);
+    CPubKey::secp256k1_scalar_set_b32(sigr, b, &overflow);
     /* These two conditions should be checked before calling */
     ARG_CHECK(!CPubKey::secp256k1_scalar_is_zero(sigr));
     ARG_CHECK(overflow == 0);
@@ -899,17 +899,17 @@ int CFirmKey::secp256k1_ecdsa_sign(const CFirmKey::ecmult::secp256k1_gen_context
     }
 
     int overflow = 0;
-    CPubKey::secp256k1_scalar_set_be32(&sec, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&sec, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (!overflow && !CPubKey::secp256k1_scalar_is_zero(&sec)) {
         unsigned char nonce32[32];
         unsigned int count = 0;
-        CPubKey::secp256k1_scalar_set_be32(&msg, msg32, nullptr);
+        CPubKey::secp256k1_scalar_set_b32(&msg, msg32, nullptr);
         for(;;) {
             ret = noncefp(nonce32, msg32, seckey, nullptr, (void *)noncedata, count);
             if (! ret)
                 break;
-            CPubKey::secp256k1_scalar_set_be32(&non, nonce32, &overflow);
+            CPubKey::secp256k1_scalar_set_b32(&non, nonce32, &overflow);
             if (!overflow && !CPubKey::secp256k1_scalar_is_zero(&non)) {
                 CFirmKey::ecmult::secp256k1_gen_context gen_ctx;
                 ARG_CHECK(gen_ctx.build());
@@ -940,8 +940,8 @@ int CFirmKey::secp256k1_ecdsa_signature_serialize_compact(unsigned char *output6
     ARG_CHECK(sig != nullptr);
 
     CPubKey::secp256k1_ecdsa_signature_load(&r, &s, sig);
-    CPubKey::secp256k1_scalar_get_be32(&output64[0], &r);
-    CPubKey::secp256k1_scalar_get_be32(&output64[32], &s);
+    CPubKey::secp256k1_scalar_get_b32(&output64[0], &r);
+    CPubKey::secp256k1_scalar_get_b32(&output64[32], &s);
     return 1;
 }
 
@@ -961,8 +961,8 @@ int CFirmKey::secp256k1_ecdsa_sig_serialize(unsigned char *sig, size_t *size, co
     unsigned char r[33] = {0}, s[33] = {0};
     unsigned char *rp = r, *sp = s;
     size_t lenR = 33, lenS = 33;
-    CPubKey::secp256k1_scalar_get_be32(&r[1], ar);
-    CPubKey::secp256k1_scalar_get_be32(&s[1], as);
+    CPubKey::secp256k1_scalar_get_b32(&r[1], ar);
+    CPubKey::secp256k1_scalar_get_b32(&s[1], as);
     while (lenR > 1 && rp[0] == 0 && rp[1] < 0x80) { lenR--; rp++; }
     while (lenS > 1 && sp[0] == 0 && sp[1] < 0x80) { lenS--; sp++; }
     if (*size < 6+lenS+lenR) {
@@ -1031,18 +1031,18 @@ int CFirmKey::secp256k1_ecdsa_sign_recoverable(const CFirmKey::ecmult::secp256k1
         noncefp = CFirmKey::nonce::nonce_function_rfc6979;
     }
 
-    CPubKey::secp256k1_scalar_set_be32(&sec, seckey, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&sec, seckey, &overflow);
     /* Fail if the secret key is invalid. */
     if (!overflow && !CPubKey::secp256k1_scalar_is_zero(&sec)) {
         unsigned char nonce32[32];
         unsigned int count = 0;
-        CPubKey::secp256k1_scalar_set_be32(&msg, msg32, nullptr);
+        CPubKey::secp256k1_scalar_set_b32(&msg, msg32, nullptr);
         for(;;) {
             ret = noncefp(nonce32, msg32, seckey, NULL, (void*)noncedata, count);
             if (! ret) {
                 break;
             }
-            CPubKey::secp256k1_scalar_set_be32(&non, nonce32, &overflow);
+            CPubKey::secp256k1_scalar_set_b32(&non, nonce32, &overflow);
             if (!CPubKey::secp256k1_scalar_is_zero(&non) && !overflow) {
                 if (CFirmKey::secp256k1_ecdsa_sig_sign(gen_ctx, &r, &s, &sec, &msg, &non, &recid)) {
                     break;
@@ -1071,8 +1071,8 @@ int CFirmKey::secp256k1_ecdsa_recoverable_signature_serialize_compact(unsigned c
     ARG_CHECK(recid != nullptr);
 
     CPubKey::secp256k1_ecdsa_recoverable_signature_load(&r, &s, recid, sig);
-    CPubKey::secp256k1_scalar_get_be32(&output64[0], &r);
-    CPubKey::secp256k1_scalar_get_be32(&output64[32], &s);
+    CPubKey::secp256k1_scalar_get_b32(&output64[0], &r);
+    CPubKey::secp256k1_scalar_get_b32(&output64[32], &s);
     return 1;
 }
 
@@ -1106,13 +1106,13 @@ int CFirmKey::secp256k1_ec_privkey_tweak_add(unsigned char *seckey, const unsign
     ARG_CHECK(seckey != nullptr);
     ARG_CHECK(tweak != nullptr);
 
-    CPubKey::secp256k1_scalar_set_be32(&term, tweak, &overflow);
-    CPubKey::secp256k1_scalar_set_be32(&sec, seckey, nullptr);
+    CPubKey::secp256k1_scalar_set_b32(&term, tweak, &overflow);
+    CPubKey::secp256k1_scalar_set_b32(&sec, seckey, nullptr);
 
     ret = !overflow && CFirmKey::secp256k1_eckey_privkey_tweak_add(&sec, &term);
     std::memset(seckey, 0, 32);
     if (ret)
-        CPubKey::secp256k1_scalar_get_be32(seckey, &sec);
+        CPubKey::secp256k1_scalar_get_b32(seckey, &sec);
 
     CFirmKey::secp256k1_scalar_clear(&sec);
     CFirmKey::secp256k1_scalar_clear(&term);

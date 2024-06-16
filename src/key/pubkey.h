@@ -43,6 +43,47 @@ public:
     CEthID(const uint160 &in) : uint160(in) {}
 };
 
+/**Warning attributes
+  * NONNULL is not used if SECP256K1_BUILD is set to avoid the compiler optimizing out
+  * some paranoid null checks. */
+# if !defined(SECP256K1_GNUC_PREREQ)
+#  if defined(__GNUC__)&&defined(__GNUC_MINOR__)
+#   define SECP256K1_GNUC_PREREQ(_maj,_min) \
+ ((__GNUC__<<16)+__GNUC_MINOR__>=((_maj)<<16)+(_min))
+#  else
+#   define SECP256K1_GNUC_PREREQ(_maj,_min) 0
+#  endif
+# endif
+
+# if defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
+#  define SECP256K1_WARN_UNUSED_RESULT __attribute__ ((__warn_unused_result__))
+# else
+#  define SECP256K1_WARN_UNUSED_RESULT
+# endif
+# if !defined(SECP256K1_BUILD) && defined(__GNUC__) && SECP256K1_GNUC_PREREQ(3, 4)
+#  define SECP256K1_ARG_NONNULL(_x)  __attribute__ ((__nonnull__(_x)))
+# else
+#  define SECP256K1_ARG_NONNULL(_x)
+# endif
+
+# if (!defined(__STDC_VERSION__) || (__STDC_VERSION__ < 199901L) )
+#  if SECP256K1_GNUC_PREREQ(2,7)
+#   define SECP256K1_INLINE __inline__
+#  elif (defined(_MSC_VER))
+#   define SECP256K1_INLINE __inline
+#  else
+#   define SECP256K1_INLINE
+#  endif
+# else
+#  define SECP256K1_INLINE inline
+# endif
+
+#ifdef HAVE_BUILTIN_EXPECT
+#define EXPECT(x,c) __builtin_expect((x),(c))
+#else
+#define EXPECT(x,c) (x)
+#endif
+
 // An encapsulated libsecp256k1 Elliptic Curve key (public)
 // The signature is 1 byte at the beginning. so 33Bytes or 65 Bytes.
 // CoinAddress to use when sending coins is converted from CPubKey(65 Bytes) to CBitcoinAddress.
@@ -179,8 +220,8 @@ public:
         static void secp256k1_fe_verify(const secp256k1_fe *a);
 #endif
         static void secp256k1_fe_clear(secp256k1_fe *a);
-        static  int secp256k1_fe_set_be32(secp256k1_fe *r, const unsigned char *a);
-        static void secp256k1_fe_get_be32(unsigned char *r, const secp256k1_fe *a);
+        static  int secp256k1_fe_set_b32(secp256k1_fe *r, const unsigned char *a);
+        static void secp256k1_fe_get_b32(unsigned char *r, const secp256k1_fe *a);
         static void secp256k1_fe_from_storage(secp256k1_fe *r, const secp256k1_fe_storage *a);
         static void secp256k1_fe_to_storage(secp256k1_fe_storage *r, const secp256k1_fe *a);
         static void secp256k1_fe_set_int(secp256k1_fe *r, int a);
@@ -233,7 +274,7 @@ public:
         static int secp256k1_gej_eq_x_var(const secp256k1_fe *x, const secp256k1_gej *a);
         static const secp256k1_ge *secp256k1_get_ge_const_g();
 
-        // context
+        // public key r = na * a + ng * G: context
         class secp256k1_context {
         public:
             secp256k1_ge_storage (*pre_g_)[];     /* odd multiples of the generator */
@@ -288,8 +329,8 @@ public:
     // BIP66 (src/secp256k1)
     static int secp256k1_scalar_check_overflow(const secp256k1_scalar *a);
     static uint32_t secp256k1_scalar_reduce(secp256k1_scalar *r, uint32_t overflow);
-    static void secp256k1_scalar_set_be32(secp256k1_scalar *r, const unsigned char *b32, int *overflow);
-    static void secp256k1_scalar_get_be32(unsigned char *bin, const secp256k1_scalar *a);
+    static void secp256k1_scalar_set_b32(secp256k1_scalar *r, const unsigned char *b32, int *overflow);
+    static void secp256k1_scalar_get_b32(unsigned char *bin, const secp256k1_scalar *a);
     static void secp256k1_ecdsa_signature_save(secp256k1_signature *sig, const secp256k1_scalar *r, const secp256k1_scalar *s);
     static void secp256k1_ecdsa_signature_load(secp256k1_scalar *r, secp256k1_scalar *s, const secp256k1_signature *sig);
     static int secp256k1_ecdsa_signature_parse_compact(secp256k1_signature *sig, unsigned char *input64);
@@ -571,6 +612,19 @@ typedef struct {
     unsigned char data[64];
 } secp256k1_schnorrsig;
 
+/*
+ * The error callback function implemented in CPubKey is called by the ARG_CHECK, ARG_CHECK_FUNC macro.
+ *
+typedef struct {
+    void (*fn)(const char *text, void* data);
+    const void* data;
+} secp256k1_callback;
+
+static SECP256K1_INLINE void secp256k1_callback_call(const secp256k1_callback * const cb, const char * const text) {
+    cb->fn(text, (void*)cb->data);
+}
+*/
+
 namespace schnorr_nonce {
     int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter);
     int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter);
@@ -581,6 +635,63 @@ namespace schnorr_e_hash {
      * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
     void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32);
     void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32);
+}
+
+/* Numeric output function for debug console.
+ */
+inline void print_secp256k1_fe(const char *mes, const CPubKey::ecmult::secp256k1_fe *v) {
+    CPubKey::ecmult::secp256k1_fe v2 = *v;
+    CPubKey::ecmult::secp256k1_fe_normalize(&v2);
+    unsigned char buf[32];
+    CPubKey::ecmult::secp256k1_fe_get_b32(buf, &v2);
+    debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
+}
+
+inline void print_secp256k1_scalar(const char *mes, const CPubKey::secp256k1_scalar *s) {
+    unsigned char buf[32];
+    CPubKey::secp256k1_scalar_get_b32(buf, s);
+    debugcs::instance() << mes << ": " << strenc::HexStr(key_vector(BEGIN(buf), END(buf))) << debugcs::endl();
+}
+
+inline void print_bytes(const char *mes, const unsigned char *buf, int size) {
+    std::vector<unsigned char> vch;
+    vch.resize(size);
+    ::memcpy(&vch.front(), buf, size);
+    debugcs::instance() << mes << ": " << strenc::HexStr(vch) << debugcs::endl();
+}
+
+inline void print_bignum(const char *mes, BIGNUM *bn) {
+    char *bn_str = BN_bn2hex(bn);
+    if (bn_str) {
+        debugcs::instance() << mes << ": " << bn_str << debugcs::endl();
+        OPENSSL_free(bn_str);
+    } else {
+        debugcs::instance() << "Error converting BIGNUM to string" << debugcs::endl();
+    }
+}
+
+inline void print_ecpoint(const EC_GROUP *group, const EC_POINT *point) {
+    BN_CTX *ctx = BN_CTX_new();
+    BIGNUM *x = BN_new();
+    BIGNUM *y = BN_new();
+    do {
+        if (!ctx || !x || !y)
+            break;
+        if (EC_POINT_get_affine_coordinates_GFp(group, point, x, y, ctx) != 1)
+            break;
+
+        char *x_str = BN_bn2dec(x);
+        char *y_str = BN_bn2dec(y);
+        debugcs::instance() << "EC Point Coordinates:" << debugcs::endl();
+        debugcs::instance() << "x: " << x_str << debugcs::endl();
+        debugcs::instance() << "y: " << y_str << debugcs::endl();
+        OPENSSL_free(x_str);
+        OPENSSL_free(y_str);
+    } while(false);
+
+    BN_free(x);
+    BN_free(y);
+    BN_CTX_free(ctx);
 }
 
 /** SORA's Schnorr Signatures - Key Properties:
@@ -620,6 +731,11 @@ private:
 public:
     static int secp256k1_schnorrsig_serialize(unsigned char *out64, const secp256k1_schnorrsig *sig);
     static int secp256k1_schnorrsig_parse(secp256k1_schnorrsig *sig, const unsigned char *in64);
+
+    /* BIP-340: Helper function for verification and batch verification.
+     * Computes R = sG - eP. */
+    static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, const CPubKey::secp256k1_scalar *s, const CPubKey::secp256k1_scalar *e, const CPubKey::secp256k1_pubkey *pk);
+    static int secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256k1_ge *ge, const secp256k1_xonly_pubkey *pubkey);
 
 public:
     static constexpr unsigned int XONLY_PUBLIC_KEY_SIZE = 32;

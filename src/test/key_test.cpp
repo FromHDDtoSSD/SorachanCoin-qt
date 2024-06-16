@@ -242,7 +242,7 @@ public:
     // from secp256k1_scalar to uint256
     uint256 secp256k1_scalar_get_uint256(const CPubKey::secp256k1_scalar *unit) {
         uint256 value;
-        CPubKey::secp256k1_scalar_get_be32((unsigned char *)&value, unit);
+        CPubKey::secp256k1_scalar_get_b32((unsigned char *)&value, unit);
         return value;
     }
     std::pair<uint256, uint256> secp256k1_scalar_get_uint256(const CPubKey::secp256k1_scalar *re, const CPubKey::secp256k1_scalar *im) {
@@ -253,8 +253,8 @@ public:
         CPubKey::secp256k1_scalar unit_re, unit_im;
         CPubKey::secp256k1_scalar_set_int(&unit_re, 0);
         CPubKey::secp256k1_scalar_set_int(&unit_im, 0);
-        CPubKey::secp256k1_scalar_set_be32(&unit_re, (const unsigned char *)&gai->re, &overflow);
-        CPubKey::secp256k1_scalar_set_be32(&unit_im, (const unsigned char *)&gai->im, &overflow);
+        CPubKey::secp256k1_scalar_set_b32(&unit_re, (const unsigned char *)&gai->re, &overflow);
+        CPubKey::secp256k1_scalar_set_b32(&unit_im, (const unsigned char *)&gai->im, &overflow);
         return secp256k1_scalar_get_uint256(&unit_re, &unit_im);
     }
 
@@ -281,9 +281,9 @@ public:
         vchRS.push_back(0x04);
         for(int i=1; i<65; ++i)
             vchRS.push_back(0x10);
-        CPubKey::secp256k1_scalar_set_be32(&r, &vchRS[1], &overflow);
+        CPubKey::secp256k1_scalar_set_b32(&r, &vchRS[1], &overflow);
         ret &= !overflow;
-        CPubKey::secp256k1_scalar_set_be32(&s, &vchRS[33], &overflow);
+        CPubKey::secp256k1_scalar_set_b32(&s, &vchRS[33], &overflow);
         ret &= !overflow;
         ::fprintf(stdout, "k1_scalar_set_be32 overflow: %d\n", ret);
         ::fprintf(stdout, "r: %s\ns: %s\n", ToString(r).c_str(), ToString(s).c_str());
