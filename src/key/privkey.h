@@ -273,7 +273,16 @@ namespace bip340_tagged {
 // Schnorr signature
 class XOnlyFirmKey {
 public:
-    static int secp256k1_schnorrsig_aggregation(const std::vector<CSecret> *secrets, CSecret *agg_secret, const std::vector<CPubKey> *pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey);
+    XOnlyFirmKey() {}
+
+    size_t size() const { return secrets.size(); }
+    void push(CSecret &&in) { secrets.emplace_back(in); }
+    void clear() { secrets.clear(); secrets.shrink_to_fit(); }
+
+    static int secp256k1_schnorrsig_aggregation(Span<CSecret> secrets, CSecret *agg_secret, Span<CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey);
+
+private:
+    std::vector<CSecret> secrets;
 };
 
 // BIP32

@@ -1392,6 +1392,60 @@ namespace bip340_tagged {
     }
 } // namespace bip340_tagged
 
+int XOnlyFirmKey::secp256k1_schnorrsig_aggregation(Span<CSecret> secrets, CSecret *agg_secret, Span<CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey)
+{
+    // CSecret
+    {
+        CPubKey::secp256k1_scalar ret;
+        CPubKey::secp256k1_scalar_set_int(&ret, 0);
+        for(auto d: secrets) {
+            CPubKey::secp256k1_scalar tmp;
+            int overflow;
+            CPubKey::secp256k1_scalar_set_b32(&tmp, d.data(), &overflow);
+            if(overflow) {
+                cleanse::memory_cleanse(&ret, 32);
+                cleanse::memory_cleanse(&tmp, 32);
+                return 0;
+            }
+            CPubKey::secp256k1_scalar_add(&ret, &ret, &tmp);
+            cleanse::memory_cleanse(&tmp, 32);
+        }
+        agg_secret->resize(32);
+        unsigned char *buf = &agg_secret->front();
+        CPubKey::secp256k1_scalar_get_b32(buf, &ret);
+        cleanse::memory_cleanse(&ret, 32);
+    }
+
+    // CPubKey
+    {
+        CPubKey::ecmult::secp256k1_gej gej_ret;
+        CPubKey::ecmult::secp256k1_gej_set_infinity(&gej_ret);
+        CPubKey::ecmult::secp256k1_fe rzr;
+        CPubKey::ecmult::secp256k1_fe_clear(&rzr);
+        for(auto d: pubkeys)
+        {
+            CPubKey pubkey = d;
+            CPubKey::ecmult::secp256k1_ge ge_xy;
+            CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
+            pubkey.Decompress();
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pubkey.data() + 1);
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pubkey.data() + 33);
+            CPubKey::ecmult::secp256k1_ge_set_xy(&ge_xy, &fe_x, &fe_y);
+            if(CPubKey::ecmult::secp256k1_gej_is_infinity(&gej_ret))
+                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, NULL);
+            else
+                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, &rzr);
+        }
+        CPubKey::ecmult::secp256k1_ge ge_ret;
+        CPubKey::ecmult::secp256k1_ge_set_gej(&ge_ret, &gej_ret);
+        CPubKey::ecmult::secp256k1_fe_normalize_var(&ge_ret.x);
+        ::memset(&x_only_agg_pubkey->data[0], 0x00, 64);
+        CPubKey::ecmult::secp256k1_fe_get_b32(&x_only_agg_pubkey->data[0], &ge_ret.x);
+    }
+
+    return 1;
+}
+
 /////////////////////////////////////////////////////////////////////////////////
 // BIP32
 /////////////////////////////////////////////////////////////////////////////////
