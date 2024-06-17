@@ -806,6 +806,12 @@ CPubKey CFirmKey::GetPubKey() const {
     return result;
 }
 
+XOnlyPubKey CFirmKey::GetXOnlyPubKey() const {
+    CPubKey pubkey = GetPubKey();
+    pubkey.Compress();
+    return XOnlyPubKey(Span<const unsigned char>(pubkey.data() + 1, 32));
+}
+
 CSecret CFirmKey::GetSecret(bool &fCompressed) const {
     CSecret ret(keydata_.begin(), keydata_.end());
     fCompressed = fCompressed_;
@@ -1392,13 +1398,18 @@ namespace bip340_tagged {
     }
 } // namespace bip340_tagged
 
-int XOnlyFirmKey::secp256k1_schnorrsig_aggregation(Span<CSecret> secrets, CSecret *agg_secret, Span<CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey)
+/** Schnorr Signature Aggregation (priv aggregation, nonce randomness)
+ */
+int XOnlyFirmKeys::secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSecret *agg_secret)
 {
+    if(secrets.size() == 0 || agg_secret == NULL)
+        return 0;
+
     // CSecret
     {
         CPubKey::secp256k1_scalar ret;
         CPubKey::secp256k1_scalar_set_int(&ret, 0);
-        for(auto d: secrets) {
+        for(const auto &d: secrets) {
             CPubKey::secp256k1_scalar tmp;
             int overflow;
             CPubKey::secp256k1_scalar_set_b32(&tmp, d.data(), &overflow);
@@ -1416,34 +1427,171 @@ int XOnlyFirmKey::secp256k1_schnorrsig_aggregation(Span<CSecret> secrets, CSecre
         cleanse::memory_cleanse(&ret, 32);
     }
 
-    // CPubKey
-    {
-        CPubKey::ecmult::secp256k1_gej gej_ret;
-        CPubKey::ecmult::secp256k1_gej_set_infinity(&gej_ret);
-        CPubKey::ecmult::secp256k1_fe rzr;
-        CPubKey::ecmult::secp256k1_fe_clear(&rzr);
-        for(auto d: pubkeys)
-        {
-            CPubKey pubkey = d;
-            CPubKey::ecmult::secp256k1_ge ge_xy;
-            CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
-            pubkey.Decompress();
-            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pubkey.data() + 1);
-            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pubkey.data() + 33);
-            CPubKey::ecmult::secp256k1_ge_set_xy(&ge_xy, &fe_x, &fe_y);
-            if(CPubKey::ecmult::secp256k1_gej_is_infinity(&gej_ret))
-                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, NULL);
-            else
-                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, &rzr);
-        }
-        CPubKey::ecmult::secp256k1_ge ge_ret;
-        CPubKey::ecmult::secp256k1_ge_set_gej(&ge_ret, &gej_ret);
-        CPubKey::ecmult::secp256k1_fe_normalize_var(&ge_ret.x);
-        ::memset(&x_only_agg_pubkey->data[0], 0x00, 64);
-        CPubKey::ecmult::secp256k1_fe_get_b32(&x_only_agg_pubkey->data[0], &ge_ret.x);
+    return 1;
+}
+
+/** Create a Schnorr signature.
+ *
+ * Returns 1 on success, 0 on failure.
+ *  Args:    ctx: pointer to the secp256k1_gen_ctx (can be NULL)
+ *  Out:     sig: pointer to the returned signature (cannot be NULL)
+ *       nonce_is_negated: a pointer to an integer indicates if signing algorithm negated the
+ *                nonce (can be NULL)
+ *  In:    msg32: the 32-byte message hash being signed (cannot be NULL)
+ *        seckey: pointer to a 32-byte secret key (cannot be NULL)
+ *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_and_random_function_schnorr is used
+ *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
+ */
+int XOnlyFirmKey::secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata)
+{
+    ARG_CHECK(sig != NULL);
+    ARG_CHECK(msg32 != NULL);
+    ARG_CHECK(seckey != NULL);
+
+    // get secret key (from seckey to x)
+    CPubKey::secp256k1_scalar x;
+    int overflow;
+    CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
+    /* Fail if the secret key is invalid. */
+    if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
     }
 
+    // get public key (pubkey = x * G)
+    CPubKey::ecmult::secp256k1_gej pkj;
+    CPubKey::ecmult::secp256k1_ge pk;
+    CFirmKey::ecmult::secp256k1_gen_context ctxobj;
+    if(ctx == NULL) {
+        ctx = &ctxobj;
+        if(!ctx->build()) {
+            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+    }
+    if(!ctx->secp256k1_ecmult_gen(&pkj, &x)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_ge_set_gej(&pk, &pkj);
+
+    // get nonce k (random number for signature)
+    unsigned char buf[32];
+    if (noncefp == NULL)
+        noncefp = schnorr_nonce::secp256k1_nonce_and_random_function_schnorr;
+    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
+    }
+    CPubKey::secp256k1_scalar k;
+    CPubKey::secp256k1_scalar_set_b32(&k, buf, NULL);
+    if (CPubKey::secp256k1_scalar_is_zero(&k)) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        cleanse::memory_cleanse(&k, sizeof(k));
+        return 0;
+    }
+
+    // get and check r = k*G (if r.y cannot get sqrt, compute negate k)
+    CPubKey::secp256k1_scalar one;
+    CPubKey::secp256k1_scalar_set_int(&one, 1);
+    CPubKey::ecmult::secp256k1_ge r;
+    do {
+        CPubKey::ecmult::secp256k1_gej rj;
+        if(!ctx->secp256k1_ecmult_gen(&rj, &k)) {
+            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+            cleanse::memory_cleanse(&x, sizeof(x));
+            cleanse::memory_cleanse(&k, sizeof(k));
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_ge_set_gej(&r, &rj);
+        CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y); // Check r.y is odd
+        if(CPubKey::ecmult::secp256k1_fe_is_odd(&r.y)) {
+            if(CPubKey::secp256k1_scalar_add(&k, &k, &one) == 1) { // if r.y is odd, k is added 1
+                // Fail if k is overflow
+                cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+                cleanse::memory_cleanse(&x, sizeof(x));
+                cleanse::memory_cleanse(&k, sizeof(k));
+                return 0;
+            }
+        } else {
+            break;
+        }
+    } while(true);
+    if (nonce_is_negated != NULL)
+        *nonce_is_negated = 0;
+    if (!CPubKey::ecmult::secp256k1_fe_is_quad_var(&r.y)) {
+        CPubKey::secp256k1_scalar_negate(&k, &k);
+        if (nonce_is_negated != NULL)
+            *nonce_is_negated = 1;
+    }
+
+    // store signature [(r.x) | s]
+    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
+    CPubKey::ecmult::secp256k1_fe_get_b32(&sig->data[0], &r.x);
+
+    /* Compute e. */
+    CPubKey::secp256k1_scalar e;
+    unsigned char pub_buf[CPubKey::COMPRESSED_PUBLIC_KEY_SIZE];
+    size_t pub_buflen;
+    CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
+    if(pub_buflen != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {
+        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
+        cleanse::memory_cleanse(&x, sizeof(x));
+        cleanse::memory_cleanse(&k, sizeof(k));
+        return 0;
+    }
+    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
+
+    // generate s = k + e * privkey
+    // if pub_y is even: s = k + e * privkey
+    // if pub_y is odd: s = k + negate(e) * privkey
+    CPubKey::secp256k1_scalar s;
+    if (pub_buf[0] == CPubKey::SECP256K1_TAG_PUBKEY_ODD)
+        CPubKey::secp256k1_scalar_negate(&e, &e);
+    CPubKey::secp256k1_scalar_mul(&e, &e, &x);
+    CPubKey::secp256k1_scalar_add(&s, &e, &k);
+
+    // store signature [r.x | (s)]
+    CPubKey::secp256k1_scalar_get_b32(&sig->data[32], &s);
+
+    cleanse::memory_cleanse(&k, sizeof(k));
+    cleanse::memory_cleanse(&x, sizeof(x));
     return 1;
+}
+
+bool XOnlyFirmKey::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
+    secp256k1_schnorrsig sig;
+    bool fret = (secp256k1_schnorrsig_sign(NULL, &sig, NULL, msg.begin(), m_secret.data(), NULL, NULL) == 1) ? true: false;
+    if(fret) {
+        sigbytes.resize(64);
+        XOnlyPubKey::secp256k1_schnorrsig_serialize(&sigbytes.front(), &sig);
+        return true;
+    } else {
+        sigbytes.clear();
+        return false;
+    }
+}
+
+bool XOnlyFirmKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
+    CSecret agg_secret;
+    if(!aggregation(&agg_secret))
+        return false;
+
+    secp256k1_schnorrsig sig;
+    bool fret = (XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, NULL, msg.begin(), agg_secret.data(), NULL, NULL) == 1) ? true: false;
+    if(fret) {
+        sigbytes.resize(64);
+        XOnlyPubKey::secp256k1_schnorrsig_serialize(&sigbytes.front(), &sig);
+        return true;
+    } else {
+        sigbytes.clear();
+        return false;
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////////

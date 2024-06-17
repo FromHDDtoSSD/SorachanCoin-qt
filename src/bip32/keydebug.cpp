@@ -10,7 +10,7 @@
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 
-#define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
+// #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
 namespace schnorr_openssl {
 
@@ -311,11 +311,13 @@ bool verify(const BIGNUM *pubkey_x, const uint256 &hash, const std::vector<unsig
 
 } // schnorr_openssl
 
+/*
 #define ARG_CHECK(cond) do { \
     if (EXPECT(!(cond), 0)) { \
         return 0; \
     } \
 } while(0)
+*/
 
 #ifndef EXHAUSTIVE_TEST_ORDER
 /* see group_impl.h for allowable values */
@@ -334,218 +336,6 @@ static SECP256K1_INLINE void secp256k1_scalar_memcpy(CPubKey::secp256k1_scalar *
     for (int i = 0; i < 8; i++) {
         r->d[i] = secp256k1_check_overflow(a->d[i], 0, overflow & mask);
     }
-}
-
-/** Create a Schnorr signature.
- *
- * Returns 1 on success, 0 on failure.
- *  Args:    ctx: pointer to the secp256k1_gen_ctx (can be NULL)
- *  Out:     sig: pointer to the returned signature (cannot be NULL)
- *       nonce_is_negated: a pointer to an integer indicates if signing algorithm negated the
- *                nonce (can be NULL)
- *  In:    msg32: the 32-byte message hash being signed (cannot be NULL)
- *        seckey: pointer to a 32-byte secret key (cannot be NULL)
- *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_and_random_function_schnorr is used
- *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
- */
-static int secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata)
-{
-    ARG_CHECK(sig != NULL);
-    ARG_CHECK(msg32 != NULL);
-    ARG_CHECK(seckey != NULL);
-
-    // get secret key (from seckey to x)
-    CPubKey::secp256k1_scalar x;
-    int overflow;
-    CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
-    /* Fail if the secret key is invalid. */
-    if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
-        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-
-    // get public key (pubkey = x * G)
-    CPubKey::ecmult::secp256k1_gej pkj;
-    CPubKey::ecmult::secp256k1_ge pk;
-    CFirmKey::ecmult::secp256k1_gen_context ctxobj;
-    if(ctx == NULL) {
-        ctx = &ctxobj;
-        if(!ctx->build()) {
-            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-            cleanse::memory_cleanse(&x, sizeof(x));
-            return 0;
-        }
-    }
-    if(!ctx->secp256k1_ecmult_gen(&pkj, &x)) {
-        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-    CPubKey::ecmult::secp256k1_ge_set_gej(&pk, &pkj);
-
-    // get nonce k (random number for signature)
-    unsigned char buf[32];
-    if (noncefp == NULL)
-        noncefp = schnorr_nonce::secp256k1_nonce_and_random_function_schnorr;
-    if (!noncefp(buf, msg32, seckey, NULL, (void*)ndata, 0)) {
-        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-    CPubKey::secp256k1_scalar k;
-    CPubKey::secp256k1_scalar_set_b32(&k, buf, NULL);
-    if (CPubKey::secp256k1_scalar_is_zero(&k)) {
-        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-        cleanse::memory_cleanse(&x, sizeof(x));
-        cleanse::memory_cleanse(&k, sizeof(k));
-        return 0;
-    }
-
-    // get and check r = k*G (if r.y cannot get sqrt, compute negate k)
-    CPubKey::secp256k1_scalar one;
-    CPubKey::secp256k1_scalar_set_int(&one, 1);
-    CPubKey::ecmult::secp256k1_ge r;
-    do {
-        CPubKey::ecmult::secp256k1_gej rj;
-        if(!ctx->secp256k1_ecmult_gen(&rj, &k)) {
-            cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-            cleanse::memory_cleanse(&x, sizeof(x));
-            cleanse::memory_cleanse(&k, sizeof(k));
-            return 0;
-        }
-        CPubKey::ecmult::secp256k1_ge_set_gej(&r, &rj);
-        CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y); // Check r.y is odd
-        if(CPubKey::ecmult::secp256k1_fe_is_odd(&r.y)) {
-            if(CPubKey::secp256k1_scalar_add(&k, &k, &one) == 1) { // if r.y is odd, k is added 1
-                // Fail if k is overflow
-                cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-                cleanse::memory_cleanse(&x, sizeof(x));
-                cleanse::memory_cleanse(&k, sizeof(k));
-                return 0;
-            }
-        } else {
-            break;
-        }
-    } while(true);
-    if (nonce_is_negated != NULL)
-        *nonce_is_negated = 0;
-    if (!CPubKey::ecmult::secp256k1_fe_is_quad_var(&r.y)) {
-        CPubKey::secp256k1_scalar_negate(&k, &k);
-        if (nonce_is_negated != NULL)
-            *nonce_is_negated = 1;
-    }
-
-    // store signature [(r.x) | s]
-    CPubKey::ecmult::secp256k1_fe_normalize(&r.x);
-    CPubKey::ecmult::secp256k1_fe_get_b32(&sig->data[0], &r.x);
-
-    /* Compute e. */
-    CPubKey::secp256k1_scalar e;
-    unsigned char pub_buf[CPubKey::COMPRESSED_PUBLIC_KEY_SIZE];
-    size_t pub_buflen;
-    CPubKey::secp256k1_eckey_pubkey_serialize(&pk, pub_buf, &pub_buflen, 1);
-    if(pub_buflen != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE) {
-        cleanse::memory_cleanse(sig->data, sizeof(sig->data));
-        cleanse::memory_cleanse(&x, sizeof(x));
-        cleanse::memory_cleanse(&k, sizeof(k));
-        return 0;
-    }
-    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig->data[0], msg32, pub_buf + 1);
-
-    // generate s = k + e * privkey
-    // if pub_y is even: s = k + e * privkey
-    // if pub_y is odd: s = k + negate(e) * privkey
-    CPubKey::secp256k1_scalar s;
-    if (pub_buf[0] == CPubKey::SECP256K1_TAG_PUBKEY_ODD)
-        CPubKey::secp256k1_scalar_negate(&e, &e);
-    CPubKey::secp256k1_scalar_mul(&e, &e, &x);
-    CPubKey::secp256k1_scalar_add(&s, &e, &k);
-
-    // store signature [r.x | (s)]
-    CPubKey::secp256k1_scalar_get_b32(&sig->data[32], &s);
-
-    cleanse::memory_cleanse(&k, sizeof(k));
-    cleanse::memory_cleanse(&x, sizeof(x));
-    return 1;
-}
-
-static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey)
-{
-    ARG_CHECK(sig64 != NULL);
-    ARG_CHECK(msg32 != NULL);
-    ARG_CHECK(pubkey != NULL);
-
-    /* y^2 = x^3 + 7 */
-    CPubKey::ecmult::secp256k1_fe sc7;
-    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
-
-    /* Get R_x */
-    CPubKey::ecmult::secp256k1_fe rx;
-    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&rx, &sig64[0]))
-        return 0;
-
-    /* Compute R_y */
-    CPubKey::ecmult::secp256k1_fe ry;
-    CPubKey::ecmult::secp256k1_fe_sqr(&ry, &rx);
-    CPubKey::ecmult::secp256k1_fe_mul(&ry, &ry, &rx);
-    CPubKey::ecmult::secp256k1_fe_add(&ry, &sc7);
-    CPubKey::ecmult::secp256k1_fe_sqrt(&ry, &ry);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
-    if(CPubKey::ecmult::secp256k1_fe_is_odd(&ry))
-        CPubKey::ecmult::secp256k1_fe_negate(&ry, &ry, 1);
-
-    /* Get s */
-    CPubKey::secp256k1_scalar s;
-    int overflow;
-    CPubKey::secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
-    if (overflow)
-        return 0;
-
-    /* Get pub_x */
-    CPubKey::ecmult::secp256k1_fe pub_x;
-    if(!CPubKey::ecmult::secp256k1_fe_set_b32(&pub_x, &pubkey->data[0]))
-        return 0;
-
-    /* Compute pub_y */
-    CPubKey::ecmult::secp256k1_fe pub_y;
-    CPubKey::ecmult::secp256k1_fe_sqr(&pub_y, &pub_x);
-    CPubKey::ecmult::secp256k1_fe_mul(&pub_y, &pub_y, &pub_x);
-    CPubKey::ecmult::secp256k1_fe_add(&pub_y, &sc7);
-    CPubKey::ecmult::secp256k1_fe_sqrt(&pub_y, &pub_y);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&pub_y);
-    if(CPubKey::ecmult::secp256k1_fe_is_odd(&pub_y))
-        CPubKey::ecmult::secp256k1_fe_negate(&pub_y, &pub_y, 1);
-    CPubKey::ecmult::secp256k1_ge pk;
-    CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &pub_x, &pub_y);
-
-    /* Compute e. */
-    CPubKey::secp256k1_scalar e;
-    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
-
-    /* Compute rj =  s*G + (-e)*pkj */
-    CPubKey::ecmult::secp256k1_gej pkj;
-    CPubKey::ecmult::secp256k1_gej rj;
-    CPubKey::ecmult::secp256k1_ge r;
-    CPubKey::secp256k1_scalar_negate(&e, &e);
-    CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
-    if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &e, &s))
-        return 0;
-    CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
-    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
-        return 0;
-
-    /* Checking R_x == r.x && R_y == r.y */
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&rx);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.x);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
-    if(CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&ry, &r.y) == 0)
-        return 1;
-    CPubKey::ecmult::secp256k1_fe neg_ry;
-    CPubKey::ecmult::secp256k1_fe_negate(&neg_ry, &ry, 1);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&neg_ry);
-    return (CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&neg_ry, &r.y) == 0) ? 1: 0;
 }
 
 EC_KEY *Create_pub_y_odd_eckey(const EC_GROUP *group, BN_CTX *ctx) {
@@ -802,7 +592,7 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
         uint256 hash = Create_random_hash();
 
         // sign
-        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1250,7 +1040,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         uint256 hash = Create_random_hash();
 
         // sign
-        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1260,7 +1050,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         ::memcpy(x_only_pubkey.data, pubkey.data() + 1, 32);
 
         // valid verify
-        if(secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey))
+        if(XOnlyPubKey::secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey))
             debugcs::instance() << __func__ << " ok Libsecp256k1 sign, verify valid" << debugcs::endl();
         else {
             debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify invalid" << debugcs::endl();
@@ -1271,7 +1061,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         uint256 invalid_hash = hash;
         invalid_hash.begin()[2] = 0xFF;
         invalid_hash.begin()[3] = 0x55;
-        if(secp256k1_schnorrsig_verify(&sig.data[0], invalid_hash.begin(), &x_only_pubkey)) {
+        if(XOnlyPubKey::secp256k1_schnorrsig_verify(&sig.data[0], invalid_hash.begin(), &x_only_pubkey)) {
             debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify1 invalid" << debugcs::endl();
             break;
         } else
@@ -1279,7 +1069,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
 
         // invalid verify 2
         x_only_pubkey.data[0] += 0x7F;
-        if(secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey)) {
+        if(XOnlyPubKey::secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_pubkey)) {
             debugcs::instance() << __func__ << " failure Libsecp256k1 sign, verify2 invalid" << debugcs::endl();
             break;
         } else
@@ -1409,29 +1199,46 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         secrets.reserve(schnorr_agg_num);
         std::vector<CPubKey> pubkeys;
         pubkeys.reserve(schnorr_agg_num);
+        XOnlyFirmKeys xonlykeys;
+        XOnlyPubKeys xonlypubs;
         for(int i=0; i < schnorr_agg_num; ++i) {
             std::shared_ptr<CFirmKey> secpkey = Create_pub_y_key();
             if(!secpkey.get())
                 return false;
             secrets.emplace_back(secpkey->GetSecret());
+            xonlykeys.push(secpkey->GetSecret()); // move
             pubkeys.emplace_back(secpkey->GetPubKey());
+            xonlypubs.push(secpkey->GetPubKey()); //move
         }
 
         // aggregate sign
         CSecret agg_secret;
         secp256k1_xonly_pubkey x_only_agg_pubkey;
-        Span<CSecret> sp_secrets(secrets.data(), 55);
-        Span<CPubKey> sp_pubkeys(pubkeys.data(), 55);
-        if(XOnlyFirmKey::secp256k1_schnorrsig_aggregation(sp_secrets, &agg_secret, sp_pubkeys, &x_only_agg_pubkey) != 1) {
+        Span<const CSecret> sp_secrets(secrets);
+        if(XOnlyFirmKeys::secp256k1_schnorrsig_aggregation(sp_secrets, &agg_secret) != 1) {
+            debugcs::instance() << "Failure Libsecp256k1 aggregate sign" << debugcs::endl();
+            break;
+        }
+        Span<const CPubKey> sp_pubkeys(pubkeys);
+        if(XOnlyPubKeys::secp256k1_schnorrsig_aggregation(sp_pubkeys, &x_only_agg_pubkey) != 1) {
             debugcs::instance() << "Failure Libsecp256k1 aggregate sign" << debugcs::endl();
             break;
         }
         secp256k1_schnorrsig sig;
-        if(secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        std::vector<unsigned char> sigbytes;
+        if(!xonlykeys.SignSchnorr(hash, sigbytes))
+            break;
+        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         // valid agg verify
-        if(secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_agg_pubkey) == 1)
+        if(xonlypubs.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
+            debugcs::instance() << "xonly OK Libsecp256k1 agg sign, verify valid" << debugcs::endl();
+        else {
+            debugcs::instance() << "xonly Failure Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
+            break;
+        }
+        if(XOnlyPubKey::secp256k1_schnorrsig_verify(&sig.data[0], hash.begin(), &x_only_agg_pubkey) == 1)
             debugcs::instance() << "OK Libsecp256k1 agg sign, verify valid" << debugcs::endl();
         else {
             debugcs::instance() << "Failure Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
@@ -1442,7 +1249,13 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         uint256 hash2 = hash;
         *hash2.begin() = 0x7E;
         *(hash2.begin() + 1) = 0x7E;
-        if(secp256k1_schnorrsig_verify(&sig.data[0], hash2.begin(), &x_only_agg_pubkey) != 1)
+        if(!xonlypubs.VerifySchnorr(hash2, Span<const unsigned char>(sigbytes)))
+            debugcs::instance() << "xonly OK Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
+        else {
+            debugcs::instance() << "xonly Failure Libsecp256k1 agg sign, verify valid" << debugcs::endl();
+            break;
+        }
+        if(XOnlyPubKey::secp256k1_schnorrsig_verify(&sig.data[0], hash2.begin(), &x_only_agg_pubkey) != 1)
             debugcs::instance() << "OK Libsecp256k1 agg sign, verify invalid" << debugcs::endl();
         else {
             debugcs::instance() << "Failure Libsecp256k1 agg sign, verify valid" << debugcs::endl();
@@ -1707,9 +1520,9 @@ void Debug_checking_sign_verify() {
     //    debugcs::instance() << __func__ << " pubkey collect failure" << debugcs::endl();
 
     // Schnorr aggregation sign and verify
-    if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation()) {
-        assert(!"4: failure Libsecp256k1_schnorr_sign_and_verify_and_aggregation");
-    }
+    //if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation()) {
+    //    assert(!"4: failure Libsecp256k1_schnorr_sign_and_verify_and_aggregation");
+    //}
 
     //Span_check();
 

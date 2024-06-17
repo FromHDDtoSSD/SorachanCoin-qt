@@ -4250,8 +4250,153 @@ int XOnlyPubKey::secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256k1_ge *ge, 
     return CPubKey::secp256k1_pubkey_load(ge, &pub);
 }
 
+void XOnlyPubKey::secp256k1_xonly_pubkey_load(secp256k1_xonly_pubkey *pubkey, const uint256 *in) {
+    ::memset(pubkey->data, 0x00, 64);
+    ::memcpy(pubkey->data, in->begin(), 32);
+}
 
+void XOnlyPubKey::secp256k1_xonly_pubkey_save(uint256 *out, const secp256k1_xonly_pubkey *pubkey) {
+    ::memcpy(out->begin(), pubkey->data, 32);
+}
 
+/** Schnorr Signature Aggregation (pub aggregation, nonce randomness)
+ */
+int XOnlyPubKeys::secp256k1_schnorrsig_aggregation(Span<const CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey)
+{
+    if(pubkeys.size() == 0 || x_only_agg_pubkey == NULL)
+        return 0;
+
+    // CPubKey
+    {
+        CPubKey::ecmult::secp256k1_gej gej_ret;
+        CPubKey::ecmult::secp256k1_gej_set_infinity(&gej_ret);
+        CPubKey::ecmult::secp256k1_fe rzr;
+        CPubKey::ecmult::secp256k1_fe_clear(&rzr);
+        for(const auto &d: pubkeys)
+        {
+            CPubKey pubkey = d;
+            CPubKey::ecmult::secp256k1_ge ge_xy;
+            CPubKey::ecmult::secp256k1_fe fe_x, fe_y;
+            pubkey.Decompress();
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_x, pubkey.data() + 1);
+            CPubKey::ecmult::secp256k1_fe_set_b32(&fe_y, pubkey.data() + 33);
+            CPubKey::ecmult::secp256k1_ge_set_xy(&ge_xy, &fe_x, &fe_y);
+            if(CPubKey::ecmult::secp256k1_gej_is_infinity(&gej_ret))
+                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, NULL);
+            else
+                CPubKey::ecmult::secp256k1_gej_add_ge_var(&gej_ret, &gej_ret, &ge_xy, &rzr);
+        }
+        CPubKey::ecmult::secp256k1_ge ge_ret;
+        CPubKey::ecmult::secp256k1_ge_set_gej(&ge_ret, &gej_ret);
+        CPubKey::ecmult::secp256k1_fe_normalize_var(&ge_ret.x);
+        ::memset(&x_only_agg_pubkey->data[0], 0x00, 64);
+        CPubKey::ecmult::secp256k1_fe_get_b32(&x_only_agg_pubkey->data[0], &ge_ret.x);
+    }
+
+    return 1;
+}
+
+/* Schnorr Signatures Verify
+ */
+int XOnlyPubKey::secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey)
+{
+    ARG_CHECK(sig64 != NULL);
+    ARG_CHECK(msg32 != NULL);
+    ARG_CHECK(pubkey != NULL);
+
+    /* y^2 = x^3 + 7 */
+    CPubKey::ecmult::secp256k1_fe sc7;
+    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
+
+    /* Get R_x */
+    CPubKey::ecmult::secp256k1_fe rx;
+    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&rx, &sig64[0]))
+        return 0;
+
+    /* Compute R_y */
+    CPubKey::ecmult::secp256k1_fe ry;
+    CPubKey::ecmult::secp256k1_fe_sqr(&ry, &rx);
+    CPubKey::ecmult::secp256k1_fe_mul(&ry, &ry, &rx);
+    CPubKey::ecmult::secp256k1_fe_add(&ry, &sc7);
+    CPubKey::ecmult::secp256k1_fe_sqrt(&ry, &ry);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&ry))
+        CPubKey::ecmult::secp256k1_fe_negate(&ry, &ry, 1);
+
+    /* Get s */
+    CPubKey::secp256k1_scalar s;
+    int overflow;
+    CPubKey::secp256k1_scalar_set_b32(&s, &sig64[32], &overflow);
+    if (overflow)
+        return 0;
+
+    /* Get pub_x */
+    CPubKey::ecmult::secp256k1_fe pub_x;
+    if(!CPubKey::ecmult::secp256k1_fe_set_b32(&pub_x, &pubkey->data[0]))
+        return 0;
+
+    /* Compute pub_y */
+    CPubKey::ecmult::secp256k1_fe pub_y;
+    CPubKey::ecmult::secp256k1_fe_sqr(&pub_y, &pub_x);
+    CPubKey::ecmult::secp256k1_fe_mul(&pub_y, &pub_y, &pub_x);
+    CPubKey::ecmult::secp256k1_fe_add(&pub_y, &sc7);
+    CPubKey::ecmult::secp256k1_fe_sqrt(&pub_y, &pub_y);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&pub_y);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&pub_y))
+        CPubKey::ecmult::secp256k1_fe_negate(&pub_y, &pub_y, 1);
+    CPubKey::ecmult::secp256k1_ge pk;
+    CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &pub_x, &pub_y);
+
+    /* Compute e. */
+    CPubKey::secp256k1_scalar e;
+    schnorr_e_hash::secp256k1_schnorrsig_challenge(&e, &sig64[0], msg32, &pubkey->data[0]);
+
+    /* Compute rj =  s*G + (-e)*pkj */
+    CPubKey::ecmult::secp256k1_gej pkj;
+    CPubKey::ecmult::secp256k1_gej rj;
+    CPubKey::ecmult::secp256k1_ge r;
+    CPubKey::secp256k1_scalar_negate(&e, &e);
+    CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
+    if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &e, &s))
+        return 0;
+    CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
+    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r))
+        return 0;
+
+    /* Checking R_x == r.x && R_y == r.y */
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&rx);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.x);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&ry);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&r.y);
+    if(CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&ry, &r.y) == 0)
+        return 1;
+    CPubKey::ecmult::secp256k1_fe neg_ry;
+    CPubKey::ecmult::secp256k1_fe_negate(&neg_ry, &ry, 1);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&neg_ry);
+    return (CPubKey::ecmult::secp256k1_fe_cmp_var(&rx, &r.x) == 0 && CPubKey::ecmult::secp256k1_fe_cmp_var(&neg_ry, &r.y) == 0) ? 1: 0;
+}
+
+bool XOnlyPubKey::VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const
+{
+    if(sigbytes.size() != SCHNORR_SIGNATURE_SIZE)
+        return false;
+
+    secp256k1_xonly_pubkey pubkey;
+    secp256k1_xonly_pubkey_load(&pubkey, &m_keydata);
+    return (secp256k1_schnorrsig_verify(sigbytes.data(), msg.begin(), &pubkey) == 1) ? true: false;
+}
+
+bool XOnlyPubKeys::VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const
+{
+    if(sigbytes.size() != XOnlyPubKey::SCHNORR_SIGNATURE_SIZE)
+        return false;
+
+    secp256k1_xonly_pubkey agg_pubkey;
+    if(!aggregation(&agg_pubkey))
+        return false;
+
+    return (XOnlyPubKey::secp256k1_schnorrsig_verify(sigbytes.data(), msg.begin(), &agg_pubkey) == 1) ? true: false;
+}
 
 uint256 secp256k1_negate_ope::fe_get_uint256(const s256k1_fe *fe) { // fe (be normalized)
     uint256 value;

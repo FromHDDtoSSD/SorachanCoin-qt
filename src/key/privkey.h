@@ -208,6 +208,9 @@ public:
     //! Compute the public key from a private key.
     CPubKey GetPubKey() const;
 
+    //! Compute the schnorr xonly public key from a private key.
+    XOnlyPubKey GetXOnlyPubKey() const;
+
     //! Compute the CSecret from a private key.
     CSecret GetSecret(bool &fCompressed) const;
     CSecret GetSecret() const {
@@ -271,18 +274,64 @@ namespace bip340_tagged {
 }
 
 // Schnorr signature
-class XOnlyFirmKey {
-public:
-    XOnlyFirmKey() {}
-
-    size_t size() const { return secrets.size(); }
-    void push(CSecret &&in) { secrets.emplace_back(in); }
-    void clear() { secrets.clear(); secrets.shrink_to_fit(); }
-
-    static int secp256k1_schnorrsig_aggregation(Span<CSecret> secrets, CSecret *agg_secret, Span<CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey);
-
+class XOnlyFirmKey
+{
 private:
-    std::vector<CSecret> secrets;
+    CSecret m_secret;
+
+public:
+    /** Create a Schnorr signature.
+     *
+     * Returns 1 on success, 0 on failure.
+     *  Args:    ctx: pointer to the secp256k1_gen_ctx (can be NULL)
+     *  Out:     sig: pointer to the returned signature (cannot be NULL)
+     *       nonce_is_negated: a pointer to an integer indicates if signing algorithm negated the
+     *                nonce (can be NULL)
+     *  In:    msg32: the 32-byte message hash being signed (cannot be NULL)
+     *        seckey: pointer to a 32-byte secret key (cannot be NULL)
+     *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_and_random_function_schnorr is used
+     *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
+     */
+    static int secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata);
+
+public:
+    XOnlyFirmKey(const CSecret &in) : m_secret(in) {}
+    ~XOnlyFirmKey() { m_secret.clear(); }
+
+    /** Sign a Schnorr signature against this private key.
+     *
+     * sigbytes must be exactly 64 bytes.
+     */
+    bool SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const;
+};
+
+class XOnlyFirmKeys
+{
+private:
+    std::vector<CSecret> m_secrets;
+
+    bool aggregation(CSecret *agg_secret) const {
+        return (secp256k1_schnorrsig_aggregation(Span<const CSecret>(m_secrets), agg_secret) == 1) ? true: false;
+    }
+
+public:
+    /** Schnorr Signature Aggregation (priv aggregation, nonce randomness)
+     */
+    static int secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSecret *agg_secret);
+
+public:
+    XOnlyFirmKeys() {}
+    ~XOnlyFirmKeys() { clear(); }
+
+    /** Sign a Schnorr signature against this private keys.
+     *
+     * sigbytes must be exactly 64 bytes.
+     */
+    bool SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const;
+
+    size_t size() const { return m_secrets.size(); }
+    void push(CSecret &&in) { m_secrets.emplace_back(in); }
+    void clear() { m_secrets.clear(); m_secrets.shrink_to_fit(); }
 };
 
 // BIP32

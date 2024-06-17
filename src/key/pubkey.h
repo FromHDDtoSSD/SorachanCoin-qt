@@ -780,6 +780,12 @@ public:
      * Computes R = sG - eP. */
     static int secp256k1_schnorrsig_real_verify(CPubKey::ecmult::secp256k1_gej *rj, const CPubKey::secp256k1_scalar *s, const CPubKey::secp256k1_scalar *e, const CPubKey::secp256k1_pubkey *pk);
     static int secp256k1_xonly_pubkey_load(CPubKey::ecmult::secp256k1_ge *ge, const secp256k1_xonly_pubkey *pubkey);
+    static void secp256k1_xonly_pubkey_load(secp256k1_xonly_pubkey *pubkey, const uint256 *in);
+    static void secp256k1_xonly_pubkey_save(uint256 *out, const secp256k1_xonly_pubkey *pubkey);
+
+    /* Schnorr Signatures Verify
+     */
+    static int secp256k1_schnorrsig_verify(const unsigned char* sig64, const unsigned char* msg32, const secp256k1_xonly_pubkey* pubkey);
 
 public:
     static constexpr unsigned int XONLY_PUBLIC_KEY_SIZE = 32;
@@ -795,12 +801,54 @@ public:
      *
      * sigbytes must be exactly 64 bytes.
      */
-    //bool VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const;
+    bool VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const;
     //bool CheckPayToContract(const XOnlyPubKey& base, const uint256& hash, bool parity) const;
 
     const unsigned char& operator[](int pos) const { return *(m_keydata.begin() + pos); }
     const unsigned char* data() const { return m_keydata.begin(); }
     size_t size() const { return m_keydata.size(); }
+};
+
+class XOnlyPubKeys
+{
+private:
+    std::vector<CPubKey> m_vkeydata;
+
+    bool aggregation(secp256k1_xonly_pubkey *agg_pubkey) const {
+        return (secp256k1_schnorrsig_aggregation(Span<const CPubKey>(m_vkeydata), agg_pubkey) == 1) ? true: false;
+    }
+
+public:
+    /** Schnorr Signature Aggregation (pub aggregation, nonce randomness)
+     */
+    static int secp256k1_schnorrsig_aggregation(Span<const CPubKey> pubkeys, secp256k1_xonly_pubkey *x_only_agg_pubkey);
+
+public:
+    XOnlyPubKeys() {}
+
+    /** Verify a Schnorr signature against this public keys.
+     *
+     * sigbytes must be exactly 64 bytes.
+     */
+    bool VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const;
+    //bool CheckPayToContract(const XOnlyPubKey& base, const uint256& hash, bool parity) const;
+
+    XOnlyPubKey GetXOnlyPubKey() const {
+        secp256k1_xonly_pubkey xonly_publey;
+        if(!aggregation(&xonly_publey)) {
+            CPubKey pubkey; // invalid public key
+            return XOnlyPubKey(Span<const unsigned char>(pubkey.data() + 1, 32));
+        }
+
+        uint256 data;
+        XOnlyPubKey::secp256k1_xonly_pubkey_save(&data, &xonly_publey);
+        return XOnlyPubKey(Span<const unsigned char>(data.begin(), 32));
+    }
+
+    const CPubKey& operator[](int pos) const { return *(m_vkeydata.begin() + pos); }
+    const CPubKey* data() const { return m_vkeydata.data(); }
+    void push(CPubKey &&in) { m_vkeydata.emplace_back(in); }
+    size_t size() const { return m_vkeydata.size(); }
 };
 
 // BIP32
