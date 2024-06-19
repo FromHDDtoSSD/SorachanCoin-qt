@@ -1400,7 +1400,7 @@ namespace bip340_tagged {
 
 /** Schnorr Signature Aggregation (priv aggregation, nonce randomness)
  */
-int XOnlyFirmKeys::secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSecret *agg_secret)
+int XOnlyKeys::secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSecret *agg_secret)
 {
     if(secrets.size() == 0 || agg_secret == NULL)
         return 0;
@@ -1442,7 +1442,7 @@ int XOnlyFirmKeys::secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets,
  *       noncefp: pointer to a nonce generation function. If NULL, secp256k1_nonce_and_random_function_schnorr is used
  *         ndata: pointer to arbitrary data used by the nonce generation function (can be NULL)
  */
-int XOnlyFirmKey::secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata)
+int XOnlyKey::secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata)
 {
     ARG_CHECK(sig != NULL);
     ARG_CHECK(msg32 != NULL);
@@ -1564,7 +1564,7 @@ int XOnlyFirmKey::secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_cont
     return 1;
 }
 
-bool XOnlyFirmKey::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
+bool XOnlyKey::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
     secp256k1_schnorrsig sig;
     bool fret = (secp256k1_schnorrsig_sign(NULL, &sig, NULL, msg.begin(), m_secret.data(), NULL, NULL) == 1) ? true: false;
     if(fret) {
@@ -1577,13 +1577,13 @@ bool XOnlyFirmKey::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &s
     }
 }
 
-bool XOnlyFirmKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
+bool XOnlyKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
     CSecret agg_secret;
     if(!aggregation(&agg_secret))
         return false;
 
     secp256k1_schnorrsig sig;
-    bool fret = (XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, NULL, msg.begin(), agg_secret.data(), NULL, NULL) == 1) ? true: false;
+    bool fret = (XOnlyKey::secp256k1_schnorrsig_sign(NULL, &sig, NULL, msg.begin(), agg_secret.data(), NULL, NULL) == 1) ? true: false;
     if(fret) {
         sigbytes.resize(64);
         XOnlyPubKey::secp256k1_schnorrsig_serialize(&sigbytes.front(), &sig);
@@ -1598,7 +1598,7 @@ bool XOnlyFirmKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &
 // BIP32
 /////////////////////////////////////////////////////////////////////////////////
 
-bool CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const  {
+bool CExtKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const  {
     if(! privkey_.IsValid())
         return false;
 
@@ -1613,7 +1613,7 @@ bool CExtFirmKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) cons
     return true;
 }
 
-CPrivKey CExtFirmKey::GetPrivKeyVch() const {
+CPrivKey CExtKey::GetPrivKeyVch() const {
     CPrivKey vch;
     vch.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
     unsigned char *code = &vch.front();
@@ -1628,11 +1628,11 @@ CPrivKey CExtFirmKey::GetPrivKeyVch() const {
     return vch;
 }
 
-bool CExtFirmKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) {
+bool CExtKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) {
     return Set(code, true);
 }
 
-bool CExtFirmKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
+bool CExtKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
     nDepth_ = code[0];
     std::memcpy(vchFingerprint_, code+1, 4);
     nChild_ = (code[5] << 24) | (code[6] << 16) | (code[7] << 8) | code[8];
@@ -1641,7 +1641,7 @@ bool CExtFirmKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], b
     return privkey_.IsValid();
 }
 
-bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild) const {
+bool CExtKey::Derive(CExtKey &out, unsigned int _nChild) const {
     out.nDepth_ = nDepth_ + 1;
     CKeyID id = privkey_.GetPubKey().GetID();
     std::memcpy(&out.vchFingerprint_[0], &id, 4);
@@ -1649,7 +1649,7 @@ bool CExtFirmKey::Derive(CExtFirmKey &out, unsigned int _nChild) const {
     return privkey_.Derive(out.privkey_, out.chaincode_, _nChild, chaincode_);
 }
 
-CExtPubKey CExtFirmKey::Neuter() const  {
+CExtPubKey CExtKey::Neuter() const  {
     CExtPubKey ret;
     ret.nDepth_ = nDepth_;
     std::memcpy(&ret.vchFingerprint_[0], &vchFingerprint_[0], 4);
@@ -1661,7 +1661,7 @@ CExtPubKey CExtFirmKey::Neuter() const  {
     return ret;
 }
 
-bool CExtFirmKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
+bool CExtKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
     static const unsigned char hashkey[] = {'F','r','o','m','H','D','D','t','o','S','S','D'};
     std::vector<unsigned char, secure_allocator<unsigned char> > vout(64);
     latest_crypto::CHMAC_SHA512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());

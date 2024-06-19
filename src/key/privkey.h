@@ -274,7 +274,7 @@ namespace bip340_tagged {
 }
 
 // Schnorr signature
-class XOnlyFirmKey
+class XOnlyKey
 {
 private:
     CSecret m_secret;
@@ -295,8 +295,8 @@ public:
     static int secp256k1_schnorrsig_sign(CFirmKey::ecmult::secp256k1_gen_context *ctx, secp256k1_schnorrsig *sig, int *nonce_is_negated, const unsigned char *msg32, const unsigned char *seckey, secp256k1_nonce_function noncefp, void *ndata);
 
 public:
-    XOnlyFirmKey(const CSecret &in) : m_secret(in) {}
-    ~XOnlyFirmKey() { m_secret.clear(); }
+    XOnlyKey(const CSecret &in) : m_secret(in) {}
+    ~XOnlyKey() { m_secret.clear(); }
 
     /** Sign a Schnorr signature against this private key.
      *
@@ -305,7 +305,7 @@ public:
     bool SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const;
 };
 
-class XOnlyFirmKeys
+class XOnlyKeys
 {
 private:
     std::vector<CSecret> m_secrets;
@@ -320,8 +320,8 @@ public:
     static int secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSecret *agg_secret);
 
 public:
-    XOnlyFirmKeys() {}
-    ~XOnlyFirmKeys() { clear(); }
+    XOnlyKeys() {}
+    ~XOnlyKeys() { clear(); }
 
     /** Sign a Schnorr signature against this private keys.
      *
@@ -335,14 +335,14 @@ public:
 };
 
 // BIP32
-struct CExtFirmKey {
+struct CExtKey {
     unsigned char nDepth_;
     unsigned char vchFingerprint_[4];
     unsigned int nChild_;
-    ChainCode chaincode_; // uint256
+    ChainCode chaincode_;
     CFirmKey privkey_;
 
-    friend bool operator==(const CExtFirmKey &a, const CExtFirmKey &b) {
+    friend bool operator==(const CExtKey &a, const CExtKey &b) {
         return a.nDepth_ == b.nDepth_ &&
                ::memcmp(&a.vchFingerprint_[0], &b.vchFingerprint_[0], sizeof(vchFingerprint_)) == 0 &&
                a.nChild_ == b.nChild_ &&
@@ -354,7 +354,7 @@ struct CExtFirmKey {
     CPrivKey GetPrivKeyVch() const;
     bool Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
     bool Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
-    bool Derive(CExtFirmKey &out, unsigned int nChild) const;
+    bool Derive(CExtKey &out, unsigned int nChild) const;
 
     CExtPubKey Neuter() const;
 
@@ -377,8 +377,6 @@ struct CExtFirmKey {
         if (len != CExtPubKey::BIP32_EXTKEY_SIZE)
             throw std::runtime_error("Invalid extended key size\n");
         s.read((char *)&code[0], len);
-        //if(! Decode(code))
-        //    throw std::runtime_error("Invalid CExtKey Decode\n");
         if(! Set(code))
             throw std::runtime_error("Invalid CExtKey Decode\n");
     }

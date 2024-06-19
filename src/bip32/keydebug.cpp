@@ -593,7 +593,7 @@ bool Libsecp256k1_schnorr_sign_and_openssl_verify_pub_y_with_both_odd_and_even()
         uint256 hash = Create_random_hash();
 
         // sign
-        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(XOnlyKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1041,7 +1041,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even() {
         uint256 hash = Create_random_hash();
 
         // sign
-        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(XOnlyKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         CPubKey pubkey = secpkey->GetPubKey();
@@ -1189,7 +1189,7 @@ void Check_agg_ecdsa() {
 // Checker
 // 4, [OK checked] Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation() {
-    const int schnorr_agg_num = 10;
+    const int schnorr_agg_num = 100;
     const int check_num = 50;
 
     bool fret = false;
@@ -1200,7 +1200,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         secrets.reserve(schnorr_agg_num);
         std::vector<CPubKey> pubkeys;
         pubkeys.reserve(schnorr_agg_num);
-        XOnlyFirmKeys xonlykeys;
+        XOnlyKeys xonlykeys;
         XOnlyPubKeys xonlypubs;
         for(int i=0; i < schnorr_agg_num; ++i) {
             std::shared_ptr<CFirmKey> secpkey = Create_pub_y_key();
@@ -1216,7 +1216,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         CSecret agg_secret;
         secp256k1_xonly_pubkey x_only_agg_pubkey;
         Span<const CSecret> sp_secrets(secrets);
-        if(XOnlyFirmKeys::secp256k1_schnorrsig_aggregation(sp_secrets, &agg_secret) != 1) {
+        if(XOnlyKeys::secp256k1_schnorrsig_aggregation(sp_secrets, &agg_secret) != 1) {
             debugcs::instance() << "Failure Libsecp256k1 aggregate sign" << debugcs::endl();
             break;
         }
@@ -1229,7 +1229,7 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         std::vector<unsigned char> sigbytes;
         if(!xonlykeys.SignSchnorr(hash, sigbytes))
             break;
-        if(XOnlyFirmKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
+        if(XOnlyKey::secp256k1_schnorrsig_sign(NULL, &sig, nullptr, hash.begin(), agg_secret.data(), schnorr_nonce::secp256k1_nonce_and_random_function_schnorr, nullptr) != 1)
             break;
 
         // valid agg verify
@@ -1318,39 +1318,41 @@ bool add_for_schnorr_hd_keys(unsigned int nSize) {
 
 // 5, try schnorr from wallet keys
 bool exists_keys_schnorr_agg_sign_verify() {
-    //if(!add_for_schnorr_hd_keys(10))
+    //if(!add_for_schnorr_hd_keys(100))
     //    return false;
-    //if(!entry::pwalletMain->TopUpKeyPool(10))
+    //if(!entry::pwalletMain->TopUpKeyPool(100))
     //    return false;
-    XOnlyPubKeys pubkeys;
-    XOnlyFirmKeys secrets;
-    for(int i=0; i < 75; ++i) {
-        CPubKey pubkey;
-        if(!entry::pwalletMain->GetKeyFromPool(pubkey, false))
+
+    for(int k=0; k < 7; ++k) {
+        XOnlyPubKeys pubkeys;
+        XOnlyKeys secrets;
+        for(int i=0; i < 70; ++i) {
+            CPubKey pubkey;
+            entry::pwalletMain->GetKeyFromPool(pubkey, false);
+            pubkeys.push(std::move(pubkey));
+            //key_vector vpub = pubkey.GetPubVch();
+            //print_bytes("wallet pubkeys", vpub.data(), vpub.size());
+            CFirmKey key;
+            if(!entry::pwalletMain->GetKey(pubkey.GetID(), key))
+                return false;
+            secrets.push(key.GetSecret());
+        }
+
+        XOnlyPubKeysAggInfo agg_pubkeys;
+        agg_pubkeys.agg_pubkeys.push_back(pubkeys);
+        CDataStream ss;
+        ss << agg_pubkeys;
+        XOnlyPubKeysAggInfo agg_pubkeys2;
+        ss >> agg_pubkeys2;
+        assert(pubkeys == agg_pubkeys2.agg_pubkeys[0]);
+
+        uint256 hash = Create_random_hash();
+        std::vector<unsigned char> sigbytes;
+        if(!secrets.SignSchnorr(hash, sigbytes))
             return false;
-        pubkeys.push(std::move(pubkey));
-        key_vector vpub = pubkey.GetPubVch();
-        print_bytes("wallet pubkeys", vpub.data(), vpub.size());
-        CFirmKey key;
-        if(!entry::pwalletMain->GetKey(pubkey.GetID(), key))
+        if(!pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
             return false;
-        secrets.push(key.GetSecret());
     }
-
-    XOnlyPubKeysAggInfo agg_pubkeys;
-    agg_pubkeys.agg_pubkeys.push_back(pubkeys);
-    CDataStream ss;
-    ss << agg_pubkeys;
-    XOnlyPubKeysAggInfo agg_pubkeys2;
-    ss >> agg_pubkeys2;
-    assert(pubkeys == agg_pubkeys2.agg_pubkeys[0]);
-
-    uint256 hash = Create_random_hash();
-    std::vector<unsigned char> sigbytes;
-    if(!secrets.SignSchnorr(hash, sigbytes))
-        return false;
-    if(!pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
-        return false;
 
     return true;
 }

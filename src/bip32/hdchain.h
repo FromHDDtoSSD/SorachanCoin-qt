@@ -22,8 +22,7 @@
 inline void nprintf(const char *, ...) {}
 #endif
 
-class CExtFirmKey;
-using CExtKey = CExtFirmKey; // using building CFirmKey
+class CExtKey;
 using CSeedSecret = std::vector<unsigned char, secure_allocator<unsigned char> >; // seed-phrase in secure allocator
 namespace SeedCrypto {
     void CreateKeyToHash(const CSeedSecret &keydata, CSeedSecret &outkeysalt, unsigned char keyhash[latest_crypto::AES256_KEYSIZE]);

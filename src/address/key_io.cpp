@@ -609,8 +609,8 @@ std::string key_io::EncodeExtPubKey(const CExtPubKey &extkey, unsigned char nVer
     return ret;
 }
 
-CExtFirmKey key_io::DecodeExtFirmKey(const SecureString &str) {
-    CExtFirmKey key;
+CExtKey key_io::DecodeExtFirmKey(const SecureString &str) {
+    CExtKey key;
     CExtSecret data;
     if (base58::manage::DecodeBase58Check<SecureString, CExtSecret>(str, data)) {
         if (data.size() != CExtPubKey::BIP32_EXTKEY_SIZE + base58_bytes_prefix_size)
@@ -631,7 +631,7 @@ CExtFirmKey key_io::DecodeExtFirmKey(const SecureString &str) {
     return key;
 }
 
-SecureString key_io::EncodeExtFirmKey(const CExtFirmKey &extkey) {
+SecureString key_io::EncodeExtFirmKey(const CExtKey &extkey) {
     if(! extkey.privkey_.IsValid()) {
         throw std::runtime_error("key_io::EncodeExtFirmKey: privkey is invalid");
     }
