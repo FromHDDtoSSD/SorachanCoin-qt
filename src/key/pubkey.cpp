@@ -2176,7 +2176,24 @@ void CPubKey::secp256k1_scalar_inverse(secp256k1_scalar *r, const secp256k1_scal
     }
     secp256k1_scalar_mul(r, t, &x6); /* 111111 */
 }
+#endif
 
+#if defined(EXHAUSTIVE_TEST_ORDER)
+int CPubKey::secp256k1_scalar_is_even(const secp256k1_scalar *a) {
+    return !(*a & 1);
+}
+
+int CPubKey::secp256k1_scalar_is_odd(const secp256k1_scalar *a) {
+    return (*a & 1);
+}
+#else
+int CPubKey::secp256k1_scalar_is_even(const secp256k1_scalar *a) {
+    return !(a->d[0] & 1);
+}
+
+int CPubKey::secp256k1_scalar_is_odd(const secp256k1_scalar *a) {
+    return (a->d[0] & 1);
+}
 #endif
 
 void CPubKey::secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_scalar *x) {
@@ -3506,27 +3523,6 @@ int CPubKey::secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsi
         return 0;
 }
 
-/*
-int CPubKey::secp256k1_eckey_pubkey_parse_signed(ecmult::secp256k1_ge_signed *elem, const unsigned char *pub, size_t size) {
-    if (size == 33 && (pub[0] == SECP256K1_TAG_PUBKEY_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_ODD)) {
-        ecmult::secp256k1_fe_signed x;
-        return ecmult::secp256k1_fe_set_b32(&x, pub+1) && ecmult::secp256k1_ge_set_xo_var(elem, &x, pub[0] == SECP256K1_TAG_PUBKEY_ODD);
-    } else if (size == 65 && (pub[0] == 0x04 || pub[0] == 0x06 || pub[0] == 0x07)) {
-        ecmult::secp256k1_fe_signed x, y;
-        if (!ecmult::secp256k1_fe_set_b32(&x, pub+1) || !ecmult::secp256k1_fe_set_b32(&y, pub+33))
-            return 0;
-
-        ecmult::secp256k1_ge_set_xy(elem, &x, &y);
-        if ((pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_EVEN || pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD) &&
-            ecmult::secp256k1_fe_is_odd(&y) != (pub[0] == SECP256K1_TAG_PUBKEY_HYBRID_ODD)) {
-            return 0;
-        }
-        return ecmult::secp256k1_ge_is_valid_var(elem);
-    } else
-        return 0;
-}
-*/
-
 void CPubKey::ecmult::secp256k1_ge_clear(secp256k1_ge *r) {
     r->infinity = 0;
     secp256k1_fe_clear(&r->x);
@@ -3547,23 +3543,6 @@ int CPubKey::secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned 
     ecmult::secp256k1_ge_clear(&Q);
     return 1;
 }
-
-/*
-int CPubKey::secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen) {
-    ecmult::secp256k1_ge Q;
-
-    //VERIFY_CHECK(ctx != nullptr);
-    ARG_CHECK(pubkey != nullptr);
-    std::memset(pubkey, 0, sizeof(*pubkey));
-    ARG_CHECK(input != nullptr);
-    if (! secp256k1_eckey_pubkey_parse(&Q, input, inputlen))
-        return 0;
-
-    secp256k1_pubkey_save(pubkey, &Q);
-    ecmult::secp256k1_ge_clear(&Q);
-    return 1;
-}
-*/
 
 bool CPubKey::Decompress() {
     if (! IsValid())

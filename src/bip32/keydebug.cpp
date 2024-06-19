@@ -9,6 +9,7 @@
 #include <openssl/sha.h>
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
+#include <init.h>
 
 // #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
@@ -1188,7 +1189,7 @@ void Check_agg_ecdsa() {
 // Checker
 // 4, [OK checked] Libsecp256k1 schnorr signature sign and verify and aggregation: try pub_y with both odd and even values
 bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation() {
-    const int schnorr_agg_num = 100;
+    const int schnorr_agg_num = 10;
     const int check_num = 50;
 
     bool fret = false;
@@ -1268,6 +1269,90 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
         fret = true;
 
     return fret;
+}
+
+// [checking]
+bool add_for_schnorr_hd_keys(unsigned int nSize) {
+    if(nSize == 0 || 1024 <= nSize)
+        return false;
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    LOCK(entry::pwalletMain->cs_wallet);
+
+    std::vector<CExtKey> nextkey;
+    nextkey.resize(nSize);
+    for(int i = 0; i < nSize; ++i) {
+        if(!hd_wallet::get().get_nextkey(nextkey[i], *hd_wallet::get().pkeyseed))
+            return false;
+    }
+
+    // CFirmKey
+    for(int i = 0; i < nSize; ++i) {
+        if(!nextkey[i].privkey_.IsValid())
+            return false;
+
+        CPubKey pubkey = nextkey[i].privkey_.GetPubKey();
+        if(!pubkey.IsFullyValid_BIP66())
+            return false;
+        if(!entry::pwalletMain->AddKey(nextkey[i].privkey_))
+            return false;
+    }
+
+    // CPubKey
+    const size_t size = hd_wallet::get().reserved_pubkey.size() + nSize;
+    if(hd_wallet::get()._child_offset == size) {
+        hd_wallet::get().reserved_pubkey.reserve(size);
+        for(int i = 0; i < nSize; ++i) {
+            hd_wallet::get().reserved_pubkey.emplace_back(nextkey[i].privkey_.GetPubKey());
+        }
+        if(!walletdb.WriteReservedHDPubkeys(hd_wallet::get().reserved_pubkey))
+            return false;
+
+        debugcs::instance() << __func__ << " _child_offset: " << hd_wallet::get()._child_offset << debugcs::endl();
+        if(!walletdb.WriteChildHDSeed(hd_wallet::get().pkeyseed->privkey_.GetPubKey(), size))
+            return false;
+    } else
+        return false;
+
+    return true;
+}
+
+// 5, try schnorr from wallet keys
+bool exists_keys_schnorr_agg_sign_verify() {
+    //if(!add_for_schnorr_hd_keys(10))
+    //    return false;
+    //if(!entry::pwalletMain->TopUpKeyPool(10))
+    //    return false;
+    XOnlyPubKeys pubkeys;
+    XOnlyFirmKeys secrets;
+    for(int i=0; i < 75; ++i) {
+        CPubKey pubkey;
+        if(!entry::pwalletMain->GetKeyFromPool(pubkey, false))
+            return false;
+        pubkeys.push(std::move(pubkey));
+        key_vector vpub = pubkey.GetPubVch();
+        print_bytes("wallet pubkeys", vpub.data(), vpub.size());
+        CFirmKey key;
+        if(!entry::pwalletMain->GetKey(pubkey.GetID(), key))
+            return false;
+        secrets.push(key.GetSecret());
+    }
+
+    XOnlyPubKeysAggInfo agg_pubkeys;
+    agg_pubkeys.agg_pubkeys.push_back(pubkeys);
+    CDataStream ss;
+    ss << agg_pubkeys;
+    XOnlyPubKeysAggInfo agg_pubkeys2;
+    ss >> agg_pubkeys2;
+    assert(pubkeys == agg_pubkeys2.agg_pubkeys[0]);
+
+    uint256 hash = Create_random_hash();
+    std::vector<unsigned char> sigbytes;
+    if(!secrets.SignSchnorr(hash, sigbytes))
+        return false;
+    if(!pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
+        return false;
+
+    return true;
 }
 
 // y = a * x mod p (solve x)
@@ -1522,6 +1607,11 @@ void Debug_checking_sign_verify() {
     // Schnorr aggregation sign and verify
     //if(!Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggregation()) {
     //    assert(!"4: failure Libsecp256k1_schnorr_sign_and_verify_and_aggregation");
+    //}
+
+    // Exists keys aggregation sign and verify
+    //if(!exists_keys_schnorr_agg_sign_verify()) {
+    //    assert(!"5: failure Exists keys aggregation sign and verify");
     //}
 
     //Span_check();

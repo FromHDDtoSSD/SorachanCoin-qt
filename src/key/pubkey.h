@@ -354,7 +354,8 @@ public:
     static void secp256k1_scalar_mul_512(uint32_t *l, const secp256k1_scalar *a, const secp256k1_scalar *b);
     static void secp256k1_scalar_mul(secp256k1_scalar *r, const secp256k1_scalar *a, const secp256k1_scalar *b);
     static void secp256k1_scalar_inverse(secp256k1_scalar *r, const secp256k1_scalar *x);
-    // static int secp256k1_scalar_is_even(const secp256k1_scalar *a);
+    static int secp256k1_scalar_is_even(const secp256k1_scalar *a);
+    static int secp256k1_scalar_is_odd(const secp256k1_scalar *a);
     static void secp256k1_scalar_inverse_var(secp256k1_scalar *r, const secp256k1_scalar *x);
     static void secp256k1_pubkey_save(secp256k1_pubkey *pubkey, ecmult::secp256k1_ge *ge);
     static int secp256k1_ecdsa_recover(secp256k1_pubkey *pubkey, const secp256k1_ecdsa_recoverable_signature *signature, const unsigned char *msg32);
@@ -362,9 +363,7 @@ public:
     static int secp256k1_eckey_pubkey_serialize(ecmult::secp256k1_ge *elem, unsigned char *pub, size_t *size, int compressed);
     static int secp256k1_ec_pubkey_serialize(unsigned char *output, size_t *outputlen, const secp256k1_pubkey *pubkey, unsigned int flags);
     static int secp256k1_ec_pubkey_parse(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
-        //static int secp256k1_ec_pubkey_parse_signed(secp256k1_pubkey *pubkey, const unsigned char *input, size_t inputlen);
     static int secp256k1_eckey_pubkey_parse(ecmult::secp256k1_ge *elem, const unsigned char *pub, size_t size);
-        //static int secp256k1_eckey_pubkey_parse_signed(ecmult::secp256k1_ge_signed *elem, const unsigned char *pub, size_t size);
     static int secp256k1_ec_pubkey_tweak_add(secp256k1_pubkey *pubkey, const unsigned char *tweak);
     static int secp256k1_eckey_pubkey_tweak_add(ecmult::secp256k1_ge *key, const secp256k1_scalar *tweak);
     static void secp256k1_scalar_set_int(secp256k1_scalar *r, unsigned int v);
@@ -845,10 +844,72 @@ public:
         return XOnlyPubKey(Span<const unsigned char>(data.begin(), 32));
     }
 
-    const CPubKey& operator[](int pos) const { return *(m_vkeydata.begin() + pos); }
+    const CPubKey& operator[](int pos) const { return m_vkeydata[pos]; }
     const CPubKey* data() const { return m_vkeydata.data(); }
     void push(CPubKey &&in) { m_vkeydata.emplace_back(in); }
     size_t size() const { return m_vkeydata.size(); }
+
+    friend bool operator==(const XOnlyPubKeys &a, const XOnlyPubKeys &b) {
+        return a.m_vkeydata == b.m_vkeydata;
+    }
+
+    unsigned int GetSerializeSize() const {
+        return ::GetSerializeSize(m_vkeydata);
+    }
+
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        s << m_vkeydata;
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        s >> m_vkeydata;
+    }
+};
+
+// for WalletDB
+struct XOnlyPubKeysAggInfo {
+    constexpr static int schnorr_version = 1;
+    int nVersion;
+    std::vector<XOnlyPubKeys> agg_pubkeys;
+
+    XOnlyPubKeysAggInfo() {
+        nVersion = schnorr_version;
+    }
+
+    unsigned int GetSerializeSize() const {
+        unsigned int size = 0;
+        size += sizeof(nVersion);
+        size += sizeof(unsigned int);
+        for(const auto &d: agg_pubkeys) {
+            size += d.GetSerializeSize();
+        }
+        return size;
+    }
+
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        unsigned int size = (unsigned int)agg_pubkeys.size();
+        s << nVersion;
+        s << size;
+        for(unsigned int i=0; i < size; ++i) {
+            s << agg_pubkeys[i];
+        }
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        unsigned int size = 0;
+        s >> nVersion;
+        s >> size;
+        agg_pubkeys.clear();
+        for(unsigned int i=0; i < size; ++i) {
+            XOnlyPubKeys vpub;
+            s >> vpub;
+            agg_pubkeys.emplace_back(vpub);
+        }
+    }
 };
 
 // BIP32
@@ -924,78 +985,6 @@ struct CExtPubKey {
         }
     }
 };
-
-/*
-// BIP32
-class CExtPubKey {
-public:
-    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74;
-    unsigned char nDepth;
-    unsigned char vchFingerprint[4];
-    unsigned int nChild;
-    ChainCode chaincode;
-    CPubKey pubkey;
-
-    friend bool operator==(const CExtPubKey &a, const CExtPubKey &b) {
-        return a.nDepth == b.nDepth &&
-               ::memcmp(&a.vchFingerprint[0], &b.vchFingerprint[0], sizeof(vchFingerprint)) == 0 &&
-               a.nChild == b.nChild &&
-               a.chaincode == b.chaincode &&
-               a.pubkey == b.pubkey;
-    }
-
-    static void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) {
-        code[0] = 0xFF;
-    }
-    static void Invalidate(key_vector &code) {
-        code[0] = 0xFF;
-    }
-
-    key_vector GetPubVch() const;
-    void Set(const key_vector &vch);
-    void Set(const unsigned char data[BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtPubKey &out, unsigned int nChild) const;
-
-    void Serialize(CSizeComputer &s) const {
-        // Optimized implementation for ::GetSerializeSize that avoids copying.
-        s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
-    }
-
-    unsigned int GetSerializeSize() const {
-        return BIP32_EXTKEY_SIZE + 1;
-    }
-
-    template <typename Stream>
-    void Serialize(Stream &s) const {
-        unsigned int len = BIP32_EXTKEY_SIZE;
-        compact_size::manage::WriteCompactSize(s, len);
-        key_vector code = GetPubVch();
-        s.write((const char *)code.data(), len);
-    }
-
-    template <typename Stream>
-    void Unserialize(Stream &s) {
-        unsigned int len = compact_size::manage::ReadCompactSize(s);
-        //unsigned char code[BIP32_EXTKEY_SIZE];
-        key_vector code;
-        if (len != BIP32_EXTKEY_SIZE) {
-            if(len <= 0) {
-                Invalidate(code);
-                return;
-            }
-            char dummy;
-            while(len--) {
-                s.read((char *)&dummy, sizeof(char));
-                cleanse::OPENSSL_cleanse(&dummy, sizeof(char));
-            }
-            Invalidate(code);
-        } else {
-            s.read((char *)&code[0], len);
-            Set(code);
-        }
-    }
-};
-*/
 
 // secp256k1 signed negate operator
 using s256k1_fe = CPubKey::ecmult::secp256k1_fe;
