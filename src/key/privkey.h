@@ -336,6 +336,7 @@ public:
 
 // BIP32
 struct CExtKey {
+    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74; // [nDepth(1) + Finger(4) + nChild(4) + chaincode_(32) + dummy(1) + secret(32) = 74] serialized data
     unsigned char nDepth_;
     unsigned char vchFingerprint_[4];
     unsigned int nChild_;
@@ -350,21 +351,19 @@ struct CExtKey {
                a.privkey_ == b.privkey_;
     }
 
-    bool Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const;
-    CPrivKey GetPrivKeyVch() const;
-    bool Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]);
-    bool Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
+    CPrivKey GetPrivKey() const;
+    bool Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const;
+    bool Decode(const unsigned char code[CExtKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
     bool Derive(CExtKey &out, unsigned int nChild) const;
-
-    CExtPubKey Neuter() const;
+    CExtPubKey Neuter() const; // from CExtKey to CEtxPubKey
 
     bool SetSeed(const unsigned char *seed, unsigned int nSeedLen);
 
     template <typename Stream>
     void Serialize(Stream &s) const {
-        const unsigned int len = CExtPubKey::BIP32_EXTKEY_SIZE;
+        const unsigned int len = CExtKey::BIP32_EXTKEY_SIZE;
         ::WriteCompactSize(s, len);
-        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
+        unsigned char code[CExtKey::BIP32_EXTKEY_SIZE];
         if(! Encode(code))
             throw std::runtime_error("Invalid CExtKey Encode\n");
         s.write((const char *)&code[0], len);
@@ -373,11 +372,11 @@ struct CExtKey {
     template <typename Stream>
     void Unserialize(Stream &s) {
         const unsigned int len = compact_size::manage::ReadCompactSize(s);
-        unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE];
-        if (len != CExtPubKey::BIP32_EXTKEY_SIZE)
+        unsigned char code[CExtKey::BIP32_EXTKEY_SIZE];
+        if (len != CExtKey::BIP32_EXTKEY_SIZE)
             throw std::runtime_error("Invalid extended key size\n");
         s.read((char *)&code[0], len);
-        if(! Set(code))
+        if(! Decode(code))
             throw std::runtime_error("Invalid CExtKey Decode\n");
     }
 };

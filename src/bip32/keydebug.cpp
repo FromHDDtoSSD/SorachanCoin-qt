@@ -1271,7 +1271,8 @@ bool Libsecp256k1_schnorr_sign_and_verify_pub_y_with_both_odd_and_even_and_aggre
     return fret;
 }
 
-// [checking]
+// Checker
+// 5, for schnorr keys
 bool add_for_schnorr_hd_keys(unsigned int nSize) {
     if(nSize == 0 || 1024 <= nSize)
         return false;
@@ -1316,22 +1317,82 @@ bool add_for_schnorr_hd_keys(unsigned int nSize) {
     return true;
 }
 
-// 5, try schnorr from wallet keys
-bool exists_keys_schnorr_agg_sign_verify() {
-    //if(!add_for_schnorr_hd_keys(100))
-    //    return false;
-    //if(!entry::pwalletMain->TopUpKeyPool(100))
-    //    return false;
+bool cmp_for_schnorr_pubkeys() {
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
 
-    for(int k=0; k < 7; ++k) {
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    CExtSecret buf;
+    buf.resize(CExtKey::BIP32_EXTKEY_SIZE);
+    if(!extkeyseed.Encode(&buf.front())) {
+        assert(!"failure A cmp_for_schnorr_pubkeys");
+        return false;
+    }
+
+    CFirmKey key;
+    key.SetSecret(CSecret(buf.data() + 42, buf.data() + buf.size()));
+    if(!key.IsValid()) {
+        assert(!"failure B cmp_for_schnorr_pubkeys");
+        return false;
+    }
+
+    CPubKey pubkey = key.GetPubKey();
+    pubkey.Compress();
+    unsigned char buf2[CExtPubKey::BIP32_EXTKEY_SIZE];
+    ::memcpy(buf2, buf.data(), 41);
+    ::memcpy(buf2 + 41, pubkey.data(), 33);
+
+    CExtPubKey extpubseed;
+    if(!extpubseed.Decode(buf2)) {
+        assert(!"failure C cmp_for_schnorr_pubkeys");
+        return false;
+    }
+
+    for(unsigned int i=0; i < hd_wallet::get().reserved_pubkey.size(); ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i)) {
+            assert(!"failure D cmp_for_schnorr_pubkeys");
+            return false;
+        }
+        print_bytes("extpub", extpub.GetPubKey().data(), 33);
+        print_bytes("pubkey", hd_wallet::get().reserved_pubkey[i].GetPubVch().data(), 33);
+        assert(extpub.GetPubKey() == hd_wallet::get().reserved_pubkey[i]);
+    }
+
+    return true;
+}
+
+bool cmp_for_schnorr_pubkeys2() {
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    for(unsigned int i=0; i < hd_wallet::get().reserved_pubkey.size(); ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i)) {
+            assert(!"failure D cmp_for_schnorr_pubkeys");
+            return false;
+        }
+        print_bytes("extpub", extpub.GetPubKey().data(), 33);
+        print_bytes("pubkey", hd_wallet::get().reserved_pubkey[i].GetPubVch().data(), 33);
+        assert(extpub.GetPubKey() == hd_wallet::get().reserved_pubkey[i]);
+    }
+
+    return true;
+}
+
+// Checker
+// 6, try schnorr from wallet keys
+bool exists_keys_schnorr_agg_sign_verify() {
+    for(int k=0; k < 1; ++k) {
         XOnlyPubKeys pubkeys;
         XOnlyKeys secrets;
         for(int i=0; i < 70; ++i) {
             CPubKey pubkey;
             entry::pwalletMain->GetKeyFromPool(pubkey, false);
             pubkeys.push(std::move(pubkey));
-            //key_vector vpub = pubkey.GetPubVch();
-            //print_bytes("wallet pubkeys", vpub.data(), vpub.size());
+            print_bytes("wallet pubkeys", pubkey.GetPubVch().data(), pubkey.GetPubVch().size());
             CFirmKey key;
             if(!entry::pwalletMain->GetKey(pubkey.GetID(), key))
                 return false;
@@ -1612,6 +1673,9 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
+    //if(!cmp_for_schnorr_pubkeys2()) {
+    //    assert(!"5: failure cmp_for_schnorr_pubkeys");
+    //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {
     //    assert(!"5: failure Exists keys aggregation sign and verify");
     //}

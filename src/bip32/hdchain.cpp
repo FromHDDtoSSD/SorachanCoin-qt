@@ -119,7 +119,7 @@ bool hd_wallet::InValidKeyseed() {
     if(! pkeyseed)
         return false;
 
-    unsigned char zero[CExtPubKey::BIP32_EXTKEY_SIZE] = {0};
+    unsigned char zero[CExtKey::BIP32_EXTKEY_SIZE] = {0};
     pkeyseed->Decode(zero);
 
     fcryptoseed = true; // locked
@@ -181,8 +181,8 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
     cryptosalt.resize(SeedCrypto::keysaltsize); // when no crypto, no necessary.
     cleanse::OPENSSL_cleanse(&cryptosalt.front(), SeedCrypto::keysaltsize);
 
-    CPrivKey vchextkey;
-    vchextkey.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
+    CExtSecret vchextkey;
+    vchextkey.resize(CExtKey::BIP32_EXTKEY_SIZE);
     if(! keyseed.Encode(&vchextkey.front()))
         return false;
     if(! walletdb.WriteHDSeed(pubkeyseed, vchextkey, _child_offset, cryptosalt, 0))
@@ -447,7 +447,7 @@ namespace hd_wallet_debug {
         bool ret = key.SetSeed((const unsigned char *)seed.c_str(), seed.size());
         __printf("seed master ret : %d\n", ret);
         __printf("seed master : %s\n", key.privkey_.GetPubKey().GetID().GetHex().c_str());
-        _debug_data->resize(CExtPubKey::BIP32_EXTKEY_SIZE);
+        _debug_data->resize(CExtKey::BIP32_EXTKEY_SIZE);
         key.Encode(&_debug_data->front());
         hd_enabled = true;
     }

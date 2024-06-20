@@ -290,8 +290,8 @@ SecureString EncodeSecret(const CFirmKey &key);
 CExtPubKey DecodeExtPubKey(const std::string &str);
 std::string EncodeExtPubKey(const CExtPubKey &extpubkey, unsigned char nVersion);
 
-CExtKey DecodeExtFirmKey(const SecureString &str);
-SecureString EncodeExtFirmKey(const CExtKey &extkey);
+CExtKey DecodeExtKey(const SecureString &str);
+SecureString EncodeExtKey(const CExtKey &extkey);
 
 std::string EncodeDestination(const CTxDestination &dest);
 CTxDestination DecodeDestination(const std::string &str);

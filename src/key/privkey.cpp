@@ -1598,7 +1598,7 @@ bool XOnlyKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigb
 // BIP32
 /////////////////////////////////////////////////////////////////////////////////
 
-bool CExtKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const  {
+bool CExtKey::Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const  {
     if(! privkey_.IsValid())
         return false;
 
@@ -1613,7 +1613,7 @@ bool CExtKey::Encode(unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) const  {
     return true;
 }
 
-CPrivKey CExtKey::GetPrivKeyVch() const {
+CPrivKey CExtKey::GetPrivKey() const {
     CPrivKey vch;
     vch.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
     unsigned char *code = &vch.front();
@@ -1628,16 +1628,12 @@ CPrivKey CExtKey::GetPrivKeyVch() const {
     return vch;
 }
 
-bool CExtKey::Decode(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE]) {
-    return Set(code, true);
-}
-
-bool CExtKey::Set(const unsigned char code[CExtPubKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
+bool CExtKey::Decode(const unsigned char code[CExtKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
     nDepth_ = code[0];
     std::memcpy(vchFingerprint_, code+1, 4);
     nChild_ = (code[5] << 24) | (code[6] << 16) | (code[7] << 8) | code[8];
     std::memcpy(chaincode_.begin(), code+9, 32);
-    privkey_.Set(code+42, code+CExtPubKey::BIP32_EXTKEY_SIZE, fCompressed);
+    privkey_.Set(code+42, code+CExtKey::BIP32_EXTKEY_SIZE, fCompressed);
     return privkey_.IsValid();
 }
 
@@ -1649,7 +1645,7 @@ bool CExtKey::Derive(CExtKey &out, unsigned int _nChild) const {
     return privkey_.Derive(out.privkey_, out.chaincode_, _nChild, chaincode_);
 }
 
-CExtPubKey CExtKey::Neuter() const  {
+CExtPubKey CExtKey::Neuter() const {
     CExtPubKey ret;
     ret.nDepth_ = nDepth_;
     std::memcpy(&ret.vchFingerprint_[0], &vchFingerprint_[0], 4);

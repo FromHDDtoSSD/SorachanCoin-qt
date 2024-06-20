@@ -914,7 +914,7 @@ struct XOnlyPubKeysAggInfo {
 
 // BIP32
 struct CExtPubKey {
-    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74; // serialized extpubkey data (Encode, Decode)
+    static constexpr unsigned int BIP32_EXTKEY_SIZE = 74; // [nDepth(1) + Finger(4) + nChild(4) + chaincode_(32) + pub(33) = 74] serialized data
     unsigned char nDepth_;
     unsigned char vchFingerprint_[4];
     unsigned int nChild_;
@@ -933,23 +933,19 @@ struct CExtPubKey {
         code[0] = 0xFF;
     }
 
-    key_vector GetPubVch() const;
+    CPubKey GetPubKey() const;
     bool Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const; // extpubkey to code
-    bool Set(const key_vector &vch);
-    bool Set(const unsigned char code[BIP32_EXTKEY_SIZE]);
-    //bool Decode(const unsigned char code[BIP32_EXTKEY_SIZE]); // code to extpubkey (replace set method)
-
+    bool Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
     bool Derive(CExtPubKey &out, unsigned int _nChildIn) const;
 
     void Serialize(CSizeComputer &s) const {
         // Optimized implementation for ::GetSerializeSize that avoids copying.
-        s.seek(BIP32_EXTKEY_SIZE + 1); // add one byte for the size (compact int)
+        s.seek(BIP32_EXTKEY_SIZE + 1);
     }
-    /*
+
     unsigned int GetSerializeSize() const {
         return BIP32_EXTKEY_SIZE + 1;
     }
-    */
 
     template <typename Stream>
     void Serialize(Stream &s) const {
@@ -978,9 +974,7 @@ struct CExtPubKey {
             Invalidate(code);
         } else {
             s.read((char *)&code[0], len);
-            //if(! Decode(code))
-            //    throw std::runtime_error("Invalid CExtPubKey Decode");
-            if(! Set(code))
+            if(! Decode(code))
                 throw std::runtime_error("Invalid CExtPubKey Decode");
         }
     }
