@@ -869,6 +869,41 @@ public:
 };
 
 // for WalletDB
+struct XOnlyPubKeysAggWalletInfo {
+    constexpr static int schnorr_version = 1;
+    int nVersion;
+
+    //! Derive _nChildIn begin, aggregation size, reserved std::vector<unsigned char> (unused)
+    std::vector<std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
+
+    XOnlyPubKeysAggWalletInfo() {
+        nVersion = schnorr_version;
+    }
+
+    void push(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+        Derive_info.emplace_back(obj);
+    }
+
+    unsigned int GetSerializeSize() const {
+        unsigned int size = 0;
+        size += sizeof(nVersion);
+        size += ::GetSerializeSize(Derive_info);
+        return size;
+    }
+
+    template <typename Stream>
+    void Serialize(Stream &s) const {
+        s << nVersion;
+        s << Derive_info;
+    }
+
+    template <typename Stream>
+    void Unserialize(Stream &s) {
+        s >> nVersion;
+        s >> Derive_info;
+    }
+};
+
 struct XOnlyPubKeysAggInfo {
     constexpr static int schnorr_version = 1;
     int nVersion;
@@ -876,6 +911,10 @@ struct XOnlyPubKeysAggInfo {
 
     XOnlyPubKeysAggInfo() {
         nVersion = schnorr_version;
+    }
+
+    void push(XOnlyPubKeys &&obj) {
+        agg_pubkeys.emplace_back(obj);
     }
 
     unsigned int GetSerializeSize() const {

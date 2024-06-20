@@ -652,7 +652,7 @@ SecureString key_io::EncodeExtKey(const CExtKey &extkey) {
     }
 
     data.resize(base58_bytes_prefix_size + CExtKey::BIP32_EXTKEY_SIZE);
-    CPrivKey keyvch = extkey.GetPrivKey();
+    CExtSecret keyvch = extkey.GetExtSecret();
     data.insert(data.end(), keyvch.begin(), keyvch.end());
     return base58::manage::EncodeBase58Check<SecureString, CExtSecret>(data);
 }

@@ -351,7 +351,8 @@ struct CExtKey {
                a.privkey_ == b.privkey_;
     }
 
-    CPrivKey GetPrivKey() const;
+    CExtSecret GetExtSecret() const;
+    CSecret GetSecret() const;
     bool Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const;
     bool Decode(const unsigned char code[CExtKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
     bool Derive(CExtKey &out, unsigned int nChild) const;

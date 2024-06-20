@@ -1363,6 +1363,8 @@ bool cmp_for_schnorr_pubkeys() {
 }
 
 bool cmp_for_schnorr_pubkeys2() {
+    if(entry::pwalletMain->IsLocked())
+        return false;
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
         return false;
 
@@ -1378,6 +1380,53 @@ bool cmp_for_schnorr_pubkeys2() {
         print_bytes("pubkey", hd_wallet::get().reserved_pubkey[i].GetPubVch().data(), 33);
         assert(extpub.GetPubKey() == hd_wallet::get().reserved_pubkey[i]);
     }
+
+    return true;
+}
+
+// Derive: 0 - 499, ECDSA
+//         after 500, schnorr agg signature
+bool agg_schnorr_from_wallet_to_keys() {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    const unsigned int schnorr_agg_nums = 5000;
+    const unsigned int begin_key_number = hd_wallet::get().reserved_pubkey.size();
+    debugcs::instance() << __func__ << ": " << begin_key_number << debugcs::endl();
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    XOnlyPubKeys xonly_pubkeys;
+    for(unsigned int i=begin_key_number; i < begin_key_number + schnorr_agg_nums; ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i))
+            return false;
+        xonly_pubkeys.push(extpub.GetPubKey());
+        print_bytes("extpub", extpub.GetPubKey().data(), 33);
+    }
+
+    XOnlyPubKeysAggWalletInfo xonly_wallet_info;
+    xonly_wallet_info.push(std::make_tuple(begin_key_number, schnorr_agg_nums, std::vector<unsigned char>()));
+
+    XOnlyKeys xonly_keys;
+    for(unsigned int i=begin_key_number; i < begin_key_number + schnorr_agg_nums; ++i) {
+        CExtKey extkey;
+        if(!extkeyseed.Derive(extkey, i))
+            return false;
+        xonly_keys.push(extkey.GetSecret());
+    }
+
+    debugcs::instance() << __func__ << ": " << "schnorr signature" << debugcs::endl();
+    uint256 hash = Create_random_hash();
+    std::vector<unsigned char> sigbytes;
+    if(!xonly_keys.SignSchnorr(hash, sigbytes))
+        return false;
+    if(!xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
+        return false;
 
     return true;
 }
@@ -1673,7 +1722,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
-    //if(!cmp_for_schnorr_pubkeys2()) {
+    //if(!agg_schnorr_from_wallet_to_keys()) {
     //    assert(!"5: failure cmp_for_schnorr_pubkeys");
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {

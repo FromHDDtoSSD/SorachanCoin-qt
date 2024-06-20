@@ -1613,9 +1613,9 @@ bool CExtKey::Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const  {
     return true;
 }
 
-CPrivKey CExtKey::GetPrivKey() const {
+CExtSecret CExtKey::GetExtSecret() const {
     CPrivKey vch;
-    vch.resize(CExtPubKey::BIP32_EXTKEY_SIZE);
+    vch.resize(CExtKey::BIP32_EXTKEY_SIZE);
     unsigned char *code = &vch.front();
     code[0] = nDepth_;
     std::memcpy(code+1, vchFingerprint_, 4);
@@ -1626,6 +1626,10 @@ CPrivKey CExtKey::GetPrivKey() const {
     assert(privkey_.size() == 32);
     std::memcpy(code+42, privkey_.begin(), 32);
     return vch;
+}
+
+CSecret CExtKey::GetSecret() const {
+    return privkey_.GetSecret();
 }
 
 bool CExtKey::Decode(const unsigned char code[CExtKey::BIP32_EXTKEY_SIZE], bool fCompressed) {
