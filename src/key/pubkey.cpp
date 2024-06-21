@@ -3945,6 +3945,7 @@ bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChildIn) const  {
     CKeyID id = pubkey_.GetID();
     std::memcpy(&out.vchFingerprint_[0], &id, 4);
     out.nChild_ = _nChildIn;
+    assert(pubkey_.IsCompressed());
     return pubkey_.Derive(out.pubkey_, out.chaincode_, _nChildIn, chaincode_);
 }
 

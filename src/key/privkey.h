@@ -351,6 +351,10 @@ struct CExtKey {
                a.privkey_ == b.privkey_;
     }
 
+    bool IsValid() const {
+        return privkey_.IsValid();
+    }
+
     CExtSecret GetExtSecret() const;
     CSecret GetSecret() const;
     bool Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const;

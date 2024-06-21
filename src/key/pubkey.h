@@ -858,13 +858,18 @@ public:
     }
 
     template <typename Stream>
-    void Serialize(Stream &s) const {
-        s << m_vkeydata;
+    inline void Serialize(Stream &s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
     }
 
     template <typename Stream>
-    void Unserialize(Stream &s) {
-        s >> m_vkeydata;
+    inline void Unserialize(Stream &s) {
+        this->SerializationOp(s, CSerActionUnserialize());
+    }
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(m_vkeydata);
     }
 };
 
@@ -876,6 +881,10 @@ struct XOnlyPubKeysAggWalletInfo {
     //! Derive _nChildIn begin, aggregation size, reserved std::vector<unsigned char> (unused)
     std::vector<std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
 
+    friend bool operator==(const XOnlyPubKeysAggWalletInfo &a, const XOnlyPubKeysAggWalletInfo &b) {
+        return a.nVersion == b.nVersion && a.Derive_info == b.Derive_info;
+    }
+
     XOnlyPubKeysAggWalletInfo() {
         nVersion = schnorr_version;
     }
@@ -885,25 +894,53 @@ struct XOnlyPubKeysAggWalletInfo {
     }
 
     unsigned int GetSerializeSize() const {
-        unsigned int size = 0;
-        size += sizeof(nVersion);
-        size += ::GetSerializeSize(Derive_info);
-        return size;
+        CSizeComputer s(nVersion);
+        s << *this;
+        return s.size();
     }
 
     template <typename Stream>
-    void Serialize(Stream &s) const {
-        s << nVersion;
-        s << Derive_info;
+    inline void Serialize(Stream &s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
     }
 
     template <typename Stream>
-    void Unserialize(Stream &s) {
-        s >> nVersion;
-        s >> Derive_info;
+    inline void Unserialize(Stream &s) {
+        this->SerializationOp(s, CSerActionUnserialize());
+    }
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        if(ser_action.ForRead()) {
+           unsigned int size = 0;
+           READWRITE(nVersion);
+           READWRITE(size);
+           for(unsigned int i=0; i < size; ++i) {
+               unsigned int a = 0;
+               size_t b = 0;
+               std::vector<unsigned char> c;
+               READWRITE(a);
+               READWRITE(b);
+               READWRITE(c);
+               Derive_info.emplace_back(std::make_tuple(a, b, c));
+           }
+        } else {
+            unsigned int size = (unsigned int)Derive_info.size();
+            READWRITE(nVersion);
+            READWRITE(size);
+            for(unsigned int i=0; i < size; ++i) {
+                unsigned int a = std::get<0>(Derive_info[i]);
+                size_t b = std::get<1>(Derive_info[i]);
+                std::vector<unsigned char> &c = std::get<2>(Derive_info[i]);
+                READWRITE(a);
+                READWRITE(b);
+                READWRITE(c);
+            }
+        }
     }
 };
 
+//! It is used when importing or exporting Schnorr keys from an external source.
 struct XOnlyPubKeysAggInfo {
     constexpr static int schnorr_version = 1;
     int nVersion;
@@ -918,35 +955,40 @@ struct XOnlyPubKeysAggInfo {
     }
 
     unsigned int GetSerializeSize() const {
-        unsigned int size = 0;
-        size += sizeof(nVersion);
-        size += sizeof(unsigned int);
-        for(const auto &d: agg_pubkeys) {
-            size += d.GetSerializeSize();
-        }
-        return size;
+        CSizeComputer s(nVersion);
+        s << *this;
+        return s.size();
     }
 
     template <typename Stream>
-    void Serialize(Stream &s) const {
-        unsigned int size = (unsigned int)agg_pubkeys.size();
-        s << nVersion;
-        s << size;
-        for(unsigned int i=0; i < size; ++i) {
-            s << agg_pubkeys[i];
-        }
+    inline void Serialize(Stream &s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
     }
 
     template <typename Stream>
-    void Unserialize(Stream &s) {
-        unsigned int size = 0;
-        s >> nVersion;
-        s >> size;
-        agg_pubkeys.clear();
-        for(unsigned int i=0; i < size; ++i) {
-            XOnlyPubKeys vpub;
-            s >> vpub;
-            agg_pubkeys.emplace_back(vpub);
+    inline void Unserialize(Stream &s) {
+        this->SerializationOp(s, CSerActionUnserialize());
+    }
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        if(ser_action.ForRead()) {
+            unsigned int size = 0;
+            READWRITE(nVersion);
+            READWRITE(size);
+            agg_pubkeys.clear();
+            for(unsigned int i=0; i < size; ++i) {
+                XOnlyPubKeys vpub;
+                READWRITE(vpub);
+                agg_pubkeys.emplace_back(vpub);
+            }
+        } else {
+            unsigned int size = (unsigned int)agg_pubkeys.size();
+            READWRITE(nVersion);
+            READWRITE(size);
+            for(unsigned int i=0; i < size; ++i) {
+                READWRITE(agg_pubkeys[i]);
+            }
         }
     }
 };
@@ -970,6 +1012,10 @@ struct CExtPubKey {
 
     void Invalidate(unsigned char code[BIP32_EXTKEY_SIZE]) const  {
         code[0] = 0xFF;
+    }
+
+    bool IsValid() const {
+        return pubkey_.IsFullyValid_BIP66();
     }
 
     CPubKey GetPubKey() const;

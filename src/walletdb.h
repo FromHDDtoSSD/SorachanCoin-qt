@@ -232,6 +232,19 @@ public:
         return Write(std::make_pair(std::string("hdkeyseed"), pubkey), std::make_tuple(vchExtSeed, _child_offset, cryptosalt, fcrypto));
     }
 
+    bool ExistsSchnorrPubKeys(const CPubKey &pubkeyseed) {
+        return Exists(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed));
+    }
+
+    bool ReadSchnorrPubKeys(const CPubKey &pubkeyseed, XOnlyPubKeysAggWalletInfo &agg_info) {
+        return Read(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed), agg_info);
+    }
+
+    bool WriteSchnorrPubKeys(const CPubKey &pubkeyseed, const XOnlyPubKeysAggWalletInfo &agg_info) {
+        dbparam::IncWalletUpdate();
+        return Write(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed), agg_info);
+    }
+
     bool WriteChildHDSeed(const CPubKey &pubkey, unsigned int _child_offset) {
         //dbparam::IncWalletUpdate();
         std::pair<std::string, CPubKey> key;

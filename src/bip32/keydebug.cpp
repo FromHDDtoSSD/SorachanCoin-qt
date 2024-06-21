@@ -1394,23 +1394,48 @@ bool agg_schnorr_from_wallet_to_keys() {
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
         return false;
 
-    const unsigned int schnorr_agg_nums = 5000;
+    const unsigned int schnorr_agg_nums = 500;
     const unsigned int begin_key_number = hd_wallet::get().reserved_pubkey.size();
-    debugcs::instance() << __func__ << ": " << begin_key_number << debugcs::endl();
 
     CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
     CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    CFirmKey key;
+    key.SetSecret(extkeyseed.GetSecret());
+    assert(key.GetPubKey() == extpubseed.GetPubKey());
+
     XOnlyPubKeys xonly_pubkeys;
     for(unsigned int i=begin_key_number; i < begin_key_number + schnorr_agg_nums; ++i) {
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, i))
             return false;
         xonly_pubkeys.push(extpub.GetPubKey());
-        print_bytes("extpub", extpub.GetPubKey().data(), 33);
     }
 
     XOnlyPubKeysAggWalletInfo xonly_wallet_info;
     xonly_wallet_info.push(std::make_tuple(begin_key_number, schnorr_agg_nums, std::vector<unsigned char>()));
+    {
+        CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+        LOCK(entry::pwalletMain->cs_wallet);
+        if(!walletdb.WriteSchnorrPubKeys(extpubseed.GetPubKey(), xonly_wallet_info))
+            return false;
+    }
+
+    XOnlyPubKeysAggWalletInfo xonly_wallet_info2;
+    {
+        CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+        LOCK(entry::pwalletMain->cs_wallet);
+        if(!walletdb.ExistsSchnorrPubKeys(extpubseed.GetPubKey()))
+            return false;
+        if(!walletdb.ReadSchnorrPubKeys(extpubseed.GetPubKey(), xonly_wallet_info2))
+            return false;
+    }
+
+    assert(xonly_wallet_info == xonly_wallet_info2);
 
     XOnlyKeys xonly_keys;
     for(unsigned int i=begin_key_number; i < begin_key_number + schnorr_agg_nums; ++i) {
@@ -1420,7 +1445,6 @@ bool agg_schnorr_from_wallet_to_keys() {
         xonly_keys.push(extkey.GetSecret());
     }
 
-    debugcs::instance() << __func__ << ": " << "schnorr signature" << debugcs::endl();
     uint256 hash = Create_random_hash();
     std::vector<unsigned char> sigbytes;
     if(!xonly_keys.SignSchnorr(hash, sigbytes))
