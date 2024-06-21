@@ -1393,14 +1393,35 @@ bool agg_schnorr_from_wallet_to_keys() {
 
     XOnlyPubKeys xonly_pubkeys;
     XOnlyKeys xonly_keys;
-    if(!xonly_wallet_info.GetXOnlyKeys(0, xonly_pubkeys, xonly_keys))
+    if(!xonly_wallet_info.GetXOnlyKeys(9, xonly_pubkeys, xonly_keys))
         return false;
+
+    /*
+    XOnlyPubKeys xonly_pubkeys2;
+    if(!xonly_wallet_info.GetXOnlyPubKeys(0, xonly_pubkeys2))
+        return false;
+    assert(xonly_pubkeys == xonly_pubkeys2);
+    */
+
+    debugcs::instance() << "xonly_wallet_info nums: " << xonly_wallet_info.size() << debugcs::endl();
+    debugcs::instance() << "xonly_wallet_info GetSerializeSize: " << xonly_wallet_info.GetSerializeSize() << debugcs::endl();
+    debugcs::instance() << "xonly_pubkeys: " << xonly_pubkeys.size() << debugcs::endl();
+    debugcs::instance() << "xonly_keys: " << xonly_keys.size() << debugcs::endl();
+    for(int i=0; i < xonly_wallet_info.size(); ++i)
+        print_bytes("xonly_reserved", std::get<2>(xonly_wallet_info.Derive_info[i]).data(), std::get<2>(xonly_wallet_info.Derive_info[i]).size());
 
     uint256 hash = Create_random_hash();
     std::vector<unsigned char> sigbytes;
     if(!xonly_keys.SignSchnorr(hash, sigbytes))
         return false;
     if(!xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
+        return false;
+
+    //! try: new schnorr agg key
+    std::vector<unsigned char> dummy = {0x56, 0x77, 0x89, 0x6f, 0x75};
+    print_bytes("dummy", dummy.data(), 5);
+    const auto d = std::make_tuple(7500, 330, dummy);
+    if(!xonly_wallet_info.push_commit(d))
         return false;
 
     return true;

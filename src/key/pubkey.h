@@ -908,8 +908,22 @@ struct XOnlyAggWalletInfo {
         nVersion = schnorr_version;
     }
 
+    void push(unsigned int begin_index, size_t agg_size) {
+        Derive_info.emplace_back(std::make_tuple(begin_index, agg_size, std::vector<unsigned char>()));
+    }
+
+    bool push_commit(unsigned int begin_index, size_t agg_size) {
+        Derive_info.emplace_back(std::make_tuple(begin_index, agg_size, std::vector<unsigned char>()));
+        return UpdateToWalletInfo();
+    }
+
     void push(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
         Derive_info.emplace_back(obj);
+    }
+
+    bool push_commit(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+        Derive_info.emplace_back(obj);
+        return UpdateToWalletInfo();
     }
 
     unsigned int GetSerializeSize() const {
