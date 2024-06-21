@@ -360,7 +360,7 @@ struct CExtKey {
     bool Encode(unsigned char code[CExtKey::BIP32_EXTKEY_SIZE]) const;
     bool Decode(const unsigned char code[CExtKey::BIP32_EXTKEY_SIZE], bool fCompressed=true);
     bool Derive(CExtKey &out, unsigned int nChild) const;
-    CExtPubKey Neuter() const; // from CExtKey to CEtxPubKey
+    CExtPubKey Neuter() const; // from CExtKey to CEtxPubKey, CExtPubKey::pubkey_ is always compressed
 
     bool SetSeed(const unsigned char *seed, unsigned int nSeedLen);
 

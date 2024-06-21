@@ -232,17 +232,17 @@ public:
         return Write(std::make_pair(std::string("hdkeyseed"), pubkey), std::make_tuple(vchExtSeed, _child_offset, cryptosalt, fcrypto));
     }
 
-    bool ExistsSchnorrPubKeys(const CPubKey &pubkeyseed) {
-        return Exists(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed));
+    bool ExistsSchnorrWalletInfo(const CPubKey &pubkeyseed) {
+        return Exists(std::make_pair(std::string("schnorrwalletinfo"), pubkeyseed));
     }
 
-    bool ReadSchnorrPubKeys(const CPubKey &pubkeyseed, XOnlyPubKeysAggWalletInfo &agg_info) {
-        return Read(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed), agg_info);
+    bool ReadSchnorrWalletInfo(const CPubKey &pubkeyseed, XOnlyAggWalletInfo &agg_info) {
+        return Read(std::make_pair(std::string("schnorrwalletinfo"), pubkeyseed), agg_info);
     }
 
-    bool WriteSchnorrPubKeys(const CPubKey &pubkeyseed, const XOnlyPubKeysAggWalletInfo &agg_info) {
+    bool WriteSchnorrWalletInfo(const CPubKey &pubkeyseed, const XOnlyAggWalletInfo &agg_info) {
         dbparam::IncWalletUpdate();
-        return Write(std::make_pair(std::string("schnorrpubkeys"), pubkeyseed), agg_info);
+        return Write(std::make_pair(std::string("schnorrwalletinfo"), pubkeyseed), agg_info);
     }
 
     bool WriteChildHDSeed(const CPubKey &pubkey, unsigned int _child_offset) {

@@ -3949,6 +3949,105 @@ bool CExtPubKey::Derive(CExtPubKey &out, unsigned int _nChildIn) const  {
     return pubkey_.Derive(out.pubkey_, out.chaincode_, _nChildIn, chaincode_);
 }
 
+bool XOnlyAggWalletInfo::LoadFromWalletInfo() {
+    LOCK(entry::pwalletMain->cs_wallet);
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    if(!walletdb.ExistsSchnorrWalletInfo(extpubseed.GetPubKey()))
+        return false;
+    if(!walletdb.ReadSchnorrWalletInfo(extpubseed.GetPubKey(), *this))
+        return false;
+
+    return true;
+}
+
+bool XOnlyAggWalletInfo::UpdateToWalletInfo() const {
+    LOCK(entry::pwalletMain->cs_wallet);
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    if(!walletdb.WriteSchnorrWalletInfo(extpubseed.GetPubKey(), *this))
+        return false;
+
+    return true;
+}
+
+bool XOnlyAggWalletInfo::GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    const auto info = GetInfo(index);
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i))
+            return false;
+        xonly_pubkeys.push(extpub.GetPubKey());
+    }
+
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        CExtKey extkey;
+        if(!extkeyseed.Derive(extkey, i))
+            return false;
+        xonly_keys.push(extkey.GetSecret());
+    }
+
+    return true;
+}
+
+bool XOnlyAggWalletInfo::GetXOnlyPubKeys(int index, XOnlyPubKeys &xonly_pubkeys) const {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    const auto info = GetInfo(index);
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i))
+            return false;
+        xonly_pubkeys.push(extpub.GetPubKey());
+    }
+
+    return true;
+}
+
 /**
  * secp256k1 util
  */

@@ -874,18 +874,37 @@ public:
 };
 
 // for WalletDB
-struct XOnlyPubKeysAggWalletInfo {
+struct XOnlyKeys; // privkey.h
+struct XOnlyAggWalletInfo {
     constexpr static int schnorr_version = 1;
     int nVersion;
 
-    //! Derive _nChildIn begin, aggregation size, reserved std::vector<unsigned char> (unused)
+    //! Derive _nChildIn begin, aggregation size, (Future reservation) reserved std::vector<unsigned char>
     std::vector<std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
 
-    friend bool operator==(const XOnlyPubKeysAggWalletInfo &a, const XOnlyPubKeysAggWalletInfo &b) {
+    std::pair<unsigned int, size_t> GetInfo(int index) const {
+        return std::make_pair(std::get<0>(Derive_info[index]), std::get<1>(Derive_info[index]));
+    }
+
+    unsigned int size() const {
+        return Derive_info.size();
+    }
+
+    //! Load from the wallet to this object
+    bool LoadFromWalletInfo();
+
+    //! Update to the wallet
+    bool UpdateToWalletInfo() const;
+
+    //! Construct objects for each aggregated key
+    bool GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const;
+    bool GetXOnlyPubKeys(int index, XOnlyPubKeys &xonly_pubkeys) const;
+
+    friend bool operator==(const XOnlyAggWalletInfo &a, const XOnlyAggWalletInfo &b) {
         return a.nVersion == b.nVersion && a.Derive_info == b.Derive_info;
     }
 
-    XOnlyPubKeysAggWalletInfo() {
+    XOnlyAggWalletInfo() {
         nVersion = schnorr_version;
     }
 
@@ -948,6 +967,14 @@ struct XOnlyPubKeysAggInfo {
 
     XOnlyPubKeysAggInfo() {
         nVersion = schnorr_version;
+    }
+
+    const XOnlyPubKeys &GetInfo(int index) const {
+        return agg_pubkeys[index];
+    }
+
+    unsigned int size() const {
+        return agg_pubkeys.size();
     }
 
     void push(XOnlyPubKeys &&obj) {
@@ -1019,9 +1046,9 @@ struct CExtPubKey {
     }
 
     CPubKey GetPubKey() const;
-    bool Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const; // extpubkey to code
+    bool Encode(unsigned char code[BIP32_EXTKEY_SIZE]) const; // from extpubkey to code
     bool Decode(const unsigned char code[BIP32_EXTKEY_SIZE]);
-    bool Derive(CExtPubKey &out, unsigned int _nChildIn) const;
+    bool Derive(CExtPubKey &out, unsigned int _nChildIn) const; // out.pubkey_ is always compressed
 
     void Serialize(CSizeComputer &s) const {
         // Optimized implementation for ::GetSerializeSize that avoids copying.
