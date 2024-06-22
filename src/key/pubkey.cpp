@@ -3993,10 +3993,12 @@ bool XOnlyAggWalletInfo::UpdateToWalletInfo() const {
     return true;
 }
 
-bool XOnlyAggWalletInfo::GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const {
+bool XOnlyAggWalletInfo::GetXOnlyKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const {
     if(entry::pwalletMain->IsLocked())
         return false;
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+    if(!Derive_info.count(hash))
         return false;
 
     CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
@@ -4006,7 +4008,7 @@ bool XOnlyAggWalletInfo::GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XO
     if(!extpubseed.IsValid())
         return false;
 
-    const auto info = GetInfo(index);
+    const auto info = GetInfo(hash);
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, i))
@@ -4024,10 +4026,12 @@ bool XOnlyAggWalletInfo::GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XO
     return true;
 }
 
-bool XOnlyAggWalletInfo::GetXOnlyPubKeys(int index, XOnlyPubKeys &xonly_pubkeys) const {
+bool XOnlyAggWalletInfo::GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const {
     if(entry::pwalletMain->IsLocked())
         return false;
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+    if(!Derive_info.count(hash))
         return false;
 
     CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
@@ -4037,7 +4041,7 @@ bool XOnlyAggWalletInfo::GetXOnlyPubKeys(int index, XOnlyPubKeys &xonly_pubkeys)
     if(!extpubseed.IsValid())
         return false;
 
-    const auto info = GetInfo(index);
+    const auto info = GetInfo(hash);
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, i))

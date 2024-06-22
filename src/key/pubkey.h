@@ -879,11 +879,18 @@ struct XOnlyAggWalletInfo {
     constexpr static int schnorr_version = 1;
     int nVersion;
 
-    //! Derive _nChildIn begin, aggregation size, (Future reservation) reserved std::vector<unsigned char>
-    std::vector<std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
+    //! uint160: Hash of the aggregated public key
+    //! std::tuple: Derive _nChildIn begin, aggregation size, (Future reservation) std::vector<unsigned char>
+    std::map<uint160, std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
 
-    std::pair<unsigned int, size_t> GetInfo(int index) const {
-        return std::make_pair(std::get<0>(Derive_info[index]), std::get<1>(Derive_info[index]));
+    //! T is uint160 type-only allowed member function
+    //! return type is std::pair<unsigned int, size_t>
+    template<typename T>
+    typename std::enable_if<std::is_same<T, uint160>::value, std::pair<unsigned int, size_t>>::type
+    GetInfo(const T &hash) const {
+        if(!Derive_info.count(hash))
+            return std::make_pair(0, 0);
+        return std::make_pair(std::get<0>(Derive_info.at(hash)), std::get<1>(Derive_info.at(hash)));
     }
 
     unsigned int size() const {
@@ -897,8 +904,8 @@ struct XOnlyAggWalletInfo {
     bool UpdateToWalletInfo() const;
 
     //! Construct objects for each aggregated key
-    bool GetXOnlyKeys(int index, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const;
-    bool GetXOnlyPubKeys(int index, XOnlyPubKeys &xonly_pubkeys) const;
+    bool GetXOnlyKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const;
+    bool GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const;
 
     friend bool operator==(const XOnlyAggWalletInfo &a, const XOnlyAggWalletInfo &b) {
         return a.nVersion == b.nVersion && a.Derive_info == b.Derive_info;
@@ -908,21 +915,27 @@ struct XOnlyAggWalletInfo {
         nVersion = schnorr_version;
     }
 
-    void push(unsigned int begin_index, size_t agg_size) {
-        Derive_info.emplace_back(std::make_tuple(begin_index, agg_size, std::vector<unsigned char>()));
+    bool push(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
+        auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
+        return ret.second;
     }
 
-    bool push_commit(unsigned int begin_index, size_t agg_size) {
-        Derive_info.emplace_back(std::make_tuple(begin_index, agg_size, std::vector<unsigned char>()));
+    bool push_commit(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
+        auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
+        if(!ret.second)
+            return false;
         return UpdateToWalletInfo();
     }
 
-    void push(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
-        Derive_info.emplace_back(obj);
+    bool push(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+        auto ret = Derive_info.emplace(std::make_pair(hash, obj));
+        return ret.second;
     }
 
-    bool push_commit(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
-        Derive_info.emplace_back(obj);
+    bool push_commit(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+        auto ret = Derive_info.emplace(std::make_pair(hash, obj));
+        if(!ret.second)
+            return false;
         return UpdateToWalletInfo();
     }
 
@@ -932,43 +945,36 @@ struct XOnlyAggWalletInfo {
         return s.size();
     }
 
-    template <typename Stream>
-    inline void Serialize(Stream &s) const {
-        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
+    template<typename Stream>
+    void Serialize(Stream &s) const {
+        CSerActionSerialize ser_action;
+        unsigned int size = (unsigned int)Derive_info.size();
+        READWRITE(nVersion);
+        READWRITE(size);
+        for(auto &r: Derive_info) {
+            READWRITE(r.first);
+            READWRITE(std::get<0>(r.second));
+            READWRITE(std::get<1>(r.second));
+            READWRITE(std::get<2>(r.second));
+        }
     }
 
-    template <typename Stream>
-    inline void Unserialize(Stream &s) {
-        this->SerializationOp(s, CSerActionUnserialize());
-    }
-
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        if(ser_action.ForRead()) {
-           unsigned int size = 0;
-           READWRITE(nVersion);
-           READWRITE(size);
-           for(unsigned int i=0; i < size; ++i) {
-               unsigned int a = 0;
-               size_t b = 0;
-               std::vector<unsigned char> c;
-               READWRITE(a);
-               READWRITE(b);
-               READWRITE(c);
-               Derive_info.emplace_back(std::make_tuple(a, b, c));
-           }
-        } else {
-            unsigned int size = (unsigned int)Derive_info.size();
-            READWRITE(nVersion);
-            READWRITE(size);
-            for(unsigned int i=0; i < size; ++i) {
-                unsigned int a = std::get<0>(Derive_info[i]);
-                size_t b = std::get<1>(Derive_info[i]);
-                std::vector<unsigned char> &c = std::get<2>(Derive_info[i]);
-                READWRITE(a);
-                READWRITE(b);
-                READWRITE(c);
-            }
+    template<typename Stream>
+    void Unserialize(Stream &s) {
+        CSerActionUnserialize ser_action;
+        unsigned int size = 0;
+        READWRITE(nVersion);
+        READWRITE(size);
+        for(unsigned int i=0; i < size; ++i) {
+            uint160 hash;
+            unsigned int a;
+            size_t b;
+            std::vector<unsigned char> c;
+            READWRITE(hash);
+            READWRITE(a);
+            READWRITE(b);
+            READWRITE(c);
+            Derive_info.emplace(std::make_pair(hash, std::make_tuple(a, b, c)));
         }
     }
 };
