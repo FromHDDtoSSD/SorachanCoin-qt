@@ -915,29 +915,17 @@ struct XOnlyAggWalletInfo {
         nVersion = schnorr_version;
     }
 
-    bool push(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
-        auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
-        return ret.second;
-    }
+    //! Manually assign and store the hash in the map.
+    bool push(const uint160 &hash, unsigned int begin_index, size_t agg_size);
+    bool push_commit(const uint160 &hash, unsigned int begin_index, size_t agg_size);
+    bool push(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj);
+    bool push_commit(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj);
 
-    bool push_commit(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
-        auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
-        if(!ret.second)
-            return false;
-        return UpdateToWalletInfo();
-    }
-
-    bool push(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
-        auto ret = Derive_info.emplace(std::make_pair(hash, obj));
-        return ret.second;
-    }
-
-    bool push_commit(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
-        auto ret = Derive_info.emplace(std::make_pair(hash, obj));
-        if(!ret.second)
-            return false;
-        return UpdateToWalletInfo();
-    }
+    //! Automatically compute and store the hash in the map.
+    bool push_computehash(unsigned int begin_index, size_t agg_size, uint160 &hash);
+    bool push_computehash_commit(unsigned int begin_index, size_t agg_size, uint160 &hash);
+    bool push_computehash(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash);
+    bool push_computehash_commit(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash);
 
     unsigned int GetSerializeSize() const {
         CSizeComputer s(nVersion);

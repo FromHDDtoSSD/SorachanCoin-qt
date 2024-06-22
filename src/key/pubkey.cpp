@@ -4052,6 +4052,78 @@ bool XOnlyAggWalletInfo::GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonl
     return true;
 }
 
+bool XOnlyAggWalletInfo::push(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
+    auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
+    return ret.second;
+}
+
+bool XOnlyAggWalletInfo::push_commit(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
+    if(!push(hash, begin_index, agg_size))
+        return false;
+    return UpdateToWalletInfo();
+}
+
+bool XOnlyAggWalletInfo::push(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+    auto ret = Derive_info.emplace(std::make_pair(hash, obj));
+    return ret.second;
+}
+
+bool XOnlyAggWalletInfo::push_commit(const uint160 &hash, std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj) {
+    if(!push(hash, std::move(obj)))
+        return false;
+    return UpdateToWalletInfo();
+}
+
+static bool GetAggPublicKeyHash(unsigned int begin_index, size_t agg_size, uint160 &hash) {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    XOnlyPubKeys xonly_agg_pubkeys;
+    for(unsigned int i=begin_index; i < begin_index + agg_size; ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i))
+            return false;
+        xonly_agg_pubkeys.push(extpub.GetPubKey());
+    }
+
+    XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
+    latest_crypto::CHash160().Write((const unsigned char *)xonly_pubkey.data(), xonly_pubkey.size()).Finalize(hash.begin());
+    return true;
+}
+
+bool XOnlyAggWalletInfo::push_computehash(unsigned int begin_index, size_t agg_size, uint160 &hash) {
+    if(!GetAggPublicKeyHash(begin_index, agg_size, hash))
+        return false;
+    return push(hash, begin_index, agg_size);
+}
+
+bool XOnlyAggWalletInfo::push_computehash_commit(unsigned int begin_index, size_t agg_size, uint160 &hash) {
+    if(!GetAggPublicKeyHash(begin_index, agg_size, hash))
+        return false;
+    return push_commit(hash, begin_index, agg_size);
+}
+
+bool XOnlyAggWalletInfo::push_computehash(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash) {
+    if(!GetAggPublicKeyHash(std::get<0>(obj), std::get<1>(obj), hash))
+        return false;
+    return push(hash, std::move(obj));
+}
+
+bool XOnlyAggWalletInfo::push_computehash_commit(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash) {
+    if(!GetAggPublicKeyHash(std::get<0>(obj), std::get<1>(obj), hash))
+        return false;
+    return push_commit(hash, std::move(obj));
+}
+
 /**
  * secp256k1 util
  */
