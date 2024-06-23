@@ -879,9 +879,19 @@ struct XOnlyAggWalletInfo {
     constexpr static int schnorr_version = 1;
     int nVersion;
 
+    //! Manages aggregated XOnlyKey.
+    constexpr static size_t DEF_AGG_XONLY_KEYS = 5000;
+    size_t aggregated_size;
+
     //! uint160: Hash of the aggregated public key
     //! std::tuple: Derive _nChildIn begin, aggregation size, (Future reservation) std::vector<unsigned char>
     std::map<uint160, std::tuple<unsigned int, size_t, std::vector<unsigned char>>> Derive_info;
+
+    //! Construction that enables the generation of the first aggregated xonly key.
+    XOnlyAggWalletInfo() {
+        nVersion = schnorr_version;
+        aggregated_size = 0;
+    }
 
     //! T is uint160 type-only allowed member function
     //! return type is std::pair<unsigned int, size_t>
@@ -908,11 +918,7 @@ struct XOnlyAggWalletInfo {
     bool GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const;
 
     friend bool operator==(const XOnlyAggWalletInfo &a, const XOnlyAggWalletInfo &b) {
-        return a.nVersion == b.nVersion && a.Derive_info == b.Derive_info;
-    }
-
-    XOnlyAggWalletInfo() {
-        nVersion = schnorr_version;
+        return a.nVersion == b.nVersion && a.aggregated_size == b.aggregated_size && a.Derive_info == b.Derive_info;
     }
 
     //! Manually assign and store the hash in the map.
@@ -927,6 +933,10 @@ struct XOnlyAggWalletInfo {
     bool push_computehash(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash);
     bool push_computehash_commit(std::tuple<unsigned int, size_t, std::vector<unsigned char>> &&obj, uint160 &hash);
 
+    //! Generate a new XOnly key using a CExtKey.
+    //! This class uses a stored counter to generate unique keys. The default aggregation count is 5,000.
+    bool MakeNewKey(uint160 &hash, size_t agg_size = DEF_AGG_XONLY_KEYS);
+
     unsigned int GetSerializeSize() const {
         CSizeComputer s(nVersion);
         s << *this;
@@ -938,6 +948,7 @@ struct XOnlyAggWalletInfo {
         CSerActionSerialize ser_action;
         unsigned int size = (unsigned int)Derive_info.size();
         READWRITE(nVersion);
+        READWRITE(aggregated_size);
         READWRITE(size);
         for(auto &r: Derive_info) {
             READWRITE(r.first);
@@ -952,6 +963,7 @@ struct XOnlyAggWalletInfo {
         CSerActionUnserialize ser_action;
         unsigned int size = 0;
         READWRITE(nVersion);
+        READWRITE(aggregated_size);
         READWRITE(size);
         for(unsigned int i=0; i < size; ++i) {
             uint160 hash;

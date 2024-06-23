@@ -1398,7 +1398,7 @@ bool agg_schnorr_from_wallet_to_keys() {
     //if(!xonly_wallet_info.push_computehash_commit(d, agg_hash))
     //    return false;
     uint160 agg_hash;
-    if(!xonly_wallet_info.push_computehash_commit(15387, 5000, agg_hash))
+    if(!xonly_wallet_info.push_computehash_commit(15387, 35000, agg_hash))
         return false;
 
     XOnlyPubKeys xonly_pubkeys;
@@ -1421,6 +1421,52 @@ bool agg_schnorr_from_wallet_to_keys() {
     debugcs::instance() << "xonly_wallet_info GetSerializeSize: " << xonly_wallet_info.GetSerializeSize() << debugcs::endl();
     debugcs::instance() << "xonly_pubkeys: " << xonly_pubkeys.size() << debugcs::endl();
     debugcs::instance() << "xonly_keys: " << xonly_keys.size() << debugcs::endl();
+    for(const auto &d: xonly_wallet_info.Derive_info) {
+        print_bytes("xonly_reserved", std::get<2>(d.second).data(), std::get<2>(d.second).size());
+        print_bytes("hash", d.first.begin(), d.first.size());
+    }
+
+    uint256 hash = Create_random_hash();
+    std::vector<unsigned char> sigbytes;
+    if(!xonly_keys.SignSchnorr(hash, sigbytes))
+        return false;
+    if(!xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes)))
+        return false;
+
+    uint256 hash2 = Create_random_hash();
+    std::vector<unsigned char> sigbytes2;
+    if(!xonly_keys.SignSchnorr(hash2, sigbytes2))
+        return false;
+    if(xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes2))) // invalid check
+        return false;
+
+    return true;
+}
+
+bool agg_schnorr_from_makenewkey() {
+    XOnlyAggWalletInfo xonly_wallet_info;
+    if(!xonly_wallet_info.LoadFromWalletInfo())
+        return false;
+
+    uint160 agg_hash;
+    if(!xonly_wallet_info.MakeNewKey(agg_hash))
+        return false;
+
+    XOnlyPubKeys xonly_pubkeys;
+    XOnlyKeys xonly_keys;
+    if(!xonly_wallet_info.GetXOnlyKeys(agg_hash, xonly_pubkeys, xonly_keys))
+        return false;
+
+    XOnlyPubKey xonly_pubkey = xonly_pubkeys.GetXOnlyPubKey();
+    print_bytes("agg_xonly_pubkey", xonly_pubkey.data(), 32);
+    print_bytes("schnorr keyid", agg_hash.begin(), 20);
+
+    size_t agg_size = xonly_wallet_info.size();
+    debugcs::instance() << "xonly_wallet_info nums: " << agg_size << debugcs::endl();
+    debugcs::instance() << "xonly_wallet_info GetSerializeSize: " << xonly_wallet_info.GetSerializeSize() << debugcs::endl();
+    debugcs::instance() << "xonly_pubkeys: " << xonly_pubkeys.size() << debugcs::endl();
+    debugcs::instance() << "xonly_keys: " << xonly_keys.size() << debugcs::endl();
+    debugcs::instance() << "xonly_aggregated_size:" << xonly_wallet_info.aggregated_size << debugcs::endl();
     for(const auto &d: xonly_wallet_info.Derive_info) {
         print_bytes("xonly_reserved", std::get<2>(d.second).data(), std::get<2>(d.second).size());
         print_bytes("hash", d.first.begin(), d.first.size());
@@ -1734,7 +1780,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
-    //if(!agg_schnorr_from_wallet_to_keys()) {
+    //if(!agg_schnorr_from_makenewkey()) {
     //    assert(!"5: failure cmp_for_schnorr_pubkeys");
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {

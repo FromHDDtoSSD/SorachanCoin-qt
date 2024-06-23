@@ -3965,7 +3965,7 @@ bool XOnlyAggWalletInfo::LoadFromWalletInfo() {
 
     CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
     if(!walletdb.ExistsSchnorrWalletInfo(extpubseed.GetPubKey()))
-        return false;
+        return true; // If it does not exist in the XOnlyAggWalletInfo in database, it can be used as is, so it returns true without loading.
     if(!walletdb.ReadSchnorrWalletInfo(extpubseed.GetPubKey(), *this))
         return false;
 
@@ -4009,6 +4009,8 @@ bool XOnlyAggWalletInfo::GetXOnlyKeys(const uint160 &hash, XOnlyPubKeys &xonly_p
         return false;
 
     const auto info = GetInfo(hash);
+    if(info.second == 0)
+        return false;
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, i))
@@ -4042,6 +4044,8 @@ bool XOnlyAggWalletInfo::GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonl
         return false;
 
     const auto info = GetInfo(hash);
+    if(info.second == 0)
+        return false;
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, i))
@@ -4122,6 +4126,20 @@ bool XOnlyAggWalletInfo::push_computehash_commit(std::tuple<unsigned int, size_t
     if(!GetAggPublicKeyHash(std::get<0>(obj), std::get<1>(obj), hash))
         return false;
     return push_commit(hash, std::move(obj));
+}
+
+bool XOnlyAggWalletInfo::MakeNewKey(uint160 &hash, size_t agg_size /* = DEF_AGG_XONLY_KEYS */) {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    const unsigned int begin_index = hd_wallet::get().reserved_pubkey.size() * aggregated_size;
+    if(!push_computehash(begin_index, agg_size, hash))
+        return false;
+
+    aggregated_size += agg_size;
+    return UpdateToWalletInfo();
 }
 
 /**
