@@ -703,6 +703,11 @@ inline void print_bytes(const char *mes, const unsigned char *buf, int size) {
     debugcs::instance() << mes << ": " << strenc::HexStr(vch) << debugcs::endl();
 }
 
+template <typename T>
+inline void print_num(const char *mes, T num) {
+    debugcs::instance() << mes << ": " << num << debugcs::endl();
+}
+
 inline void print_bignum(const char *mes, BIGNUM *bn) {
     char *bn_str = BN_bn2hex(bn);
     if (bn_str) {
@@ -802,6 +807,13 @@ public:
      */
     bool VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const;
     //bool CheckPayToContract(const XOnlyPubKey& base, const uint256& hash, bool parity) const;
+
+    //! Get the KeyID of this XOnlyPubKey. (CKeyID is uint160, 20 bytes)
+    CKeyID GetID() const;
+
+    //! Hash and verification methods used in SORA-QAI.
+    qkey_vector GetSchnorrHash() const;
+    bool CmpSchnorrHash(const qkey_vector &hashvch) const;
 
     const unsigned char& operator[](int pos) const { return *(m_keydata.begin() + pos); }
     const unsigned char* data() const { return m_keydata.begin(); }

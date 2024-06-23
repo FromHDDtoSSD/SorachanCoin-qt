@@ -4134,7 +4134,7 @@ bool XOnlyAggWalletInfo::MakeNewKey(uint160 &hash, size_t agg_size /* = DEF_AGG_
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
         return false;
 
-    const unsigned int begin_index = hd_wallet::get().reserved_pubkey.size() * aggregated_size;
+    const unsigned int begin_index = hd_wallet::get().reserved_pubkey.size() + aggregated_size;
     if(!push_computehash(begin_index, agg_size, hash))
         return false;
 
@@ -4533,6 +4533,30 @@ bool XOnlyPubKey::VerifySchnorr(const uint256& msg, Span<const unsigned char> si
     secp256k1_xonly_pubkey pubkey;
     secp256k1_xonly_pubkey_load(&pubkey, &m_keydata);
     return (secp256k1_schnorrsig_verify(sigbytes.data(), msg.begin(), &pubkey) == 1) ? true: false;
+}
+
+CKeyID XOnlyPubKey::GetID() const
+{
+    uint160 hash;
+    latest_crypto::CHash160().Write((const unsigned char *)data(), size()).Finalize(hash.begin());
+    return CKeyID(hash);
+}
+
+static unsigned char QaiVersion = (unsigned char)0x02;
+qkey_vector XOnlyPubKey::GetSchnorrHash() const
+{
+    qkey_vector buf;
+    buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
+    ::memset(&buf.front(), 0xFF, 33);
+    buf[0] = 0x02;
+    buf[1] = QaiVersion;
+    ::memcpy(&buf[2], GetID().begin(), 20);
+    return buf;
+}
+
+bool XOnlyPubKey::CmpSchnorrHash(const qkey_vector &hashvch) const
+{
+    return (GetSchnorrHash() == hashvch);
 }
 
 bool XOnlyPubKeys::VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const

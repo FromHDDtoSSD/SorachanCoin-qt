@@ -1462,15 +1462,21 @@ bool agg_schnorr_from_makenewkey() {
     print_bytes("schnorr keyid", agg_hash.begin(), 20);
 
     size_t agg_size = xonly_wallet_info.size();
-    debugcs::instance() << "xonly_wallet_info nums: " << agg_size << debugcs::endl();
-    debugcs::instance() << "xonly_wallet_info GetSerializeSize: " << xonly_wallet_info.GetSerializeSize() << debugcs::endl();
-    debugcs::instance() << "xonly_pubkeys: " << xonly_pubkeys.size() << debugcs::endl();
-    debugcs::instance() << "xonly_keys: " << xonly_keys.size() << debugcs::endl();
-    debugcs::instance() << "xonly_aggregated_size:" << xonly_wallet_info.aggregated_size << debugcs::endl();
+    print_num("xonly_wallet_info nums", agg_size);
+    print_num("xonly_wallet_info GetSerializeSize", xonly_wallet_info.GetSerializeSize());
+    print_num("xonly_pubkeys", xonly_pubkeys.size());
+    print_num("xonly_keys", xonly_keys.size());
+    print_num("xonly_aggregated_size", xonly_wallet_info.aggregated_size);
     for(const auto &d: xonly_wallet_info.Derive_info) {
+        print_num("xonly_begin", std::get<0>(d.second));
+        print_num("xonly_agg_num", std::get<1>(d.second));
         print_bytes("xonly_reserved", std::get<2>(d.second).data(), std::get<2>(d.second).size());
         print_bytes("hash", d.first.begin(), d.first.size());
     }
+
+    XOnlyPubKey xpubkey = xonly_pubkeys.GetXOnlyPubKey();
+    print_bytes("CKeyID", xpubkey.GetID().begin(), 20);
+    print_bytes("QAI_hash", xpubkey.GetSchnorrHash().data(), 33);
 
     uint256 hash = Create_random_hash();
     std::vector<unsigned char> sigbytes;
