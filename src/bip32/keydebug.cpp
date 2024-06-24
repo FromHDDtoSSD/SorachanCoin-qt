@@ -1478,6 +1478,9 @@ bool agg_schnorr_from_makenewkey() {
     print_bytes("CKeyID", xpubkey.GetID().begin(), 20);
     print_bytes("QAI_hash", xpubkey.GetSchnorrHash().data(), 33);
 
+    CPubKey::secp256k1_scalar tmp;
+    print_num("secp256k1_scalar_size_check", sizeof(tmp));
+
     uint256 hash = Create_random_hash();
     std::vector<unsigned char> sigbytes;
     if(!xonly_keys.SignSchnorr(hash, sigbytes))
@@ -1490,6 +1493,13 @@ bool agg_schnorr_from_makenewkey() {
     if(!xonly_keys.SignSchnorr(hash2, sigbytes2))
         return false;
     if(xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes2))) // invalid check
+        return false;
+
+    std::vector<unsigned char> sigbytes3 = sigbytes;
+    sigbytes3[1] = 0xFF;
+    sigbytes3[2] = 0xFF;
+    sigbytes3[35] = 0xFF;
+    if(xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes3))) // invalid check
         return false;
 
     return true;

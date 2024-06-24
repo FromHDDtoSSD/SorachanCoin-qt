@@ -1409,22 +1409,27 @@ int XOnlyKeys::secp256k1_schnorrsig_aggregation(Span<const CSecret> secrets, CSe
     {
         CPubKey::secp256k1_scalar ret;
         CPubKey::secp256k1_scalar_set_int(&ret, 0);
+        CPubKey::secp256k1_scalar tmp;
         for(const auto &d: secrets) {
-            CPubKey::secp256k1_scalar tmp;
             int overflow;
             CPubKey::secp256k1_scalar_set_b32(&tmp, d.data(), &overflow);
             if(overflow) {
-                cleanse::memory_cleanse(&ret, 32);
-                cleanse::memory_cleanse(&tmp, 32);
+                cleanse::memory_cleanse(&ret, sizeof(ret));
+                cleanse::memory_cleanse(&tmp, sizeof(tmp));
                 return 0;
             }
             CPubKey::secp256k1_scalar_add(&ret, &ret, &tmp);
-            cleanse::memory_cleanse(&tmp, 32);
+            if(CPubKey::secp256k1_scalar_is_zero(&ret)) {
+                cleanse::memory_cleanse(&ret, sizeof(ret));
+                cleanse::memory_cleanse(&tmp, sizeof(tmp));
+                return 0;
+            }
         }
+        cleanse::memory_cleanse(&tmp, sizeof(tmp));
         agg_secret->resize(32);
         unsigned char *buf = &agg_secret->front();
         CPubKey::secp256k1_scalar_get_b32(buf, &ret);
-        cleanse::memory_cleanse(&ret, 32);
+        cleanse::memory_cleanse(&ret, sizeof(ret));
     }
 
     return 1;
