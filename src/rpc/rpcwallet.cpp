@@ -604,6 +604,61 @@ json_spirit::Value CRPCTable::getaccountqaiaddress(const json_spirit::Array &par
     return ret;
 }
 
+CBitcoinAddress CRPCTable::GetAccountSchnorrAddress(std::string strAccount, bool bForceNew/* =false */)
+{
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    CAccountqai account;
+
+    walletdb.ReadQaiAccount(strAccount, account);
+    bool bKeyUsed = false;
+
+    // Check if the current key has been used
+    if (account.redeemScript != CScript()) {
+        CScript scriptPubKey;
+        scriptPubKey.SetDestination(account.redeemScript.GetID());
+        for (std::map<uint256, CWalletTx>::iterator it = entry::pwalletMain->mapWallet.begin(); it != entry::pwalletMain->mapWallet.end(); ++it)
+        {
+            const CWalletTx &wtx = (*it).second;
+            for(const CTxOut &txout: wtx.get_vout())
+            {
+                if (scriptPubKey == txout.get_scriptPubKey()) {
+                    bKeyUsed = true;
+                    break;
+                }
+            }
+            if(bKeyUsed)
+                break;
+        }
+    }
+
+    // Generate a new key
+    if (account.redeemScript == CScript() || bForceNew || bKeyUsed) {
+        CBitcoinAddress address = CreateNewSchnorrAddress(XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, &account.redeemScript);
+        entry::pwalletMain->SetAddressBookName(address, strAccount);
+        walletdb.WriteQaiAccount(strAccount, account);
+        return address;
+    }
+
+    return CBitcoinAddress(account.redeemScript.GetID());
+}
+
+json_spirit::Value CRPCTable::getaccountschnorraddress(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 1) {
+        throw std::runtime_error(
+            ("getaccountschnorraddress <account>\n"
+            "Returns the current " + std::string(strCoinName) + " address for receiving payments to this account.").c_str());
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount = AccountFromValue(params[0]);
+
+    json_spirit::Value ret;
+    ret = GetAccountSchnorrAddress(strAccount).ToString();
+
+    return ret;
+}
+
 json_spirit::Value CRPCTable::setaccount(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() < 1 || params.size() > 2) {
