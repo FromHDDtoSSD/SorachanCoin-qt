@@ -4542,9 +4542,9 @@ CKeyID XOnlyPubKey::GetID() const
     return CKeyID(hash);
 }
 
-static unsigned char QaiVersion = (unsigned char)0x02;
 qkey_vector XOnlyPubKey::GetSchnorrHash() const
 {
+    static const unsigned char QaiVersion = (unsigned char)0x02;
     qkey_vector buf;
     buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
     ::memset(&buf.front(), 0xFF, 33);

@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[103];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[104];    // Bitcoin RPC Command
 
     //
     // map command
@@ -304,6 +304,7 @@ private:
     static std::string AccountFromValue(const json_spirit::Value &value);
     static CBitcoinAddress CreateNewQaiAddress(CScript *create_redeem = nullptr);
     static CBitcoinAddress GetAccountAddress(std::string strAccount, bool bForceNew=false);
+    static CBitcoinAddress CreateNewSchnorrAddress(size_t agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, CScript *create_redeem = nullptr);
     static CBitcoinAddress GetAccountQaiAddress(std::string strAccount, bool bForceNew=false);
     static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress);
     static int64_t GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter);
@@ -394,6 +395,7 @@ public:
     static json_spirit::Value getnewaddress(const json_spirit::Array &params, bool fHelp); // in rpcwallet.cpp
     static json_spirit::Value getnewethaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewqaiaddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getnewschnorraddress(const json_spirit::Array &params, bool fHelp);
     //static json_spirit::Value getnewethlock(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getkeyentangle(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value gethdwalletinfo(const json_spirit::Array &params, bool fHelp);

@@ -242,6 +242,39 @@ json_spirit::Value CRPCTable::getnewqaiaddress(const json_spirit::Array &params,
     return address.ToString();
 }
 
+json_spirit::Value CRPCTable::getnewschnorraddress(const json_spirit::Array &params, bool fHelp)
+{
+    using namespace ScriptOpcodes;
+    if (fHelp || params.size() > 2) {
+        throw std::runtime_error(
+            "getnewschnorraddress [account] [aggregation size]\n"
+            "If you want to specify the number of Schnorr aggregations, "
+            "please set a value between 50 and 80,000 in [aggregation size].\n"
+            "If omitted, the default is 5000.\n"
+            "Returns a new sora quantum and AI resistance style address for receiving payments.  "
+            "If [account] is specified (recommended), it is added to the address book "
+            "so payments received with the address will be credited to [account].");
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount;
+    if (params.size() > 0) {
+        strAccount = AccountFromValue(params[0]);
+    }
+
+    int agg_size = (int)XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
+    if (params.size() > 1) {
+        agg_size = params[1].get_int();
+        if (agg_size < 50 || agg_size > 80000) {
+            throw std::runtime_error("aggregation size out of range.");
+        }
+    }
+
+    CBitcoinAddress address = CreateNewSchnorrAddress((size_t)agg_size);
+    entry::pwalletMain->SetAddressBookName(address, strAccount);
+    return address.ToString();
+}
+
 json_spirit::Value CRPCTable::getkeyentangle(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() != 1) {
@@ -462,6 +495,56 @@ CBitcoinAddress CRPCTable::CreateNewQaiAddress(CScript *create_redeem/* = nullpt
             throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public sig size is invalid");
         }
     }
+
+    return address;
+}
+
+CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS */, CScript *create_redeem/* = nullptr */) {
+    using namespace ScriptOpcodes;
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+    if (entry::pwalletMain->IsLocked())
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
+
+    //
+    // Generate a new key that is added to wallet
+    //
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+    newKey.Compress();
+    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
+
+    //
+    // Generate a new XOnlyPubKey that is added to wallet
+    //
+    XOnlyAggWalletInfo xonly_agg_wallet;
+    if(!xonly_agg_wallet.LoadFromWalletInfo())
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyAggWalletInfo is invalid");
+
+    uint160 hash;
+    if(!xonly_agg_wallet.MakeNewKey(hash, agg_size))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XonlyKey MakeNewKey is invalid");
+
+    XOnlyPubKeys xonly_pubkeys;
+    if(!xonly_agg_wallet.GetXOnlyPubKeys(hash, xonly_pubkeys))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
+
+    script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
+    XOnlyPubKey xonly_agg_pubkey = xonly_pubkeys.GetXOnlyPubKey();
+    script_vector qrandvch = xonly_agg_pubkey.GetSchnorrHash();
+    assert(qrandvch.size() == 33);
+
+    // SORA L1 Quantum and AI resistance transaction:
+    // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
+    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
+    entry::pwalletMain->AddCScript(redeemScript, newKey);
+    CBitcoinAddress address(redeemScript.GetID());
+    if(create_redeem)
+        *create_redeem = redeemScript;
 
     return address;
 }

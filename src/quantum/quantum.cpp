@@ -823,8 +823,8 @@ bool CqPubKey::IsQaiHash(const qkey_vector &hashvch) {
     return true;
 }
 
-static unsigned char QaiVersion = (unsigned char)0x01;
 qkey_vector CqPubKey::GetRandHash() {
+    static const unsigned char QaiVersion = (unsigned char)0x01;
     qkey_vector buf;
     buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
     ::memset(&buf.front(), 0xFF, 33);
