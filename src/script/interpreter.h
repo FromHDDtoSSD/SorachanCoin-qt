@@ -57,11 +57,12 @@ private:
     // CTransaction Base(P2PK, P2PKH, P2SH) scriptPubKey Solver
     static bool Solver(const CKeyStore &keystore, const CScript &scriptPubKey, const uint256 &hash, int nHashType, CScript &scriptSigRet, TxnOutputType::txnouttype &whichTypeRet);
 
-    // Sign1: Single ECDSA, SignQAI: Single Quantum and AI resistance, SignR: Single pubkey-R ECDSA, SignN: Multisig ECDSA
+    // Sign1: Single ECDSA, SignQAI: Single Quantum and AI resistance, SignR: Single pubkey-R ECDSA, SignN: Multisig ECDSA, SignSchnorr: 5000 keys aggregation Schnorr sig
     static bool Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignQAI(const CqKey &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet);
     static bool SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
+    static bool SignSchnorr(const CKeyID &keyid, const uint256 &hash, XOnlyPubKeys &xonly_pubkeys, CScript &schnorrSig);
 
     // CTransaction Base(P2PK, P2PKH, P2SH) combine blockchain ope_code stack(type: std::vector<std::vector<unsigned char>>)
     static CScript CombineSignatures(const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, const TxnOutputType::txnouttype txType, const statype &vSolutions, statype &sigs1, statype &sigs2);

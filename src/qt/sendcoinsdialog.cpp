@@ -140,7 +140,8 @@ void SendCoinsDialog::on_sendButton_clicked()
     QList<SendCoinsRecipient> recqai;
     try {
         json_spirit::Array obj;
-        json_spirit::Value qaiAddress = CRPCTable::getnewqaiaddress(obj, false);
+        //json_spirit::Value qaiAddress = CRPCTable::getnewqaiaddress(obj, false);
+        json_spirit::Value qaiAddress = CRPCTable::getnewschnorraddress(obj, false);
         SendCoinsRecipient rv;
         rv.address = QString(qaiAddress.get_str().c_str());
         rv.label = qaiTransaction;

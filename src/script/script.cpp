@@ -2423,6 +2423,28 @@ bool Script_util::SignN(const statype &multisigdata, const CKeyStore &keystore, 
     return nSigned == nRequired;
 }
 
+bool Script_util::SignSchnorr(const CKeyID &keyid, const uint256 &hash, XOnlyPubKeys &xonly_pubkeys, CScript &schnorrSig) {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+
+    XOnlyAggWalletInfo xonly_agg_wallet;
+    if(!xonly_agg_wallet.LoadFromWalletInfo())
+        return false;
+
+    XOnlyKeys xonly_keys;
+    if(!xonly_agg_wallet.GetXOnlyKeys(keyid, xonly_pubkeys, xonly_keys))
+        return false;
+
+    std::vector<unsigned char> sigbytes;
+    if(!xonly_keys.SignSchnorr(hash, sigbytes))
+        return false;
+
+    schnorrSig << sigbytes;
+    return true;
+}
+
 /*
 static bool VerifySignatureQAI(const CScript &scriptSigQAI, const CScript &ScriptSigECDSA) {
     CScript scriptCheck;
@@ -2588,8 +2610,8 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
                 }
             }
 
-            if(fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && hd_wallet::get().enable) {
-                // OP_CHECKMULTISIG for QAI Transaction
+            if(fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && qairand[1] == 0x01 && hd_wallet::get().enable) {
+                //! [Version 1] OP_CHECKMULTISIG for QAI Transaction
                 CScript ecdsaScriptSig;
                 if(!SignN(vSolutions, keystore, hash, nHashType, ecdsaScriptSig))
                     return false;
@@ -2630,8 +2652,60 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
                 scriptSigRet += qaiSig;
                 scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
                 scriptSigRet += ecdsaScriptSig;
+            } else if (fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && qairand[1] == 0x02 && hd_wallet::get().enable) {
+                //! [Version 2] OP_CHECKMULTISIG for QAI and Schnorr Transaction
+                CScript ecdsaScriptSig;
+                if(!SignN(vSolutions, keystore, hash, nHashType, ecdsaScriptSig))
+                    return false;
+
+                const int32_t nCurrentQaiVersion = (int32_t)qairand[1];
+                const int32_t nHashType32 = (int32_t)nHashType;
+                CScript qaiVerifySig;
+                qaiVerifySig.reserve(256);
+                qaiVerifySig += ecdsaScriptSig;
+                qaiVerifySig << ecdsapub;
+                qaiVerifySig << qaihash;
+                qaiVerifySig << qairand;
+                qaiVerifySig << hash;
+                qaiVerifySig << nCurrentQaiVersion;
+                qaiVerifySig << nHashType32;
+
+                CqKey qkey(hd_wallet::get().GetSecretKey());
+                if(!qkey.IsValid())
+                    return false;
+
+                CHashWriter qaihash(SER_GETHASH, 0);
+                qaihash << qaiVerifySig;
+                CScript qaiSig;
+                const uint256 msg_qhash = qaihash.GetHash();
+                if(!SignQAI(qkey, msg_qhash, hash, nHashType, qaiSig))
+                    return false;
+
+                CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
+                if(!qpubkey.IsFullyValid_BIP66())
+                    return false;
+                qaiSig << qpubkey;
+
+                // QAI signature verify check
+                if(!VerifySignatureQAI(qaiSig, qaiVerifySig))
+                    return false;
+
+                // Schnorr signature
+                CKeyID keyid = XOnlyPubKey::GetFromQairand(qairand);
+                CScript schnorrSig;
+                XOnlyPubKeys xonly_pubkeys;
+                if(!SignSchnorr(keyid, msg_qhash, xonly_pubkeys, schnorrSig))
+                    return false;
+                schnorrSig << xonly_pubkeys.GetXOnlyPubKey().GetPubVch();
+
+                debugcs::instance() << "QAI and Schnorr creation OK" << debugcs::endl();
+
+                scriptSigRet += qaiSig;
+                scriptSigRet += schnorrSig;
+                scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
+                scriptSigRet += ecdsaScriptSig;
             } else {
-                // OP_CHECKMULTISIG for P2SH BASE
+                //! OP_CHECKMULTISIG for P2SH BASE
                 scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
                 if(!SignN(vSolutions, keystore, hash, nHashType, scriptSigRet))
                     return false;
@@ -2716,6 +2790,9 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statyp
                         return -1;
                     else if (vch[1] == 0x01) {
                         addstack = 3;
+                        break;
+                    } else if (vch[1] == 0x02) {
+                        addstack = 5;
                         break;
                     } else
                         return -1;

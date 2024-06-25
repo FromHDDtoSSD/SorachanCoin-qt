@@ -4559,6 +4559,22 @@ bool XOnlyPubKey::CmpSchnorrHash(const qkey_vector &hashvch) const
     return (GetSchnorrHash() == hashvch);
 }
 
+CKeyID XOnlyPubKey::GetFromQairand(const qkey_vector &qairand)
+{
+    assert(qairand.size() == 33);
+    CKeyID keyid;
+    ::memcpy(keyid.begin(), &qairand[2], 20);
+    return keyid;
+}
+
+key_vector XOnlyPubKey::GetPubVch() const
+{
+    key_vector vch;
+    vch.resize(32);
+    ::memcpy(&vch.front(), m_keydata.begin(), 32);
+    return vch;
+}
+
 bool XOnlyPubKeys::VerifySchnorr(const uint256& msg, Span<const unsigned char> sigbytes) const
 {
     if(sigbytes.size() != XOnlyPubKey::SCHNORR_SIGNATURE_SIZE)

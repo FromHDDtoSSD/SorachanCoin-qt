@@ -145,7 +145,8 @@ bool EditAddressDialog::saveCurrentRow()
             } else if(ui->qaicheckbutton->isChecked()) {
                 json_spirit::Array obj;
                 obj.push_back(ui->labelEdit->text().toStdString());
-                CRPCTable::getnewqaiaddress(obj, false);
+                //CRPCTable::getnewqaiaddress(obj, false);
+                CRPCTable::getnewschnorraddress(obj, false);
                 return true;
             }
         } catch (const json_spirit::Object &s) {

@@ -795,6 +795,8 @@ public:
     static constexpr unsigned int XONLY_PUBLIC_KEY_SIZE = 32;
     static constexpr unsigned int SCHNORR_SIGNATURE_SIZE = 64;
 
+    XOnlyPubKey() = delete;
+
     /** Construct an x-only pubkey from exactly 32 bytes. */
     XOnlyPubKey(Span<const unsigned char> bytes) {
         assert(bytes.size() == XONLY_PUBLIC_KEY_SIZE);
@@ -814,6 +816,12 @@ public:
     //! Hash and verification methods used in SORA-QAI.
     qkey_vector GetSchnorrHash() const;
     bool CmpSchnorrHash(const qkey_vector &hashvch) const;
+
+    //! Extract uint160 from qairand and store it in CKeyID(uint160).
+    static CKeyID GetFromQairand(const qkey_vector &qairand);
+
+    //! Provides a vector of XOnlyPubKey.
+    key_vector GetPubVch() const;
 
     const unsigned char& operator[](int pos) const { return *(m_keydata.begin() + pos); }
     const unsigned char* data() const { return m_keydata.begin(); }

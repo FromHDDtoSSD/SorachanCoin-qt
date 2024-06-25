@@ -564,6 +564,7 @@ bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &se
             for(int i=0; i < 30; ++i) {
                 json_spirit::Array obj;
                 CRPCTable::getnewqaiaddress(obj, false);
+                CRPCTable::getnewschnorraddress(obj, false);
             }
         }
         catch (const json_spirit::Object &err) {
