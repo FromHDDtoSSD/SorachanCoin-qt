@@ -1475,8 +1475,15 @@ bool agg_schnorr_from_makenewkey() {
     }
 
     XOnlyPubKey xpubkey = xonly_pubkeys.GetXOnlyPubKey();
+    print_num("XOnlyPubKey_size", xpubkey.size());
     print_bytes("CKeyID", xpubkey.GetID().begin(), 20);
     print_bytes("QAI_hash", xpubkey.GetSchnorrHash().data(), 33);
+
+    std::vector<unsigned char> dummy_vch;
+    dummy_vch.resize(32);
+    ::memset(&dummy_vch.front(), 0xFF, 32);
+    XOnlyPubKey xpubkey2 = XOnlyPubKey(Span<const unsigned char>(dummy_vch));
+    print_num("XonlyPubKey2_size", xpubkey2.size());
 
     CPubKey::secp256k1_scalar tmp;
     print_num("secp256k1_scalar_size_check", sizeof(tmp));
