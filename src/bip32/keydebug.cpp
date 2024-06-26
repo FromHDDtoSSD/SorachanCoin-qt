@@ -1443,6 +1443,15 @@ bool agg_schnorr_from_wallet_to_keys() {
     return true;
 }
 
+class AiNftInfo {
+public:
+    constexpr static int32_t qai_nft_version = 0x03;
+    int32_t qaiVersion;
+    AiNftInfo() {
+        qaiVersion = qai_nft_version;
+    }
+};
+
 bool agg_schnorr_from_makenewkey() {
     XOnlyAggWalletInfo xonly_wallet_info;
     if(!xonly_wallet_info.LoadFromWalletInfo())

@@ -1661,6 +1661,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                                 debugcs::instance() << "QAI_CHECKMULTISIG Schnorr Verify OK" << debugcs::endl();
 
                             } else {
+                                qaiVersion = (int32_t)CurrentQaiVersion;
                                 // CurrentQaiVersion 0x03 ... 0xFF
                             }
                         } // fQaimode
