@@ -4056,6 +4056,82 @@ bool XOnlyAggWalletInfo::GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonl
     return true;
 }
 
+bool XOnlyAggWalletInfo::GetXOnlyKeysStrictOrder(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+    if(!Derive_info.count(hash))
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    const auto info = GetInfo(hash);
+    if(info.second == 0)
+        return false;
+    uint160 step = uint160(0);
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        uint64_t t = (step + uint160(i)).GetLow64();
+        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        const unsigned int r = step.Get32() % 80000;
+        print_num("step hash", r);
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, r))
+            return false;
+        xonly_pubkeys.push(extpub.GetPubKey());
+    }
+
+    step = uint160(0);
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        uint64_t t = (step + uint160(i)).GetLow64();
+        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        const unsigned int r = step.Get32() % 80000;
+        CExtKey extkey;
+        if(!extkeyseed.Derive(extkey, r))
+            return false;
+        xonly_keys.push(extkey.GetSecret());
+    }
+
+    return true;
+}
+
+bool XOnlyAggWalletInfo::GetXOnlyPubKeysStrictOrder(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+    if(!Derive_info.count(hash))
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    const auto info = GetInfo(hash);
+    if(info.second == 0)
+        return false;
+    uint160 step = uint160(0);
+    for(unsigned int i=info.first; i < info.first + info.second; ++i) {
+        uint64_t t = (step + uint160(i)).GetLow64();
+        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        const unsigned int r = step.Get32() % 80000;
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, r))
+            return false;
+        xonly_pubkeys.push(extpub.GetPubKey());
+    }
+
+    return true;
+}
+
 bool XOnlyAggWalletInfo::push(const uint160 &hash, unsigned int begin_index, size_t agg_size) {
     auto ret = Derive_info.emplace(std::make_pair(hash, std::make_tuple(begin_index, agg_size, std::vector<unsigned char>())));
     return ret.second;

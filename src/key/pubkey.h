@@ -937,6 +937,10 @@ struct XOnlyAggWalletInfo {
     bool GetXOnlyKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const;
     bool GetXOnlyPubKeys(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const;
 
+    //! Construct objects for each aggregated key (StrictOrder)
+    bool GetXOnlyKeysStrictOrder(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys, XOnlyKeys &xonly_keys) const;
+    bool GetXOnlyPubKeysStrictOrder(const uint160 &hash, XOnlyPubKeys &xonly_pubkeys) const;
+
     friend bool operator==(const XOnlyAggWalletInfo &a, const XOnlyAggWalletInfo &b) {
         return a.nVersion == b.nVersion && a.aggregated_size == b.aggregated_size && a.Derive_info == b.Derive_info;
     }

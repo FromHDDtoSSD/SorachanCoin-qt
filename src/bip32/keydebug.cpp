@@ -1509,6 +1509,17 @@ bool agg_schnorr_from_makenewkey() {
     if(xonly_pubkeys.VerifySchnorr(hash, Span<const unsigned char>(sigbytes3))) // invalid check
         return false;
 
+    debugcs::instance() << "Schnorr aggregation signature Check OK" << debugcs::endl();
+
+    XOnlyPubKeys xonly_pubkeys2;
+    XOnlyKeys xonly_keys2;
+    if(!xonly_wallet_info.GetXOnlyKeysStrictOrder(agg_hash, xonly_pubkeys2, xonly_keys2))
+        return false;
+    XOnlyPubKeys xonly_pubkeys3;
+    if(!xonly_wallet_info.GetXOnlyPubKeysStrictOrder(agg_hash, xonly_pubkeys3))
+        return false;
+    assert(xonly_pubkeys2 == xonly_pubkeys3);
+
     return true;
 }
 

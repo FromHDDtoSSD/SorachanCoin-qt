@@ -46,6 +46,7 @@ SorachanCoind_SOURCES = \
  bench/be_hash.cpp \
  bip32/hdchain.cpp \
  bip32/hdwalletutil.cpp \
+ bip32/keydebug.cpp \
  block/block.cpp \
  block/block_alert.cpp \
  block/block_check.cpp \
@@ -173,6 +174,7 @@ SorachanCoin_cli_SOURCES = \
  bench/be_hash.cpp \
  bip32/hdchain.cpp \
  bip32/hdwalletutil.cpp \
+ bip32/keydebug.cpp \
  block/block.cpp \
  block/block_alert.cpp \
  block/block_check.cpp \
