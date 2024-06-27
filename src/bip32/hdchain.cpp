@@ -195,6 +195,7 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
     {
         //LOCK(entry::pwalletMain->cs_wallet);
         std::vector<CPubKey> vpubkeys;
+        vpubkeys.reserve(130);
         IDB::DbIterator ite = walletdb.GetIteCursor();
         if(ite.is_error())
             return false;

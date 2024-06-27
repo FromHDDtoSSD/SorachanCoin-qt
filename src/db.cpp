@@ -655,7 +655,7 @@ bool CSqliteDBEnv::RemoveDb(const std::string &strFile) {
 
 #ifdef USE_BERKELEYDB
 CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), activeTxn(nullptr) {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (pszFile == nullptr)
         return;
 
@@ -666,7 +666,7 @@ CDB::CDB(const char *pszFile, const char *pszMode/*="r+"*/) : pdb(nullptr), acti
         nFlags |= DB_CREATE;
 
     {
-        LOCK(CDBEnv::cs_db);
+        //LOCK(CDBEnv::cs_db);
         strFile = pszFile;
         pdb = CDBEnv::get_instance().Create(strFile, nFlags);
         if (fCreate && !Exists(std::string("version"))) {
@@ -683,7 +683,7 @@ CDB::~CDB() {
 }
 
 void CDB::Close() {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (! pdb)
         return;
     if (activeTxn)
@@ -955,7 +955,7 @@ bool CSqliteDB::PortToSqlite(DbIterator ite, migrate type) {
 
 #ifdef USE_BERKELEYDB
 bool CDB::TxnBegin() {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (!pdb || activeTxn)
         return false;
 
@@ -968,7 +968,7 @@ bool CDB::TxnBegin() {
 }
 
 bool CDB::TxnCommit() {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (!pdb || !activeTxn)
         return false;
 
@@ -978,7 +978,7 @@ bool CDB::TxnCommit() {
 }
 
 bool CDB::TxnAbort() {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (!pdb || !activeTxn)
         return false;
 
@@ -988,18 +988,18 @@ bool CDB::TxnAbort() {
 }
 
 bool CDB::ReadVersion(int &nVersion) {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     nVersion = 0;
     return Read(std::string("version"), nVersion);
 }
 
 bool CDB::WriteVersion(int nVersion) {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     return Write(std::string("version"), nVersion);
 }
 
 IDB::DbIterator CDB::GetIteCursor() {
-    LOCK(CDBEnv::cs_db);
+    //LOCK(CDBEnv::cs_db);
     if (! pdb)
         return std::move(DbIterator());
 

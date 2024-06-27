@@ -866,7 +866,7 @@ public:
 
     template<typename K, typename T>
     bool Read(const K &key, T &value) {
-        LOCK(CDBEnv::cs_db);
+        //LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
 
@@ -912,7 +912,7 @@ public:
 
     template<typename K, typename T>
     bool Write(const K &key, const T &value, bool fOverwrite = true) {
-        LOCK(CDBEnv::cs_db);
+        //LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
         if (fReadOnly) {
@@ -942,7 +942,7 @@ public:
 
     template<typename K>
     bool Erase(const K &key) {
-        LOCK(CDBEnv::cs_db);
+        //LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
         if (fReadOnly) {
@@ -965,7 +965,7 @@ public:
 
     template<typename K>
     bool Exists(const K &key) {
-        LOCK(CDBEnv::cs_db);
+        //LOCK(CDBEnv::cs_db);
         if (! pdb)
             return false;
 
