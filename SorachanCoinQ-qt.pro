@@ -85,8 +85,6 @@ DEBUG_ALGO_CS_OUTPUT=0
 # Build mode
 #
 USE_DBUS=0
-USE_BERKELEYDB=0
-USE_LEVELDB=1
 USE_LEBRESSL=1
 USE_AUTOCHECKPOINTS=1
 BITCOIN_NEED_QT_PLUGINS=0
@@ -100,8 +98,27 @@ USE_O3=1
 USE_UPNP=1
 USE_IPV6=1
 USE_QRCODE=1
+
+#
+# This is a flag to determine whether to use SQLite for the blockchain map.
+# Since there is little difference from LevelDB, LevelDB is sufficient.
+# Therefore, USE_LEVELDB is 1, USE_BLK_SQLITE is 0.
+#
+USE_LEVELDB=1
 USE_BLK_SQLITE=0
-USE_WALLET_SQLITE=1
+
+#
+# Setting both USE_BERKELEYDB and USE_WALLET_SQLITE to 1 enables
+# automatic porting from BerkeleyDB to SQLite in wallet.
+#
+# If you want to use BerkeleyDB in wallet, set only USE_BERKELEYDB to 1 (USE_WALLET_SQLITE is 0).
+# In this case, compatibility with the FromHDDtoSSD will be lost.
+#
+# USE_BERKELEYDB -> USE_BERKELEYDB macro is enabled
+# USE_WALLET_SQLITE -> WALLET_SQL_MODE macro is enabled
+#
+USE_BERKELEYDB=1
+USE_WALLET_SQLITE=0
 
 #
 # prevector or std::vector<uint8_t>
