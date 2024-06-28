@@ -49,11 +49,7 @@ CPubKey CWallet::GenerateNewKey()
 {
     auto changeDefaultkeyToHD = []() {
         CPubKey pubkey = hd_wallet::get().reserved_pubkey[0];
-        if(! pubkey.IsFullyValid_BIP66())
-            return false;
-
         entry::pwalletMain->vchDefaultKey = pubkey;
-        return true;
     };
 
     bool fCompressed = CanSupportFeature(FEATURE_COMPRPUBKEY); // default to compressed public keys if we want 0.6.0 wallets
@@ -63,12 +59,14 @@ CPubKey CWallet::GenerateNewKey()
         //
         // if hd-wallet, already generated pubkey to send
         //
+
         if(hd_wallet::get()._child_offset > hd_wallet::get()._usedkey_offset) {
             LOCK(cs_wallet);
             CPubKey pubkey = hd_wallet::get().reserved_pubkey[hd_wallet::get()._usedkey_offset];
             hd_wallet::get()._usedkey_offset++;
 
-            //CWalletDB walletdb(std::string(""), std::string(""), CSqliteDBEnv::getname_wallet());
+            //print_bytes("CKeyID", pubkey.GetPubVch().data(), pubkey.GetPubVch().size());
+
             CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
             bool ret = walletdb.WriteUsedHDKey(hd_wallet::get()._usedkey_offset);
             if(ret)
@@ -3576,6 +3574,7 @@ bool CWallet::GetKeyFromPool(CPubKey &result, bool fAllowReuse)
     {
         LOCK(cs_wallet);
         ReserveKeyFromKeyPool(nIndex, keypool);
+        print_num("GetKeyFromPool index", nIndex);
         if (nIndex == -1) {
             if (fAllowReuse && vchDefaultKey.IsValid()) {
                 result = vchDefaultKey;

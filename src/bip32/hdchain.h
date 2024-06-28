@@ -38,6 +38,7 @@ namespace SeedCrypto {
 constexpr int hdkeys_child_regenerate = 500;
 constexpr int hdkeys_reserve_pubkey_to_pool = 200;
 constexpr int hdkeys_called_reserve_pubkey_sub = 150;
+constexpr int hdkeys_added_at_once = 200;
 
 /***************************************************************************************
  * SorachanCoin Integrated Wallet
@@ -57,6 +58,7 @@ public:
 
     bool get_nextkey(CExtKey &nextkey, const CExtKey &extkeyseed);
     bool create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, std::vector<CPubKey> &outpubkeys); // no crypted: seed
+    bool add_keys(unsigned int add = hdkeys_added_at_once);
 
     static hd_wallet &get() { // singleton instance
         static hd_wallet obj;

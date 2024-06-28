@@ -173,7 +173,6 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
             return false;
     }
 
-    //CWalletDB walletdb(std::string(""), std::string(""), CSqliteDBEnv::getname_wallet());
     CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
     LOCK(entry::pwalletMain->cs_wallet);
 
@@ -193,7 +192,6 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
     // Erase random-wallet keys
     // remaining random wallet keys
     {
-        //LOCK(entry::pwalletMain->cs_wallet);
         std::vector<CPubKey> vpubkeys;
         vpubkeys.reserve(130);
         IDB::DbIterator ite = walletdb.GetIteCursor();
@@ -230,21 +228,29 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
     // Registerd hd-wallet keys
     //
     {
-        //LOCK(entry::pwalletMain->cs_wallet);
         std::vector<CPubKey> &pubkeys = outpubkeys;
         pubkeys.clear();
+
+        CExtPubKey extpubkey = keyseed.Neuter();
         for(int i=0; i<generate_keys_unit; ++i) {
-            pubkeys.emplace_back(nextkey[i].privkey_.GetPubKey());
+            CExtPubKey pub_c;
+            if(!extpubkey.Derive(pub_c, i))
+                return false;
+            CPubKey pub1 = pub_c.GetPubKey();
+            if(!pub1.IsFullyValid_BIP66())
+                return false;
+            CPubKey pub2 = nextkey[i].privkey_.GetPubKey();
+            if(pub1 != pub2)
+                return false;
+            pubkeys.emplace_back(pub1);
         }
         if(! walletdb.WriteReservedHDPubkeys(pubkeys))
             return false;
         if(! walletdb.WriteUsedHDKey(0))
             return false;
-        //outpubkeys = pubkeys;
     }
 
     // register hd wallet keys
-    //int64_t nCreationTime = bitsystem::GetTime();
     for(int i=0; i<generate_keys_unit; ++i) {
         if(! nextkey[i].privkey_.IsValid())
             return false;
@@ -252,11 +258,49 @@ bool hd_wallet::create_seed(const CSeedSecret &seed, CSeedSecret &outvchextkey, 
         CPubKey pubkey = nextkey[i].privkey_.GetPubKey();
         if(! pubkey.IsFullyValid_BIP66())
             return false;
-        //if(! walletdb.WriteKey(pubkey, nextkey[i].privkey_.GetPrivKey(), CKeyMetadata(nCreationTime + i)))
-        //  return false;
         if(! entry::pwalletMain->AddKey(nextkey[i].privkey_))
             return false;
     }
+    return true;
+}
+
+bool hd_wallet::add_keys(unsigned int add /* = hdkeys_added_at_once*/) {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+
+    CExtKey keyseed = *hd_wallet::get().pkeyseed;
+    CExtPubKey keypub = keyseed.Neuter();
+    hd_wallet::get().reserved_pubkey.reserve(hd_wallet::get()._child_offset + add);
+    for(unsigned int i=hd_wallet::get()._child_offset; i < hd_wallet::get()._child_offset + add; ++i) {
+        CExtKey key_c;
+        if(!keyseed.Derive(key_c, i))
+            return false;
+        CFirmKey key;
+        key.SetSecret(key_c.GetSecret());
+        if(!entry::pwalletMain->AddKey(key))
+            return false;
+
+        CExtPubKey pub_c;
+        if(!keypub.Derive(pub_c, i))
+            return false;
+        CPubKey pubkey = pub_c.GetPubKey();
+        if(!pubkey.IsFullyValid_BIP66())
+            return false;
+        hd_wallet::get().reserved_pubkey.emplace_back(pubkey);
+    }
+
+    {
+        hd_wallet::get()._child_offset += add;
+        CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+        LOCK(entry::pwalletMain->cs_wallet);
+        if(!walletdb.WriteReservedHDPubkeys(hd_wallet::get().reserved_pubkey))
+            return false;
+        if(!walletdb.WriteChildHDSeed(keypub.GetPubKey(), hd_wallet::get()._child_offset))
+            return false;
+    }
+
     return true;
 }
 

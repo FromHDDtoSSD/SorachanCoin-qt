@@ -708,6 +708,11 @@ inline void print_num(const char *mes, T num) {
     debugcs::instance() << mes << ": " << num << debugcs::endl();
 }
 
+template <typename T>
+inline void print_str(const char *mes, const T &str) {
+    debugcs::instance() << mes << ": " << str.c_str() << debugcs::endl();
+}
+
 inline void print_bignum(const char *mes, BIGNUM *bn) {
     char *bn_str = BN_bn2hex(bn);
     if (bn_str) {
