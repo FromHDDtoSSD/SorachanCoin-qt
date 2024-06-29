@@ -1571,10 +1571,7 @@ bool agg_schnorr_from_makenewkey() {
     if(!xonly_wallet_info.GetXOnlyPubKeysStrictOrder(agg_hash, xonly_pubkeys3))
         return false;
     assert(xonly_pubkeys2 == xonly_pubkeys3);
-
-    // added keys
-    if(!hd_wallet::get().add_keys())
-        return false;
+    assert(xonly_pubkeys != xonly_pubkeys2);
 
     return true;
 }
@@ -1608,6 +1605,8 @@ bool agg_schnorr_from_makenewkey2() {
             //print_str("BitcoinAddress", CBitcoinAddress(pubkey.GetID()).ToString());
         }
     }
+
+    return false;
 
     const int check_counter = 500;
     unsigned int prev_used = hd_wallet::get()._usedkey_offset;
@@ -1938,7 +1937,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
-    //if(!agg_schnorr_from_makenewkey2()) {
+    //if(!agg_schnorr_from_makenewkey()) {
     //    assert(!"5: failure cmp_for_schnorr_pubkeys");
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {

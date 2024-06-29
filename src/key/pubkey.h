@@ -878,6 +878,10 @@ public:
         return a.m_vkeydata == b.m_vkeydata;
     }
 
+    friend bool operator!=(const XOnlyPubKeys &a, const XOnlyPubKeys &b) {
+        return !operator==(a, b);
+    }
+
     unsigned int GetSerializeSize() const {
         return ::GetSerializeSize(m_vkeydata);
     }

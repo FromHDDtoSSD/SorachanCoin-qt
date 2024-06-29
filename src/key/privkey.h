@@ -127,6 +127,8 @@ public:
             void init();
             bool build();
             void clear();
+            static void on_static();
+            static void off_static();
             secp256k1_gen_context();
             secp256k1_gen_context(const secp256k1_gen_context &)=delete;
             secp256k1_gen_context(secp256k1_gen_context &&)=delete;

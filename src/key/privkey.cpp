@@ -509,6 +509,75 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     return true;
 }
 
+namespace {
+
+// Singleton object
+struct secp256k1_key_context_manager {
+private:
+    CPubKey::ecmult::secp256k1_ge_storage m_static_prec[64][16];
+    CPubKey::secp256k1_scalar m_blind;
+    CPubKey::ecmult::secp256k1_gej m_initial;
+    int m_valid;
+    int m_status;
+
+    secp256k1_key_context_manager() {
+        clear();
+    }
+
+public:
+    static secp256k1_key_context_manager &get() {
+        static secp256k1_key_context_manager obj;
+        return obj;
+    }
+
+    void setinfo(const CPubKey::ecmult::secp256k1_ge_storage (*precIn)[64][16], CPubKey::secp256k1_scalar blindIn, CPubKey::ecmult::secp256k1_gej initialIn) {
+        ::memcpy(&m_static_prec, precIn, sizeof(m_static_prec));
+        m_blind = blindIn;
+        m_initial = initialIn;
+        m_valid = 1;
+    }
+
+    void getinfo(CPubKey::ecmult::secp256k1_ge_storage (*prec)[64][16], CPubKey::secp256k1_scalar *pblind, CPubKey::ecmult::secp256k1_gej *pinitial) {
+        ::memcpy(prec, m_static_prec, sizeof(m_static_prec));
+        *pblind = m_blind;
+        *pinitial = m_initial;
+    }
+
+    void clear() {
+        cleanse::memory_cleanse(&m_static_prec, sizeof(m_static_prec));
+        cleanse::memory_cleanse(&m_blind, sizeof(m_blind));
+        cleanse::memory_cleanse(&m_initial, sizeof(m_initial));
+        m_valid = 0;
+        m_status = 0;
+    }
+
+    void clear_var() {
+        m_valid = 0;
+    }
+
+    int valid() const {
+        return m_valid;
+    }
+
+    int status() const {
+        return m_status;
+    }
+
+    void on_static() {
+        m_status = 1;
+    }
+
+    void off_static() {
+        m_status = 0;
+    }
+
+    ~secp256k1_key_context_manager() {
+        clear();
+    }
+};
+
+} // namespace
+
 CFirmKey::ecmult::secp256k1_gen_context::secp256k1_gen_context() {
     init();
 }
@@ -521,6 +590,17 @@ void CFirmKey::ecmult::secp256k1_gen_context::init() {
 
 bool CFirmKey::ecmult::secp256k1_gen_context::build() {
     if (prec_ != nullptr) return true;
+
+#ifndef USE_ECMULT_STATIC_PRECOMPUTATION
+    if(secp256k1_key_context_manager::get().status() == 1) {
+        if(secp256k1_key_context_manager::get().valid()) {
+            prec_ = (CPubKey::ecmult::secp256k1_ge_storage (*)[64][16])::malloc(sizeof(*prec_));
+            if(! prec_) return false;
+            secp256k1_key_context_manager::get().getinfo(prec_, &blind_, &initial_);
+            return true;
+        }
+    }
+#endif
 
 #ifndef USE_ECMULT_STATIC_PRECOMPUTATION
     prec_ = (CPubKey::ecmult::secp256k1_ge_storage (*)[64][16])::malloc(sizeof(*prec_));
@@ -587,12 +667,29 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() {
     prec_ = (CPubKey::ecmult::secp256k1_ge_storage (*)[64][16])secp256k1_ecmult_static_context;
 #endif
 
-    debugcs::instance() << "CFirmKey: called prevent side channel attack" << debugcs::endl();
     unsigned char seed32[32];
-    latest_crypto::random::GetStrongRandBytes(seed32, 32);
+    latest_crypto::random::GetRandBytes(seed32, 32);
+    print_bytes("CFirmKey: called prevent side channel attack", seed32, sizeof(seed32));
     bool ret = secp256k1_ecmult_gen_blind(seed32);
     cleanse::memory_cleanse(seed32, sizeof(seed32));
+
+    if(ret) {
+        if(secp256k1_key_context_manager::get().status() == 1) {
+            secp256k1_key_context_manager::get().setinfo(prec_, blind_, initial_);
+        } else {
+            secp256k1_key_context_manager::get().clear_var();
+        }
+    }
+
     return ret;
+}
+
+void CFirmKey::ecmult::secp256k1_gen_context::on_static() {
+    secp256k1_key_context_manager::get().on_static();
+}
+
+void CFirmKey::ecmult::secp256k1_gen_context::off_static() {
+    secp256k1_key_context_manager::get().off_static();
 }
 
 void CFirmKey::ecmult::secp256k1_gen_context::clear() {
@@ -606,7 +703,7 @@ void CFirmKey::ecmult::secp256k1_gen_context::clear() {
 }
 
 CFirmKey::ecmult::secp256k1_gen_context::~secp256k1_gen_context() {
-    debugcs::instance() << "CFirmKey: cleanse prevent side channel attack " << sizeof(initial_) << ":" << sizeof(blind_) << debugcs::endl();
+    //debugcs::instance() << "CFirmKey: cleanse prevent side channel attack " << sizeof(initial_) << ":" << sizeof(blind_) << debugcs::endl();
     clear();
     cleanse::memory_cleanse(&initial_, sizeof(initial_));
     cleanse::memory_cleanse(&blind_, sizeof(blind_));
