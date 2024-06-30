@@ -12,6 +12,7 @@
 #include <QFont>
 #include <QColor>
 #include <allocator/qtsecure.h>
+#include <rpc/bitcoinrpc.h>
 
 const QString AddressTableModel::Send = "S";
 const QString AddressTableModel::Receive = "R";
@@ -292,6 +293,42 @@ QModelIndex AddressTableModel::index(int row, int column, const QModelIndex &par
 void AddressTableModel::updateEntry(const QString &address, const QString &label, bool isMine, int status) {
     // Update address book model from Bitcoin core
     priv->updateEntry(address, label, isMine, status);
+}
+
+void AddressTableModel::addQai_eth(const QString &label) {
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid()) {
+        editStatus = WALLET_UNLOCK_FAILURE;
+        return;
+    }
+
+    json_spirit::Array obj;
+    obj.push_back(label.toStdString());
+    CRPCTable::getnewethaddress(obj, false);
+}
+
+void AddressTableModel::addQai_v1(const QString &label) {
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid()) {
+        editStatus = WALLET_UNLOCK_FAILURE;
+        return;
+    }
+
+    json_spirit::Array obj;
+    obj.push_back(label.toStdString());
+    CRPCTable::getnewqaiaddress(obj, false);
+}
+
+void AddressTableModel::addQai_v2(const QString &label) {
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid()) {
+        editStatus = WALLET_UNLOCK_FAILURE;
+        return;
+    }
+
+    json_spirit::Array obj;
+    obj.push_back(label.toStdString());
+    CRPCTable::getnewschnorraddress(obj, false);
 }
 
 QString AddressTableModel::addRow(const QString &type, const QString &label, const QString &address) {

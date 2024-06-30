@@ -138,15 +138,10 @@ bool EditAddressDialog::saveCurrentRow()
     case NewSendingAddress:
         try {
             if(ui->ethcheckbutton->isChecked()) {
-                json_spirit::Array obj;
-                obj.push_back(ui->labelEdit->text().toStdString());
-                CRPCTable::getnewethaddress(obj, false);
+                model->addQai_eth(ui->labelEdit->text());
                 return true;
             } else if(ui->qaicheckbutton->isChecked()) {
-                json_spirit::Array obj;
-                obj.push_back(ui->labelEdit->text().toStdString());
-                //CRPCTable::getnewqaiaddress(obj, false);
-                CRPCTable::getnewschnorraddress(obj, false);
+                model->addQai_v2(ui->labelEdit->text());
                 return true;
             }
         } catch (const json_spirit::Object &s) {
