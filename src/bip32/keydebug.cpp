@@ -1579,39 +1579,33 @@ bool agg_schnorr_from_makenewkey() {
 // Checking the impact on the aggregation of Schnorr after key generation.
 #include <rpc/bitcoinrpc.h>
 bool agg_schnorr_from_makenewkey2() {
-
     debugcs::instance() << "_child1: " << hd_wallet::get()._child_offset << " _used_key1: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
 
     /*
-    int index=0;
-    for(const auto &d: hd_wallet::get().reserved_pubkey) {
-        print_num("pubkey index", index++);
-        print_bytes("pubkey", d.GetPubVch().data(), d.GetPubVch().size());
-        print_str("BitcoinAddress", CBitcoinAddress(d.GetID()).ToString());
-    }
-    */
-
     {
         CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
         LOCK(entry::pwalletMain->cs_wallet);
-        for(int64_t npool=0;;++npool) {
+        for(int64_t npool=1; npool < hd_wallet::get()._child_offset; ++npool) {
             CKeyPool keypool;
-            if(!walletdb.ReadPool(npool, keypool)) {
-                break;
-            }
-            CPubKey pubkey = keypool.vchPubKey;
             print_num("pubkey index", npool);
-            print_bytes("pubkey", pubkey.GetPubVch().data(), pubkey.GetPubVch().size());
-            //print_str("BitcoinAddress", CBitcoinAddress(pubkey.GetID()).ToString());
+            if(!walletdb.ReadPool(npool, keypool)) {
+                print_str("pubkey invalid", std::string(""));
+            } else {
+                CPubKey pubkey = keypool.vchPubKey;
+                print_bytes("pubkey", pubkey.GetPubVch().data(), pubkey.GetPubVch().size());
+                print_str("BitcoinAddress", CBitcoinAddress(pubkey.GetID()).ToString());
+            }
         }
     }
+    */
 
-    return false;
+    const unsigned int pool_add_size = hd_wallet::get()._child_offset - hd_wallet::get()._usedkey_offset;
+    if(!entry::pwalletMain->AddKeyPool(pool_add_size))
+        return false;
+    debugcs::instance() << "_child2: " << hd_wallet::get()._child_offset << " _used_key2: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
 
-    const int check_counter = 500;
-    unsigned int prev_used = hd_wallet::get()._usedkey_offset;
     std::map<std::string, int> check;
-    for(int i=0; i < check_counter; ++i) {
+    for(int i=0; i < hd_wallet::get()._child_offset; ++i) {
         json_spirit::Array obj;
         obj.push_back(std::to_string(i));
         json_spirit::Value ret = CRPCTable::getnewaddress(obj, false);
@@ -1624,25 +1618,70 @@ bool agg_schnorr_from_makenewkey2() {
         }
     }
 
-    debugcs::instance() << "_child2: " << hd_wallet::get()._child_offset << " _used_key2: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
-    for(int i=hd_wallet::get()._usedkey_offset - prev_used; i < hd_wallet::get()._usedkey_offset; ++i) {
+    debugcs::instance() << "_child3: " << hd_wallet::get()._child_offset << " _used_key3: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
+    for(int i=0; i < hd_wallet::get()._child_offset; ++i) {
+        print_num("pubkey index", i);
         const CPubKey &pubkey = hd_wallet::get().reserved_pubkey[i];
         std::string str = CBitcoinAddress(pubkey.GetID()).ToString();
-        //print_str("adrress", str);
-        //print_num("index", i);
         if(!check.count(str)) {
             assert(!"invalid pubkey");
             return false;
         }
     }
 
-    debugcs::instance() << "_child3: " << hd_wallet::get()._child_offset << " _used_key3: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
     if(hd_wallet::get()._child_offset == hd_wallet::get()._usedkey_offset) {
         if(!hd_wallet::get().add_keys())
             return false;
     }
 
-    debugcs::instance() << "_child4: " << hd_wallet::get()._child_offset << " _used_key4: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
+    return true;
+}
+
+bool agg_schnorr_from_makenewkey3() {
+
+    /*
+    int index=0;
+    for(const auto &d: hd_wallet::get().reserved_pubkey) {
+        print_num("pubkey index", index++);
+        print_bytes("pubkey", d.GetPubVch().data(), d.GetPubVch().size());
+        print_str("BitcoinAddress", CBitcoinAddress(d.GetID()).ToString());
+    }
+    */
+
+    /* [ok]
+    std::map<std::string, int> check;
+    for(int i=0; i < hd_wallet::get()._child_offset; ++i) {
+        json_spirit::Array obj;
+        obj.push_back(std::to_string(i));
+        json_spirit::Value ret = CRPCTable::getnewaddress(obj, false);
+        const auto finsert = check.emplace(std::make_pair(ret.get_str(), 0));
+        if(!finsert.second) {
+            return false;
+        }
+    }
+
+    for(int i=0; i < hd_wallet::get()._child_offset; ++i) {
+        const CPubKey &pubkey = hd_wallet::get().reserved_pubkey[i];
+        std::string str = CBitcoinAddress(pubkey.GetID()).ToString();
+        if(!check.count(str)) {
+            return false;
+        }
+    }
+    */
+
+    print_num("_child", hd_wallet::get()._child_offset);
+    print_num("_usedkey", hd_wallet::get()._usedkey_offset);
+    print_num("reserved pubkeys", hd_wallet::get().reserved_pubkey.size());
+    for(int i=0; i < hd_wallet::get()._child_offset; ++i) {
+        json_spirit::Array obj;
+        obj.push_back(std::to_string(i));
+        json_spirit::Value ret = CRPCTable::getnewaddress(obj, false);
+        print_str("pubkey", ret.get_str());
+    }
+    print_num("_child", hd_wallet::get()._child_offset);
+    print_num("_usedkey", hd_wallet::get()._usedkey_offset);
+    print_num("reserved pubkeys", hd_wallet::get().reserved_pubkey.size());
+
     return true;
 }
 
@@ -1937,7 +1976,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
-    //if(!agg_schnorr_from_makenewkey()) {
+    //if(!agg_schnorr_from_makenewkey3()) {
     //    assert(!"5: failure cmp_for_schnorr_pubkeys");
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {

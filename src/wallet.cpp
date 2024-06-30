@@ -3492,6 +3492,27 @@ bool CWallet::TopUpKeyPool(unsigned int nSize/*=0*/) {
     return true;
 }
 
+bool CWallet::AddKeyPool(unsigned int nSize) {
+    LOCK(cs_wallet);
+    if (IsLocked())
+        return false;
+    if (nSize == 0)
+        return true;
+
+    CWalletDB walletdb(strWalletFile, strWalletLevelDB, strWalletSqlFile);
+    for(unsigned int i=0; i < nSize; ++i) {
+        uint64_t nEnd = 1;
+        if (!setKeyPool.empty())
+            nEnd = *(--setKeyPool.end()) + 1;
+        if (!walletdb.WritePool(nEnd, CKeyPool(GenerateNewKey())))
+            return false;
+
+        setKeyPool.insert(nEnd);
+    }
+
+    return true;
+}
+
 void CWallet::ReserveKeyFromKeyPool(int64_t &nIndex, CKeyPool &keypool)
 {
     nIndex = -1;

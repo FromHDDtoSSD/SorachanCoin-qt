@@ -4223,7 +4223,7 @@ bool XOnlyAggWalletInfo::MakeNewKey(uint160 &hash, size_t agg_size /* = DEF_AGG_
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
         return false;
 
-    const unsigned int begin_index = hd_wallet::get().reserved_pubkey.size() + aggregated_size;
+    const unsigned int begin_index = hdkeys_child_regenerate + aggregated_size;
     if(!push_computehash(begin_index, agg_size, hash))
         return false;
 
