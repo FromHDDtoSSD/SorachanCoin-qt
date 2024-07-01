@@ -1453,13 +1453,42 @@ public:
 };
 
 // Schnorr ECDH
-class ECDHKey : public CPubKey {
+class ECDHKey : public CPubKey::secp256k1_pubkey {
+public:
     ECDHKey() {}
+
+    friend bool operator==(const ECDHKey &a, const ECDHKey &b) {
+        return ::memcmp(a.data, b.data, sizeof(a.data)) == 0;
+    }
 };
 
 // Schnorr ECDH: key pair
-int secp256k1_schnorr_get_ecdhkey(const unsigned char *seckey, const CPubKey::secp256k1_pubkey *pubkey, CPubKey::secp256k1_pubkey *ecdhkey)
+int secp256k1_schnorrsig_ecdhkey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, ECDHKey *symmetrickey)
 {
+    /* y^2 = x^3 + 7 */
+    CPubKey::ecmult::secp256k1_fe sc7;
+    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
+
+    /* Get the pub_x */
+    CPubKey::ecmult::secp256k1_fe px;
+    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&px, xonlypubkey))
+        return 0;
+
+    /* Compute the pub_y */
+    CPubKey::ecmult::secp256k1_fe py;
+    CPubKey::ecmult::secp256k1_fe_sqr(&py, &px);
+    CPubKey::ecmult::secp256k1_fe_mul(&py, &py, &px);
+    CPubKey::ecmult::secp256k1_fe_add(&py, &sc7);
+    CPubKey::ecmult::secp256k1_fe_sqrt(&py, &py);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&py);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&py))
+        CPubKey::ecmult::secp256k1_fe_negate(&py, &py, 1);
+
+    /* Get the pubkey */
+    CPubKey::ecmult::secp256k1_ge pk;
+    CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &px, &py);
+
+    /* Get the secret */
     CPubKey::secp256k1_scalar x;
     int overflow;
     CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
@@ -1469,30 +1498,137 @@ int secp256k1_schnorr_get_ecdhkey(const unsigned char *seckey, const CPubKey::se
         return 0;
     }
 
-    /* Get the pubkey */
-    CPubKey::ecmult::secp256k1_ge pk;
-    CPubKey::secp256k1_pubkey_load(&pk, pubkey);
+    /* Cumpute nonce (rand) */
+    CPubKey::secp256k1_scalar nonce;
+    do {
+        unsigned char rand[32];
+        latest_crypto::random::GetStrongRandBytes(rand, 32);
+        CPubKey::secp256k1_scalar_set_b32(&nonce, rand, &overflow);
+    } while (overflow);
 
-    /* Compute rj =  0*G + x*pub */
-    CPubKey::secp256k1_scalar zero;
-    CPubKey::secp256k1_scalar_set_int(&zero, 0);
-    CPubKey::ecmult::secp256k1_gej pkj;
+    /* Compute rj = nonce*G + x*pub */
     CPubKey::ecmult::secp256k1_gej rj;
-    CPubKey::ecmult::secp256k1_ge r;
-    CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
-    if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &x, &zero)) {
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-    CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
-    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r)) {
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
+    {
+        CPubKey::ecmult::secp256k1_gej pkj;
+        CPubKey::ecmult::secp256k1_ge r;
+        CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
+        if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &x, &nonce)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
+        if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
     }
 
-    CPubKey::secp256k1_pubkey_save(ecdhkey, &r);
+    /* Compute negnonce = (-nonce)*G */
+    CPubKey::ecmult::secp256k1_ge negnonce;
+    {
+        CPubKey::ecmult::secp256k1_gej pkj;
+        CPubKey::secp256k1_scalar neg;
+        CFirmKey::ecmult::secp256k1_gen_context ctxobj;
+        if(ctx == NULL) {
+            ctx = &ctxobj;
+            if(!ctx->build()) {
+                cleanse::memory_cleanse(&x, sizeof(x));
+                return 0;
+            }
+        }
+        CPubKey::secp256k1_scalar_negate(&neg, &nonce);
+        if(!ctx->secp256k1_ecmult_gen(&pkj, &neg)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_ge_set_gej(&negnonce, &pkj);
+    }
+
+    /* Compute s = rj + negnonce */
+    CPubKey::ecmult::secp256k1_gej sj;
+    CPubKey::ecmult::secp256k1_ge s;
+    CPubKey::ecmult::secp256k1_gej_add_ge_var(&sj, &rj, &negnonce, NULL);
+    CPubKey::ecmult::secp256k1_ge_set_gej(&s, &sj);
+    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&s)) {
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_fe_normalize(&s.y);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&s.y))
+        CPubKey::ecmult::secp256k1_fe_negate(&s.y, &s.y, 1);
+
+    CPubKey::secp256k1_pubkey_save(symmetrickey, &s);
     cleanse::memory_cleanse(&x, sizeof(x));
     return 1;
+}
+
+#include <crypto/ctaes/ctaes.h>
+bool agg_schnorr_ecdh_key_exchange() {
+    std::string message = "I have heard that in a certain country, capitalism has partially collapsed, \
+                          and people are forced to bear debts with an annual interest rate of up to 30 percent. \
+                          Immediate improvement is necessary.";
+
+    XOnlyAggWalletInfo xonly_wallet_info;
+    if(!xonly_wallet_info.LoadFromWalletInfo())
+        return false;
+
+    uint160 bob_hash;
+    if(!xonly_wallet_info.MakeNewKey(bob_hash))
+        return false;
+    XOnlyPubKeys xonly_bob_pubkeys;
+    XOnlyKeys xonly_bob_keys;
+    if(!xonly_wallet_info.GetXOnlyKeys(bob_hash, xonly_bob_pubkeys, xonly_bob_keys))
+        return false;
+    XOnlyPubKey bob_agg_pubkey = xonly_bob_pubkeys.GetXOnlyPubKey();
+    CSecret bob_agg_secret;
+    if(!xonly_bob_keys.GetSecret(bob_agg_secret))
+        return false;
+
+    uint160 alice_hash;
+    if(!xonly_wallet_info.MakeNewKey(alice_hash))
+        return false;
+    XOnlyPubKeys xonly_alice_pubkeys;
+    XOnlyKeys xonly_alice_keys;
+    if(!xonly_wallet_info.GetXOnlyKeys(alice_hash, xonly_alice_pubkeys, xonly_alice_keys))
+        return false;
+    XOnlyPubKey alice_agg_pubkey = xonly_alice_pubkeys.GetXOnlyPubKey();
+    CSecret alice_agg_secret;
+    if(!xonly_alice_keys.GetSecret(alice_agg_secret))
+        return false;
+
+    /*
+    uint160 carol_hash;
+    if(!xonly_wallet_info.MakeNewKey(carol_hash))
+        return false;
+    XOnlyPubKeys xonly_carol_pubkeys;
+    XOnlyKeys xonly_carol_keys;
+    if(!xonly_wallet_info.GetXOnlyKeys(carol_hash, xonly_carol_pubkeys, xonly_carol_keys))
+        return false;
+    */
+
+    ECDHKey symmetrickey1, symmetrickey2;
+    // bob (bob secret * alice pubkey)
+    secp256k1_schnorrsig_ecdhkey(NULL, bob_agg_secret.data(), alice_agg_pubkey.data(), &symmetrickey1);
+    // alice (alice secret * bob pubkey)
+    secp256k1_schnorrsig_ecdhkey(NULL, alice_agg_secret.data(), bob_agg_pubkey.data(), &symmetrickey2);
+    print_bytes("  bob symmetrickey", symmetrickey1.data, sizeof(symmetrickey1.data));
+    print_bytes("alice symmetrickey", symmetrickey2.data, sizeof(symmetrickey2.data));
+    assert(symmetrickey1 == symmetrickey2);
+
+    uint256 symmetrickeyhash;
+    latest_crypto::CHash256().Write(symmetrickey1.data, sizeof(symmetrickey1.data)).Finalize(symmetrickeyhash.begin());
+
+    AES256_ctx ctx;
+    AES256_init(&ctx, symmetrickeyhash.begin());
+    unsigned char cipher[1024] = {0};
+    AES256_encrypt(&ctx, latest_crypto::AES_BLOCKSIZE, cipher, (const unsigned char *)message.data());
+    print_bytes("AES256 Encrypt", cipher, sizeof(cipher));
+
+    unsigned char decrypt[1024] = {0};
+    AES256_decrypt(&ctx, latest_crypto::AES_BLOCKSIZE, decrypt, cipher);
+    print_str("AES256 Decrypt", std::string((const char *)decrypt));
+
+    return true;
 }
 
 bool agg_schnorr_from_makenewkey() {
@@ -1976,7 +2112,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Exists keys aggregation sign and verify
-    //if(!agg_schnorr_from_makenewkey3()) {
+    //if(!agg_schnorr_ecdh_key_exchange()) {
     //    assert(!"5: failure cmp_for_schnorr_pubkeys");
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {

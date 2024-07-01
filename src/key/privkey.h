@@ -325,6 +325,8 @@ public:
     XOnlyKeys() {}
     ~XOnlyKeys() { clear(); }
 
+    bool GetSecret(CSecret &agg_secret) const;
+
     /** Sign a Schnorr signature against this private keys.
      *
      * sigbytes must be exactly 64 bytes.

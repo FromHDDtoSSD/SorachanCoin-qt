@@ -1679,6 +1679,10 @@ bool XOnlyKey::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigby
     }
 }
 
+bool XOnlyKeys::GetSecret(CSecret &agg_secret) const {
+    return aggregation(&agg_secret);
+}
+
 bool XOnlyKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
     CSecret agg_secret;
     if(!aggregation(&agg_secret))
