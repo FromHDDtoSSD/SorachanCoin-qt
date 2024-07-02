@@ -1452,18 +1452,40 @@ public:
     }
 };
 
-// Schnorr ECDH
-class ECDHKey : public CPubKey::secp256k1_pubkey {
+// Schnorr SymmetricKey
+using secp256k1_symmetrickey = CPubKey::secp256k1_pubkey;
+class SymmetricKey : private CPubKey::secp256k1_pubkey
+{
 public:
-    ECDHKey() {}
+    SymmetricKey() = delete;
 
-    friend bool operator==(const ECDHKey &a, const ECDHKey &b) {
-        return ::memcmp(a.data, b.data, sizeof(a.data)) == 0;
+    explicit SymmetricKey(const secp256k1_symmetrickey &symkey) {
+        ::memcpy(&front(), symkey.data, size());
+    }
+
+    const unsigned char *data() const {
+        return ((const CPubKey::secp256k1_pubkey *)this)->data;
+    }
+
+    unsigned char &front() {
+        return ((CPubKey::secp256k1_pubkey *)this)->data[0];
+    }
+
+    unsigned int size() const {
+        return sizeof(((CPubKey::secp256k1_pubkey *)this)->data);
+    }
+
+    friend bool operator==(const SymmetricKey &a, const SymmetricKey &b) {
+        return ::memcmp(a.data(), b.data(), a.size()) == 0;
     }
 };
 
-// Schnorr ECDH: key pair
-int secp256k1_schnorrsig_ecdhkey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, ECDHKey *symmetrickey)
+void secp256k1_symmetrickey_save(secp256k1_symmetrickey *symmetrickey, CPubKey::ecmult::secp256k1_ge *ge) {
+    CPubKey::secp256k1_pubkey_save(symmetrickey, ge);
+}
+
+// Schnorr signature symmetrickey
+int secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, secp256k1_symmetrickey *symmetrickey)
 {
     /* y^2 = x^3 + 7 */
     CPubKey::ecmult::secp256k1_fe sc7;
@@ -1557,16 +1579,86 @@ int secp256k1_schnorrsig_ecdhkey(CFirmKey::ecmult::secp256k1_gen_context *ctx, c
     if(CPubKey::ecmult::secp256k1_fe_is_odd(&s.y))
         CPubKey::ecmult::secp256k1_fe_negate(&s.y, &s.y, 1);
 
-    CPubKey::secp256k1_pubkey_save(symmetrickey, &s);
+    secp256k1_symmetrickey_save(symmetrickey, &s);
     cleanse::memory_cleanse(&x, sizeof(x));
     return 1;
 }
 
 #include <crypto/ctaes/ctaes.h>
+
+namespace latest_crypto {
+
+class CAES256 {
+private:
+    CHash256 hash256;
+    AES256_ctx ctx;
+    std::vector<unsigned char> buffer;
+
+    void padding(unsigned char *data, uint32_t data_len) {
+        const size_t pad_len = 16 - (data_len % 16);
+        if(pad_len < 16) {
+            for (size_t i = 0; i < pad_len; i++) {
+                data[data_len + i] = 0xFF;
+            }
+        }
+    }
+
+public:
+    CAES256() {}
+
+    CAES256 &Init(const unsigned char *key, uint32_t size) {
+        hash256.Reset().Write(key, size);
+        uint256 hash;
+        hash256.Finalize(hash.begin());
+        AES256_init(&ctx, hash.begin());
+        buffer.clear(); buffer.shrink_to_fit();
+        return *this;
+    }
+
+    CAES256 &Encrypt(const unsigned char *data, uint32_t size) {
+        const uint32_t blocks = (size / 16) + ((size % 16 > 0) ? 1: 0);
+        const uint32_t padded_size = size + (16 - (size % 16));
+        buffer.resize(padded_size + 4);
+        std::vector<unsigned char> padded_data;
+        padded_data.resize(padded_size);
+        ::memcpy(&padded_data.front(), data, size);
+        padding(&padded_data.front(), size);
+        AES256_encrypt(&ctx, blocks, &buffer.front(), padded_data.data());
+        const uint32_t le_size = endian::bc_le32toh(size);
+        const unsigned char *ser_p = (const unsigned char *)&le_size;
+        for(int i=0; i < 4; ++i)
+            buffer.at(padded_size + i) = ser_p[i];
+        return *this;
+    }
+
+    CAES256 &Decrypt(const unsigned char *data, uint32_t size) {
+        uint32_t le_size;
+        unsigned char *ser_p = (unsigned char *)&le_size;
+        for(int i=0; i < 4; ++i)
+            ser_p[i] = data[size - 4 + i];
+        const uint32_t real_size = endian::bc_le32toh(le_size);
+        const uint32_t blocks = (real_size / 16) + ((real_size % 16 > 0) ? 1: 0);
+        const uint32_t padded_size = real_size + (16 - (real_size % 16));
+        buffer.resize(padded_size);
+        AES256_decrypt(&ctx, blocks, &buffer.front(), data);
+        if(buffer.size() != real_size) {
+            assert(buffer.size() > real_size);
+            const uint32_t erase_size = buffer.size() - real_size;
+            assert(erase_size < 16);
+            buffer.erase(buffer.end() - erase_size, buffer.end());
+        }
+        return *this;
+    }
+
+    void Finalize(std::vector<unsigned char> &vch) {
+        vch = std::move(buffer);
+    }
+};
+
+} // latest_crypto
+
 bool agg_schnorr_ecdh_key_exchange() {
-    std::string message = "I have heard that in a certain country, capitalism has partially collapsed, \
-                          and people are forced to bear debts with an annual interest rate of up to 30 percent. \
-                          Immediate improvement is necessary.";
+    std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
 
     XOnlyAggWalletInfo xonly_wallet_info;
     if(!xonly_wallet_info.LoadFromWalletInfo())
@@ -1606,27 +1698,26 @@ bool agg_schnorr_ecdh_key_exchange() {
         return false;
     */
 
-    ECDHKey symmetrickey1, symmetrickey2;
+    secp256k1_symmetrickey symmetrickey1, symmetrickey2;
     // bob (bob secret * alice pubkey)
-    secp256k1_schnorrsig_ecdhkey(NULL, bob_agg_secret.data(), alice_agg_pubkey.data(), &symmetrickey1);
+    secp256k1_schnorrsig_symmetrickey(NULL, bob_agg_secret.data(), alice_agg_pubkey.data(), &symmetrickey1);
     // alice (alice secret * bob pubkey)
-    secp256k1_schnorrsig_ecdhkey(NULL, alice_agg_secret.data(), bob_agg_pubkey.data(), &symmetrickey2);
-    print_bytes("  bob symmetrickey", symmetrickey1.data, sizeof(symmetrickey1.data));
-    print_bytes("alice symmetrickey", symmetrickey2.data, sizeof(symmetrickey2.data));
-    assert(symmetrickey1 == symmetrickey2);
+    secp256k1_schnorrsig_symmetrickey(NULL, alice_agg_secret.data(), bob_agg_pubkey.data(), &symmetrickey2);
 
-    uint256 symmetrickeyhash;
-    latest_crypto::CHash256().Write(symmetrickey1.data, sizeof(symmetrickey1.data)).Finalize(symmetrickeyhash.begin());
+    SymmetricKey SKey1(symmetrickey1), SKey2(symmetrickey2);
+    print_bytes("  bob symmetrickey", SKey1.data(), SKey1.size());
+    print_bytes("alice symmetrickey", SKey2.data(), SKey2.size());
+    assert(SKey1 == SKey2);
 
-    AES256_ctx ctx;
-    AES256_init(&ctx, symmetrickeyhash.begin());
-    unsigned char cipher[1024] = {0};
-    AES256_encrypt(&ctx, latest_crypto::AES_BLOCKSIZE, cipher, (const unsigned char *)message.data());
-    print_bytes("AES256 Encrypt", cipher, sizeof(cipher));
+    std::vector<unsigned char> cipher;
+    latest_crypto::CAES256().Init(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
+    print_bytes("AES256 Encrypt", cipher.data(), cipher.size());
 
-    unsigned char decrypt[1024] = {0};
-    AES256_decrypt(&ctx, latest_crypto::AES_BLOCKSIZE, decrypt, cipher);
-    print_str("AES256 Decrypt", std::string((const char *)decrypt));
+    std::vector<unsigned char> plain;
+    latest_crypto::CAES256().Init(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher.data(), cipher.size()).Finalize(plain);
+    print_str("AES256 Decrypt", std::string(plain.begin(), plain.end()));
+    assert(message.size() == plain.size());
+    assert(message == std::string(plain.begin(), plain.end()));
 
     return true;
 }
