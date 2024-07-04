@@ -2109,72 +2109,38 @@ int hash160_get_merkle_root(secp256k1_hash160 *r, const std::vector<uint160> &vh
     size_t num_hashes = vhashes.size();
 
     // Copy the current level's hashes
-    unsigned char **current_level = (unsigned char **)::malloc(num_hashes * sizeof(unsigned char *));
-    if(!current_level)
-        return 0;
-    for (size_t i = 0; i < num_hashes; i++) {
-        current_level[i] = (unsigned char *)::malloc(HASH160_DIGEST_LENGTH);
-        if(!current_level[i]) {
-            for (size_t k = 0; k < i; k++)
-                ::free(current_level[k]);
-            ::free(current_level);
-            return 0;
-        }
-        ::memcpy(current_level[i], vhashes[i].begin(), HASH160_DIGEST_LENGTH);
-    }
+    std::vector<uint160> current_level;
+    current_level.resize(num_hashes);
+    for (size_t i = 0; i < num_hashes; i++)
+        ::memcpy(current_level[i].begin(), vhashes[i].begin(), HASH160_DIGEST_LENGTH);
 
     // Build the Merkle tree
     while (num_hashes > 1) {
         size_t new_num_hashes = (num_hashes + 1) / 2;
-        unsigned char **next_level = (unsigned char **)::malloc(new_num_hashes * sizeof(unsigned char *));
-        if(!next_level) {
-            for (size_t k = 0; k < num_hashes; k++)
-                ::free(current_level[k]);
-            ::free(current_level);
-            return 0;
-        }
-
+        std::vector<uint160> next_level;
+        next_level.resize(new_num_hashes);
         for (size_t i = 0; i < new_num_hashes; i++) {
-            next_level[i] = (unsigned char *)::malloc(HASH160_DIGEST_LENGTH);
-            if(!next_level[i]) {
-                for (size_t k = 0; k < i; k++)
-                    ::free(next_level[k]);
-                for (size_t k = 0; k < num_hashes; k++)
-                    ::free(current_level[k]);
-                ::free(current_level);
-                return 0;
-            }
             if (2 * i + 1 < num_hashes) {
                 // Combine two child hashes and compute the parent hash
                 unsigned char combined[2 * HASH160_DIGEST_LENGTH];
-                ::memcpy(combined, current_level[2 * i], HASH160_DIGEST_LENGTH);
-                ::memcpy(combined + HASH160_DIGEST_LENGTH, current_level[2 * i + 1], HASH160_DIGEST_LENGTH);
-                secp256k1_compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i]);
+                ::memcpy(combined, current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
+                ::memcpy(combined + HASH160_DIGEST_LENGTH, current_level[2 * i + 1].begin(), HASH160_DIGEST_LENGTH);
+                secp256k1_compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i].begin());
             } else {
                 // Odd number of hashes, so copy the last hash
-                ::memcpy(next_level[i], current_level[2 * i], HASH160_DIGEST_LENGTH);
+                ::memcpy(next_level[i].begin(), current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
             }
         }
 
-        // Free the current level
-        for (size_t i = 0; i < num_hashes; i++) {
-            ::free(current_level[i]);
-        }
-        ::free(current_level);
-
         // Move to the next level
-        current_level = next_level;
+        current_level.clear();
+        current_level = std::move(next_level);
         num_hashes = new_num_hashes;
     }
 
     // The root hash is the only hash in the final level
     unsigned char *merkle_root = r->data;
-    ::memcpy(merkle_root, current_level[0], HASH160_DIGEST_LENGTH);
-
-    // Free the last level
-    ::free(current_level[0]);
-    ::free(current_level);
-
+    ::memcpy(merkle_root, current_level[0].begin(), HASH160_DIGEST_LENGTH);
     return 1;
 }
 
