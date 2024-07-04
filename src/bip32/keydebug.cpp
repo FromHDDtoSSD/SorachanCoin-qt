@@ -2017,6 +2017,91 @@ public:
 
 } // latest_crypto
 
+constexpr static int HASH160_DIGEST_LENGTH = 20;
+struct secp256k1_hash160 {
+    unsigned char data[HASH160_DIGEST_LENGTH];
+};
+
+// Function to compute SHA-256 hash
+void secp256k1_compute_hash160(const unsigned char *data, size_t len, unsigned char *hash) {
+    latest_crypto::CHash160().Write(data, len).Finalize(hash);
+}
+
+// Function to build the Merkle tree and compute the Merkle root
+int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size_t num_hashes) {
+    if (!hashes || num_hashes == 0)
+        return 0;
+
+    // Copy the current level's hashes
+    unsigned char **current_level = (unsigned char **)::malloc(num_hashes * sizeof(unsigned char *));
+    if(!current_level)
+        return 0;
+    for (size_t i = 0; i < num_hashes; i++) {
+        current_level[i] = (unsigned char *)::malloc(HASH160_DIGEST_LENGTH);
+        if(!current_level[i]) {
+            for (size_t k = 0; k < i; k++)
+                ::free(current_level[k]);
+            ::free(current_level);
+            return 0;
+        }
+        ::memcpy(current_level[i], hashes[i], HASH160_DIGEST_LENGTH);
+    }
+
+    // Build the Merkle tree
+    while (num_hashes > 1) {
+        size_t new_num_hashes = (num_hashes + 1) / 2;
+        unsigned char **next_level = (unsigned char **)::malloc(new_num_hashes * sizeof(unsigned char *));
+        if(!next_level) {
+            for (size_t k = 0; k < num_hashes; k++)
+                ::free(current_level[k]);
+            ::free(current_level);
+            return 0;
+        }
+
+        for (size_t i = 0; i < new_num_hashes; i++) {
+            next_level[i] = (unsigned char *)::malloc(HASH160_DIGEST_LENGTH);
+            if(!next_level[i]) {
+                for (size_t k = 0; k < i; k++)
+                    ::free(next_level[k]);
+                for (size_t k = 0; k < num_hashes; k++)
+                    ::free(current_level[k]);
+                ::free(current_level);
+                return 0;
+            }
+            if (2 * i + 1 < num_hashes) {
+                // Combine two child hashes and compute the parent hash
+                unsigned char combined[2 * HASH160_DIGEST_LENGTH];
+                ::memcpy(combined, current_level[2 * i], HASH160_DIGEST_LENGTH);
+                ::memcpy(combined + HASH160_DIGEST_LENGTH, current_level[2 * i + 1], HASH160_DIGEST_LENGTH);
+                secp256k1_compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i]);
+            } else {
+                // Odd number of hashes, so copy the last hash
+                ::memcpy(next_level[i], current_level[2 * i], HASH160_DIGEST_LENGTH);
+            }
+        }
+
+        // Free the current level
+        for (size_t i = 0; i < num_hashes; i++) {
+            ::free(current_level[i]);
+        }
+        ::free(current_level);
+
+        // Move to the next level
+        current_level = next_level;
+        num_hashes = new_num_hashes;
+    }
+
+    // The root hash is the only hash in the final level
+    unsigned char *merkle_root = r->data;
+    ::memcpy(merkle_root, current_level[0], HASH160_DIGEST_LENGTH);
+
+    // Free the last level
+    ::free(current_level[0]);
+    ::free(current_level);
+
+    return 1;
+}
+
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
 
@@ -2110,6 +2195,22 @@ bool agg_schnorr_ecdh_key_exchange() {
     latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher3.first.data(), cipher3.first.size()).Finalize(plain4);
     print_str("CChaCha20 Decrypt", std::string(plain4.first.begin(), plain4.first.end()));
     assert(plain4.second == false);
+
+    unsigned char **hashes;
+    hashes = (unsigned char **)::malloc(sizeof(unsigned char*) * 10);
+    for(int i=0; i < 10; ++i) {
+        unsigned char buf[32] = {0};
+        buf[0] = (unsigned char)i;
+        hashes[i] = (unsigned char *)::malloc(HASH160_DIGEST_LENGTH);
+        secp256k1_compute_hash160(buf, 32, hashes[i]);
+    }
+
+    secp256k1_hash160 merkle_top;
+    secp256k1_get_merkle_root(&merkle_top, hashes, 10);
+    print_bytes("merkle root", merkle_top.data, sizeof(merkle_top.data));
+    for(int i=0; i < 10; ++i)
+        ::free(hashes[i]);
+    ::free(hashes);
 
     return true;
 }
