@@ -2260,6 +2260,31 @@ bool agg_schnorr_ecdh_key_exchange() {
     hash160_get_merkle_root(&merkle_top2, vhashes);
     print_bytes("merkle root2", merkle_top2.data, sizeof(merkle_top2.data));
 
+    // checking ChaCha20
+    const std::string cha20_message = "Checking the implementation of ChaCha20 in cryptocurrency.";
+    uint256 chacha20_key;
+    latest_crypto::random::GetStrongRandBytes(chacha20_key.begin(), 32);
+    latest_crypto::ChaCha20 cha20;
+    cha20.SetKey(chacha20_key.begin(), 32);
+    cha20.SetIV(5);
+    cha20.Seek(0);
+    std::vector<unsigned char> cha20_checking;
+    cha20_checking.resize(cha20_message.size());
+    cha20.Output(&cha20_checking.front(), cha20_checking.size());
+    cha20.Output(&cha20_checking.front(), cha20_checking.size());
+    print_str("chacha20 str", std::string(cha20_checking.begin(), cha20_checking.end()));
+
+    latest_crypto::CChaCha20 ccha20;
+    ccha20.Init(chacha20_key.begin(), 32);
+    ccha20.Encrypt((const unsigned char *)cha20_message.data(), cha20_message.size());
+    std::pair<std::vector<unsigned char>, bool> ccha20_checking;
+    ccha20.Finalize(ccha20_checking);
+    assert(ccha20_checking.second);
+    ccha20.Decrypt(ccha20_checking.first.data(), ccha20_checking.first.size());
+    assert(ccha20_checking.second);
+    ccha20.Finalize(ccha20_checking);
+    print_str("cchacha20 str", std::string(ccha20_checking.first.begin(), ccha20_checking.first.end()));
+
     return true;
 }
 
