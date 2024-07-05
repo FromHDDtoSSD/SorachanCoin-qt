@@ -1,4 +1,5 @@
 // Copyright (c) 2016-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -6,6 +7,7 @@
 #include <crypto/common.h>
 #include <assert.h>
 #include <string.h>
+#include <random/random.h>
 
 extern "C" {
 #include <crypto/ctaes/ctaes.c>
@@ -218,6 +220,121 @@ AES128CBCDecrypt::~AES128CBCDecrypt()
 int AES128CBCDecrypt::Decrypt(const unsigned char* data, int size, unsigned char* out) const
 {
     return CBCDecrypt(dec, iv, data, size, pad, out);
+}
+
+/**
+ * CAES256CBCPKCS7
+ */
+void CAES256CBCPKCS7::padding(unsigned char *data, uint32_t data_len) {
+    const uint32_t pad_len = bsize - (data_len % bsize);
+    for (uint32_t i = 0; i < pad_len; i++) {
+        data[data_len + i] = (unsigned char)pad_len;
+    }
+}
+
+bool CAES256CBCPKCS7::padcheck(std::vector<unsigned char>::iterator end, uint32_t pad_num) {
+    if(pad_num == 0 || pad_num > bsize)
+        return false;
+    for(uint32_t i=0; i < pad_num; ++i) {
+        if(*(end - 1 - i) != pad_num)
+            return false;
+    }
+    return true;
+}
+
+CAES256CBCPKCS7::CheckHash CAES256CBCPKCS7::checking(unsigned char *data, uint32_t data_len) {
+    uint160 hash;
+    latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
+    CheckHash chash;
+    for (uint32_t i=0; i < chashsize; ++i)
+        chash.c[i] = *(hash.begin() + i);
+    return chash;
+}
+
+CAES256CBCPKCS7 &CAES256CBCPKCS7::err() {
+    buffer.clear();
+    fcheck = false;
+    return *this;
+}
+
+uint256_cleanse CAES256CBCPKCS7::getkeyhash(const CAESSecret &key) {
+    uint256_cleanse hash;
+    CHash256().Write(key.data(), key.size()).Finalize(hash.begin());
+    return hash;
+}
+
+unsigned char *CAES256CBCPKCS7::createiv() {
+    iv.resize(bsize);
+    random::GetStrongRandBytes(&iv.front(), iv.size());
+    return iv.data();
+}
+
+CAES256CBCPKCS7::CAES256CBCPKCS7(const unsigned char *key, uint32_t size) : fcheck(false) {
+    Reset(key, size);
+}
+
+CAES256CBCPKCS7 &CAES256CBCPKCS7::Reset(const unsigned char *key, uint32_t size) {
+    assert(key && size >= 16);
+    buffer.clear(); buffer.shrink_to_fit();
+    secret.resize(size);
+    ::memcpy(&secret.front(), key, size);
+    fcheck = false;
+    return *this;
+}
+
+CAES256CBCPKCS7 &CAES256CBCPKCS7::Encrypt(const unsigned char *data, uint32_t size) {
+    AES256CBCEncrypt enc(getkeyhash(secret).begin(), createiv(), false);
+    assert(iv.size() == bsize);
+    if(!data || size == 0)
+        return err();
+    const uint32_t padded_size = size + (bsize - (size % bsize));
+    buffer.resize(padded_size + chashsize + bsize);
+    std::vector<unsigned char> padded_data;
+    padded_data.resize(padded_size);
+    ::memcpy(&padded_data.front(), data, size);
+    padding(&padded_data.front(), size);
+    CheckHash chash = checking(padded_data.data(), padded_data.size());
+    const uint32_t written = (uint32_t)enc.Encrypt(padded_data.data(), padded_data.size(), &buffer.front());
+    if(written != padded_size)
+        return err();
+    for(uint32_t i=0; i < chashsize; ++i)
+        buffer.at(padded_size + i) = chash.c[i];
+    for(uint32_t i=0; i < bsize; ++i)
+        buffer.at(padded_size + chashsize + i) = iv[i];
+    fcheck = true;
+    return *this;
+}
+
+CAES256CBCPKCS7 &CAES256CBCPKCS7::Decrypt(const unsigned char *data, uint32_t size) {
+    if(!data || size < bsize + (chashsize + bsize) || (size - (chashsize + bsize)) % bsize > 0)
+        return err();
+    iv.resize(bsize);
+    for(uint32_t i=0; i < bsize; ++i)
+        iv[i] = data[size - bsize + i];
+    CheckHash chash;
+    for(int i=0; i < chashsize; ++i)
+        chash.c[i] = data[size - (bsize + chashsize) + i];
+    const uint32_t padded_size = size - (bsize + chashsize);
+    AES256CBCDecrypt dec(getkeyhash(secret).begin(), iv.data(), false);
+    buffer.resize(padded_size);
+    const uint32_t written = (uint32_t)dec.Decrypt(data, padded_size, &buffer.front());
+    if(written != padded_size)
+        return err();
+    CheckHash chashdec = checking(buffer.data(), buffer.size());
+    if(chash != chashdec)
+        return err();
+    const uint32_t erase_size = (uint32_t)buffer.back();
+    if(erase_size > bsize)
+        return err();
+    if(!padcheck(buffer.end(), erase_size))
+        return err();
+    buffer.erase(buffer.end() - erase_size, buffer.end());
+    fcheck = true;
+    return *this;
+}
+
+void CAES256CBCPKCS7::Finalize(std::pair<std::vector<unsigned char>, bool> &vch) {
+    vch = std::make_pair(std::move(buffer), fcheck);
 }
 
 } // namespace latest_crypto

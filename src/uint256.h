@@ -14,6 +14,7 @@
 #include <vector>
 #include <prevector/prevector.h>
 #include <stdint.h>
+#include <cleanse/cleanse.h>
 
 /** Base class without constructors for uint.
 * This makes the compiler let u use it in a union.
@@ -553,6 +554,20 @@ public:
         HashFinal(a, b, c);
 
         return ((((uint64_t)b) << 32) | c);
+    }
+};
+
+class uint160_cleanse : public uint160 {
+public:
+    ~uint160_cleanse() {
+        cleanse::memory_cleanse(this->begin(), this->size());
+    }
+};
+
+class uint256_cleanse : public uint256 {
+public:
+    ~uint256_cleanse() {
+        cleanse::memory_cleanse(this->begin(), this->size());
     }
 };
 

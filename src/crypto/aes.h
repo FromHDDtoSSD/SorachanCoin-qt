@@ -1,4 +1,5 @@
 // Copyright (c) 2015-2018 The Bitcoin Core developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 //
@@ -10,6 +11,7 @@
 extern "C" {
 #include <crypto/ctaes/ctaes.h>
 }
+#include <hash.h>
 
 namespace latest_crypto {
 
@@ -107,6 +109,47 @@ private:
     const AES128Decrypt dec;
     const bool pad;
     unsigned char iv[AES_BLOCKSIZE];
+};
+
+// SORA-QAI: CAES256CBCPKCS7
+// implement SecureAllocator
+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CAESSecret;
+class CAES256CBCPKCS7 {
+public:
+    CAES256CBCPKCS7() = delete;
+    CAES256CBCPKCS7(const unsigned char *key, uint32_t size);
+
+    CAES256CBCPKCS7 &Reset(const unsigned char *key, uint32_t size);
+    CAES256CBCPKCS7 &Encrypt(const unsigned char *data, uint32_t size);
+    CAES256CBCPKCS7 &Decrypt(const unsigned char *data, uint32_t size);
+    void Finalize(std::pair<std::vector<unsigned char>, bool> &vch);
+
+private:
+    CAESSecret secret;
+    std::vector<unsigned char> iv;
+    std::vector<unsigned char> buffer;
+    bool fcheck;
+    constexpr static uint32_t chashsize = sizeof(uint160);
+    constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
+    struct CheckHash {
+        unsigned char c[chashsize];
+        CheckHash() {
+            ::memset(c, 0x00, chashsize);
+        }
+        bool operator==(const CheckHash &a) const {
+            return ::memcmp(a.c, this->c, chashsize) == 0;
+        }
+        bool operator!=(const CheckHash &a) const {
+            return !operator==(a);
+        }
+    } checkhash;
+
+    static void padding(unsigned char *data, uint32_t data_len);
+    static bool padcheck(std::vector<unsigned char>::iterator end, uint32_t pad_num);
+    static CheckHash checking(unsigned char *data, uint32_t data_len);
+    CAES256CBCPKCS7 &err();
+    static uint256_cleanse getkeyhash(const CAESSecret &key);
+    unsigned char *createiv();
 };
 
 } // namespace latest_crypto

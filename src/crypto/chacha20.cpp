@@ -1,4 +1,5 @@
 // Copyright (c) 2017 The Bitcoin Core developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -8,8 +9,141 @@
 #include <crypto/common.h>
 #include <crypto/chacha20.h>
 #include <string.h>
+#include <random/random.h>
+#include <hash.h>
 
 namespace latest_crypto {
+
+void CChaCha20::chacha20_round(uint32_t x[], uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
+    auto rotL32 = [](uint32_t v, uint32_t n) {
+        return ((v << n) | (v >> (32 - n)));
+    };
+    x[a] += x[b]; x[d] = rotL32(x[d] ^ x[a], 16);
+    x[c] += x[d]; x[b] = rotL32(x[b] ^ x[c], 12);
+    x[a] += x[b]; x[d] = rotL32(x[d] ^ x[a], 8);
+    x[c] += x[d]; x[b] = rotL32(x[b] ^ x[c], 7);
+}
+
+void CChaCha20::chacha20_block(CHACHA20_CTX *ctx, unsigned char output[64]) {
+    uint32_t x[16];
+    memcpy(x, ctx->state, sizeof(x));
+    for (uint32_t i = 0; i < rounds; i += 2) {
+        chacha20_round(x, 0, 4, 8, 12);
+        chacha20_round(x, 1, 5, 9, 13);
+        chacha20_round(x, 2, 6, 10, 14);
+        chacha20_round(x, 3, 7, 11, 15);
+        chacha20_round(x, 0, 5, 10, 15);
+        chacha20_round(x, 1, 6, 11, 12);
+        chacha20_round(x, 2, 7, 8, 13);
+        chacha20_round(x, 3, 4, 9, 14);
+    }
+    for (uint32_t i = 0; i < 16; ++i) {
+        x[i] += ctx->state[i];
+        ((uint32_t *)output)[i] = x[i];
+    }
+}
+
+void CChaCha20::chacha20_init(CHACHA20_CTX *ctx, const unsigned char key[32], const unsigned char nonce[12], uint32_t counter /*= defcounter*/) {
+    static const char *constants = "expand 32-byte k";
+    ctx->state[0]  = ((uint32_t *)constants)[0];
+    ctx->state[1]  = ((uint32_t *)constants)[1];
+    ctx->state[2]  = ((uint32_t *)constants)[2];
+    ctx->state[3]  = ((uint32_t *)constants)[3];
+    for (uint32_t i = 0; i < 8; ++i)
+        ctx->state[4 + i] = ((uint32_t *)key)[i];
+    ctx->state[12] = counter;
+    ctx->state[13] = ((uint32_t *)nonce)[0];
+    ctx->state[14] = ((uint32_t *)nonce)[1];
+    ctx->state[15] = ((uint32_t *)nonce)[2];
+}
+
+void CChaCha20::chacha20_compute(CHACHA20_CTX *ctx, const unsigned char *input, unsigned char *output, uint32_t size) {
+    uint8_t block[64];
+    uint32_t i, j;
+    for (i = 0; i < size; i += 64) {
+        chacha20_block(ctx, block);
+        ctx->state[12]++;
+        for (j = 0; j < 64 && i + j < size; ++j)
+            output[i + j] = input[i + j] ^ block[j];
+    }
+}
+
+uint256_cleanse CChaCha20::getkeyhash(const CChaCha20Secret &key) {
+    uint256_cleanse hash;
+    CHash256().Write(key.data(), key.size()).Finalize(hash.begin());
+    return hash;
+}
+
+const unsigned char *CChaCha20::createnonce() {
+    random::GetStrongRandBytes(nonce, nsize);
+    return nonce;
+}
+
+CChaCha20::CheckHash CChaCha20::checking(const unsigned char *data, uint32_t data_len) {
+    uint160 hash;
+    latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
+    CheckHash chash;
+    for (uint32_t i=0; i < chashsize; ++i)
+        chash.c[i] = *(hash.begin() + i);
+    return chash;
+}
+
+CChaCha20 &CChaCha20::err() {
+    buffer.clear();
+    fcheck = false;
+    return *this;
+}
+
+CChaCha20::CChaCha20(const unsigned char *key, uint32_t size) : fcheck(false) {
+    Reset(key, size);
+}
+
+CChaCha20 &CChaCha20::Reset(const unsigned char *key, uint32_t size) {
+    assert(key && size >= 16);
+    secret.resize(size);
+    ::memcpy(&secret.front(), key, size);
+    fcheck = false;
+    return *this;
+}
+
+CChaCha20 &CChaCha20::Encrypt(const unsigned char *data, uint32_t size) {
+    if(!data || size == 0)
+        return err();
+    CHACHA20_CTX ctx;
+    chacha20_init(&ctx, getkeyhash(secret).begin(), createnonce());
+    buffer.resize(size + chashsize + nsize);
+    CheckHash chash = checking(data, size);
+    chacha20_compute(&ctx, data, &buffer.front(), size);
+    for(int i=0; i < chashsize; ++i)
+        buffer[size + i] = chash.c[i];
+    for(int i=0; i < nsize; ++i)
+        buffer[size + chashsize + i] = nonce[i];
+    fcheck = true;
+    return *this;
+}
+
+CChaCha20 &CChaCha20::Decrypt(const unsigned char *data, uint32_t size) {
+    if(!data || size <= (nsize + chashsize))
+        return err();
+    CheckHash chash;
+    for(int i=0; i < chashsize; ++i)
+        chash.c[i] = data[size - (chashsize + nsize) + i];
+    for(int i=0; i < nsize; ++i)
+        nonce[i] = data[size - nsize + i];
+    CHACHA20_CTX ctx;
+    chacha20_init(&ctx, getkeyhash(secret).begin(), nonce);
+    buffer.resize(size - (chashsize + nsize));
+    chacha20_compute(&ctx, data, &buffer.front(), size - (chashsize + nsize));
+    CheckHash chashdec = checking(buffer.data(), buffer.size());
+    if(chash != chashdec)
+        return err();
+    fcheck = true;
+    return *this;
+}
+
+void CChaCha20::Finalize(std::pair<std::vector<unsigned char>, bool> &out) {
+    out = std::make_pair(std::move(buffer), fcheck);
+}
 
 constexpr static inline uint32_t rotl32(uint32_t v, int c) { return (v << c) | (v >> (32 - c)); }
 

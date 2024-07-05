@@ -1587,436 +1587,6 @@ int secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_gen_context *c
     return 1;
 }
 
-#include <crypto/ctaes/ctaes.h>
-
-class uint256_cleanse : public uint256 {
-public:
-    ~uint256_cleanse() {
-        cleanse::memory_cleanse(this->begin(), this->size());
-    }
-};
-
-namespace latest_crypto {
-
-class CAES256 {
-private:
-    CHash256 hash256;
-    AES256_ctx ctx;
-    std::vector<unsigned char> buffer;
-    bool fcheck;
-    constexpr static uint32_t chashsize = sizeof(uint160);
-    constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
-    constexpr static uint32_t usize = sizeof(uint32_t);
-    struct CheckHash {
-        unsigned char c[chashsize];
-        CheckHash() {
-            ::memset(c, 0x00, chashsize);
-        }
-        bool operator==(const CheckHash &a) const {
-            return ::memcmp(a.c, this->c, chashsize) == 0;
-        }
-        bool operator!=(const CheckHash &a) const {
-            return !operator==(a);
-        }
-    } checkhash;
-
-    void padding(unsigned char *data, uint32_t data_len) {
-        const size_t pad_len = bsize - (data_len % bsize);
-        if(pad_len < bsize) {
-            for (size_t i = 0; i < pad_len; i++) {
-                data[data_len + i] = 0xFF;
-            }
-        }
-    }
-
-    CheckHash checking(unsigned char *data, uint32_t data_len) {
-        uint160 hash;
-        latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
-        CheckHash chash;
-        for (int i=0; i < chashsize; ++i)
-            chash.c[i] = *(hash.begin() + i);
-        return chash;
-    }
-
-    CAES256 &err() {
-        buffer.clear();
-        fcheck = false;
-        return *this;
-    }
-
-public:
-    CAES256() {}
-
-    CAES256 &Init(const unsigned char *key, uint32_t size) {
-        hash256.Reset().Write(key, size);
-        uint256 hash;
-        hash256.Finalize(hash.begin());
-        AES256_init(&ctx, hash.begin());
-        buffer.clear(); buffer.shrink_to_fit();
-        fcheck = false;
-        return *this;
-    }
-
-    CAES256 &Encrypt(const unsigned char *data, uint32_t size) {
-        if(size == 0)
-            return err();
-        const uint32_t blocks = (size / bsize) + ((size % bsize > 0) ? 1: 0);
-        const uint32_t padded_size = size + (bsize - (size % bsize));
-        buffer.resize(padded_size + chashsize + usize);
-        std::vector<unsigned char> padded_data;
-        padded_data.resize(padded_size);
-        ::memcpy(&padded_data.front(), data, size);
-        padding(&padded_data.front(), size);
-        CheckHash chash = checking(padded_data.data(), padded_data.size());
-        AES256_encrypt(&ctx, blocks, &buffer.front(), padded_data.data());
-        for(int i=0; i < chashsize; ++i)
-            buffer.at(padded_size + i) = chash.c[i];
-        const uint32_t le_size = endian::bc_le32toh(size);
-        const unsigned char *ser_p = (const unsigned char *)&le_size;
-        for(int i=0; i < usize; ++i)
-            buffer.at(padded_size + chashsize + i) = ser_p[i];
-        fcheck = true;
-        return *this;
-    }
-
-    CAES256 &Decrypt(const unsigned char *data, uint32_t size) {
-        if(size == 0 || (size - (usize + chashsize)) % bsize > 0)
-            return err();
-        uint32_t le_size;
-        unsigned char *ser_p = (unsigned char *)&le_size;
-        for(int i=0; i < usize; ++i)
-            ser_p[i] = data[size - usize + i];
-        CheckHash chash;
-        for(int i=0; i < chashsize; ++i)
-            chash.c[i] = data[size - (usize + chashsize) + i];
-        const uint32_t real_size = endian::bc_le32toh(le_size);
-        if(size <= real_size)
-            return err();
-        const uint32_t blocks = (real_size / bsize) + ((real_size % bsize > 0) ? 1: 0);
-        const uint32_t padded_size = real_size + (bsize - (real_size % bsize));
-        buffer.resize(padded_size);
-        AES256_decrypt(&ctx, blocks, &buffer.front(), data);
-        CheckHash chashdec = checking(buffer.data(), buffer.size());
-        if(chash != chashdec)
-            return err();
-        if(buffer.size() != real_size) {
-            if(buffer.size() < real_size)
-                return err();
-            const uint32_t erase_size = buffer.size() - real_size;
-            if(erase_size >= bsize)
-                return err();
-            buffer.erase(buffer.end() - erase_size, buffer.end());
-        }
-        fcheck = true;
-        return *this;
-    }
-
-    void Finalize(std::pair<std::vector<unsigned char>, bool> &vch) {
-        vch = std::make_pair(std::move(buffer), fcheck);
-    }
-};
-
-// implement SecureAllocator
-class CAES256CBC {
-private:
-    CSecret secret;
-    std::vector<unsigned char> iv;
-    std::vector<unsigned char> buffer;
-    bool fcheck;
-    constexpr static uint32_t chashsize = sizeof(uint160);
-    constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
-    constexpr static uint32_t usize = sizeof(uint32_t);
-    struct CheckHash {
-        unsigned char c[chashsize];
-        CheckHash() {
-            ::memset(c, 0x00, chashsize);
-        }
-        bool operator==(const CheckHash &a) const {
-            return ::memcmp(a.c, this->c, chashsize) == 0;
-        }
-        bool operator!=(const CheckHash &a) const {
-            return !operator==(a);
-        }
-    } checkhash;
-
-    void padding(unsigned char *data, uint32_t data_len) {
-        const size_t pad_len = bsize - (data_len % bsize);
-        if(pad_len < bsize) {
-            for (size_t i = 0; i < pad_len; i++) {
-                data[data_len + i] = 0xFF;
-            }
-        }
-    }
-
-    CheckHash checking(unsigned char *data, uint32_t data_len) {
-        uint160 hash;
-        latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
-        CheckHash chash;
-        for (int i=0; i < chashsize; ++i)
-            chash.c[i] = *(hash.begin() + i);
-        return chash;
-    }
-
-    CAES256CBC &err() {
-        buffer.clear();
-        fcheck = false;
-        return *this;
-    }
-
-    uint256_cleanse getkeyhash(const CSecret &key) {
-        uint256_cleanse hash;
-        CHash256().Reset().Write(key.data(), key.size()).Finalize(hash.begin());
-        return hash;
-    }
-
-    unsigned char *createiv() {
-        iv.resize(bsize);
-        random::GetStrongRandBytes(&iv.front(), iv.size());
-        return iv.data();
-    }
-
-public:
-    CAES256CBC() : fcheck(false) {}
-
-    CAES256CBC &Init(const unsigned char *key, uint32_t size) {
-        assert(key && size >= 16);
-        buffer.clear(); buffer.shrink_to_fit();
-        secret.resize(size);
-        ::memcpy(&secret.front(), key, size);
-        fcheck = false;
-        return *this;
-    }
-
-    CAES256CBC &Encrypt(const unsigned char *data, uint32_t size) {
-        AES256CBCEncrypt enc(getkeyhash(secret).begin(), createiv(), false);
-        if(!data || size == 0)
-            return err();
-        const uint32_t padded_size = size + (bsize - (size % bsize));
-        assert(iv.size() == bsize);
-        buffer.resize(padded_size + chashsize + usize + bsize);
-        std::vector<unsigned char> padded_data;
-        padded_data.resize(padded_size);
-        ::memcpy(&padded_data.front(), data, size);
-        padding(&padded_data.front(), size);
-        CheckHash chash = checking(padded_data.data(), padded_data.size());
-        const uint32_t written = (uint32_t)enc.Encrypt(padded_data.data(), padded_data.size(), &buffer.front());
-        if(written != padded_size)
-            return err();
-        for(int i=0; i < chashsize; ++i)
-            buffer.at(padded_size + i) = chash.c[i];
-        const uint32_t le_size = endian::bc_le32toh(size);
-        const unsigned char *ser_p = (const unsigned char *)&le_size;
-        for(int i=0; i < usize; ++i)
-            buffer.at(padded_size + chashsize + i) = ser_p[i];
-        for(int i=0; i < bsize; ++i)
-            buffer.at(padded_size + chashsize + usize + i) = iv[i];
-        fcheck = true;
-        return *this;
-    }
-
-    CAES256CBC &Decrypt(const unsigned char *data, uint32_t size) {
-        if(!data || size <= bsize + (usize + chashsize + bsize) || (size - (usize + chashsize + bsize)) % bsize > 0)
-            return err();
-        iv.resize(bsize);
-        for(int i=0; i < bsize; ++i)
-            iv[i] = data[size - bsize + i];
-        uint32_t le_size;
-        unsigned char *ser_p = (unsigned char *)&le_size;
-        for(int i=0; i < usize; ++i)
-            ser_p[i] = data[size - (bsize + usize) + i];
-        CheckHash chash;
-        for(int i=0; i < chashsize; ++i)
-            chash.c[i] = data[size - (bsize + usize + chashsize) + i];
-        const uint32_t real_size = endian::bc_le32toh(le_size);
-        if(size <= real_size)
-            return err();
-        AES256CBCDecrypt dec(getkeyhash(secret).begin(), iv.data(), false);
-        const uint32_t padded_size = real_size + (bsize - (real_size % bsize));
-        buffer.resize(padded_size);
-        const uint32_t written = (uint32_t)dec.Decrypt(data, padded_size, &buffer.front());
-        if(written != padded_size)
-            return err();
-        CheckHash chashdec = checking(buffer.data(), buffer.size());
-        if(chash != chashdec)
-            return err();
-        if(buffer.size() != real_size) {
-            if(buffer.size() < real_size)
-                return err();
-            const uint32_t erase_size = buffer.size() - real_size;
-            if(erase_size >= bsize)
-                return err();
-            buffer.erase(buffer.end() - erase_size, buffer.end());
-        }
-        fcheck = true;
-        return *this;
-    }
-
-    void Finalize(std::pair<std::vector<unsigned char>, bool> &vch) {
-        vch = std::make_pair(std::move(buffer), fcheck);
-    }
-};
-
-// implement SecureAllocator
-class CChaCha20 {
-private:
-    CSecret secret;
-    std::vector<unsigned char> buffer;
-    bool fcheck;
-    constexpr static uint32_t nsize = 12;
-    constexpr static uint32_t defcounter = 1;
-    constexpr static uint32_t rounds = 20;
-    constexpr static uint32_t chashsize = sizeof(uint160);
-    unsigned char nonce[nsize];
-    struct CheckHash {
-        unsigned char c[chashsize];
-        CheckHash() {
-            ::memset(c, 0x00, chashsize);
-        }
-        bool operator==(const CheckHash &a) const {
-            return ::memcmp(a.c, this->c, chashsize) == 0;
-        }
-        bool operator!=(const CheckHash &a) const {
-            return !operator==(a);
-        }
-    } checkhash;
-
-    struct CHACHA20_CTX {
-        uint32_t state[16];
-    };
-
-    void chacha20_round(uint32_t x[], uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
-        auto rotL32 = [](uint32_t v, uint32_t n) {
-            return ((v << n) | (v >> (32 - n)));
-        };
-        x[a] += x[b]; x[d] = rotL32(x[d] ^ x[a], 16);
-        x[c] += x[d]; x[b] = rotL32(x[b] ^ x[c], 12);
-        x[a] += x[b]; x[d] = rotL32(x[d] ^ x[a], 8);
-        x[c] += x[d]; x[b] = rotL32(x[b] ^ x[c], 7);
-    }
-
-    void chacha20_block(CHACHA20_CTX *ctx, unsigned char output[64]) {
-        uint32_t x[16];
-        memcpy(x, ctx->state, sizeof(x));
-        for (int i = 0; i < rounds; i += 2) {
-            chacha20_round(x, 0, 4, 8, 12);
-            chacha20_round(x, 1, 5, 9, 13);
-            chacha20_round(x, 2, 6, 10, 14);
-            chacha20_round(x, 3, 7, 11, 15);
-            chacha20_round(x, 0, 5, 10, 15);
-            chacha20_round(x, 1, 6, 11, 12);
-            chacha20_round(x, 2, 7, 8, 13);
-            chacha20_round(x, 3, 4, 9, 14);
-        }
-        for (int i = 0; i < 16; ++i) {
-            x[i] += ctx->state[i];
-            ((uint32_t *)output)[i] = x[i];
-        }
-    }
-
-    void chacha20_init(CHACHA20_CTX *ctx, const unsigned char key[32], const unsigned char nonce[12], uint32_t counter = defcounter) {
-        static const char *constants = "expand 32-byte k";
-        ctx->state[0]  = ((uint32_t *)constants)[0];
-        ctx->state[1]  = ((uint32_t *)constants)[1];
-        ctx->state[2]  = ((uint32_t *)constants)[2];
-        ctx->state[3]  = ((uint32_t *)constants)[3];
-        for (int i = 0; i < 8; ++i)
-            ctx->state[4 + i] = ((uint32_t *)key)[i];
-        ctx->state[12] = counter;
-        ctx->state[13] = ((uint32_t *)nonce)[0];
-        ctx->state[14] = ((uint32_t *)nonce)[1];
-        ctx->state[15] = ((uint32_t *)nonce)[2];
-    }
-
-    void chacha20_compute(CHACHA20_CTX *ctx, const unsigned char *input, unsigned char *output, uint32_t size) {
-        uint8_t block[64];
-        size_t i, j;
-        for (i = 0; i < size; i += 64) {
-            chacha20_block(ctx, block);
-            ctx->state[12]++;
-            for (j = 0; j < 64 && i + j < size; ++j)
-                output[i + j] = input[i + j] ^ block[j];
-        }
-    }
-
-    uint256_cleanse getkeyhash(const CSecret &key) {
-        uint256_cleanse hash;
-        CHash256().Reset().Write(key.data(), key.size()).Finalize(hash.begin());
-        return hash;
-    }
-
-    const unsigned char *createnonce() {
-        random::GetStrongRandBytes(nonce, nsize);
-        return nonce;
-    }
-
-    CheckHash checking(const unsigned char *data, uint32_t data_len) {
-        uint160 hash;
-        latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
-        CheckHash chash;
-        for (int i=0; i < chashsize; ++i)
-            chash.c[i] = *(hash.begin() + i);
-        return chash;
-    }
-
-    CChaCha20 &err() {
-        buffer.clear();
-        fcheck = false;
-        return *this;
-    }
-
-public:
-    CChaCha20() : fcheck(false) {}
-
-    CChaCha20 &Init(const unsigned char *key, size_t size) {
-        assert(key && size >= 16);
-        secret.resize(size);
-        ::memcpy(&secret.front(), key, size);
-        fcheck = false;
-        return *this;
-    }
-
-    CChaCha20 &Encrypt(const unsigned char *data, uint32_t size) {
-        if(!data || size == 0)
-            return err();
-        CHACHA20_CTX ctx;
-        chacha20_init(&ctx, getkeyhash(secret).begin(), createnonce());
-        buffer.resize(size + chashsize + nsize);
-        CheckHash chash = checking(data, size);
-        chacha20_compute(&ctx, data, &buffer.front(), size);
-        for(int i=0; i < chashsize; ++i)
-            buffer[size + i] = chash.c[i];
-        for(int i=0; i < nsize; ++i)
-            buffer[size + chashsize + i] = nonce[i];
-        fcheck = true;
-        return *this;
-    }
-
-    CChaCha20 &Decrypt(const unsigned char *data, uint32_t size) {
-        if(!data || size <= (nsize + chashsize))
-            return err();
-        CheckHash chash;
-        for(int i=0; i < chashsize; ++i)
-            chash.c[i] = data[size - (chashsize + nsize) + i];
-        for(int i=0; i < nsize; ++i)
-            nonce[i] = data[size - nsize + i];
-        CHACHA20_CTX ctx;
-        chacha20_init(&ctx, getkeyhash(secret).begin(), nonce);
-        buffer.resize(size - (chashsize + nsize));
-        chacha20_compute(&ctx, data, &buffer.front(), size - (chashsize + nsize));
-        CheckHash chashdec = checking(buffer.data(), buffer.size());
-        if(chash != chashdec)
-            return err();
-        fcheck = true;
-        return *this;
-    }
-
-    void Finalize(std::pair<std::vector<unsigned char>, bool> &out) {
-        out = std::make_pair(std::move(buffer), fcheck);
-    }
-};
-
-} // latest_crypto
-
 constexpr static int HASH160_DIGEST_LENGTH = 20;
 struct secp256k1_hash160 {
     unsigned char data[HASH160_DIGEST_LENGTH];
@@ -2104,6 +1674,10 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
 
 // (vector version) Function to build the Merkle tree and compute the Merkle root
 int hash160_get_merkle_root(secp256k1_hash160 *r, const std::vector<uint160> &vhashes) {
+    auto compute_hash160 = [](const unsigned char *data, size_t len, unsigned char *hash) {
+        latest_crypto::CHash160().Write(data, len).Finalize(hash);
+    };
+
     if (vhashes.size() == 0)
         return 0;
     size_t num_hashes = vhashes.size();
@@ -2125,7 +1699,7 @@ int hash160_get_merkle_root(secp256k1_hash160 *r, const std::vector<uint160> &vh
                 unsigned char combined[2 * HASH160_DIGEST_LENGTH];
                 ::memcpy(combined, current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
                 ::memcpy(combined + HASH160_DIGEST_LENGTH, current_level[2 * i + 1].begin(), HASH160_DIGEST_LENGTH);
-                secp256k1_compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i].begin());
+                compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i].begin());
             } else {
                 // Odd number of hashes, so copy the last hash
                 ::memcpy(next_level[i].begin(), current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
@@ -2199,29 +1773,30 @@ bool agg_schnorr_ecdh_key_exchange() {
     cleanse::memory_cleanse(symmetrickey2.data, sizeof(symmetrickey2.data));
 
     std::pair<std::vector<unsigned char>, bool> cipher;
-    latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
+    latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
     assert(cipher.second);
     print_bytes("AES256 Encrypt", cipher.first.data(), cipher.first.size());
 
     std::pair<std::vector<unsigned char>, bool> plain;
-    latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher.first.data(), cipher.first.size()).Finalize(plain);
+    latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher.first.data(), cipher.first.size()).Finalize(plain);
     print_str("AES256 Decrypt", std::string(plain.first.begin(), plain.first.end()));
     assert(plain.second);
     assert(message.size() == plain.first.size());
     assert(message == std::string(plain.first.begin(), plain.first.end()));
 
     std::pair<std::vector<unsigned char>, bool> cipher2;
-    latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher2);
+    latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher2);
     assert(cipher2.second);
     print_bytes("AES256 Encrypt", cipher2.first.data(), cipher2.first.size());
     assert(cipher.first != cipher2.first); // CBC check
+    //assert(cipher.first == cipher2.first); // non-CBC check
 
     std::pair<std::vector<unsigned char>, bool> cipher3;
-    latest_crypto::CChaCha20().Init(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher3);
+    latest_crypto::CChaCha20(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher3);
     assert(cipher3.second);
     print_bytes("CChaCha20 Encrypt", cipher3.first.data(), cipher3.first.size());
     std::pair<std::vector<unsigned char>, bool> plain3;
-    latest_crypto::CChaCha20().Init(SKey1.data(), SKey1.size()).Decrypt(cipher3.first.data(), cipher3.first.size()).Finalize(plain3);
+    latest_crypto::CChaCha20(SKey1.data(), SKey1.size()).Decrypt(cipher3.first.data(), cipher3.first.size()).Finalize(plain3);
     assert(plain3.second);
     print_str("CChaCha20 Decrypt", std::string(plain3.first.begin(), plain3.first.end()));
     assert(message == std::string(plain3.first.begin(), plain3.first.end()));
@@ -2230,11 +1805,11 @@ bool agg_schnorr_ecdh_key_exchange() {
     SKey1.front() += 0x01;
     *(&SKey1.front() + 1) += 0x01;
     std::pair<std::vector<unsigned char>, bool> plain2;
-    latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher2.first.data(), cipher2.first.size()).Finalize(plain2);
+    latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher2.first.data(), cipher2.first.size()).Finalize(plain2);
     print_str("AES256 Decrypt", std::string(plain2.first.begin(), plain2.first.end()));
     assert(plain2.second == false);
     std::pair<std::vector<unsigned char>, bool> plain4;
-    latest_crypto::CAES256CBC().Init(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher3.first.data(), cipher3.first.size()).Finalize(plain4);
+    latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher3.first.data(), cipher3.first.size()).Finalize(plain4);
     print_str("CChaCha20 Decrypt", std::string(plain4.first.begin(), plain4.first.end()));
     assert(plain4.second == false);
 
@@ -2274,8 +1849,7 @@ bool agg_schnorr_ecdh_key_exchange() {
     cha20.Output(&cha20_checking.front(), cha20_checking.size());
     print_str("chacha20 str", std::string(cha20_checking.begin(), cha20_checking.end()));
 
-    latest_crypto::CChaCha20 ccha20;
-    ccha20.Init(chacha20_key.begin(), 32);
+    latest_crypto::CChaCha20 ccha20(chacha20_key.begin(), 32);
     ccha20.Encrypt((const unsigned char *)cha20_message.data(), cha20_message.size());
     std::pair<std::vector<unsigned char>, bool> ccha20_checking;
     ccha20.Finalize(ccha20_checking);
@@ -2284,6 +1858,62 @@ bool agg_schnorr_ecdh_key_exchange() {
     assert(ccha20_checking.second);
     ccha20.Finalize(ccha20_checking);
     print_str("cchacha20 str", std::string(ccha20_checking.first.begin(), ccha20_checking.first.end()));
+
+    // CAES256CBCPKCS7 [Check OK]
+    for(int i=1; i <= 100000; ++i) {
+        size_t size = ::rand() % 8000;
+        if(size == 0) size = 1;
+        print_num("AES256 checking size", size);
+        std::vector<unsigned char> data;
+        data.resize(size);
+        ::RAND_bytes(&data.front(), size);
+        uint256 key;
+        latest_crypto::random::GetStrongRandBytes(key.begin(), sizeof(uint256));
+        std::pair<std::vector<unsigned char>, bool> cipher;
+        latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Encrypt(data.data(), data.size()).Finalize(cipher);
+        assert(cipher.second);
+        print_num("cipher size", cipher.first.size());
+        std::pair<std::vector<unsigned char>, bool> plain;
+        latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain);
+        assert(plain.second);
+        print_bytes("data ", data.data(), data.size());
+        print_bytes("plain", plain.first.data(), plain.first.size());
+        assert(data == plain.first);
+
+        std::pair<std::vector<unsigned char>, bool> plain2;
+        *(key.begin() + 1) += 0x05;
+        latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain2);
+        assert(!plain2.second);
+        print_bytes("plain2", plain2.first.data(), plain2.first.size());
+    }
+
+    // CChaCha20 [Check OK]
+    for(int i=1; i <= 100000; ++i) {
+        size_t size = ::rand() % 8000;
+        if(size == 0) size = 1;
+        print_num("ChaCha20 checking size", size);
+        std::vector<unsigned char> data;
+        data.resize(size);
+        ::RAND_bytes(&data.front(), size);
+        uint256 key;
+        latest_crypto::random::GetStrongRandBytes(key.begin(), sizeof(uint256));
+        std::pair<std::vector<unsigned char>, bool> cipher;
+        latest_crypto::CChaCha20(key.begin(), key.size()).Encrypt(data.data(), data.size()).Finalize(cipher);
+        assert(cipher.second);
+        print_num("cipher size", cipher.first.size());
+        std::pair<std::vector<unsigned char>, bool> plain;
+        latest_crypto::CChaCha20(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain);
+        assert(plain.second);
+        print_bytes("data ", data.data(), data.size());
+        print_bytes("plain", plain.first.data(), plain.first.size());
+        assert(data == plain.first);
+
+        std::pair<std::vector<unsigned char>, bool> plain2;
+        *(key.begin() + 1) += 0x05;
+        latest_crypto::CChaCha20(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain2);
+        assert(!plain2.second);
+        print_bytes("plain2", plain2.first.data(), plain2.first.size());
+    }
 
     return true;
 }
