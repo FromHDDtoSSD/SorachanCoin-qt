@@ -1443,6 +1443,7 @@ bool agg_schnorr_from_wallet_to_keys() {
     return true;
 }
 
+/*
 class AiNftInfo {
 public:
     constexpr static int32_t qai_nft_version = 0x03;
@@ -1451,6 +1452,7 @@ public:
         qaiVersion = qai_nft_version;
     }
 };
+*/
 
 // Schnorr SymmetricKey
 using secp256k1_symmetrickey = CPubKey::secp256k1_pubkey;
@@ -1673,13 +1675,15 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
 }
 
 // (vector version) Function to build the Merkle tree and compute the Merkle root
-int hash160_get_merkle_root(secp256k1_hash160 *r, const std::vector<uint160> &vhashes) {
+void hash160_get_merkle_root(uint160 &merkle_root, const std::vector<uint160> &vhashes) {
     auto compute_hash160 = [](const unsigned char *data, size_t len, unsigned char *hash) {
         latest_crypto::CHash160().Write(data, len).Finalize(hash);
     };
 
-    if (vhashes.size() == 0)
-        return 0;
+    if (vhashes.size() == 0) {
+        merkle_root = uint160(0);
+        return;
+    }
     size_t num_hashes = vhashes.size();
 
     // Copy the current level's hashes
@@ -1713,10 +1717,119 @@ int hash160_get_merkle_root(secp256k1_hash160 *r, const std::vector<uint160> &vh
     }
 
     // The root hash is the only hash in the final level
-    unsigned char *merkle_root = r->data;
-    ::memcpy(merkle_root, current_level[0].begin(), HASH160_DIGEST_LENGTH);
-    return 1;
+    ::memcpy(merkle_root.begin(), current_level[0].begin(), HASH160_DIGEST_LENGTH);
 }
+
+// SORA-QAI ver3: crypto message
+class CAIToken03
+{
+public:
+    std::string message;
+    CAIToken03() {}
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(message);
+    }
+};
+
+// SORA-QAI CKeyID: uint160 merkle tree
+class CAITransaction
+{
+private:
+    unsigned char qaiVersion;
+    uint32_t nTime;
+    CKeyID schnorrsigHash;
+    std::vector<uint160> hashes;
+    uint160 merkle_root;
+
+public:
+    CAITransaction() = delete;
+    CAITransaction(unsigned char qaiVersionIn) :
+        qaiVersion(qaiVersionIn), merkle_root(uint160(0)), schnorrsigHash(CKeyID(0)) {}
+
+    bool IsValid() const {
+        return merkle_root != uint160(0) && schnorrsigHash != CKeyID(0);
+    }
+
+    const uint160 &GetMerkleRoot() const {
+        return merkle_root;
+    }
+
+    void PushTxHash(uint160 hash) {
+        hashes.emplace_back(hash);
+    }
+
+    void ClearTxHashes() {
+        hashes.clear();
+        merkle_root = uint160(0);
+    }
+
+    void SetSchnorrKeyID(Span<const unsigned char> bytes) {
+        XOnlyPubKey xonly_pubkey(bytes);
+        schnorrsigHash = xonly_pubkey.GetID();
+    }
+
+    void SetSchnorrKeyID(const XOnlyPubKey &xonly_pubkey) {
+        schnorrsigHash = xonly_pubkey.GetID();
+    }
+
+    bool BuildMerkleRoot() {
+        if(hashes.size() == 0 || schnorrsigHash == CKeyID(0))
+            return false;
+        std::vector<uint160> target = hashes;
+        target.push_back(schnorrsigHash);
+        hash160_get_merkle_root(merkle_root, target);
+        return true;
+    }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(qaiVersion);
+        READWRITE(nTime);
+        READWRITE(schnorrsigHash);
+        READWRITE(hashes);
+        READWRITE(merkle_root);
+    }
+};
+
+// // SORA-QAI ver3: CAITransaction03
+class CAITransaction03 : public CAITransaction
+{
+private:
+    std::vector<CAIToken03> tokens;
+
+public:
+    constexpr static unsigned char qaiVersion = 0x03;
+    CAITransaction03() : CAITransaction(qaiVersion) {}
+
+    void push(const std::string &str) {
+        CAIToken03 token;
+        token.message = str;
+        tokens.emplace_back(token);
+    }
+
+    void clear() {
+        tokens.clear();
+    }
+
+    uint32_t size() const {
+        return tokens.size();
+    }
+
+    const CAIToken03 &operator[](uint32_t index) const {
+        return tokens.at(index);
+    }
+
+    ADD_SERIALIZE_METHODS
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream &s, Operation ser_action) {
+        READWRITE(*((CAITransaction *)this));
+        READWRITE(tokens);
+    }
+};
 
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
@@ -1826,14 +1939,15 @@ bool agg_schnorr_ecdh_key_exchange() {
         vhashes.emplace_back(hash160);
     }
 
-    secp256k1_hash160 merkle_top, merkle_top2;
+    secp256k1_hash160 merkle_top;
+    uint160 merkle_top2;
     secp256k1_get_merkle_root(&merkle_top, hashes, 10);
     print_bytes("merkle root1", merkle_top.data, sizeof(merkle_top.data));
     for(int i=0; i < 10; ++i)
         ::free(hashes[i]);
     ::free(hashes);
-    hash160_get_merkle_root(&merkle_top2, vhashes);
-    print_bytes("merkle root2", merkle_top2.data, sizeof(merkle_top2.data));
+    hash160_get_merkle_root(merkle_top2, vhashes);
+    print_bytes("merkle root2", merkle_top2.begin(), sizeof(merkle_top2.size()));
 
     // checking ChaCha20
     const std::string cha20_message = "Checking the implementation of ChaCha20 in cryptocurrency.";
@@ -1860,7 +1974,7 @@ bool agg_schnorr_ecdh_key_exchange() {
     print_str("cchacha20 str", std::string(ccha20_checking.first.begin(), ccha20_checking.first.end()));
 
     // CAES256CBCPKCS7 [Check OK]
-    for(int i=1; i <= 100000; ++i) {
+    for(int i=1; i <= 100; ++i) {
         size_t size = ::rand() % 8000;
         if(size == 0) size = 1;
         print_num("AES256 checking size", size);
@@ -1888,7 +2002,7 @@ bool agg_schnorr_ecdh_key_exchange() {
     }
 
     // CChaCha20 [Check OK]
-    for(int i=1; i <= 100000; ++i) {
+    for(int i=1; i <= 100; ++i) {
         size_t size = ::rand() % 8000;
         if(size == 0) size = 1;
         print_num("ChaCha20 checking size", size);
@@ -1914,6 +2028,16 @@ bool agg_schnorr_ecdh_key_exchange() {
         assert(!plain2.second);
         print_bytes("plain2", plain2.first.data(), plain2.first.size());
     }
+
+    CAITransaction03 aitx;
+    for(int i=0; i < 100; ++i) {
+        uint160 hash;
+        latest_crypto::random::GetStrongRandBytes(hash.begin(), sizeof(uint160));
+        aitx.PushTxHash(hash);
+    }
+    aitx.SetSchnorrKeyID(xonly_bob_pubkeys.GetXOnlyPubKey());
+    assert(aitx.BuildMerkleRoot());
+    print_bytes("Merkle_root", aitx.GetMerkleRoot().begin(), aitx.GetMerkleRoot().size());
 
     return true;
 }

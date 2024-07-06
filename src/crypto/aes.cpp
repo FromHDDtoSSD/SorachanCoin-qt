@@ -243,8 +243,8 @@ bool CAES256CBCPKCS7::padcheck(std::vector<unsigned char>::iterator end, uint32_
 }
 
 CAES256CBCPKCS7::CheckHash CAES256CBCPKCS7::checking(unsigned char *data, uint32_t data_len) {
-    uint160 hash;
-    latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
+    uint256 hash;
+    latest_crypto::CHash256().Write(data, data_len).Finalize(hash.begin());
     CheckHash chash;
     for (uint32_t i=0; i < chashsize; ++i)
         chash.c[i] = *(hash.begin() + i);
@@ -274,7 +274,7 @@ CAES256CBCPKCS7::CAES256CBCPKCS7(const unsigned char *key, uint32_t size) : fche
 }
 
 CAES256CBCPKCS7 &CAES256CBCPKCS7::Reset(const unsigned char *key, uint32_t size) {
-    assert(key && size >= 16);
+    assert(key && size >= 20);
     buffer.clear(); buffer.shrink_to_fit();
     secret.resize(size);
     ::memcpy(&secret.front(), key, size);

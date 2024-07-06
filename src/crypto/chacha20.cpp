@@ -80,8 +80,8 @@ const unsigned char *CChaCha20::createnonce() {
 }
 
 CChaCha20::CheckHash CChaCha20::checking(const unsigned char *data, uint32_t data_len) {
-    uint160 hash;
-    latest_crypto::CHash160().Write(data, data_len).Finalize(hash.begin());
+    uint256 hash;
+    latest_crypto::CHash256().Write(data, data_len).Finalize(hash.begin());
     CheckHash chash;
     for (uint32_t i=0; i < chashsize; ++i)
         chash.c[i] = *(hash.begin() + i);
@@ -99,7 +99,7 @@ CChaCha20::CChaCha20(const unsigned char *key, uint32_t size) : fcheck(false) {
 }
 
 CChaCha20 &CChaCha20::Reset(const unsigned char *key, uint32_t size) {
-    assert(key && size >= 16);
+    assert(key && size >= 20);
     secret.resize(size);
     ::memcpy(&secret.front(), key, size);
     fcheck = false;

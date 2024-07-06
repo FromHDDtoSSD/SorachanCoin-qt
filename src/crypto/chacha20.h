@@ -32,7 +32,7 @@ private:
     constexpr static uint32_t nsize = 12;
     constexpr static uint32_t defcounter = 1;
     constexpr static uint32_t rounds = 20;
-    constexpr static uint32_t chashsize = sizeof(uint160);
+    constexpr static uint32_t chashsize = sizeof(uint256);
     unsigned char nonce[nsize];
     struct CheckHash {
         unsigned char c[chashsize];

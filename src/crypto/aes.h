@@ -129,7 +129,7 @@ private:
     std::vector<unsigned char> iv;
     std::vector<unsigned char> buffer;
     bool fcheck;
-    constexpr static uint32_t chashsize = sizeof(uint160);
+    constexpr static uint32_t chashsize = sizeof(uint256);
     constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
     struct CheckHash {
         unsigned char c[chashsize];
