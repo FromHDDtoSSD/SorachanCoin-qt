@@ -10,6 +10,7 @@
 #include <openssl/ec.h>
 #include <openssl/obj_mac.h>
 #include <init.h>
+#include <sorara/aitx.h>
 
 // #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
@@ -1444,12 +1445,13 @@ bool agg_schnorr_from_wallet_to_keys() {
 }
 
 
-constexpr static int HASH160_DIGEST_LENGTH = 20;
+
+constexpr static size_t HASH160_DIGEST_LENGTH = 20;
 struct secp256k1_hash160 {
     unsigned char data[HASH160_DIGEST_LENGTH];
 };
 
-// Function to compute SHA-256 hash
+// Function to compute Hash160
 void secp256k1_compute_hash160(const unsigned char *data, size_t len, unsigned char *hash) {
     latest_crypto::CHash160().Write(data, len).Finalize(hash);
 }
@@ -1529,6 +1531,7 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
     return 1;
 }
 
+/*
 // (vector version) Function to build the Merkle tree and compute the Merkle root
 void hash160_get_merkle_root(uint160 &merkle_root, const std::vector<uint160> &vhashes) {
     auto compute_hash160 = [](const unsigned char *data, size_t len, unsigned char *hash) {
@@ -1771,6 +1774,7 @@ public:
         READWRITE(aitx);
     }
 };
+*/
 
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
@@ -1886,14 +1890,14 @@ bool agg_schnorr_ecdh_key_exchange() {
     }
 
     secp256k1_hash160 merkle_top;
-    uint160 merkle_top2;
+    //uint160 merkle_top2;
     secp256k1_get_merkle_root(&merkle_top, hashes, 10);
     print_bytes("merkle root1", merkle_top.data, sizeof(merkle_top.data));
     for(int i=0; i < 10; ++i)
         ::free(hashes[i]);
     ::free(hashes);
-    hash160_get_merkle_root(merkle_top2, vhashes);
-    print_bytes("merkle root2", merkle_top2.begin(), sizeof(merkle_top2.size()));
+    //hash160_get_merkle_root(merkle_top2, vhashes);
+    //print_bytes("merkle root2", merkle_top2.begin(), sizeof(merkle_top2.size()));
 
     // checking ChaCha20
     const std::string cha20_message = "Checking the implementation of ChaCha20 in cryptocurrency.";

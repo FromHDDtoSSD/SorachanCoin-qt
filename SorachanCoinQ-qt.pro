@@ -823,6 +823,7 @@ HEADERS += \
     src/PoBench/pob_challenge.h \
     src/PoBench/pob_proof.h \
     src/PoBench/pob_plot.h \
+    src/sorara/aitx.h \
     src/Lyra2RE/Lyra2.h \
     src/Lyra2RE/Lyra2RE.h \
     src/Lyra2RE/Sponge.h \
@@ -977,6 +978,7 @@ SOURCES += \
     src/PoBench/pob_challenge.cpp \
     src/PoBench/pob_proof.cpp \
     src/PoBench/pob_plot.cpp \
+    src/sorara/aitx.cpp \
     src/Lyra2RE/Lyra2.c \
     src/Lyra2RE/Lyra2RE.c \
     src/Lyra2RE/Sponge.c \

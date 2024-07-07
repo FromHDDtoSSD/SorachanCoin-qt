@@ -123,6 +123,7 @@ SorachanCoind_SOURCES = \
  PoBench/pob_challenge.cpp \
  PoBench/pob_proof.cpp \
  PoBench/pob_plot.cpp \
+ sorara/aitx.cpp \
  Lyra2RE/Lyra2.c \
  Lyra2RE/Lyra2RE.c \
  Lyra2RE/Sponge.c \
@@ -251,6 +252,7 @@ SorachanCoin_cli_SOURCES = \
  PoBench/pob_challenge.cpp \
  PoBench/pob_proof.cpp \
  PoBench/pob_plot.cpp \
+ sorara/aitx.cpp \
  Lyra2RE/Lyra2.c \
  Lyra2RE/Lyra2RE.c \
  Lyra2RE/Sponge.c \
