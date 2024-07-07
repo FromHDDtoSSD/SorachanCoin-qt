@@ -338,6 +338,52 @@ public:
     void clear() { m_secrets.clear(); m_secrets.shrink_to_fit(); }
 };
 
+//! [SORA-QAI] Schnorr SymmetricKey
+using secp256k1_symmetrickey = CPubKey::secp256k1_pubkey;
+class SymmetricKey : private CPubKey::secp256k1_pubkey
+{
+public:
+    //! for Schnorr signature symmetrickey
+    static void secp256k1_symmetrickey_save(secp256k1_symmetrickey *symmetrickey, CPubKey::ecmult::secp256k1_ge *ge);
+    static int secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, secp256k1_symmetrickey *symmetrickey);
+
+    SymmetricKey() = delete;
+
+    ~SymmetricKey() {
+        cleanse::memory_cleanse(&front(), size());
+    }
+
+    explicit SymmetricKey(const secp256k1_symmetrickey &symkey) {
+        ::memcpy(&front(), symkey.data, size());
+        _valid = true;
+    }
+
+    explicit SymmetricKey(const CSecret &my_secret, const XOnlyPubKey &recipient_xonly_pubkry);
+
+    bool is_valid() const {
+        return _valid;
+    }
+
+    const unsigned char *data() const {
+        return ((const CPubKey::secp256k1_pubkey *)this)->data;
+    }
+
+    unsigned char &front() {
+        return ((CPubKey::secp256k1_pubkey *)this)->data[0];
+    }
+
+    unsigned int size() const {
+        return sizeof(((CPubKey::secp256k1_pubkey *)this)->data);
+    }
+
+    friend bool operator==(const SymmetricKey &a, const SymmetricKey &b) {
+        return ::memcmp(a.data(), b.data(), a.size()) == 0;
+    }
+
+private:
+    bool _valid;
+};
+
 // BIP32
 struct CExtKey {
     static constexpr unsigned int BIP32_EXTKEY_SIZE = 74; // [nDepth(1) + Finger(4) + nChild(4) + chaincode_(32) + dummy(1) + secret(32) = 74] serialized data

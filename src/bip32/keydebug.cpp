@@ -1443,151 +1443,6 @@ bool agg_schnorr_from_wallet_to_keys() {
     return true;
 }
 
-/*
-class AiNftInfo {
-public:
-    constexpr static int32_t qai_nft_version = 0x03;
-    int32_t qaiVersion;
-    AiNftInfo() {
-        qaiVersion = qai_nft_version;
-    }
-};
-*/
-
-// Schnorr SymmetricKey
-using secp256k1_symmetrickey = CPubKey::secp256k1_pubkey;
-class SymmetricKey : private CPubKey::secp256k1_pubkey
-{
-public:
-    SymmetricKey() = delete;
-    ~SymmetricKey() {
-        cleanse::memory_cleanse(&front(), size());
-    }
-
-    explicit SymmetricKey(const secp256k1_symmetrickey &symkey) {
-        ::memcpy(&front(), symkey.data, size());
-    }
-
-    const unsigned char *data() const {
-        return ((const CPubKey::secp256k1_pubkey *)this)->data;
-    }
-
-    unsigned char &front() {
-        return ((CPubKey::secp256k1_pubkey *)this)->data[0];
-    }
-
-    unsigned int size() const {
-        return sizeof(((CPubKey::secp256k1_pubkey *)this)->data);
-    }
-
-    friend bool operator==(const SymmetricKey &a, const SymmetricKey &b) {
-        return ::memcmp(a.data(), b.data(), a.size()) == 0;
-    }
-};
-
-void secp256k1_symmetrickey_save(secp256k1_symmetrickey *symmetrickey, CPubKey::ecmult::secp256k1_ge *ge) {
-    CPubKey::secp256k1_pubkey_save(symmetrickey, ge);
-}
-
-// Schnorr signature symmetrickey
-int secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, secp256k1_symmetrickey *symmetrickey)
-{
-    /* y^2 = x^3 + 7 */
-    CPubKey::ecmult::secp256k1_fe sc7;
-    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
-
-    /* Get the pub_x */
-    CPubKey::ecmult::secp256k1_fe px;
-    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&px, xonlypubkey))
-        return 0;
-
-    /* Compute the pub_y */
-    CPubKey::ecmult::secp256k1_fe py;
-    CPubKey::ecmult::secp256k1_fe_sqr(&py, &px);
-    CPubKey::ecmult::secp256k1_fe_mul(&py, &py, &px);
-    CPubKey::ecmult::secp256k1_fe_add(&py, &sc7);
-    CPubKey::ecmult::secp256k1_fe_sqrt(&py, &py);
-    CPubKey::ecmult::secp256k1_fe_normalize_var(&py);
-    if(CPubKey::ecmult::secp256k1_fe_is_odd(&py))
-        CPubKey::ecmult::secp256k1_fe_negate(&py, &py, 1);
-
-    /* Get the pubkey */
-    CPubKey::ecmult::secp256k1_ge pk;
-    CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &px, &py);
-
-    /* Get the secret */
-    CPubKey::secp256k1_scalar x;
-    int overflow;
-    CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
-    /* Fail if the secret key is invalid. */
-    if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-
-    /* Cumpute nonce (rand) */
-    CPubKey::secp256k1_scalar nonce;
-    do {
-        unsigned char rand[32];
-        latest_crypto::random::GetStrongRandBytes(rand, 32);
-        CPubKey::secp256k1_scalar_set_b32(&nonce, rand, &overflow);
-    } while (overflow);
-
-    /* Compute rj = nonce*G + x*pub */
-    CPubKey::ecmult::secp256k1_gej rj;
-    {
-        CPubKey::ecmult::secp256k1_gej pkj;
-        CPubKey::ecmult::secp256k1_ge r;
-        CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
-        if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &x, &nonce)) {
-            cleanse::memory_cleanse(&x, sizeof(x));
-            return 0;
-        }
-        CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
-        if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r)) {
-            cleanse::memory_cleanse(&x, sizeof(x));
-            return 0;
-        }
-    }
-
-    /* Compute negnonce = (-nonce)*G */
-    CPubKey::ecmult::secp256k1_ge negnonce;
-    {
-        CPubKey::ecmult::secp256k1_gej pkj;
-        CPubKey::secp256k1_scalar neg;
-        CFirmKey::ecmult::secp256k1_gen_context ctxobj;
-        if(ctx == NULL) {
-            ctx = &ctxobj;
-            if(!ctx->build()) {
-                cleanse::memory_cleanse(&x, sizeof(x));
-                return 0;
-            }
-        }
-        CPubKey::secp256k1_scalar_negate(&neg, &nonce);
-        if(!ctx->secp256k1_ecmult_gen(&pkj, &neg)) {
-            cleanse::memory_cleanse(&x, sizeof(x));
-            return 0;
-        }
-        CPubKey::ecmult::secp256k1_ge_set_gej(&negnonce, &pkj);
-    }
-
-    /* Compute s = rj + negnonce */
-    CPubKey::ecmult::secp256k1_gej sj;
-    CPubKey::ecmult::secp256k1_ge s;
-    CPubKey::ecmult::secp256k1_gej_add_ge_var(&sj, &rj, &negnonce, NULL);
-    CPubKey::ecmult::secp256k1_ge_set_gej(&s, &sj);
-    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&s)) {
-        cleanse::memory_cleanse(&x, sizeof(x));
-        return 0;
-    }
-    CPubKey::ecmult::secp256k1_fe_normalize(&s.y);
-    if(CPubKey::ecmult::secp256k1_fe_is_odd(&s.y))
-        CPubKey::ecmult::secp256k1_fe_negate(&s.y, &s.y, 1);
-
-    secp256k1_symmetrickey_save(symmetrickey, &s);
-    cleanse::memory_cleanse(&x, sizeof(x));
-    return 1;
-}
 
 constexpr static int HASH160_DIGEST_LENGTH = 20;
 struct secp256k1_hash160 {
@@ -1960,14 +1815,19 @@ bool agg_schnorr_ecdh_key_exchange() {
 
     secp256k1_symmetrickey symmetrickey1, symmetrickey2;
     // bob (bob secret * alice pubkey)
-    secp256k1_schnorrsig_symmetrickey(NULL, bob_agg_secret.data(), alice_agg_pubkey.data(), &symmetrickey1);
+    SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL, bob_agg_secret.data(), alice_agg_pubkey.data(), &symmetrickey1);
     // alice (alice secret * bob pubkey)
-    secp256k1_schnorrsig_symmetrickey(NULL, alice_agg_secret.data(), bob_agg_pubkey.data(), &symmetrickey2);
+    SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL, alice_agg_secret.data(), bob_agg_pubkey.data(), &symmetrickey2);
 
     SymmetricKey SKey1(symmetrickey1), SKey2(symmetrickey2);
     print_bytes("  bob symmetrickey", SKey1.data(), SKey1.size());
     print_bytes("alice symmetrickey", SKey2.data(), SKey2.size());
     assert(SKey1 == SKey2);
+
+    SymmetricKey SKey3(bob_agg_secret, alice_agg_pubkey);
+    assert(SKey3.is_valid());
+    assert(SKey1 == SKey3);
+
     cleanse::memory_cleanse(symmetrickey1.data, sizeof(symmetrickey1.data));
     cleanse::memory_cleanse(symmetrickey2.data, sizeof(symmetrickey2.data));
 

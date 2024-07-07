@@ -1683,6 +1683,117 @@ bool XOnlyKeys::GetSecret(CSecret &agg_secret) const {
     return aggregation(&agg_secret);
 }
 
+void SymmetricKey::secp256k1_symmetrickey_save(secp256k1_symmetrickey *symmetrickey, CPubKey::ecmult::secp256k1_ge *ge) {
+    CPubKey::secp256k1_pubkey_save(symmetrickey, ge);
+}
+
+int SymmetricKey::secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_gen_context *ctx, const unsigned char *seckey, const unsigned char *xonlypubkey, secp256k1_symmetrickey *symmetrickey)
+{
+    /* y^2 = x^3 + 7 */
+    CPubKey::ecmult::secp256k1_fe sc7;
+    CPubKey::ecmult::secp256k1_fe_set_int(&sc7, 7);
+
+    /* Get the pub_x */
+    CPubKey::ecmult::secp256k1_fe px;
+    if (!CPubKey::ecmult::secp256k1_fe_set_b32(&px, xonlypubkey))
+        return 0;
+
+    /* Compute the pub_y */
+    CPubKey::ecmult::secp256k1_fe py;
+    CPubKey::ecmult::secp256k1_fe_sqr(&py, &px);
+    CPubKey::ecmult::secp256k1_fe_mul(&py, &py, &px);
+    CPubKey::ecmult::secp256k1_fe_add(&py, &sc7);
+    CPubKey::ecmult::secp256k1_fe_sqrt(&py, &py);
+    CPubKey::ecmult::secp256k1_fe_normalize_var(&py);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&py))
+        CPubKey::ecmult::secp256k1_fe_negate(&py, &py, 1);
+
+    /* Get the pubkey */
+    CPubKey::ecmult::secp256k1_ge pk;
+    CPubKey::ecmult::secp256k1_ge_set_xy(&pk, &px, &py);
+
+    /* Get the secret */
+    CPubKey::secp256k1_scalar x;
+    int overflow;
+    CPubKey::secp256k1_scalar_set_b32(&x, seckey, &overflow);
+    /* Fail if the secret key is invalid. */
+    if (overflow || CPubKey::secp256k1_scalar_is_zero(&x)) {
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
+    }
+
+    /* Cumpute nonce (rand) */
+    CPubKey::secp256k1_scalar nonce;
+    do {
+        unsigned char rand[32];
+        latest_crypto::random::GetStrongRandBytes(rand, 32);
+        CPubKey::secp256k1_scalar_set_b32(&nonce, rand, &overflow);
+    } while (overflow);
+
+    /* Compute rj = nonce*G + x*pub */
+    CPubKey::ecmult::secp256k1_gej rj;
+    {
+        CPubKey::ecmult::secp256k1_gej pkj;
+        CPubKey::ecmult::secp256k1_ge r;
+        CPubKey::ecmult::secp256k1_gej_set_ge(&pkj, &pk);
+        if(!CPubKey::secp256k1_ecmult(&rj, &pkj, &x, &nonce)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_ge_set_gej_var(&r, &rj);
+        if(CPubKey::ecmult::secp256k1_ge_is_infinity(&r)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+    }
+
+    /* Compute negnonce = (-nonce)*G */
+    CPubKey::ecmult::secp256k1_ge negnonce;
+    {
+        CPubKey::ecmult::secp256k1_gej pkj;
+        CPubKey::secp256k1_scalar neg;
+        CFirmKey::ecmult::secp256k1_gen_context ctxobj;
+        if(ctx == NULL) {
+            ctx = &ctxobj;
+            if(!ctx->build()) {
+                cleanse::memory_cleanse(&x, sizeof(x));
+                return 0;
+            }
+        }
+        CPubKey::secp256k1_scalar_negate(&neg, &nonce);
+        if(!ctx->secp256k1_ecmult_gen(&pkj, &neg)) {
+            cleanse::memory_cleanse(&x, sizeof(x));
+            return 0;
+        }
+        CPubKey::ecmult::secp256k1_ge_set_gej(&negnonce, &pkj);
+    }
+
+    /* Compute s = rj + negnonce */
+    CPubKey::ecmult::secp256k1_gej sj;
+    CPubKey::ecmult::secp256k1_ge s;
+    CPubKey::ecmult::secp256k1_gej_add_ge_var(&sj, &rj, &negnonce, NULL);
+    CPubKey::ecmult::secp256k1_ge_set_gej(&s, &sj);
+    if(CPubKey::ecmult::secp256k1_ge_is_infinity(&s)) {
+        cleanse::memory_cleanse(&x, sizeof(x));
+        return 0;
+    }
+    CPubKey::ecmult::secp256k1_fe_normalize(&s.y);
+    if(CPubKey::ecmult::secp256k1_fe_is_odd(&s.y))
+        CPubKey::ecmult::secp256k1_fe_negate(&s.y, &s.y, 1);
+
+    secp256k1_symmetrickey_save(symmetrickey, &s);
+    cleanse::memory_cleanse(&x, sizeof(x));
+    return 1;
+}
+
+SymmetricKey::SymmetricKey(const CSecret &my_secret, const XOnlyPubKey &recipient_xonly_pubkry) {
+    secp256k1_symmetrickey symmetrickey;
+    int ret = secp256k1_schnorrsig_symmetrickey(NULL, my_secret.data(), recipient_xonly_pubkry.data(), &symmetrickey);
+    _valid = (ret == 1) ? true: false;
+    if(_valid)
+        ::memcpy(&front(), symmetrickey.data, sizeof(symmetrickey.data));
+}
+
 bool XOnlyKeys::SignSchnorr(const uint256 &msg, std::vector<unsigned char> &sigbytes) const {
     CSecret agg_secret;
     if(!aggregation(&agg_secret))
