@@ -1720,68 +1720,109 @@ void hash160_get_merkle_root(uint160 &merkle_root, const std::vector<uint160> &v
     ::memcpy(merkle_root.begin(), current_level[0].begin(), HASH160_DIGEST_LENGTH);
 }
 
-// SORA-QAI ver3: crypto message
+//! SORA-QAI ver3: crypto message
 class CAIToken03
 {
+private:
+    std::vector<unsigned char> crypto;
+
 public:
-    std::string message;
     CAIToken03() {}
+
+    bool IsValid() const {
+        return crypto.size() > 0;
+    }
+
+    bool SetTokenMessage(const SymmetricKey &key, const std::string &message) {
+        std::pair<std::vector<unsigned char>, bool> cipher;
+        latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
+        if(!cipher.second)
+            return false;
+        crypto = std::move(cipher.first);
+        return true;
+    }
+
+    bool GetTokenMessage(const SymmetricKey &key, std::string &message) const {
+        if(crypto.size() == 0)
+            return false;
+        std::pair<std::vector<unsigned char>, bool> plain;
+        latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Decrypt(crypto.data(), crypto.size()).Finalize(plain);
+        if(!plain.second)
+            return false;
+        message.clear();
+        message.insert(message.end(), plain.first.begin(), plain.first.end());
+        return true;
+    }
+
+    std::pair<uint160, bool> GetHash() const {
+        if(crypto.size() == 0)
+            return std::make_pair(uint160(0), false);
+        uint160 hash;
+        latest_crypto::CHash160().Write(crypto.data(), crypto.size()).Finalize(hash.begin());
+        return std::make_pair(hash, true);
+    }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(message);
+        READWRITE(crypto);
     }
 };
 
-// SORA-QAI CKeyID: uint160 merkle tree
+//! SORA-QAI CKeyID: uint160 merkle tree
 class CAITransaction
 {
 private:
     unsigned char qaiVersion;
-    uint32_t nTime;
+    int64_t nTime;
     CKeyID schnorrsigHash;
     std::vector<uint160> hashes;
-    uint160 merkle_root;
 
 public:
     CAITransaction() = delete;
     CAITransaction(unsigned char qaiVersionIn) :
-        qaiVersion(qaiVersionIn), merkle_root(uint160(0)), schnorrsigHash(CKeyID(0)) {}
+    qaiVersion(qaiVersionIn), nTime(0), schnorrsigHash(CKeyID(0)) {}
 
     bool IsValid() const {
-        return merkle_root != uint160(0) && schnorrsigHash != CKeyID(0);
+        return hashes.size() > 0 && nTime != 0 && schnorrsigHash != CKeyID(0);
     }
 
-    const uint160 &GetMerkleRoot() const {
-        return merkle_root;
-    }
-
-    void PushTxHash(uint160 hash) {
+    void PushTokenHash(uint160 hash) {
         hashes.emplace_back(hash);
     }
 
-    void ClearTxHashes() {
+    void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey) {
+        nTime = bitsystem::GetAdjustedTime();
+        schnorrsigHash = xonly_pubkey.GetID();
+    }
+
+    void ClearTx() {
+        nTime = 0;
+        schnorrsigHash = CKeyID(0);
         hashes.clear();
-        merkle_root = uint160(0);
     }
 
-    void SetSchnorrKeyID(Span<const unsigned char> bytes) {
-        XOnlyPubKey xonly_pubkey(bytes);
-        schnorrsigHash = xonly_pubkey.GetID();
-    }
-
-    void SetSchnorrKeyID(const XOnlyPubKey &xonly_pubkey) {
-        schnorrsigHash = xonly_pubkey.GetID();
-    }
-
-    bool BuildMerkleRoot() {
-        if(hashes.size() == 0 || schnorrsigHash == CKeyID(0))
-            return false;
+    std::pair<uint160, bool> GetMerkleRoot() const {
+        if(!IsValid())
+            return std::make_pair(uint160(0), false);
         std::vector<uint160> target = hashes;
         target.push_back(schnorrsigHash);
+        uint160 merkle_root;
         hash160_get_merkle_root(merkle_root, target);
-        return true;
+        return std::make_pair(merkle_root, true);
+    }
+
+    std::pair<qkey_vector, bool> GetSchnorrHash() const {
+        qkey_vector buf;
+        buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
+        ::memset(&buf.front(), 0xFF, 33);
+        buf[0] = 0x02;
+        buf[1] = qaiVersion;
+        std::pair<uint160, bool> merkle_root = GetMerkleRoot();
+        if(!merkle_root.second)
+            return std::make_pair(qkey_vector(), false);
+        ::memcpy(&buf[2], merkle_root.first.begin(), 20);
+        return std::make_pair(buf, true);
     }
 
     ADD_SERIALIZE_METHODS
@@ -1791,31 +1832,52 @@ public:
         READWRITE(nTime);
         READWRITE(schnorrsigHash);
         READWRITE(hashes);
-        READWRITE(merkle_root);
     }
 };
 
-// // SORA-QAI ver3: CAITransaction03
-class CAITransaction03 : public CAITransaction
+//! SORA-QAI ver3: CAITransaction03
+class CAITransaction03
 {
 private:
+    //! Place the AI tokens here in PushTokenMessage.
+    //! Additionally, please add one Schnorr aggregated signature with XOnlyPubKey and SetSchnorrAggregateKeyID.
     std::vector<CAIToken03> tokens;
 
+    //! Each token hash (tokens) and the hash of the Schnorr aggregated signature
+    //! must be inserted to be validated.
+    //! If not activated, the retrieval of the Merkle root will fail.
+    CAITransaction aitx;
+
 public:
-    constexpr static unsigned char qaiVersion = 0x03;
-    CAITransaction03() : CAITransaction(qaiVersion) {}
+    constexpr static unsigned char QaiVersion = 0x03;
+    CAITransaction03() : aitx(QaiVersion) {}
 
-    void push(const std::string &str) {
+    bool IsValid() const {
+        return aitx.IsValid();
+    }
+
+    bool PushTokenMessage(const SymmetricKey &key, const std::string &message) {
         CAIToken03 token;
-        token.message = str;
+        if(!token.SetTokenMessage(key, message))
+            return false;
+        std::pair<uint160, bool> hash = token.GetHash();
+        if(!hash.second)
+            return false;
+        aitx.PushTokenHash(hash.first);
         tokens.emplace_back(token);
+        return true;
     }
 
-    void clear() {
+    void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey) {
+        aitx.SetSchnorrAggregateKeyID(xonly_pubkey);
+    }
+
+    void ClearTokens() {
         tokens.clear();
+        aitx.ClearTx();
     }
 
-    uint32_t size() const {
+    uint32_t SizeTokens() const {
         return tokens.size();
     }
 
@@ -1823,11 +1885,35 @@ public:
         return tokens.at(index);
     }
 
+    CAIToken03 *begin() {
+        return &tokens[0];
+    }
+
+    CAIToken03 *end() {
+        return &tokens[0] + tokens.size();
+    }
+
+    const CAIToken03 *begin() const {
+        return &tokens[0];
+    }
+
+    const CAIToken03 *end() const {
+        return &tokens[0] + tokens.size();
+    }
+
+    std::pair<uint160, bool> GetMerkleRoot() const {
+        return aitx.GetMerkleRoot();
+    }
+
+    std::pair<qkey_vector, bool> GetSchnorrHash() const {
+        return aitx.GetSchnorrHash();
+    }
+
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(*((CAITransaction *)this));
         READWRITE(tokens);
+        READWRITE(aitx);
     }
 };
 
@@ -2030,14 +2116,45 @@ bool agg_schnorr_ecdh_key_exchange() {
     }
 
     CAITransaction03 aitx;
+    std::string web3 = "This is a decentralized encrypted message. Let's ensure privacy with user-sovereign Web3!";
+    assert(!aitx.IsValid());
     for(int i=0; i < 100; ++i) {
-        uint160 hash;
-        latest_crypto::random::GetStrongRandBytes(hash.begin(), sizeof(uint160));
-        aitx.PushTxHash(hash);
+        std::string _web3 = web3 + std::to_string(i);
+        aitx.PushTokenMessage(SKey1, _web3);
     }
-    aitx.SetSchnorrKeyID(xonly_bob_pubkeys.GetXOnlyPubKey());
-    assert(aitx.BuildMerkleRoot());
-    print_bytes("Merkle_root", aitx.GetMerkleRoot().begin(), aitx.GetMerkleRoot().size());
+    for(int i=0; i < aitx.SizeTokens(); ++i) {
+        std::string plain;
+        CAIToken03 token = aitx[i];
+        assert(token.GetTokenMessage(SKey1, plain));
+        assert(plain == (web3 + std::to_string(i)));
+        print_num("num", i);
+        print_str("plain", plain);
+    }
+    assert(!aitx.IsValid());
+    aitx.SetSchnorrAggregateKeyID(xonly_bob_pubkeys.GetXOnlyPubKey());
+    assert(aitx.IsValid());
+    std::pair<uint160, bool> merkle_root = aitx.GetMerkleRoot();
+    assert(merkle_root.second);
+    print_bytes("Merkle_root", merkle_root.first.begin(), merkle_root.first.size());
+
+    // stream check
+    CDataStream stream;
+    stream << aitx;
+    print_num("stream size", stream.size());
+    CAITransaction03 aitx2;
+    stream >> aitx2;
+    int i2 = 0;
+    for(const auto &token: aitx2) {
+        std::string plain;
+        assert(token.GetTokenMessage(SKey1, plain));
+        assert(plain == (web3 + std::to_string(i2)));
+        print_num("num2", i2);
+        print_str("plain2", plain);
+        ++i2;
+    }
+    std::pair<qkey_vector, bool> qai_hash = aitx2.GetSchnorrHash();
+    assert(qai_hash.second);
+    print_bytes("SORA-QAI hash", qai_hash.first.data(), qai_hash.first.size());
 
     return true;
 }
