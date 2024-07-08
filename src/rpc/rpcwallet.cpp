@@ -20,6 +20,7 @@
 #include <util/strencodings.h> // HexStr (Witness)
 #include <util/thread.h>
 #include <bip32/hdchain.h>
+#include <sorara/aitx.h>
 
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
@@ -532,6 +533,58 @@ CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggW
     XOnlyPubKeys xonly_pubkeys;
     if(!xonly_agg_wallet.GetXOnlyPubKeys(hash, xonly_pubkeys))
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
+
+    script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
+    XOnlyPubKey xonly_agg_pubkey = xonly_pubkeys.GetXOnlyPubKey();
+    script_vector qrandvch = xonly_agg_pubkey.GetSchnorrHash();
+    assert(qrandvch.size() == 33);
+
+    // SORA L1 Quantum and AI resistance transaction:
+    // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
+    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
+    entry::pwalletMain->AddCScript(redeemScript, newKey);
+    CBitcoinAddress address(redeemScript.GetID());
+    if(create_redeem)
+        *create_redeem = redeemScript;
+
+    return address;
+}
+
+CBitcoinAddress CRPCTable::CreateNewCipherAddress(size_t agg_size/* = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS */, CScript *create_redeem/* = nullptr */) {
+    using namespace ScriptOpcodes;
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+    if (entry::pwalletMain->IsLocked())
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
+
+    //
+    // Generate a new key that is added to wallet
+    //
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+    newKey.Compress();
+    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
+
+    //
+    // Generate a new XOnlyPubKey that is added to wallet
+    //
+    XOnlyAggWalletInfo xonly_agg_wallet;
+    if(!xonly_agg_wallet.LoadFromWalletInfo())
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyAggWalletInfo is invalid");
+
+    uint160 hash;
+    if(!xonly_agg_wallet.MakeNewKey(hash, agg_size))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XonlyKey MakeNewKey is invalid");
+
+    XOnlyPubKeys xonly_pubkeys;
+    if(!xonly_agg_wallet.GetXOnlyPubKeys(hash, xonly_pubkeys))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
+
+    // Build crypto message
 
     script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
     XOnlyPubKey xonly_agg_pubkey = xonly_pubkeys.GetXOnlyPubKey();

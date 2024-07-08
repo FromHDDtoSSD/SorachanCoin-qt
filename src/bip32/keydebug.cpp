@@ -11,6 +11,7 @@
 #include <openssl/obj_mac.h>
 #include <init.h>
 #include <sorara/aitx.h>
+#include <allocator/allocators.h>
 
 // #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
@@ -1531,250 +1532,7 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
     return 1;
 }
 
-/*
-// (vector version) Function to build the Merkle tree and compute the Merkle root
-void hash160_get_merkle_root(uint160 &merkle_root, const std::vector<uint160> &vhashes) {
-    auto compute_hash160 = [](const unsigned char *data, size_t len, unsigned char *hash) {
-        latest_crypto::CHash160().Write(data, len).Finalize(hash);
-    };
 
-    if (vhashes.size() == 0) {
-        merkle_root = uint160(0);
-        return;
-    }
-    size_t num_hashes = vhashes.size();
-
-    // Copy the current level's hashes
-    std::vector<uint160> current_level;
-    current_level.resize(num_hashes);
-    for (size_t i = 0; i < num_hashes; i++)
-        ::memcpy(current_level[i].begin(), vhashes[i].begin(), HASH160_DIGEST_LENGTH);
-
-    // Build the Merkle tree
-    while (num_hashes > 1) {
-        size_t new_num_hashes = (num_hashes + 1) / 2;
-        std::vector<uint160> next_level;
-        next_level.resize(new_num_hashes);
-        for (size_t i = 0; i < new_num_hashes; i++) {
-            if (2 * i + 1 < num_hashes) {
-                // Combine two child hashes and compute the parent hash
-                unsigned char combined[2 * HASH160_DIGEST_LENGTH];
-                ::memcpy(combined, current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
-                ::memcpy(combined + HASH160_DIGEST_LENGTH, current_level[2 * i + 1].begin(), HASH160_DIGEST_LENGTH);
-                compute_hash160(combined, 2 * HASH160_DIGEST_LENGTH, next_level[i].begin());
-            } else {
-                // Odd number of hashes, so copy the last hash
-                ::memcpy(next_level[i].begin(), current_level[2 * i].begin(), HASH160_DIGEST_LENGTH);
-            }
-        }
-
-        // Move to the next level
-        current_level.clear();
-        current_level = std::move(next_level);
-        num_hashes = new_num_hashes;
-    }
-
-    // The root hash is the only hash in the final level
-    ::memcpy(merkle_root.begin(), current_level[0].begin(), HASH160_DIGEST_LENGTH);
-}
-
-//! SORA-QAI ver3: crypto message
-class CAIToken03
-{
-private:
-    std::vector<unsigned char> crypto;
-
-public:
-    CAIToken03() {}
-
-    bool IsValid() const {
-        return crypto.size() > 0;
-    }
-
-    bool SetTokenMessage(const SymmetricKey &key, const std::string &message) {
-        std::pair<std::vector<unsigned char>, bool> cipher;
-        latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
-        if(!cipher.second)
-            return false;
-        crypto = std::move(cipher.first);
-        return true;
-    }
-
-    bool GetTokenMessage(const SymmetricKey &key, std::string &message) const {
-        if(crypto.size() == 0)
-            return false;
-        std::pair<std::vector<unsigned char>, bool> plain;
-        latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Decrypt(crypto.data(), crypto.size()).Finalize(plain);
-        if(!plain.second)
-            return false;
-        message.clear();
-        message.insert(message.end(), plain.first.begin(), plain.first.end());
-        return true;
-    }
-
-    std::pair<uint160, bool> GetHash() const {
-        if(crypto.size() == 0)
-            return std::make_pair(uint160(0), false);
-        uint160 hash;
-        latest_crypto::CHash160().Write(crypto.data(), crypto.size()).Finalize(hash.begin());
-        return std::make_pair(hash, true);
-    }
-
-    ADD_SERIALIZE_METHODS
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(crypto);
-    }
-};
-
-//! SORA-QAI CKeyID: uint160 merkle tree
-class CAITransaction
-{
-private:
-    unsigned char qaiVersion;
-    int64_t nTime;
-    CKeyID schnorrsigHash;
-    std::vector<uint160> hashes;
-
-public:
-    CAITransaction() = delete;
-    CAITransaction(unsigned char qaiVersionIn) :
-    qaiVersion(qaiVersionIn), nTime(0), schnorrsigHash(CKeyID(0)) {}
-
-    bool IsValid() const {
-        return hashes.size() > 0 && nTime != 0 && schnorrsigHash != CKeyID(0);
-    }
-
-    void PushTokenHash(uint160 hash) {
-        hashes.emplace_back(hash);
-    }
-
-    void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey) {
-        nTime = bitsystem::GetAdjustedTime();
-        schnorrsigHash = xonly_pubkey.GetID();
-    }
-
-    void ClearTx() {
-        nTime = 0;
-        schnorrsigHash = CKeyID(0);
-        hashes.clear();
-    }
-
-    std::pair<uint160, bool> GetMerkleRoot() const {
-        if(!IsValid())
-            return std::make_pair(uint160(0), false);
-        std::vector<uint160> target = hashes;
-        target.push_back(schnorrsigHash);
-        uint160 merkle_root;
-        hash160_get_merkle_root(merkle_root, target);
-        return std::make_pair(merkle_root, true);
-    }
-
-    std::pair<qkey_vector, bool> GetSchnorrHash() const {
-        qkey_vector buf;
-        buf.resize(33); // size is CPubKey::COMPRESSED_PUBLIC_KEY_SIZE
-        ::memset(&buf.front(), 0xFF, 33);
-        buf[0] = 0x02;
-        buf[1] = qaiVersion;
-        std::pair<uint160, bool> merkle_root = GetMerkleRoot();
-        if(!merkle_root.second)
-            return std::make_pair(qkey_vector(), false);
-        ::memcpy(&buf[2], merkle_root.first.begin(), 20);
-        return std::make_pair(buf, true);
-    }
-
-    ADD_SERIALIZE_METHODS
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(qaiVersion);
-        READWRITE(nTime);
-        READWRITE(schnorrsigHash);
-        READWRITE(hashes);
-    }
-};
-
-//! SORA-QAI ver3: CAITransaction03
-class CAITransaction03
-{
-private:
-    //! Place the AI tokens here in PushTokenMessage.
-    //! Additionally, please add one Schnorr aggregated signature with XOnlyPubKey and SetSchnorrAggregateKeyID.
-    std::vector<CAIToken03> tokens;
-
-    //! Each token hash (tokens) and the hash of the Schnorr aggregated signature
-    //! must be inserted to be validated.
-    //! If not activated, the retrieval of the Merkle root will fail.
-    CAITransaction aitx;
-
-public:
-    constexpr static unsigned char QaiVersion = 0x03;
-    CAITransaction03() : aitx(QaiVersion) {}
-
-    bool IsValid() const {
-        return aitx.IsValid();
-    }
-
-    bool PushTokenMessage(const SymmetricKey &key, const std::string &message) {
-        CAIToken03 token;
-        if(!token.SetTokenMessage(key, message))
-            return false;
-        std::pair<uint160, bool> hash = token.GetHash();
-        if(!hash.second)
-            return false;
-        aitx.PushTokenHash(hash.first);
-        tokens.emplace_back(token);
-        return true;
-    }
-
-    void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey) {
-        aitx.SetSchnorrAggregateKeyID(xonly_pubkey);
-    }
-
-    void ClearTokens() {
-        tokens.clear();
-        aitx.ClearTx();
-    }
-
-    uint32_t SizeTokens() const {
-        return tokens.size();
-    }
-
-    const CAIToken03 &operator[](uint32_t index) const {
-        return tokens.at(index);
-    }
-
-    CAIToken03 *begin() {
-        return &tokens[0];
-    }
-
-    CAIToken03 *end() {
-        return &tokens[0] + tokens.size();
-    }
-
-    const CAIToken03 *begin() const {
-        return &tokens[0];
-    }
-
-    const CAIToken03 *end() const {
-        return &tokens[0] + tokens.size();
-    }
-
-    std::pair<uint160, bool> GetMerkleRoot() const {
-        return aitx.GetMerkleRoot();
-    }
-
-    std::pair<qkey_vector, bool> GetSchnorrHash() const {
-        return aitx.GetSchnorrHash();
-    }
-
-    ADD_SERIALIZE_METHODS
-    template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream &s, Operation ser_action) {
-        READWRITE(tokens);
-        READWRITE(aitx);
-    }
-};
-*/
 
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
@@ -1835,30 +1593,30 @@ bool agg_schnorr_ecdh_key_exchange() {
     cleanse::memory_cleanse(symmetrickey1.data, sizeof(symmetrickey1.data));
     cleanse::memory_cleanse(symmetrickey2.data, sizeof(symmetrickey2.data));
 
-    std::pair<std::vector<unsigned char>, bool> cipher;
+    std::pair<CSecureBytes, bool> cipher;
     latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
     assert(cipher.second);
     print_bytes("AES256 Encrypt", cipher.first.data(), cipher.first.size());
 
-    std::pair<std::vector<unsigned char>, bool> plain;
+    std::pair<CSecureBytes, bool> plain;
     latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher.first.data(), cipher.first.size()).Finalize(plain);
     print_str("AES256 Decrypt", std::string(plain.first.begin(), plain.first.end()));
     assert(plain.second);
     assert(message.size() == plain.first.size());
     assert(message == std::string(plain.first.begin(), plain.first.end()));
 
-    std::pair<std::vector<unsigned char>, bool> cipher2;
+    std::pair<CSecureBytes, bool> cipher2;
     latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher2);
     assert(cipher2.second);
     print_bytes("AES256 Encrypt", cipher2.first.data(), cipher2.first.size());
     assert(cipher.first != cipher2.first); // CBC check
     //assert(cipher.first == cipher2.first); // non-CBC check
 
-    std::pair<std::vector<unsigned char>, bool> cipher3;
+    std::pair<CSecureBytes, bool> cipher3;
     latest_crypto::CChaCha20(SKey1.data(), SKey1.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher3);
     assert(cipher3.second);
     print_bytes("CChaCha20 Encrypt", cipher3.first.data(), cipher3.first.size());
-    std::pair<std::vector<unsigned char>, bool> plain3;
+    std::pair<CSecureBytes, bool> plain3;
     latest_crypto::CChaCha20(SKey1.data(), SKey1.size()).Decrypt(cipher3.first.data(), cipher3.first.size()).Finalize(plain3);
     assert(plain3.second);
     print_str("CChaCha20 Decrypt", std::string(plain3.first.begin(), plain3.first.end()));
@@ -1867,11 +1625,11 @@ bool agg_schnorr_ecdh_key_exchange() {
     // invalid check
     SKey1.front() += 0x01;
     *(&SKey1.front() + 1) += 0x01;
-    std::pair<std::vector<unsigned char>, bool> plain2;
+    std::pair<CSecureBytes, bool> plain2;
     latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher2.first.data(), cipher2.first.size()).Finalize(plain2);
     print_str("AES256 Decrypt", std::string(plain2.first.begin(), plain2.first.end()));
     assert(plain2.second == false);
-    std::pair<std::vector<unsigned char>, bool> plain4;
+    std::pair<CSecureBytes, bool> plain4;
     latest_crypto::CAES256CBCPKCS7(SKey1.data(), SKey1.size()).Decrypt((const unsigned char *)cipher3.first.data(), cipher3.first.size()).Finalize(plain4);
     print_str("CChaCha20 Decrypt", std::string(plain4.first.begin(), plain4.first.end()));
     assert(plain4.second == false);
@@ -1915,7 +1673,7 @@ bool agg_schnorr_ecdh_key_exchange() {
 
     latest_crypto::CChaCha20 ccha20(chacha20_key.begin(), 32);
     ccha20.Encrypt((const unsigned char *)cha20_message.data(), cha20_message.size());
-    std::pair<std::vector<unsigned char>, bool> ccha20_checking;
+    std::pair<CSecureBytes, bool> ccha20_checking;
     ccha20.Finalize(ccha20_checking);
     assert(ccha20_checking.second);
     ccha20.Decrypt(ccha20_checking.first.data(), ccha20_checking.first.size());
@@ -1928,23 +1686,23 @@ bool agg_schnorr_ecdh_key_exchange() {
         size_t size = ::rand() % 8000;
         if(size == 0) size = 1;
         print_num("AES256 checking size", size);
-        std::vector<unsigned char> data;
+        CSecureBytes data;
         data.resize(size);
         ::RAND_bytes(&data.front(), size);
         uint256 key;
         latest_crypto::random::GetStrongRandBytes(key.begin(), sizeof(uint256));
-        std::pair<std::vector<unsigned char>, bool> cipher;
+        std::pair<CSecureBytes, bool> cipher;
         latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Encrypt(data.data(), data.size()).Finalize(cipher);
         assert(cipher.second);
         print_num("cipher size", cipher.first.size());
-        std::pair<std::vector<unsigned char>, bool> plain;
+        std::pair<CSecureBytes, bool> plain;
         latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain);
         assert(plain.second);
         print_bytes("data ", data.data(), data.size());
         print_bytes("plain", plain.first.data(), plain.first.size());
         assert(data == plain.first);
 
-        std::pair<std::vector<unsigned char>, bool> plain2;
+        std::pair<CSecureBytes, bool> plain2;
         *(key.begin() + 1) += 0x05;
         latest_crypto::CAES256CBCPKCS7(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain2);
         assert(!plain2.second);
@@ -1956,23 +1714,23 @@ bool agg_schnorr_ecdh_key_exchange() {
         size_t size = ::rand() % 8000;
         if(size == 0) size = 1;
         print_num("ChaCha20 checking size", size);
-        std::vector<unsigned char> data;
+        CSecureBytes data;
         data.resize(size);
         ::RAND_bytes(&data.front(), size);
         uint256 key;
         latest_crypto::random::GetStrongRandBytes(key.begin(), sizeof(uint256));
-        std::pair<std::vector<unsigned char>, bool> cipher;
+        std::pair<CSecureBytes, bool> cipher;
         latest_crypto::CChaCha20(key.begin(), key.size()).Encrypt(data.data(), data.size()).Finalize(cipher);
         assert(cipher.second);
         print_num("cipher size", cipher.first.size());
-        std::pair<std::vector<unsigned char>, bool> plain;
+        std::pair<CSecureBytes, bool> plain;
         latest_crypto::CChaCha20(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain);
         assert(plain.second);
         print_bytes("data ", data.data(), data.size());
         print_bytes("plain", plain.first.data(), plain.first.size());
         assert(data == plain.first);
 
-        std::pair<std::vector<unsigned char>, bool> plain2;
+        std::pair<CSecureBytes, bool> plain2;
         *(key.begin() + 1) += 0x05;
         latest_crypto::CChaCha20(key.begin(), key.size()).Decrypt(cipher.first.data(), cipher.first.size()).Finalize(plain2);
         assert(!plain2.second);
@@ -1980,17 +1738,17 @@ bool agg_schnorr_ecdh_key_exchange() {
     }
 
     CAITransaction03 aitx;
-    std::string web3 = "This is a decentralized encrypted message. Let's ensure privacy with user-sovereign Web3!";
+    SecureString web3(std::string("This is a decentralized encrypted message. Let's ensure privacy with user-sovereign Web3!"));
     assert(!aitx.IsValid());
     for(int i=0; i < 100; ++i) {
-        std::string _web3 = web3 + std::to_string(i);
+        SecureString _web3 = web3 + std::to_string(i);
         aitx.PushTokenMessage(SKey1, _web3);
     }
     for(int i=0; i < aitx.SizeTokens(); ++i) {
-        std::string plain;
+        SecureString plain;
         CAIToken03 token = aitx[i];
         assert(token.GetTokenMessage(SKey1, plain));
-        assert(plain == (web3 + std::to_string(i)));
+        assert(plain == (web3 + SecureString::to_SecureString(i)));
         print_num("num", i);
         print_str("plain", plain);
     }
@@ -2009,9 +1767,9 @@ bool agg_schnorr_ecdh_key_exchange() {
     stream >> aitx2;
     int i2 = 0;
     for(const auto &token: aitx2) {
-        std::string plain;
+        SecureString plain;
         assert(token.GetTokenMessage(SKey1, plain));
-        assert(plain == (web3 + std::to_string(i2)));
+        assert(plain == (web3 + SecureString::to_SecureString(i2)));
         print_num("num2", i2);
         print_str("plain2", plain);
         ++i2;

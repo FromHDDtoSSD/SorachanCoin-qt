@@ -64,8 +64,8 @@ bool CAIToken03::IsValid() const {
     return crypto.size() > 0;
 }
 
-bool CAIToken03::SetTokenMessage(const SymmetricKey &key, const std::string &message) {
-    std::pair<std::vector<unsigned char>, bool> cipher;
+bool CAIToken03::SetTokenMessage(const SymmetricKey &key, const SecureString &message) {
+    std::pair<CSecureBytes, bool> cipher;
     latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
     if(!cipher.second)
         return false;
@@ -73,14 +73,15 @@ bool CAIToken03::SetTokenMessage(const SymmetricKey &key, const std::string &mes
     return true;
 }
 
-bool CAIToken03::GetTokenMessage(const SymmetricKey &key, std::string &message) const {
+bool CAIToken03::GetTokenMessage(const SymmetricKey &key, SecureString &message) const {
     if(crypto.size() == 0)
         return false;
-    std::pair<std::vector<unsigned char>, bool> plain;
+    std::pair<CSecureBytes, bool> plain;
     latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Decrypt(crypto.data(), crypto.size()).Finalize(plain);
     if(!plain.second)
         return false;
     message.clear();
+    message.shrink_to_fit();
     message.insert(message.end(), plain.first.begin(), plain.first.end());
     return true;
 }
@@ -139,7 +140,7 @@ bool CAITransaction03::IsValid() const {
     return aitx.IsValid();
 }
 
-bool CAITransaction03::PushTokenMessage(const SymmetricKey &key, const std::string &message) {
+bool CAITransaction03::PushTokenMessage(const SymmetricKey &key, const SecureString &message) {
     CAIToken03 token;
     if(!token.SetTokenMessage(key, message))
         return false;

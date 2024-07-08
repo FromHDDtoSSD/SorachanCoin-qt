@@ -283,11 +283,13 @@ struct zero_after_free_allocator : public std::allocator<T>
     }
 };
 
-// This is exactly like std::string, but with a custom allocator.
+//! This is exactly like std::string
 using String_with_s_allocator = std::basic_string<char, std::char_traits<char>, secure_allocator<char> >;
-class SecureString { // SorachanCoin: SecureString
+typedef std::vector<unsigned char, secure_allocator<unsigned char> > CSecureBytes;
+class SecureString { // SORA-QAI: SecureString
 private:
     String_with_s_allocator str_;
+
 public:
     SecureString() {
         str_ = "";
@@ -298,10 +300,30 @@ public:
     SecureString(const SecureString &&obj) noexcept {
         this->str_ = std::move(obj.str_);
     }
+    SecureString(std::string &&obj) {
+        *this = std::move(obj);
+    }
+
+    String_with_s_allocator::iterator end() {
+        return this->str_.end();
+    }
+    String_with_s_allocator::iterator begin() {
+        return this->str_.begin();
+    }
+    String_with_s_allocator::const_iterator end() const {
+        return this->str_.end();
+    }
+    String_with_s_allocator::const_iterator begin() const {
+        return this->str_.begin();
+    }
 
     const char *c_str() const {
         return str_.c_str();
     }
+    const char *data() const {
+        return str_.data();
+    }
+
     SecureString &operator=(const SecureString &obj) {
         this->str_ = obj.str_;
         return *this;
@@ -312,6 +334,7 @@ public:
         str_.insert(str_.end(), b.begin(), b.end());
         cleanse::memory_cleanse(&b.front(), b.size());
         b.clear();
+        b.shrink_to_fit();
         return *this;
     }
     SecureString &operator=(const char *)=delete;
@@ -320,43 +343,83 @@ public:
         cleanse::OPENSSL_cleanse(b, ::strlen(b));
         return *this;
     }
+
     SecureString &operator=(char b) {
         str_ = b;
         return *this;
     }
+
     SecureString &operator+=(char b) {
         str_ += b;
         return *this;
     }
+    SecureString &operator+=(const SecureString &b) {
+        str_ += b.str_;
+        return *this;
+    }
+    SecureString &operator+=(std::string &&b) {
+        SecureString tmp(std::move(b));
+        str_ += tmp.str_;
+        return *this;
+    }
+
+    friend SecureString operator+(const SecureString &a, const SecureString &b) {
+        SecureString r = a;
+        r += b;
+        return r;
+    }
+    friend SecureString operator+(const SecureString &a, std::string &&b) {
+        SecureString r = a;
+        r += std::move(b);
+        return r;
+    }
+    friend SecureString operator+(std::string &&a, const SecureString &b) {
+        SecureString r = std::move(a);
+        r += std::move(b);
+        return r;
+    }
+
     bool operator==(const SecureString &obj) const {
         return (this->str_ == obj.str_);
     }
 
-    const char *data() const {
-        return str_.data();
-    }
     char &front() {
         return str_.front();
     }
+
     void clear() {
         str_.clear();
     }
+    void shrink_to_fit() {
+        str_.shrink_to_fit();
+    }
+
     std::size_t size() const {
         return str_.size();
     }
+
     std::size_t length() const {
         return str_.length();
     }
+
     void reserve(std::size_t size) {
         str_.reserve(size);
     }
+
     void resize(std::size_t)=delete; // must be used reserve(size_t).
+
     bool empty() const {
         return str_.empty();
     }
-    //String_with_s_allocator::iterator insert(String_with_s_allocator::iterator offset, String_with_s_allocator::iterator begin, String_with_s_allocator::iterator end) {
-    //    return str_.insert(offset, begin, end);
-    //}
+
+    String_with_s_allocator::iterator insert(String_with_s_allocator::const_iterator offset, String_with_s_allocator::const_iterator begin, String_with_s_allocator::const_iterator end) {
+        return str_.insert(offset, begin, end);
+    }
+
+    String_with_s_allocator::iterator insert(String_with_s_allocator::const_iterator offset, CSecureBytes::const_iterator begin, CSecureBytes::const_iterator end) {
+        return str_.insert(offset, begin, end);
+    }
+
     SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
         str_.assign(str.str_, pos, n);
         return *this;
@@ -371,21 +434,58 @@ public:
         return args_bool::fTestNet ? str_.c_str(): "mainnet is not supported.";
     }
 
-    // insert [] or ()
     char &operator[](std::size_t pos) const { // insert string directly
         assert(0 <= pos && pos < str_.size());
         return *(const_cast<char *>(str_.c_str()) + pos);
     }
+
     SecureString &operator()(std::string &obj) {
         str_ = obj.c_str();
         cleanse::memory_cleanse(const_cast<char *>(obj.c_str()), sizeof(char) * obj.size());
         return *this;
     }
+
     SecureString &operator()(const std::string &obj, unsigned short *p) { // to QString
         std::size_t len = ::wcslen((const wchar_t *)p);
         str_ = obj.c_str();
         cleanse::memory_cleanse(p, sizeof(unsigned short) * len);
         return *this;
+    }
+
+    static SecureString to_SecureString(int32_t i) {
+        SecureString str;
+        char buf[16];
+        ::sprintf(buf, "%d", i);
+        str = buf;
+        cleanse::memory_cleanse(buf, sizeof(buf));
+        return str;
+    }
+
+    static SecureString to_SecureString(int64_t i) {
+        SecureString str;
+        char buf[16];
+        ::sprintf(buf, "%lld", i);
+        str = buf;
+        cleanse::memory_cleanse(buf, sizeof(buf));
+        return str;
+    }
+
+    static SecureString to_SecureString(uint32_t i) {
+        SecureString str;
+        char buf[16];
+        ::sprintf(buf, "%u", i);
+        str = buf;
+        cleanse::memory_cleanse(buf, sizeof(buf));
+        return str;
+    }
+
+    static SecureString to_SecureString(uint64_t i) {
+        SecureString str;
+        char buf[16];
+        ::sprintf(buf, "%llu", i);
+        str = buf;
+        cleanse::memory_cleanse(buf, sizeof(buf));
+        return str;
     }
 };
 

@@ -232,7 +232,7 @@ void CAES256CBCPKCS7::padding(unsigned char *data, uint32_t data_len) {
     }
 }
 
-bool CAES256CBCPKCS7::padcheck(std::vector<unsigned char>::iterator end, uint32_t pad_num) {
+bool CAES256CBCPKCS7::padcheck(CSecureBytes::iterator end, uint32_t pad_num) {
     if(pad_num == 0 || pad_num > bsize)
         return false;
     for(uint32_t i=0; i < pad_num; ++i) {
@@ -257,7 +257,7 @@ CAES256CBCPKCS7 &CAES256CBCPKCS7::err() {
     return *this;
 }
 
-uint256_cleanse CAES256CBCPKCS7::getkeyhash(const CAESSecret &key) {
+uint256_cleanse CAES256CBCPKCS7::getkeyhash(const CSecureBytes &key) {
     uint256_cleanse hash;
     CHash256().Write(key.data(), key.size()).Finalize(hash.begin());
     return hash;
@@ -333,7 +333,7 @@ CAES256CBCPKCS7 &CAES256CBCPKCS7::Decrypt(const unsigned char *data, uint32_t si
     return *this;
 }
 
-void CAES256CBCPKCS7::Finalize(std::pair<std::vector<unsigned char>, bool> &vch) {
+void CAES256CBCPKCS7::Finalize(std::pair<CSecureBytes, bool> &vch) {
     vch = std::make_pair(std::move(buffer), fcheck);
 }
 

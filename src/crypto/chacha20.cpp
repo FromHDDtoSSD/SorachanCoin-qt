@@ -68,7 +68,7 @@ void CChaCha20::chacha20_compute(CHACHA20_CTX *ctx, const unsigned char *input, 
     }
 }
 
-uint256_cleanse CChaCha20::getkeyhash(const CChaCha20Secret &key) {
+uint256_cleanse CChaCha20::getkeyhash(const CSecureBytes &key) {
     uint256_cleanse hash;
     CHash256().Write(key.data(), key.size()).Finalize(hash.begin());
     return hash;
@@ -141,7 +141,7 @@ CChaCha20 &CChaCha20::Decrypt(const unsigned char *data, uint32_t size) {
     return *this;
 }
 
-void CChaCha20::Finalize(std::pair<std::vector<unsigned char>, bool> &out) {
+void CChaCha20::Finalize(std::pair<CSecureBytes, bool> &out) {
     out = std::make_pair(std::move(buffer), fcheck);
 }
 

@@ -14,7 +14,6 @@
 namespace latest_crypto {
 
 /** SORA-QAI for CChaCha20. */
-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CChaCha20Secret;
 class CChaCha20
 {
 public:
@@ -23,11 +22,11 @@ public:
     CChaCha20 &Reset(const unsigned char *key, uint32_t size);
     CChaCha20 &Encrypt(const unsigned char *data, uint32_t size);
     CChaCha20 &Decrypt(const unsigned char *data, uint32_t size);
-    void Finalize(std::pair<std::vector<unsigned char>, bool> &out);
+    void Finalize(std::pair<CSecureBytes, bool> &out);
 
 private:
-    CChaCha20Secret secret;
-    std::vector<unsigned char> buffer;
+    CSecureBytes secret;
+    CSecureBytes buffer;
     bool fcheck;
     constexpr static uint32_t nsize = 12;
     constexpr static uint32_t defcounter = 1;
@@ -55,7 +54,7 @@ private:
     static void chacha20_block(CHACHA20_CTX *ctx, unsigned char output[64]);
     static void chacha20_init(CHACHA20_CTX *ctx, const unsigned char key[32], const unsigned char nonce[12], uint32_t counter = defcounter);
     static void chacha20_compute(CHACHA20_CTX *ctx, const unsigned char *input, unsigned char *output, uint32_t size);
-    static uint256_cleanse getkeyhash(const CChaCha20Secret &key);
+    static uint256_cleanse getkeyhash(const CSecureBytes &key);
     const unsigned char *createnonce();
     static CheckHash checking(const unsigned char *data, uint32_t data_len);
     CChaCha20 &err();

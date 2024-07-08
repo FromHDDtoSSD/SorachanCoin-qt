@@ -113,7 +113,6 @@ private:
 
 // SORA-QAI: CAES256CBCPKCS7
 // implement SecureAllocator
-typedef std::vector<unsigned char, secure_allocator<unsigned char> > CAESSecret;
 class CAES256CBCPKCS7 {
 public:
     CAES256CBCPKCS7() = delete;
@@ -122,12 +121,12 @@ public:
     CAES256CBCPKCS7 &Reset(const unsigned char *key, uint32_t size);
     CAES256CBCPKCS7 &Encrypt(const unsigned char *data, uint32_t size);
     CAES256CBCPKCS7 &Decrypt(const unsigned char *data, uint32_t size);
-    void Finalize(std::pair<std::vector<unsigned char>, bool> &vch);
+    void Finalize(std::pair<CSecureBytes, bool> &vch);
 
 private:
-    CAESSecret secret;
+    CSecureBytes secret;
     std::vector<unsigned char> iv;
-    std::vector<unsigned char> buffer;
+    CSecureBytes buffer;
     bool fcheck;
     constexpr static uint32_t chashsize = sizeof(uint256);
     constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
@@ -145,10 +144,10 @@ private:
     } checkhash;
 
     static void padding(unsigned char *data, uint32_t data_len);
-    static bool padcheck(std::vector<unsigned char>::iterator end, uint32_t pad_num);
+    static bool padcheck(CSecureBytes::iterator end, uint32_t pad_num);
     static CheckHash checking(unsigned char *data, uint32_t data_len);
     CAES256CBCPKCS7 &err();
-    static uint256_cleanse getkeyhash(const CAESSecret &key);
+    static uint256_cleanse getkeyhash(const CSecureBytes &key);
     unsigned char *createiv();
 };
 

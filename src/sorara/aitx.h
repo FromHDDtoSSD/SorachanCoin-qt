@@ -14,15 +14,15 @@ class SymmetricKey;
 class CAIToken03
 {
 private:
-    std::vector<unsigned char> crypto;
+    CSecureBytes crypto;
 
 public:
     CAIToken03() {}
 
     bool IsValid() const;
 
-    bool SetTokenMessage(const SymmetricKey &key, const std::string &message);
-    bool GetTokenMessage(const SymmetricKey &key, std::string &message) const;
+    bool SetTokenMessage(const SymmetricKey &key, const SecureString &message);
+    bool GetTokenMessage(const SymmetricKey &key, SecureString &message) const;
 
     std::pair<uint160, bool> GetHash() const;
 
@@ -87,7 +87,7 @@ public:
 
     bool IsValid() const;
 
-    bool PushTokenMessage(const SymmetricKey &key, const std::string &message);
+    bool PushTokenMessage(const SymmetricKey &key, const SecureString &message);
     void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey);
 
     void ClearTokens();
