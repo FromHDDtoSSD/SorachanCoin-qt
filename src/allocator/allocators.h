@@ -454,7 +454,7 @@ public:
 
     static SecureString to_SecureString(int32_t i) {
         SecureString str;
-        char buf[16];
+        char buf[32];
         ::sprintf(buf, "%d", i);
         str = buf;
         cleanse::memory_cleanse(buf, sizeof(buf));
@@ -463,7 +463,7 @@ public:
 
     static SecureString to_SecureString(int64_t i) {
         SecureString str;
-        char buf[16];
+        char buf[32];
         ::sprintf(buf, "%lld", i);
         str = buf;
         cleanse::memory_cleanse(buf, sizeof(buf));
@@ -472,7 +472,7 @@ public:
 
     static SecureString to_SecureString(uint32_t i) {
         SecureString str;
-        char buf[16];
+        char buf[32];
         ::sprintf(buf, "%u", i);
         str = buf;
         cleanse::memory_cleanse(buf, sizeof(buf));
@@ -481,7 +481,7 @@ public:
 
     static SecureString to_SecureString(uint64_t i) {
         SecureString str;
-        char buf[16];
+        char buf[32];
         ::sprintf(buf, "%llu", i);
         str = buf;
         cleanse::memory_cleanse(buf, sizeof(buf));

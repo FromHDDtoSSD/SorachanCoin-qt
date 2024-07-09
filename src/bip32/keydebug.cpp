@@ -12,6 +12,10 @@
 #include <init.h>
 #include <sorara/aitx.h>
 #include <allocator/allocators.h>
+#if __cplusplus <= 201703L
+# include <locale>
+# include <codecvt>
+#endif
 
 // #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
@@ -1532,7 +1536,39 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
     return 1;
 }
 
+#if __cplusplus <= 201703L
+uint32_t count_utf8_chars(const std::string &utf8_str) {
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    std::u32string u32_str = conv.from_bytes(utf8_str);
+    return u32_str.length();
+}
 
+std::string reverse_utf8_string(const std::string &utf8_str) {
+    std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
+    std::u32string u32_str = conv.from_bytes(utf8_str);
+    std::reverse(u32_str.begin(), u32_str.end());
+    return conv.to_bytes(u32_str);
+}
+
+std::wstring locale_to_wide(const std::string &str, const char *locale) {
+    std::locale loc(std::locale(), new std::codecvt_byname<wchar_t, char, std::mbstate_t>(locale));
+    std::vector<wchar_t> wstr(str.size());
+    const char* from_next;
+    wchar_t* to_next;
+    std::mbstate_t state = std::mbstate_t();
+    std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc).in(state,
+        str.data(), str.data() + str.size(), from_next,
+        wstr.data(), wstr.data() + wstr.size(), to_next);
+    return std::wstring(wstr.data(), to_next);
+}
+
+std::string wide_to_utf8(const std::wstring &wide_str) {
+    std::wstring_convert<std::codecvt_utf8<wchar_t>> conv;
+    return conv.to_bytes(wide_str);
+}
+#else
+    static_assert(__cplusplus > 201703L, "Using alternative method for C++20 and beyond");
+#endif
 
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
@@ -1777,6 +1813,36 @@ bool agg_schnorr_ecdh_key_exchange() {
     std::pair<qkey_vector, bool> qai_hash = aitx2.GetSchnorrHash();
     assert(qai_hash.second);
     print_bytes("SORA-QAI hash", qai_hash.first.data(), qai_hash.first.size());
+
+    return true;
+}
+
+bool check_cipher_transaction() {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+
+    CPubKey to_pubkey = hd_wallet::get().reserved_pubkey[0];
+    if(!to_pubkey.IsFullyValid_BIP66())
+        return false;
+
+    CBitcoinAddress address(to_pubkey.GetID());
+    CScript scriptPubKey;
+    scriptPubKey.SetAddress(address);
+
+    CWalletTx wtx;
+    wtx.strFromAccount = std::string("");
+
+    double dAmount = 0.3;
+    int64_t nAmount = util::roundint64(dAmount * util::COIN);
+
+    std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+    if (!strError.empty()) {
+        print_str("check_cipher_transaction strError", strError);
+        assert(!"Error: SendMoney");
+        return false;
+    }
 
     return true;
 }
@@ -2267,6 +2333,11 @@ void Debug_checking_sign_verify() {
     //}
     //if(!exists_keys_schnorr_agg_sign_verify()) {
     //    assert(!"5: failure Exists keys aggregation sign and verify");
+    //}
+
+    // Check cipher transaction
+    //if(!check_cipher_transaction()) {
+    //    assert(!"6: check_cipher_transaction");
     //}
 
     //Span_check();
