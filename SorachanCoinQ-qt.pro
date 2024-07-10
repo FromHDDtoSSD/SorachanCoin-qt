@@ -816,6 +816,7 @@ HEADERS += \
     src/nvme/nvme_cpu.h \
     src/nvme/nvme_mem.h \
     src/util/thread.h \
+    src/thread/threadqai.h \
     src/libstr/cmstring.h \
     src/libstr/cmscript.h \
     src/libstr/movestream.h \
@@ -974,6 +975,7 @@ SOURCES += \
     src/nvme/nvme_cpu.cpp \
     src/nvme/nvme_mem.cpp \
     src/util/thread.cpp \
+    src/thread/threadqai.cpp \
     src/util/exception.cpp \
     src/PoBench/pob_challenge.cpp \
     src/PoBench/pob_proof.cpp \

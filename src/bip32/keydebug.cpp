@@ -12,6 +12,7 @@
 #include <init.h>
 #include <sorara/aitx.h>
 #include <allocator/allocators.h>
+#include <thread/threadqai.h>
 #if __cplusplus <= 201703L
 # include <locale>
 # include <codecvt>
@@ -1817,6 +1818,18 @@ bool agg_schnorr_ecdh_key_exchange() {
     return true;
 }
 
+void th_func_test(std::shared_ptr<CDataStream> stream) {
+   util::Sleep(2000);
+   std::string str;
+   *stream >> str;
+   print_str("1st", str);
+   *stream >> str;
+   print_str("2nd", str);
+   *stream >> str;
+   print_str("3rd", str);
+   util::Sleep(3000);
+}
+
 bool check_cipher_transaction() {
     if(!hd_wallet::get().enable)
         return false;
@@ -1828,14 +1841,24 @@ bool check_cipher_transaction() {
         return false;
 
     CBitcoinAddress address(to_pubkey.GetID());
+    //CBitcoinAddress address(std::string("21NnAzvt5ebKMCWWU6Et9YqVVikZEoLYUri"));
     CScript scriptPubKey;
     scriptPubKey.SetAddress(address);
 
     CWalletTx wtx;
-    wtx.strFromAccount = std::string("");
+    wtx.strFromAccount = std::string("reo2");
 
-    double dAmount = 0.3;
+    double dAmount = 0.2;
     int64_t nAmount = util::roundint64(dAmount * util::COIN);
+
+    CReserveKey keyChange(entry::pwalletMain);
+    int index = 0;
+    for(const auto &d: hd_wallet::get().reserved_pubkey) {
+        if(d == keyChange.GetReservedKey())
+            break;
+        index++;
+    }
+    print_num("CReserveKey pos reserved_pubkey", index);
 
     std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
     if (!strError.empty()) {
@@ -1843,6 +1866,15 @@ bool check_cipher_transaction() {
         assert(!"Error: SendMoney");
         return false;
     }
+
+    CThread thread;
+    for(int i=0; i < 10; ++i) {
+        CDataStream stream;
+        stream << std::string("dog") << std::string("cat") << std::string("coin");
+        CThread::THREAD_INFO info(&stream, th_func_test);
+        assert(thread.BeginThread(info));
+    } // CDataStream stream object has been released.
+    thread.WaitForMultipleThreads();
 
     return true;
 }
