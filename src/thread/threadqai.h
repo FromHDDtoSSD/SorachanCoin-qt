@@ -21,15 +21,17 @@ public:
         }
     };
 
-    CThread() {}
+    CThread() : fdetach(false) {}
     ~CThread() { WaitForMultipleThreads(); }
 
     bool BeginThread(const THREAD_INFO &info);
+    void Detach();
     void WaitForMultipleThreads();
     uint32_t Size() const;
     void Reset();
 
 private:
+    bool fdetach;
     std::vector<std::thread> threads;
 };
 

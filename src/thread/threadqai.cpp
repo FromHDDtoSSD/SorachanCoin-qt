@@ -11,16 +11,26 @@ bool CThread::BeginThread(const THREAD_INFO &info) {
     if(!cp_stream.get())
         return false;
     *cp_stream = *info._stream; // copy
-    threads.push_back(std::thread([info, cp_stream]() {
+    threads.emplace_back(std::thread([info, cp_stream]() {
         info._func(cp_stream);
     }));
     return true;
 }
 
-void CThread::WaitForMultipleThreads() {
+void CThread::Detach() {
     for (auto &thread: threads) {
-        if (thread.joinable())
-            thread.join();
+        thread.detach();
+    }
+    if(threads.size() > 0)
+        fdetach = true;
+}
+
+void CThread::WaitForMultipleThreads() {
+    if(!fdetach) {
+        for (auto &thread: threads) {
+            if (thread.joinable())
+                thread.join();
+        }
     }
     Reset();
 }

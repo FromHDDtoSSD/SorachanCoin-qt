@@ -1830,6 +1830,128 @@ void th_func_test(std::shared_ptr<CDataStream> stream) {
    util::Sleep(3000);
 }
 
+void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
+    if(!hd_wallet::get().enable)
+        return;
+    if(entry::pwalletMain->IsLocked())
+        return;
+
+    //! get the SORA-QAI cipher address qai_address ans account hash
+    std::string qai_address;
+    std::string acc_hash;
+    double fee;
+    try {
+       (*stream) >> qai_address >> acc_hash >> fee;
+    } catch (const std::exception &) {
+        return;
+    }
+
+    print_str("confirm_transaction qai_address", qai_address);
+    print_str("confirm_transaction acc_hash", acc_hash);
+
+    {
+        //! get the scriptPubKey
+        CBitcoinAddress address(qai_address);
+        CScript scriptPubKey;
+        scriptPubKey.SetAddress(address);
+
+        //! send to SORA-QAI cipher scriptPubKey in 0.5 coins
+        CWalletTx wtx;
+        wtx.strFromAccount = std::string("");
+        double dAmount = fee;
+        int64_t nAmount = util::roundint64(dAmount * util::COIN);
+        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+        if (!strError.empty())
+            return;
+
+        const uint256 txid = wtx.GetHash();
+        do {
+            if(entry::pwalletMain->mapWallet.count(txid)) {
+                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
+                const int confirms = new_wtx.GetDepthInMainChain();
+                if(confirms > 0)
+                    break;
+            }
+            util::Sleep(300);
+            if(args_bool::fShutdown)
+                break;
+        } while(true);
+    }
+
+    {
+        //! get the reserved public key
+        CPubKey reserved_pubkey = hd_wallet::get().reserved_pubkey[0];
+        if(!reserved_pubkey.IsFullyValid_BIP66())
+            return;
+
+        //! get the scriptPubKey
+        CBitcoinAddress address(reserved_pubkey.GetID());
+        CScript scriptPubKey;
+        scriptPubKey.SetAddress(address);
+
+        //! send to reservedkey scriptPubKey in 0.5 coins
+        CWalletTx wtx;
+        wtx.strFromAccount = acc_hash;
+        double dAmount = fee;
+        int64_t nAmount = util::roundint64(dAmount * util::COIN);
+        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+        if (!strError.empty())
+            return;
+
+        const uint256 txid = wtx.GetHash();
+        do {
+            if(entry::pwalletMain->mapWallet.count(txid)) {
+                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
+                const int confirms = new_wtx.GetDepthInMainChain();
+                if(confirms > 0)
+                    break;
+            }
+            util::Sleep(500);
+            if(args_bool::fShutdown)
+                break;
+        } while(true);
+    }
+
+    print_str("confirm_transaction", std::string("OK"));
+}
+
+const std::string hrp_cipher_main = "cipher";
+const std::string hrp_cipher_testnet = "ciphertest";
+static std::string GetHrpCipher() {
+    return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
+}
+
+#include <rpc/bitcoinrpc.h>
+bool check_cipher_transaction2() {
+    uint160 rand_hash;
+    unsigned char buf[32];
+    latest_crypto::random::GetRandBytes(buf, sizeof(buf));
+    latest_crypto::CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
+    std::string acc_hash = "cipher_" + rand_hash.GetHex();
+
+    json_spirit::Array obj;
+    obj.push_back(acc_hash);
+    json_spirit::Value qaiAddress;
+    try {
+        qaiAddress = CRPCTable::getnewschnorraddress(obj, false);
+    } catch (json_spirit::Object &) {
+        return false;
+    } catch (std::exception &) {
+        return false;
+    }
+
+    CThread thread;
+    CDataStream stream;
+    double fee = 0.2;
+    stream << qaiAddress.get_str() << acc_hash << fee;
+    CThread::THREAD_INFO info(&stream, wait_for_confirm_transaction);
+    if(thread.BeginThread(info)) {
+        thread.Detach();
+        return true;
+    } else
+        return false;
+}
+
 bool check_cipher_transaction() {
     if(!hd_wallet::get().enable)
         return false;
@@ -1866,6 +1988,8 @@ bool check_cipher_transaction() {
         assert(!"Error: SendMoney");
         return false;
     }
+    uint256 txid = wtx.GetHash();
+    print_str("txid", txid.GetHex());
 
     CThread thread;
     for(int i=0; i < 10; ++i) {
@@ -2368,7 +2492,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Check cipher transaction
-    //if(!check_cipher_transaction()) {
+    //if(!check_cipher_transaction2()) {
     //    assert(!"6: check_cipher_transaction");
     //}
 
