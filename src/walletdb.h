@@ -10,6 +10,7 @@
 #include <db.h>
 #include <keystore.h>
 #include <bip32/hdchain.h>
+#include <sorara/aitx.h>
 
 class CKeyPool;
 class CAccount;
@@ -279,6 +280,25 @@ public:
 
     bool ExistsQAIPubkey() {
         return Exists(std::string("qaipubkey"));
+    }
+
+    bool WriteAitx03(const script_vector &qrandvch, const CAITransaction03 &aitx03) {
+        if(qrandvch.size() != 33)
+            return false;
+        dbparam::IncWalletUpdate();
+        return Write(std::make_pair(std::string("aitx03"), qrandvch), aitx03);
+    }
+
+    bool ReadAitx03(const script_vector &qrandvch, CAITransaction03 &aitx03) {
+        if(qrandvch.size() != 33)
+            return false;
+        return Read(std::make_pair(std::string("aitx03"), qrandvch), aitx03);
+    }
+
+    bool ExistsAitx03(const script_vector &qrandvch) {
+        if(qrandvch.size() != 33)
+            return false;
+        return Exists(std::make_pair(std::string("aitx03"), qrandvch));
     }
 
     bool EraseKey(const CPubKey &pubkey) { // Note that, EraseKey use ONLY hd-wallet upgrade (random wallet keys in 0 balance, Erase)

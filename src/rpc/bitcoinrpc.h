@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[105];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[107];    // Bitcoin RPC Command
 
     //
     // map command
@@ -305,7 +305,7 @@ private:
     static CBitcoinAddress CreateNewQaiAddress(CScript *create_redeem = nullptr);
     static CBitcoinAddress GetAccountAddress(std::string strAccount, bool bForceNew=false);
     static CBitcoinAddress CreateNewSchnorrAddress(size_t agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, CScript *create_redeem = nullptr);
-    static CBitcoinAddress CreateNewCipherAddress(size_t agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, CScript *create_redeem = nullptr);
+    static CBitcoinAddress CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher);
     static CBitcoinAddress GetAccountQaiAddress(std::string strAccount, bool bForceNew=false);
     static CBitcoinAddress GetAccountSchnorrAddress(std::string strAccount, bool bForceNew = false);
     static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress);
@@ -398,6 +398,8 @@ public:
     static json_spirit::Value getnewethaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewqaiaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewschnorraddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getnewcipheraddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getciphermessages(const json_spirit::Array &params, bool fHelp);
     //static json_spirit::Value getnewethlock(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getkeyentangle(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value gethdwalletinfo(const json_spirit::Array &params, bool fHelp);

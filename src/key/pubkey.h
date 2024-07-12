@@ -873,6 +873,7 @@ public:
     const CPubKey* data() const { return m_vkeydata.data(); }
     void push(CPubKey &&in) { m_vkeydata.emplace_back(in); }
     size_t size() const { return m_vkeydata.size(); }
+    void clear() { m_vkeydata.clear(); }
 
     friend bool operator==(const XOnlyPubKeys &a, const XOnlyPubKeys &b) {
         return a.m_vkeydata == b.m_vkeydata;
@@ -921,6 +922,11 @@ struct XOnlyAggWalletInfo {
         nVersion = schnorr_version;
         aggregated_size = 0;
     }
+
+    //! If you want to directly generate the public key for a Schnorr aggregated signature,
+    //! call the following static member function directly.
+    static bool GetAggKeys(unsigned int begin_index, size_t agg_size, XOnlyKeys &xonly_agg_keys);
+    static bool GetAggPublicKeys(unsigned int begin_index, size_t agg_size, XOnlyPubKeys &xonly_agg_pubkeys);
 
     //! T is uint160 type-only allowed member function
     //! return type is std::pair<unsigned int, size_t>

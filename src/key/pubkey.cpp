@@ -4167,6 +4167,51 @@ bool XOnlyAggWalletInfo::push_commit(const uint160 &hash, std::tuple<unsigned in
     return UpdateToWalletInfo();
 }
 
+bool XOnlyAggWalletInfo::GetAggKeys(unsigned int begin_index, size_t agg_size, XOnlyKeys &xonly_agg_keys) {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+
+    xonly_agg_keys.clear();
+    for(unsigned int i=begin_index; i < begin_index + agg_size; ++i) {
+        CExtKey extkey;
+        if(!extkeyseed.Derive(extkey, i))
+            return false;
+        xonly_agg_keys.push(extkey.GetSecret());
+    }
+
+    return true;
+}
+
+bool XOnlyAggWalletInfo::GetAggPublicKeys(unsigned int begin_index, size_t agg_size, XOnlyPubKeys &xonly_agg_pubkeys) {
+    if(entry::pwalletMain->IsLocked())
+        return false;
+    if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
+        return false;
+
+    CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
+    if(!extkeyseed.IsValid())
+        return false;
+    CExtPubKey extpubseed = extkeyseed.Neuter();
+    if(!extpubseed.IsValid())
+        return false;
+
+    xonly_agg_pubkeys.clear();
+    for(unsigned int i=begin_index; i < begin_index + agg_size; ++i) {
+        CExtPubKey extpub;
+        if(!extpubseed.Derive(extpub, i))
+            return false;
+        xonly_agg_pubkeys.push(extpub.GetPubKey());
+    }
+
+    return true;
+}
+
 static bool GetAggPublicKeyHash(unsigned int begin_index, size_t agg_size, uint160 &hash) {
     if(entry::pwalletMain->IsLocked())
         return false;

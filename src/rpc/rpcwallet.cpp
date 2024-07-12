@@ -21,6 +21,8 @@
 #include <util/thread.h>
 #include <bip32/hdchain.h>
 #include <sorara/aitx.h>
+#include <address/bech32.h>
+#include <thread/threadqai.h>
 
 CCriticalSection CRPCTable::cs_nWalletUnlockTime;
 int64_t CRPCTable::nWalletUnlockTime = 0;
@@ -550,10 +552,88 @@ CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggW
     return address;
 }
 
-CBitcoinAddress CRPCTable::CreateNewCipherAddress(size_t agg_size/* = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS */, CScript *create_redeem/* = nullptr */) {
+const std::string hrp_cipher_main = "cipher";
+const std::string hrp_cipher_testnet = "ciphertest";
+constexpr unsigned int cipher_begin_index = hdkeys_child_regenerate + 1;
+constexpr size_t cipher_agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
+static std::string GetHrpCipher() {
+    return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
+}
+
+json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 1) {
+        throw std::runtime_error(
+            "getciphermessages [recipient address] "
+            "[recipient address] is optional and can be omitted. "
+            "typically, a default single address is assigned.");
+    }
+
+    std::string ret = "";
+    return ret;
+}
+
+json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() > 2) {
+        throw std::runtime_error(
+            "getnewcipheraddress or "
+            "getnewcipheraddress [recipient address] [cipher message] "
+            "If no arguments are provided, it can obtain a dedicated address for receiving encrypted messages. "
+            "This is a special address that starts with cipher1.  "
+            "If arguments are provided, please pass the address of the recipient "
+            "it want to send the ciphertext to (an address starting with cipher1) "
+            "followed by the ciphertext you wish to embed.");
+    }
+
+    //! If no arguments, it can obtain a dedicated address for receiving encrypted messages
+    if(params.size() == 0) {
+        XOnlyPubKeys xonly_agg_pubkeys;
+        if(!XOnlyAggWalletInfo::GetAggPublicKeys(cipher_begin_index, cipher_agg_size, xonly_agg_pubkeys))
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
+
+        XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
+        bech32_vector vchb32 = EncodeToSoraL1QAItxBech32(xonly_pubkey.GetPubVch());
+        std::string cipher_address = bech32::Encode(GetHrpCipher(), vchb32);
+        return cipher_address;
+    }
+
+    //! If arguments are provided
+    //! Creation SORA-QAI qai-v3 cipher message transaction
+    if(params.size() == 2) {
+        std::string recipient_pubkey = params[0].get_str();
+        SecureString cipher = const_cast<std::string &&>(params[1].get_str());
+        CBitcoinAddress address = CreateNewCipherAddress(recipient_pubkey, cipher);
+
+        uint160 rand_hash;
+        unsigned char buf[32];
+        latest_crypto::random::GetRandBytes(buf, sizeof(buf));
+        latest_crypto::CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
+        std::string acc_hash = "cipher_" + rand_hash.GetHex();
+        entry::pwalletMain->SetAddressBookName(address, acc_hash);
+
+        CThread thread;
+        CDataStream stream;
+        double fee = 1;
+        int64_t nAmount = util::roundint64(fee * util::COIN);
+        stream << address.ToString() << acc_hash << nAmount << (int32_t)1;
+        CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
+        if(thread.BeginThread(info))
+            thread.Detach();
+        else
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: failed to begin aitx transactions");
+
+        return address.ToString();
+    }
+
+    throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: params is invalid");
+    return std::string("");
+}
+
+CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher) {
     using namespace ScriptOpcodes;
 
-    if(! hd_wallet::get().enable)
+    if(!hd_wallet::get().enable)
         throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
     if (entry::pwalletMain->IsLocked())
         throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
@@ -570,35 +650,79 @@ CBitcoinAddress CRPCTable::CreateNewCipherAddress(size_t agg_size/* = XOnlyAggWa
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
 
     //
-    // Generate a new XOnlyPubKey that is added to wallet
+    // Generate a new XOnlyPubKeys that is added to wallet
+    // XOnlyKeys is used by SymmetricKey
     //
     XOnlyAggWalletInfo xonly_agg_wallet;
     if(!xonly_agg_wallet.LoadFromWalletInfo())
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyAggWalletInfo is invalid");
 
     uint160 hash;
-    if(!xonly_agg_wallet.MakeNewKey(hash, agg_size))
+    if(!xonly_agg_wallet.MakeNewKey(hash, cipher_agg_size))
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XonlyKey MakeNewKey is invalid");
 
-    XOnlyPubKeys xonly_pubkeys;
-    if(!xonly_agg_wallet.GetXOnlyPubKeys(hash, xonly_pubkeys))
+    XOnlyPubKeys my_xonly_schnorr_pubkeys;
+    XOnlyKeys my_xonly_schnorr_keys;
+    if(!xonly_agg_wallet.GetXOnlyKeys(hash, my_xonly_schnorr_pubkeys, my_xonly_schnorr_keys))
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
 
-    // Build crypto message
+    //
+    // Compute SymmetricKey
+    //
+    const std::pair<std::string, bech32_vector> b32recipient_key = bech32::Decode(recipient_pubkey);
+    if(b32recipient_key.first != GetHrpCipher())
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address is invalid");
 
+    bech32_vector recipient_agg_pubkey = DecodeFromSoraL1QAItxBech32(b32recipient_key.second);
+    // When decoding 32 bytes with bech32, a 0x00 is added at the end, making it 33 bytes.
+    if(recipient_agg_pubkey.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE + 1)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address is invalid");
+    recipient_agg_pubkey.pop_back(); // erase at the end (0x00)
+
+    CSecret my_agg_key;
+    if(!my_xonly_schnorr_keys.GetSecret(my_agg_key))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: fail to compute in XOnlyKey");
+
+    secp256k1_symmetrickey symmetrickey;
+    if(SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL,  my_agg_key.data(), recipient_agg_pubkey.data(), &symmetrickey) != 1)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: fail to compute in SymmetricKey");
+    SymmetricKey symkey(symmetrickey);
+
+    //
+    // Build aitx and qrandhash
+    //
+    CAITransaction03 aitx;
+    if(!aitx.PushTokenMessage(symkey, cipher))
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: fail to compute in CAITransaction03");
+    aitx.SetSchnorrAggregateKeyID(my_xonly_schnorr_pubkeys.GetXOnlyPubKey());
+
+    //
+    // Build qai hash
+    //
     script_vector qhashvch = hd_wallet::get().GetPubKeyQai().GetQaiHash();
-    XOnlyPubKey xonly_agg_pubkey = xonly_pubkeys.GetXOnlyPubKey();
-    script_vector qrandvch = xonly_agg_pubkey.GetSchnorrHash();
+    std::pair<qkey_vector, bool> qrand = aitx.GetSchnorrHash();
+    if(!qrand.second)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: qrandvch is invalid");
+    script_vector qrandvch = qrand.first;
     assert(qrandvch.size() == 33);
+
+    //
+    // Serialize from aitx to wallet (for bind)
+    //
+    {
+        CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+        LOCK(entry::pwalletMain->cs_wallet);
+        if(walletdb.ExistsAitx03(qrandvch))
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: Aitx has been already bind to wallet");
+        if(!walletdb.WriteAitx03(qrandvch, aitx))
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: failed to bind from aitx to wallet");
+    }
 
     // SORA L1 Quantum and AI resistance transaction:
     // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
     CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
     entry::pwalletMain->AddCScript(redeemScript, newKey);
     CBitcoinAddress address(redeemScript.GetID());
-    if(create_redeem)
-        *create_redeem = redeemScript;
-
     return address;
 }
 

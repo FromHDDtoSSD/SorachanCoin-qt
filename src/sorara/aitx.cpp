@@ -7,6 +7,8 @@
 #include <hash.h>
 #include <key/privkey.h>
 #include <util/time.h>
+#include <bip32/hdchain.h>
+#include <init.h>
 
 namespace {
 
@@ -107,6 +109,10 @@ void CAITransaction::SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey) {
     schnorrsigHash = xonly_pubkey.GetID();
 }
 
+CKeyID CAITransaction::GetID() const {
+    return schnorrsigHash;
+}
+
 void CAITransaction::ClearTx() {
     nTime = 0;
     schnorrsigHash = CKeyID(0);
@@ -192,3 +198,222 @@ std::pair<uint160, bool> CAITransaction03::GetMerkleRoot() const {
 std::pair<qkey_vector, bool> CAITransaction03::GetSchnorrHash() const {
     return aitx.GetSchnorrHash();
 }
+
+//#ifdef QT_GUI
+//# include <QMessageBox>
+//#endif
+namespace aitx_thread {
+
+#if defined(QT_GUI) && defined(WIN32)
+class QMB
+{
+public:
+    enum status {
+        M_OK,
+        M_ERROR
+    };
+
+    QMB() = delete;
+    QMB(status s) {
+        if(s == M_OK) {
+            title = utf8_to_sjis(_("Confirmation"));
+            icon = MB_ICONINFORMATION;
+        } else if (s == M_ERROR) {
+            title = utf8_to_sjis(_("Error"));
+            icon = MB_ICONWARNING;
+        } else {
+            assert(!"QMB ERROR");
+            title = "";
+            icon = 0;
+        }
+    }
+
+    QMB &setText(const std::string &text) {
+        message = utf8_to_sjis(text);
+        return *this;
+    }
+
+    int exec() {
+        ::MessageBoxA(nullptr, message.c_str(), title.c_str(), MB_OK | icon);
+        return 0;
+    }
+
+private:
+
+    static std::string utf8_to_sjis(const std::string &utf8Str) {
+        const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
+        std::wstring wideStr(wideCharLen, 0);
+        ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
+
+        const int32_t sjisCharLen = ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+        std::string sjisStr(sjisCharLen, 0);
+        ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, &sjisStr[0], sjisCharLen, nullptr, nullptr);
+        return sjisStr;
+    }
+
+    std::string title;
+    std::string message;
+    UINT icon;
+};
+
+//!
+//! TODO: Currently replaced with WIN32API. Will replace with Qt in the future.
+//!
+/*
+class QMB
+{
+public:
+    enum status {
+        M_OK,
+        M_ERROR
+    };
+
+    QMB() = delete;
+    QMB(status s) {
+        if(s == M_OK) {
+            qbox.setWindowTitle(_("Confirmation").c_str());
+            qbox.setIcon(QMessageBox::Information);
+            qbox.setStandardButtons(QMessageBox::Ok);
+            qbox.setDefaultButton(QMessageBox::Ok);
+        } else if (s == M_ERROR) {
+            qbox.setWindowTitle(_("Error").c_str());
+            qbox.setIcon(QMessageBox::Critical);
+            qbox.setStandardButtons(QMessageBox::Ok);
+            qbox.setDefaultButton(QMessageBox::Ok);
+        }
+    }
+
+    QMB &setText(const std::string &text) {
+        qbox.setText(QString(text.c_str()));
+        return *this;
+    }
+
+    int exec() {
+        qbox.exec();
+        return 0;
+    }
+
+private:
+    QMessageBox qbox;
+};
+*/
+#else
+class QMB
+{
+public:
+    enum status {
+        M_OK,
+        M_ERROR
+    };
+
+    QMB() = delete;
+    QMB(status s) {}
+
+    QMB &setText(const std::string &) {
+        return *this;
+    }
+
+    int exec() {
+        return 0;
+    }
+};
+#endif
+
+void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
+    //! get the SORA-QAI cipher address qai_address ans account hash
+    std::string qai_address;
+    std::string acc_hash;
+    int64_t nAmount;
+    int32_t fMessage;
+    try {
+       (*stream) >> qai_address >> acc_hash >> nAmount >> fMessage;
+    } catch (const std::exception &) {
+        fMessage ? QMB(QMB::M_ERROR).setText(_("Failed to read from CDataStream.")).exec(): 0;
+        return;
+    }
+
+    print_str("qai_address", qai_address);
+    print_str("acc_hash", acc_hash);
+    print_num("nAmount", nAmount);
+
+    if(!hd_wallet::get().enable) {
+        fMessage ? QMB(QMB::M_ERROR).setText(_("The HD Wallet disable.")).exec(): 0;
+        return;
+    }
+    if(entry::pwalletMain->IsLocked()) {
+        fMessage ? QMB(QMB::M_ERROR).setText(_("The Wallet is locked.")).exec(): 0;
+        return;
+    }
+
+    {
+        //! get the scriptPubKey
+        CBitcoinAddress address(qai_address);
+        CScript scriptPubKey;
+        scriptPubKey.SetAddress(address);
+        print_str("scruptPubKey", scriptPubKey.ToString());
+
+        //! send to SORA-QAI cipher scriptPubKey
+        CWalletTx wtx;
+        wtx.strFromAccount = std::string("");
+        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+        if (!strError.empty()) {
+            fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
+            fMessage ? QMB(QMB::M_ERROR).setText(_("[A] The balance is likely insufficient. Please ensure a balance of at least 1 SORA.")).exec(): 0;
+            return;
+        }
+
+        const uint256 txid = wtx.GetHash();
+        do {
+            if(entry::pwalletMain->mapWallet.count(txid)) {
+                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
+                const int confirms = new_wtx.GetDepthInMainChain();
+                if(confirms > 0)
+                    break;
+            }
+            util::Sleep(300);
+            if(args_bool::fShutdown)
+                return;
+        } while(true);
+    }
+
+    {
+        //! get the reserved public key
+        CPubKey reserved_pubkey = hd_wallet::get().reserved_pubkey[0];
+        if(!reserved_pubkey.IsFullyValid_BIP66()) {
+            fMessage ? QMB(QMB::M_ERROR).setText(_("Detected an anomaly in the public key.")).exec(): 0;
+            return;
+        }
+
+        //! get the scriptPubKey
+        CBitcoinAddress address(reserved_pubkey.GetID());
+        CScript scriptPubKey;
+        scriptPubKey.SetAddress(address);
+
+        //! send to reservedkey scriptPubKey
+        CWalletTx wtx;
+        wtx.strFromAccount = acc_hash;
+        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+        if (!strError.empty()) {
+            fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
+            fMessage ? QMB(QMB::M_ERROR).setText(_("[B] The balance is likely insufficient. Please ensure a balance of at least 1 SORA.")).exec(): 0;
+            return;
+        }
+
+        const uint256 txid = wtx.GetHash();
+        do {
+            if(entry::pwalletMain->mapWallet.count(txid)) {
+                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
+                const int confirms = new_wtx.GetDepthInMainChain();
+                if(confirms > 0)
+                    break;
+            }
+            util::Sleep(500);
+            if(args_bool::fShutdown)
+                return;
+        } while(true);
+    }
+
+    fMessage ? QMB(QMB::M_OK).setText(_("Successfully verified the encrypted message transaction.")).exec(): 0;
+}
+
+} // aitx_thread

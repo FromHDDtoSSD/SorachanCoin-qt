@@ -33,4 +33,52 @@ std::pair<std::string, bech32_vector> Decode(const std::string &str);
 
 } // namespace bech32
 
+//
+// SORA L1 Quantum and AI resistance transaction for Bech32
+//
+inline bech32_vector EncodeToSoraL1QAItxBech32(const bech32_vector &data) {
+    bech32_vector bits5;
+    int bitCount = 0;
+    uint8_t currentByte = 0;
+    for (unsigned char byte: data) {
+        for (int i = 7; i >= 0; --i) {
+            currentByte = (currentByte << 1) | ((byte >> i) & 1);
+            bitCount++;
+            if (bitCount == 5) {
+                bits5.push_back(currentByte);
+                bitCount = 0;
+                currentByte = 0;
+            }
+        }
+    }
+    if (bitCount > 0) {
+        bits5.push_back(currentByte << (5 - bitCount));
+    }
+
+    return bits5;
+}
+
+inline bech32_vector DecodeFromSoraL1QAItxBech32(const bech32_vector &bits5) {
+    bech32_vector bytes;
+    int bitCount = 0;
+    unsigned char currentByte = 0;
+    for (uint8_t bitGroup: bits5) {
+        for (int i = 4; i >= 0; --i) {
+            currentByte = (currentByte << 1) | ((bitGroup >> i) & 1);
+            bitCount++;
+            if (bitCount == 8) {
+                bytes.push_back(currentByte);
+                bitCount = 0;
+                currentByte = 0;
+            }
+        }
+    }
+
+    if (bitCount > 0) {
+        bytes.push_back(currentByte << (8 - bitCount));
+    }
+
+    return bytes;
+}
+
 #endif // BITCOIN_BECH32_H

@@ -33,6 +33,11 @@ public:
     }
 };
 
+//! A dedicated worker thread for CAITransaction
+namespace aitx_thread {
+    void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream);
+} // aitx_thread
+
 //! SORA-QAI CKeyID: uint160 merkle tree
 class CAITransaction
 {
@@ -51,6 +56,7 @@ public:
 
     void PushTokenHash(uint160 hash);
     void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey);
+    CKeyID GetID() const;
 
     void ClearTx();
 

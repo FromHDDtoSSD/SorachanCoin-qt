@@ -13,6 +13,7 @@
 #include <sorara/aitx.h>
 #include <allocator/allocators.h>
 #include <thread/threadqai.h>
+#include <rpc/bitcoinrpc.h>
 #if __cplusplus <= 201703L
 # include <locale>
 # include <codecvt>
@@ -1830,98 +1831,24 @@ void th_func_test(std::shared_ptr<CDataStream> stream) {
    util::Sleep(3000);
 }
 
-void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
-    if(!hd_wallet::get().enable)
-        return;
-    if(entry::pwalletMain->IsLocked())
-        return;
+#include <address/bech32.h>
+bool check_cipher_transaction3() {
+    int64_t a = bitsystem::GetTime();
+    int64_t b = bitsystem::GetAdjustedTime();
+    print_num("GetTime", a);
+    print_num("GetAdjustedTime", b);
 
-    //! get the SORA-QAI cipher address qai_address ans account hash
-    std::string qai_address;
-    std::string acc_hash;
-    double fee;
-    try {
-       (*stream) >> qai_address >> acc_hash >> fee;
-    } catch (const std::exception &) {
-        return;
-    }
+    bech32_vector vch;
+    vch.resize(32);
+    ::memset(&vch.front(), 0xFF, 32);
+    bech32_vector vch2 = EncodeToSoraL1QAItxBech32(vch);
+    bech32_vector vch3 = DecodeFromSoraL1QAItxBech32(vch2);
+    print_num("vch3 num", vch3.size());
+    print_bytes("vch3", vch3.data(), vch3.size());
 
-    print_str("confirm_transaction qai_address", qai_address);
-    print_str("confirm_transaction acc_hash", acc_hash);
-
-    {
-        //! get the scriptPubKey
-        CBitcoinAddress address(qai_address);
-        CScript scriptPubKey;
-        scriptPubKey.SetAddress(address);
-
-        //! send to SORA-QAI cipher scriptPubKey in 0.5 coins
-        CWalletTx wtx;
-        wtx.strFromAccount = std::string("");
-        double dAmount = fee;
-        int64_t nAmount = util::roundint64(dAmount * util::COIN);
-        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
-        if (!strError.empty())
-            return;
-
-        const uint256 txid = wtx.GetHash();
-        do {
-            if(entry::pwalletMain->mapWallet.count(txid)) {
-                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
-                const int confirms = new_wtx.GetDepthInMainChain();
-                if(confirms > 0)
-                    break;
-            }
-            util::Sleep(300);
-            if(args_bool::fShutdown)
-                break;
-        } while(true);
-    }
-
-    {
-        //! get the reserved public key
-        CPubKey reserved_pubkey = hd_wallet::get().reserved_pubkey[0];
-        if(!reserved_pubkey.IsFullyValid_BIP66())
-            return;
-
-        //! get the scriptPubKey
-        CBitcoinAddress address(reserved_pubkey.GetID());
-        CScript scriptPubKey;
-        scriptPubKey.SetAddress(address);
-
-        //! send to reservedkey scriptPubKey in 0.5 coins
-        CWalletTx wtx;
-        wtx.strFromAccount = acc_hash;
-        double dAmount = fee;
-        int64_t nAmount = util::roundint64(dAmount * util::COIN);
-        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
-        if (!strError.empty())
-            return;
-
-        const uint256 txid = wtx.GetHash();
-        do {
-            if(entry::pwalletMain->mapWallet.count(txid)) {
-                const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
-                const int confirms = new_wtx.GetDepthInMainChain();
-                if(confirms > 0)
-                    break;
-            }
-            util::Sleep(500);
-            if(args_bool::fShutdown)
-                break;
-        } while(true);
-    }
-
-    print_str("confirm_transaction", std::string("OK"));
+    return true;
 }
 
-const std::string hrp_cipher_main = "cipher";
-const std::string hrp_cipher_testnet = "ciphertest";
-static std::string GetHrpCipher() {
-    return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
-}
-
-#include <rpc/bitcoinrpc.h>
 bool check_cipher_transaction2() {
     uint160 rand_hash;
     unsigned char buf[32];
@@ -1943,8 +1870,9 @@ bool check_cipher_transaction2() {
     CThread thread;
     CDataStream stream;
     double fee = 0.2;
-    stream << qaiAddress.get_str() << acc_hash << fee;
-    CThread::THREAD_INFO info(&stream, wait_for_confirm_transaction);
+    int64_t nAmount = util::roundint64(fee * util::COIN);
+    stream << qaiAddress.get_str() << acc_hash << nAmount << (int32_t)1;
+    CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
     if(thread.BeginThread(info)) {
         thread.Detach();
         return true;
@@ -2085,7 +2013,6 @@ bool agg_schnorr_from_makenewkey() {
 }
 
 // Checking the impact on the aggregation of Schnorr after key generation.
-#include <rpc/bitcoinrpc.h>
 bool agg_schnorr_from_makenewkey2() {
     debugcs::instance() << "_child1: " << hd_wallet::get()._child_offset << " _used_key1: " << hd_wallet::get()._usedkey_offset << debugcs::endl();
 
@@ -2492,7 +2419,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Check cipher transaction
-    //if(!check_cipher_transaction2()) {
+    //if(!check_cipher_transaction3()) {
     //    assert(!"6: check_cipher_transaction");
     //}
 
