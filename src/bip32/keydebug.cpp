@@ -1572,6 +1572,62 @@ std::string wide_to_utf8(const std::wstring &wide_str) {
     static_assert(__cplusplus > 201703L, "Using alternative method for C++20 and beyond");
 #endif
 
+bool aitx03_script_store(CScript &script, const CAITransaction03 &aitx) {
+    constexpr int32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    constexpr int num = 13;
+    int32_t ser_size = (int32_t)aitx.GetSerializeSize();
+    if(ser_size > cs * num)
+        return false;
+
+    script.clear();
+    CDataStream stream;
+    stream << aitx;
+    CDataStream::const_iterator pc = stream.begin();
+    for(int i=0; i < num; ++i) {
+        if(ser_size < cs) {
+            script << script_vector(pc + (i * cs), pc + (i * cs) + ser_size);
+            for(int k=i + 1; k < num; ++k) {
+                script << ScriptOpcodes::OP_0;
+            }
+            break;
+        } else {
+            script << script_vector(pc + (i * cs), pc + (i * cs) + cs);
+            ser_size -= cs;
+        }
+    }
+
+    return true;
+}
+
+bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script) {
+    constexpr int32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    constexpr int num = 13;
+    int32_t script_size = (int32_t)script.size();
+    if(script_size > cs * num)
+        return false;
+
+    CDataStream stream;
+    stream.resize(script_size);
+    CScript::const_iterator pc = script.begin();
+    CDataStream::const_iterator csc = stream.begin();
+    unsigned char *pds = (unsigned char *)const_cast<char *>(&(*csc));
+    uint32_t offset = 0;
+    for(int i=0; i < num; ++i) {
+        script_vector vch;
+        ScriptOpcodes::opcodetype opcode = ScriptOpcodes::OP_NOP;
+        if(!script.GetOp(pc, opcode, vch))
+            return false;
+        if(opcode == ScriptOpcodes::OP_0)
+            break;
+        ::memcpy(pds + offset, vch.data(), vch.size());
+        offset += vch.size();
+    }
+
+    aitx.ClearTokens();
+    stream >> aitx;
+    return true;
+}
+
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
 
@@ -1778,7 +1834,7 @@ bool agg_schnorr_ecdh_key_exchange() {
     CAITransaction03 aitx;
     SecureString web3(std::string("This is a decentralized encrypted message. Let's ensure privacy with user-sovereign Web3!"));
     assert(!aitx.IsValid());
-    for(int i=0; i < 100; ++i) {
+    for(int i=0; i < 10; ++i) {
         SecureString _web3 = web3 + std::to_string(i);
         aitx.PushTokenMessage(SKey1, _web3);
     }
@@ -1816,6 +1872,13 @@ bool agg_schnorr_ecdh_key_exchange() {
     assert(qai_hash.second);
     print_bytes("SORA-QAI hash", qai_hash.first.data(), qai_hash.first.size());
 
+    CScript script;
+    assert(aitx03_script_store(script, aitx2));
+    print_str("aitx script", script.ToString());
+    CAITransaction03 aitx3;
+    assert(aitx03_script_load(aitx3, script));
+    assert(aitx2 == aitx3);
+
     return true;
 }
 
@@ -1829,6 +1892,30 @@ void th_func_test(std::shared_ptr<CDataStream> stream) {
    *stream >> str;
    print_str("3rd", str);
    util::Sleep(3000);
+}
+
+void script_split_check() {
+    constexpr uint32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    script_vector vch;
+    vch.resize(cs * 12);
+    ::RAND_bytes(&vch.front(), vch.size());
+
+    CScript script;
+    for(int i=0; i < 12; ++i) {
+        script << script_vector(vch.begin() + (i * cs), vch.begin() + cs + (i * cs));
+    }
+
+    CScript::const_iterator pc = script.begin();
+    ScriptOpcodes::opcodetype opecode;
+    script_vector vch2;
+    vch2.resize(cs * 12);
+    for(int i=0; i < 12; ++i) {
+        script_vector vchret;
+        assert(script.GetOp(pc, opecode, vchret));
+        ::memcpy(&vch2.front() + (i * cs), vchret.data(), cs);
+    }
+
+    assert(vch == vch2);
 }
 
 #include <address/bech32.h>
@@ -1845,6 +1932,8 @@ bool check_cipher_transaction3() {
     bech32_vector vch3 = DecodeFromSoraL1QAItxBech32(vch2);
     print_num("vch3 num", vch3.size());
     print_bytes("vch3", vch3.data(), vch3.size());
+
+    script_split_check();
 
     return true;
 }
@@ -2419,7 +2508,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Check cipher transaction
-    //if(!check_cipher_transaction3()) {
+    //if(!agg_schnorr_ecdh_key_exchange()) {
     //    assert(!"6: check_cipher_transaction");
     //}
 

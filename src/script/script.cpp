@@ -2942,6 +2942,9 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statyp
                     } else if (vch[1] == 0x02) {
                         addstack = 5;
                         break;
+                    } else if (vch[1] == 0x03) {
+                        addstack = 18;
+                        break;
                     } else
                         return -1;
                 }

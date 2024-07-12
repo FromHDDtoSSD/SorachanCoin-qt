@@ -26,6 +26,10 @@ public:
 
     std::pair<uint160, bool> GetHash() const;
 
+    friend bool operator==(const CAIToken03 &a, const CAIToken03 &b) {
+        return a.crypto == b.crypto;
+    }
+
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream &s, Operation ser_action) {
@@ -62,6 +66,17 @@ public:
 
     std::pair<uint160, bool> GetMerkleRoot() const;
     std::pair<qkey_vector, bool> GetSchnorrHash() const;
+
+    uint32_t GetSerializeSize() const {
+        CSizeComputer sc((int)qaiVersion);
+        sc << (*this);
+        return sc.size();
+    }
+
+    friend bool operator==(const CAITransaction &a, const CAITransaction &b) {
+        return a.qaiVersion == b.qaiVersion && a.nTime == b.nTime &&
+               a.schnorrsigHash == b.schnorrsigHash && a.hashes == b.hashes;
+    }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
@@ -107,6 +122,16 @@ public:
 
     std::pair<uint160, bool> GetMerkleRoot() const;
     std::pair<qkey_vector, bool> GetSchnorrHash() const;
+
+    uint32_t GetSerializeSize() const {
+        CSizeComputer sc((int)QaiVersion);
+        sc << (*this);
+        return sc.size();
+    }
+
+    friend bool operator==(const CAITransaction03 &a, const CAITransaction03 &b) {
+        return a.tokens == b.tokens && a.aitx == b.aitx;
+    }
 
     ADD_SERIALIZE_METHODS
     template <typename Stream, typename Operation>
