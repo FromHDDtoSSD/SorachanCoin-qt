@@ -569,8 +569,43 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
             "typically, a default single address is assigned.");
     }
 
-    std::string ret = "";
-    return ret;
+    int32_t days = 1;
+    const int block_begin = block_info::nBestHeight - days * 24 * 20;
+    if (block_begin < 0 || block_begin > block_info::nBestHeight)
+        throw std::runtime_error("Block number out of range.");
+
+    json_spirit::Object result;
+    for (int nHeight = block_begin; nHeight <= block_info::nBestHeight; ++nHeight) {
+        CBlock block;
+        CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
+        while (pblockindex->get_nHeight() > nHeight)
+            pblockindex = pblockindex->set_pprev();
+
+        pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
+        block.ReadFromDisk(pblockindex, true);
+
+        json_spirit::Array txinfo;
+        for(const CTransaction &tx: block.get_vtx()) {
+            for(const CTxIn &txin: tx.get_vin()) {
+                txinfo.emplace_back(txin.get_scriptSig().ToString());
+            }
+        }
+        result.emplace_back(json_spirit::Pair("tx: " + std::to_string(nHeight), txinfo));
+    }
+
+    //for (const auto &d: result) {
+    //    print_str("result name", d.name_);
+    //    for(const auto &dd: d.value_.get_array()) {
+    //        print_str("tx values", dd.get_str());
+    //    }
+    //}
+
+    //XOnlyKeys my_xonly_keys;
+    //XOnlyAggWalletInfo::GetAggKeys(cipher_begin_index, cipher_agg_size, my_xonly_keys);
+    //CSecret my_agg_key;
+    //my_xonly_keys.GetSecret(my_agg_key);
+
+    return result;
 }
 
 json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &params, bool fHelp)
@@ -614,7 +649,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
 
         CThread thread;
         CDataStream stream;
-        double fee = 1;
+        double fee = 1.0;
         int64_t nAmount = util::roundint64(fee * util::COIN);
         stream << address.ToString() << acc_hash << nAmount << (int32_t)1;
         CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);

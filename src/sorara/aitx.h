@@ -122,6 +122,7 @@ public:
 
     std::pair<uint160, bool> GetMerkleRoot() const;
     std::pair<qkey_vector, bool> GetSchnorrHash() const;
+    CKeyID GetID() const;
 
     uint32_t GetSerializeSize() const {
         CSizeComputer sc((int)QaiVersion);
@@ -140,5 +141,12 @@ public:
         READWRITE(aitx);
     }
 };
+
+namespace ai_script {
+
+bool aitx03_script_store(CScript &script, const CAITransaction03 &aitx);
+bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script);
+
+} // ai_script
 
 #endif // SORA_QAI_AITX_H

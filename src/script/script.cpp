@@ -1660,9 +1660,112 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                                 debugcs::instance() << "QAI_CHECKMULTISIG Schnorr Verify OK" << debugcs::endl();
 
+                            } else if (CurrentQaiVersion == (unsigned char)0x03) {
+                                const valtype &qaihashvch = stacktop(-3);
+                                if(!CqPubKey::IsQaiHash(qaihashvch))
+                                    return false;
+
+                                // QAI publickey recover
+                                const valtype &qpubvch = stacktop(-8);
+                                CqPubKey qpubkey;
+                                if(!qpubkey.RecoverCompact(qpubvch))
+                                    return false;
+                                if(!qpubkey.IsFullyValid_BIP66())
+                                    return false;
+
+                                // scriptPubKey QAI hash compare
+                                if(!qpubkey.CmpQaiHash(qaihashvch))
+                                    return false;
+
+                                // load signature QAI
+                                valtype qaisig = stacktop(-10);
+                                //const valtype &reserved = stacktop(-9);
+                                const valtype &ecdsasig = stacktop(-6);
+                                if(qaisig.size() != 129) // signature + hashType
+                                    return false;
+                                //print_num("ECDSA sig size", ecdsasig.size());
+
+                                // get ecdsahash
+                                const int nHashEcdsaType = (int)ecdsasig.back();
+                                const int32_t nHashQaiType = (int32_t)qaisig.back();
+                                CScript _scriptCode(pbegincodehash, pend);
+                                const uint256 ecdsacheck = SignatureHash(_scriptCode, txTo, nIn, nHashEcdsaType);
+                                valtype ecdsahash;
+                                ecdsahash.resize(sizeof(uint256));
+                                ::memcpy(&ecdsahash.front(), ecdsacheck.begin(), sizeof(uint256));
+
+                                // get CAITransaction03
+                                CScript aiscript;
+                                CAITransaction03 aitx;
+                                for(int i=0; i < 13; ++i) {
+                                    aiscript << stacktop(-25 + i);
+                                }
+                                print_num("aitx script size", aiscript.size());
+                                if(!ai_script::aitx03_script_load(aitx, aiscript))
+                                    return false;
+                                if(!aitx.IsValid())
+                                    return false;
+                                debugcs::instance() << "aitx load ok" << debugcs::endl();
+                                std::pair<qkey_vector, bool> aitx_schnorr = aitx.GetSchnorrHash();
+                                if(!aitx_schnorr.second)
+                                    return false;
+                                debugcs::instance() << "aitx instance check ok" << debugcs::endl();
+                                if(aitx_schnorr.first.size() != 33)
+                                    return false;
+                                if(aitx_schnorr.first != qairand)
+                                    return false;
+                                debugcs::instance() << "aitx qairand check ok" << debugcs::endl();
+
+                                // signature QAI target hash
+                                const valtype &ecdsaPubkey = stacktop(-4);
+                                const valtype &ecdsaSig = stacktop(-6);
+                                const int32_t nCurrentQaiVersion = (int32_t)CurrentQaiVersion;
+                                CScript qaistream;
+                                qaistream.reserve(256 + aiscript.size() + 32);
+                                qaistream << ecdsaSig;
+                                qaistream << ecdsaPubkey;
+                                qaistream << qaihashvch;
+                                qaistream << qairand;
+                                qaistream << ecdsahash;
+                                qaistream << nCurrentQaiVersion;
+                                qaistream << nHashQaiType;
+                                qaistream += aiscript;
+                                CHashWriter qaihash(SER_GETHASH, 0);
+                                qaihash << qaistream;
+
+                                // signature QAI verify
+                                qaisig.erase(qaisig.begin() + 128, qaisig.end());
+                                const uint256 msg_hash = qaihash.GetHash();
+                                if(!qpubkey.VerifyQai(msg_hash, qaisig))
+                                    return false;
+
+                                qaiVersion = nCurrentQaiVersion;
+                                debugcs::instance() << "Cipher QAI_CHECKMULTISIG Verify OK" << debugcs::endl();
+
+                                // Schnorr aggregation verify
+                                const valtype &xonlypubkeyvch = stacktop(-11);
+                                const valtype &schnorrsigvch = stacktop(-12);
+                                if(xonlypubkeyvch.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE)
+                                    return false;
+                                if(schnorrsigvch.size() != XOnlyPubKey::SCHNORR_SIGNATURE_SIZE)
+                                    return false;
+
+                                XOnlyPubKey xonlypubkey = XOnlyPubKey(Span<const unsigned char>(xonlypubkeyvch));
+                                // CAITransaction03 CKeyID check
+                                if(aitx.GetID() != xonlypubkey.GetID())
+                                    return false;
+                                // CKeyID check
+                                //if(!xonlypubkey.CmpSchnorrHash(qairand))
+                                //    return false;
+                                // Verify
+                                if(!xonlypubkey.VerifySchnorr(msg_hash, Span<const unsigned char>(schnorrsigvch)))
+                                    return false;
+
+                                debugcs::instance() << "Cipher QAI_CHECKMULTISIG Schnorr Verify OK" << debugcs::endl();
+
                             } else {
                                 qaiVersion = (int32_t)CurrentQaiVersion;
-                                // CurrentQaiVersion 0x03 ... 0xFF
+                                // CurrentQaiVersion 0x04 ... 0xFF
                             }
                         } // fQaimode
 
@@ -1851,6 +1954,16 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                                 }
                             } else if(qaiVersion == 2) {
                                 for(int i=0; i < 5; ++i) {
+                                    popstack(stack);
+                                }
+                                if(opcode == OP_CHECKMULTISIG) { // if OP_CHECKMULTISIG, stack size should be zero after popstack
+                                    debugcs::instance() << "QAI removing OP_CHECKMULTISIG stack size: " << std::to_string(stack.size()) << debugcs::endl();
+                                    if(stack.size() > 0) {
+                                        return false;
+                                    }
+                                }
+                            } else if(qaiVersion == 3) {
+                                for(int i=0; i < 18; ++i) {
                                     popstack(stack);
                                 }
                                 if(opcode == OP_CHECKMULTISIG) { // if OP_CHECKMULTISIG, stack size should be zero after popstack
@@ -2848,6 +2961,79 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
 
                 debugcs::instance() << "QAI and Schnorr creation OK" << debugcs::endl();
 
+                scriptSigRet += schnorrSig;
+                scriptSigRet += qaiSig;
+                scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
+                scriptSigRet += ecdsaScriptSig;
+            } else if (fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && qairand[1] == 0x03 && hd_wallet::get().enable) {
+                //! [Version 3] OP_CHECKMULTISIG for QAI, Schnorr Transaction and cipher message
+                CScript ecdsaScriptSig;
+                if(!SignN(vSolutions, keystore, hash, nHashType, ecdsaScriptSig))
+                    return false;
+
+                // get CAITransaction03
+                CScript aiscript;
+                CAITransaction03 aitx;
+                {
+                    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+                    LOCK(entry::pwalletMain->cs_wallet);
+                    if(!walletdb.ExistsAitx03(qairand))
+                        return false;
+                    if(!walletdb.ReadAitx03(qairand, aitx))
+                        return false;
+                }
+                if(!aitx.IsValid())
+                    return false;
+                if(!ai_script::aitx03_script_store(aiscript, aitx))
+                    return false;
+
+                const int32_t nCurrentQaiVersion = (int32_t)qairand[1];
+                const int32_t nHashType32 = (int32_t)nHashType;
+                CScript qaiVerifySig;
+                qaiVerifySig.reserve(256 + aiscript.size() + 32);
+                qaiVerifySig += ecdsaScriptSig;
+                qaiVerifySig << ecdsapub;
+                qaiVerifySig << qaihash;
+                qaiVerifySig << qairand;
+                qaiVerifySig << hash;
+                qaiVerifySig << nCurrentQaiVersion;
+                qaiVerifySig << nHashType32;
+                qaiVerifySig += aiscript;
+
+                CqKey qkey(hd_wallet::get().GetSecretKey());
+                if(!qkey.IsValid())
+                    return false;
+
+                CHashWriter qaihash(SER_GETHASH, 0);
+                qaihash << qaiVerifySig;
+                CScript qaiSig;
+                const uint256 msg_qhash = qaihash.GetHash();
+                if(!SignQAI2(qkey, msg_qhash, nHashType, qaiSig))
+                    return false;
+
+                CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
+                if(!qpubkey.IsFullyValid_BIP66())
+                    return false;
+                qaiSig << qpubkey;
+
+                // QAI signature verify check
+                if(!VerifySignatureQAI2(qaiSig, qaiVerifySig))
+                    return false;
+
+                // Schnorr signature
+                //! In SORA-QAI v2, "qairand" contained a CKeyID for Schnorr aggregated signatures,
+                //! but SORA-QAI v3, it has been replaced with the "Merkle root of AI-NFT".
+                //! The CKeyID for Schnorr aggregated signatures can now be found in "CAITransaction03 aitx's" GetID().
+                CKeyID keyid = aitx.GetID();
+                CScript schnorrSig;
+                XOnlyPubKeys xonly_pubkeys;
+                if(!SignSchnorr(keyid, msg_qhash, xonly_pubkeys, schnorrSig))
+                    return false;
+                schnorrSig << xonly_pubkeys.GetXOnlyPubKey().GetPubVch();
+
+                debugcs::instance() << "Cipher QAI and Schnorr creation OK" << debugcs::endl();
+
+                scriptSigRet += aiscript;
                 scriptSigRet += schnorrSig;
                 scriptSigRet += qaiSig;
                 scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug

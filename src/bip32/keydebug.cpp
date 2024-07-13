@@ -1572,6 +1572,7 @@ std::string wide_to_utf8(const std::wstring &wide_str) {
     static_assert(__cplusplus > 201703L, "Using alternative method for C++20 and beyond");
 #endif
 
+/*
 bool aitx03_script_store(CScript &script, const CAITransaction03 &aitx) {
     constexpr int32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
     constexpr int num = 13;
@@ -1627,6 +1628,7 @@ bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script) {
     stream >> aitx;
     return true;
 }
+*/
 
 bool agg_schnorr_ecdh_key_exchange() {
     std::string message = "I have heard that in a certain country, capitalism has partially collapsed, and people are forced to bear debts with an annual interest rate of up to 30 percent. Immediate improvement is necessary.";
@@ -1873,10 +1875,10 @@ bool agg_schnorr_ecdh_key_exchange() {
     print_bytes("SORA-QAI hash", qai_hash.first.data(), qai_hash.first.size());
 
     CScript script;
-    assert(aitx03_script_store(script, aitx2));
+    assert(ai_script::aitx03_script_store(script, aitx2));
     print_str("aitx script", script.ToString());
     CAITransaction03 aitx3;
-    assert(aitx03_script_load(aitx3, script));
+    assert(ai_script::aitx03_script_load(aitx3, script));
     assert(aitx2 == aitx3);
 
     return true;
@@ -1916,6 +1918,31 @@ void script_split_check() {
     }
 
     assert(vch == vch2);
+}
+
+bool check_cipher_transaction4() {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+
+    //! get the scriptPubKey
+    CBitcoinAddress address(hd_wallet::get().reserved_pubkey[0].GetID());
+    CScript scriptPubKey;
+    scriptPubKey.SetAddress(address);
+
+    //! send to SORA-QAI cipher scriptPubKey
+    CWalletTx wtx;
+    wtx.strFromAccount = std::string("cipher_ed3de8684df53a1ff25ada51cc089d9b6f56e3eb");
+    double fee = 1;
+    int64_t nAmount = util::roundint64(fee * util::COIN);
+    std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+    if (!strError.empty()) {
+        print_str("check_cipher_transaction", strError);
+        return false;
+    }
+
+    return true;
 }
 
 #include <address/bech32.h>
@@ -2508,7 +2535,7 @@ void Debug_checking_sign_verify() {
     //}
 
     // Check cipher transaction
-    //if(!agg_schnorr_ecdh_key_exchange()) {
+    //if(!check_cipher_transaction3()) {
     //    assert(!"6: check_cipher_transaction");
     //}
 

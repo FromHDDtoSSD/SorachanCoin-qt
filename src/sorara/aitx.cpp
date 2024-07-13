@@ -199,6 +199,10 @@ std::pair<qkey_vector, bool> CAITransaction03::GetSchnorrHash() const {
     return aitx.GetSchnorrHash();
 }
 
+CKeyID CAITransaction03::GetID() const {
+    return aitx.GetID();
+}
+
 //#ifdef QT_GUI
 //# include <QMessageBox>
 //#endif
@@ -417,3 +421,63 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
 }
 
 } // aitx_thread
+
+namespace ai_script {
+
+bool aitx03_script_store(CScript &script, const CAITransaction03 &aitx) {
+    constexpr int32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    constexpr int num = 13;
+    int32_t ser_size = (int32_t)aitx.GetSerializeSize();
+    if(ser_size > cs * num)
+        return false;
+
+    script.clear();
+    CDataStream stream;
+    stream << aitx;
+    CDataStream::const_iterator pc = stream.begin();
+    for(int i=0; i < num; ++i) {
+        if(ser_size < cs) {
+            script << script_vector(pc + (i * cs), pc + (i * cs) + ser_size);
+            for(int k=i + 1; k < num; ++k) {
+                script << ScriptOpcodes::OP_0;
+            }
+            break;
+        } else {
+            script << script_vector(pc + (i * cs), pc + (i * cs) + cs);
+            ser_size -= cs;
+        }
+    }
+
+    return true;
+}
+
+bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script) {
+    constexpr int32_t cs = Script_const::MAX_SCRIPT_ELEMENT_SIZE;
+    constexpr int num = 13;
+    int32_t script_size = (int32_t)script.size();
+    if(script_size > cs * num)
+        return false;
+
+    CDataStream stream;
+    stream.resize(script_size);
+    CScript::const_iterator pc = script.begin();
+    CDataStream::const_iterator csc = stream.begin();
+    unsigned char *pds = (unsigned char *)const_cast<char *>(&(*csc));
+    uint32_t offset = 0;
+    for(int i=0; i < num; ++i) {
+        script_vector vch;
+        ScriptOpcodes::opcodetype opcode = ScriptOpcodes::OP_NOP;
+        if(!script.GetOp(pc, opcode, vch))
+            return false;
+        if(opcode == ScriptOpcodes::OP_0)
+            break;
+        ::memcpy(pds + offset, vch.data(), vch.size());
+        offset += vch.size();
+    }
+
+    aitx.ClearTokens();
+    stream >> aitx;
+    return true;
+}
+
+} // ai_script
