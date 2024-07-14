@@ -14,10 +14,10 @@
 #include <allocator/allocators.h>
 #include <thread/threadqai.h>
 #include <rpc/bitcoinrpc.h>
-#if __cplusplus <= 201703L
-# include <locale>
-# include <codecvt>
-#endif
+//#if __cplusplus <= 201703L
+//# include <locale>
+//# include <codecvt>
+//#endif
 
 // #define VERIFY_CHECK(cond) do { (void)(cond); } while(0)
 
@@ -1451,8 +1451,6 @@ bool agg_schnorr_from_wallet_to_keys() {
     return true;
 }
 
-
-
 constexpr static size_t HASH160_DIGEST_LENGTH = 20;
 struct secp256k1_hash160 {
     unsigned char data[HASH160_DIGEST_LENGTH];
@@ -1538,6 +1536,7 @@ int secp256k1_get_merkle_root(secp256k1_hash160 *r, unsigned char **hashes, size
     return 1;
 }
 
+/*
 #if __cplusplus <= 201703L
 uint32_t count_utf8_chars(const std::string &utf8_str) {
     std::wstring_convert<std::codecvt_utf8<char32_t>, char32_t> conv;
@@ -1571,6 +1570,7 @@ std::string wide_to_utf8(const std::wstring &wide_str) {
 #else
     static_assert(__cplusplus > 201703L, "Using alternative method for C++20 and beyond");
 #endif
+*/
 
 /*
 bool aitx03_script_store(CScript &script, const CAITransaction03 &aitx) {
@@ -1836,15 +1836,18 @@ bool agg_schnorr_ecdh_key_exchange() {
     CAITransaction03 aitx;
     SecureString web3(std::string("This is a decentralized encrypted message. Let's ensure privacy with user-sovereign Web3!"));
     assert(!aitx.IsValid());
+    uint64_t maxuInt64 = std::numeric_limits<uint64_t>::max();
     for(int i=0; i < 10; ++i) {
-        SecureString _web3 = web3 + std::to_string(i);
+        SecureString _web3 = web3 + std::to_string(maxuInt64 - i);
         aitx.PushTokenMessage(SKey1, _web3);
     }
+    std::string num_str = tinyformat::format("%llu", maxuInt64);
+    print_str("tinyformat", num_str);
     for(int i=0; i < aitx.SizeTokens(); ++i) {
         SecureString plain;
         CAIToken03 token = aitx[i];
         assert(token.GetTokenMessage(SKey1, plain));
-        assert(plain == (web3 + SecureString::to_SecureString(i)));
+        assert(plain == (web3 + SecureString::to_SecureString(maxuInt64 - i)));
         print_num("num", i);
         print_str("plain", plain);
     }
@@ -1861,11 +1864,11 @@ bool agg_schnorr_ecdh_key_exchange() {
     print_num("stream size", stream.size());
     CAITransaction03 aitx2;
     stream >> aitx2;
-    int i2 = 0;
+    uint64_t i2 = 0;
     for(const auto &token: aitx2) {
         SecureString plain;
         assert(token.GetTokenMessage(SKey1, plain));
-        assert(plain == (web3 + SecureString::to_SecureString(i2)));
+        assert(plain == (web3 + SecureString::to_SecureString(maxuInt64 - i2)));
         print_num("num2", i2);
         print_str("plain2", plain);
         ++i2;

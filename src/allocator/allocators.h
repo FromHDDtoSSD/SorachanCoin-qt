@@ -12,6 +12,7 @@
 #include <mutex>
 #include <map>
 #include <util/args.h>
+#include <util/tinyformat.h>
 #include <cleanse/cleanse.h>
 
 #ifdef WIN32
@@ -412,6 +413,12 @@ public:
         return str_.empty();
     }
 
+    void insert(uint32_t offset, const char *begin, uint32_t size) {
+        str_.resize(size);
+        ::memcpy(&str_.front() + offset, begin, size);
+    }
+
+    /*
     String_with_s_allocator::iterator insert(String_with_s_allocator::const_iterator offset, String_with_s_allocator::const_iterator begin, String_with_s_allocator::const_iterator end) {
         return str_.insert(offset, begin, end);
     }
@@ -419,6 +426,7 @@ public:
     String_with_s_allocator::iterator insert(String_with_s_allocator::const_iterator offset, CSecureBytes::const_iterator begin, CSecureBytes::const_iterator end) {
         return str_.insert(offset, begin, end);
     }
+    */
 
     SecureString &assign(const SecureString &str, std::size_t pos, std::size_t n) {
         str_.assign(str.str_, pos, n);
@@ -453,38 +461,22 @@ public:
     }
 
     static SecureString to_SecureString(int32_t i) {
-        SecureString str;
-        char buf[32];
-        ::sprintf(buf, "%d", i);
-        str = buf;
-        cleanse::memory_cleanse(buf, sizeof(buf));
+        SecureString str = tinyformat::format("%d", i);
         return str;
     }
 
     static SecureString to_SecureString(int64_t i) {
-        SecureString str;
-        char buf[32];
-        ::sprintf(buf, "%lld", i);
-        str = buf;
-        cleanse::memory_cleanse(buf, sizeof(buf));
+        SecureString str = tinyformat::format("%lld", i);
         return str;
     }
 
     static SecureString to_SecureString(uint32_t i) {
-        SecureString str;
-        char buf[32];
-        ::sprintf(buf, "%u", i);
-        str = buf;
-        cleanse::memory_cleanse(buf, sizeof(buf));
+        SecureString str = tinyformat::format("%u", i);
         return str;
     }
 
     static SecureString to_SecureString(uint64_t i) {
-        SecureString str;
-        char buf[32];
-        ::sprintf(buf, "%llu", i);
-        str = buf;
-        cleanse::memory_cleanse(buf, sizeof(buf));
+        SecureString str = tinyformat::format("%llu", i);
         return str;
     }
 };

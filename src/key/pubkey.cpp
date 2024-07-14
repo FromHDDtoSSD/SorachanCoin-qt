@@ -4168,24 +4168,30 @@ bool XOnlyAggWalletInfo::push_commit(const uint160 &hash, std::tuple<unsigned in
 }
 
 bool XOnlyAggWalletInfo::GetAggKeys(unsigned int begin_index, size_t agg_size, XOnlyKeys &xonly_agg_keys) {
+    auto gen_context_off_static = [](bool ret) {
+        CFirmKey::ecmult::secp256k1_gen_context::off_static();
+        return ret;
+    };
+
     if(entry::pwalletMain->IsLocked())
         return false;
     if(!hd_wallet::get().enable || !hd_wallet::get().pkeyseed)
         return false;
 
+    CFirmKey::ecmult::secp256k1_gen_context::on_static();
     CExtKey extkeyseed = *hd_wallet::get().pkeyseed;
     if(!extkeyseed.IsValid())
-        return false;
+        return gen_context_off_static(false);
 
     xonly_agg_keys.clear();
     for(unsigned int i=begin_index; i < begin_index + agg_size; ++i) {
         CExtKey extkey;
         if(!extkeyseed.Derive(extkey, i))
-            return false;
+            return gen_context_off_static(false);
         xonly_agg_keys.push(extkey.GetSecret());
     }
 
-    return true;
+    return gen_context_off_static(true);
 }
 
 bool XOnlyAggWalletInfo::GetAggPublicKeys(unsigned int begin_index, size_t agg_size, XOnlyPubKeys &xonly_agg_pubkeys) {

@@ -9,6 +9,7 @@
 #include <util/time.h>
 #include <bip32/hdchain.h>
 #include <init.h>
+#include <ctime>
 
 namespace {
 
@@ -84,7 +85,8 @@ bool CAIToken03::GetTokenMessage(const SymmetricKey &key, SecureString &message)
         return false;
     message.clear();
     message.shrink_to_fit();
-    message.insert(message.end(), plain.first.begin(), plain.first.end());
+    //message.insert(message.end(), plain.first.begin(), plain.first.end());
+    message.insert(0, (const char *)plain.first.data(), plain.first.size());
     return true;
 }
 
@@ -481,3 +483,18 @@ bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script) {
 }
 
 } // ai_script
+
+namespace ai_time {
+
+std::string get_localtime_format(time_t time) {
+    struct tm *localTime = std::localtime(&time);
+    std::string ret =
+            std::to_string(localTime->tm_year + 1900) + std::string(" - ") +
+            tinyformat::format("%d", localTime->tm_mon + 1) + std::string("/") +
+            tinyformat::format("%d", localTime->tm_mday) + std::string(" - ") +
+            tinyformat::format("%.2d", localTime->tm_hour) + std::string(":") +
+            tinyformat::format("%.2d", localTime->tm_min);
+    return ret;
+}
+
+} // ai_time

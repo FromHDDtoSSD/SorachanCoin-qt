@@ -149,4 +149,10 @@ bool aitx03_script_load(CAITransaction03 &aitx, const CScript &script);
 
 } // ai_script
 
+namespace ai_time {
+
+std::string get_localtime_format(time_t time);
+
+} // ai_time
+
 #endif // SORA_QAI_AITX_H
