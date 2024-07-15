@@ -545,6 +545,7 @@ contains(GUI_MODE, 1) {
         src/qt/multisiginputentry.h \
         src/qt/multisigdialog.h \
         src/qt/secondauthdialog.h \
+        src/qt/getciphermessageswidget.h \
         src/winapi/winguimain.h \
         src/winapi/drivebase.h \
         src/winapi/drivewin.h \
@@ -609,6 +610,7 @@ contains(GUI_MODE, 1) {
         src/qt/notificator.cpp \
         src/qt/qtipcserver.cpp \
         src/qt/rpcconsole.cpp \
+        src/qt/getciphermessageswidget.cpp \
         src/winapi/winguimain.cpp \
         src/winapi/drivebase.cpp \
         src/winapi/drivewin.cpp \

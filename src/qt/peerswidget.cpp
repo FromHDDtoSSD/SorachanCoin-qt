@@ -68,5 +68,3 @@ void PeersWidget::update() {
     GetPeersInfo(result);
     emit newnode(false, QString(result.c_str()), true);
 }
-
-void RPCConsole::on_updatePushButton_clicked() {}

@@ -5,9 +5,7 @@
 #include <sorara/aitx.h>
 #include <crypto/aes.h>
 #include <hash.h>
-#include <key/privkey.h>
 #include <util/time.h>
-#include <bip32/hdchain.h>
 #include <init.h>
 #include <ctime>
 
@@ -222,10 +220,10 @@ public:
     QMB() = delete;
     QMB(status s) {
         if(s == M_OK) {
-            title = utf8_to_sjis(_("Confirmation"));
+            title = "Confirmation";
             icon = MB_ICONINFORMATION;
         } else if (s == M_ERROR) {
-            title = utf8_to_sjis(_("Error"));
+            title = "Error";
             icon = MB_ICONWARNING;
         } else {
             assert(!"QMB ERROR");
@@ -235,7 +233,7 @@ public:
     }
 
     QMB &setText(const std::string &text) {
-        message = utf8_to_sjis(text);
+        message = text;
         return *this;
     }
 
@@ -245,17 +243,6 @@ public:
     }
 
 private:
-
-    static std::string utf8_to_sjis(const std::string &utf8Str) {
-        const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
-        std::wstring wideStr(wideCharLen, 0);
-        ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
-
-        const int32_t sjisCharLen = ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
-        std::string sjisStr(sjisCharLen, 0);
-        ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, &sjisStr[0], sjisCharLen, nullptr, nullptr);
-        return sjisStr;
-    }
 
     std::string title;
     std::string message;
@@ -398,7 +385,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         //! send to reservedkey scriptPubKey
         CWalletTx wtx;
         wtx.strFromAccount = acc_hash;
-        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
+        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount / 2, wtx);
         if (!strError.empty()) {
             fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
             fMessage ? QMB(QMB::M_ERROR).setText(_("[B] The balance is likely insufficient. Please ensure a balance of at least 1 SORA.")).exec(): 0;
@@ -498,3 +485,139 @@ std::string get_localtime_format(time_t time) {
 }
 
 } // ai_time
+
+namespace ai_cipher {
+
+bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &result, std::string &err) {
+    auto IsQairand03 = [](const CScript &scriptSig) {
+        const uint32_t qaisize = 33 + 1 + 1; // [qairand(33)][OP_3(1)][OP_CHECKMULTISIG(1)]
+        if(scriptSig.size() < qaisize)
+            return false;
+        if(scriptSig.back() != ScriptOpcodes::OP_CHECKMULTISIG)
+            return false;
+        CScript::const_iterator pc = scriptSig.begin() + (scriptSig.size() - qaisize);
+        qkey_vector randvch;
+        randvch.insert(randvch.end(), pc, pc + 33);
+        return CqPubKey::IsRandHash(randvch) && randvch[1] == 0x03;
+    };
+
+    auto Error = [&err](const char *c_err) {
+        err = std::string(c_err);
+        return false;
+    };
+
+    int block_begin = block_info::nBestHeight - (hours * 20);
+    if (block_begin < 0 || block_begin > block_info::nBestHeight)
+        return Error("Error: Block number out of range.");
+
+    //
+    // get CAITransaction03
+    //
+    std::vector<std::tuple<int, uint32_t, key_vector, CAITransaction03>> vaitx;
+    for (int nHeight = block_begin; nHeight <= block_info::nBestHeight; ++nHeight) {
+        CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
+        while (pblockindex->get_nHeight() > nHeight)
+            pblockindex = pblockindex->set_pprev();
+
+        pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
+        CBlock block;
+        if(!block.ReadFromDisk(pblockindex, true))
+            return Error("Error: failed to read from disk.");
+
+        for(const CTransaction &tx: block.get_vtx()) {
+            for(const CTxIn &txin: tx.get_vin()) {
+                if(IsQairand03(txin.get_scriptSig())) {
+                    script_vector vch;
+                    ScriptOpcodes::opcodetype opcode;
+                    script_vector::const_iterator pc = txin.get_scriptSig().begin();
+                    int i=0;
+                    CScript aiscript;
+                    while(txin.get_scriptSig().GetOp(pc, opcode, vch)) {
+                        aiscript << vch;
+                        if(++i == 13)
+                            break;
+                    }
+
+                    int pos_xonly_pubkey = 0;
+                    key_vector recipient_agg_pubkey;
+                    while(txin.get_scriptSig().GetOp(pc, opcode, vch)) {
+                        if(++pos_xonly_pubkey == 2) {
+                            recipient_agg_pubkey = std::move(vch);
+                            break;
+                        }
+                    }
+                    if(recipient_agg_pubkey.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE)
+                        return Error("Error: xonly_agg_pubkey is invalid.");
+                    XOnlyPubKey xonly_pubkey(recipient_agg_pubkey);
+
+                    CAITransaction03 aitx;
+                    if(!ai_script::aitx03_script_load(aitx, aiscript))
+                        return Error("Error: failed to load in CAITransaction03.");
+                    if(!aitx.IsValid())
+                        return Error("Error: CAITransaction03 is invalid.");
+                    if(aitx.GetID() != xonly_pubkey.GetID())
+                        return Error("Error: Schnorr signature public key for SymmetricKey is invalid.");
+                    vaitx.emplace_back(std::make_tuple(nHeight, tx.get_nTime(), recipient_agg_pubkey, aitx));
+                }
+            }
+        }
+    }
+
+    //
+    // Compute SymmetricKey and decrypto messages
+    //
+    XOnlyKeys my_xonly_keys;
+    if(!XOnlyAggWalletInfo::GetAggKeys(cipher_begin_index, cipher_agg_size, my_xonly_keys))
+        return Error("Error: SymmetricKey is invalid.");
+    CSecret my_agg_key;
+    my_xonly_keys.GetSecret(my_agg_key);
+    for(const auto &d: vaitx) {
+        const key_vector &recipient_agg_pubkey = std::get<2>(d);
+        secp256k1_symmetrickey symmetrickey;
+        if(SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL,  my_agg_key.data(), recipient_agg_pubkey.data(), &symmetrickey) != 1)
+            return Error("Error: failed to compute in SymmetricKey");
+        SymmetricKey symkey(symmetrickey);
+
+        const CAITransaction03 &aitx = std::get<3>(d);
+        for(const auto &token: aitx) {
+            SecureString message;
+            if(token.GetTokenMessage(symkey, message)) {
+                result.emplace_back(std::make_pair(std::get<1>(d), message));
+            }
+        }
+    }
+
+    err = std::string("");
+    return true;
+}
+
+} // ai_cipher
+
+/*
+namespace ai_lang {
+
+#ifdef QT_GUI
+
+std::string utf8_to_sjis(const std::string &utf8Str) {
+    const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
+    std::wstring wideStr(wideCharLen, 0);
+    ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
+    wideStr.pop_back(); // erase "\0"
+
+    const int32_t sjisCharLen = ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    std::string sjisStr(sjisCharLen, 0);
+    ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, &sjisStr[0], sjisCharLen, nullptr, nullptr);
+    sjisStr.pop_back(); // erase "\0"
+    return sjisStr;
+}
+
+#else
+
+std::string utf8_to_sjis(const std::string &utf8Str) {
+    return utf8Str;
+}
+
+#endif
+
+} // ai_lang
+*/

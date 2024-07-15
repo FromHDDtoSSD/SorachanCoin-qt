@@ -554,8 +554,6 @@ CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggW
 
 const std::string hrp_cipher_main = "cipher";
 const std::string hrp_cipher_testnet = "ciphertest";
-constexpr unsigned int cipher_begin_index = hdkeys_child_regenerate + 1;
-constexpr size_t cipher_agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
 static std::string GetHrpCipher() {
     return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
 }
@@ -569,105 +567,19 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
             "If omitted, it defaults to 168 hours (7 days).");
     }
 
-    auto IsQairand03 = [](const CScript &scriptSig) {
-        const uint32_t qaisize = 33 + 1 + 1; // [qairand(33)][OP_3(1)][OP_CHECKMULTISIG(1)]
-        if(scriptSig.size() < qaisize)
-            return false;
-        if(scriptSig.back() != ScriptOpcodes::OP_CHECKMULTISIG)
-            return false;
-        CScript::const_iterator pc = scriptSig.begin() + (scriptSig.size() - qaisize);
-        qkey_vector randvch;
-        randvch.insert(randvch.end(), pc, pc + 33);
-        return CqPubKey::IsRandHash(randvch) && randvch[1] == 0x03;
-    };
-
     const int hours = (params.size() > 0) ? params[0].get_int() : 168;
-    int block_begin = block_info::nBestHeight - (hours * 20);
-    if (block_begin < 0 || block_begin > block_info::nBestHeight)
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: Block number out of range.");
+    std::string err;
+    std::vector<std::pair<time_t, SecureString>> vdata;
+    if(!ai_cipher::getmessages(hours, vdata, err))
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, err.c_str());
 
-    //
-    // get CAITransaction03
-    //
-    std::vector<std::tuple<int, uint32_t, key_vector, CAITransaction03>> vaitx;
-    for (int nHeight = block_begin; nHeight <= block_info::nBestHeight; ++nHeight) {
-        CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
-        while (pblockindex->get_nHeight() > nHeight)
-            pblockindex = pblockindex->set_pprev();
-
-        pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
-        CBlock block;
-        if(!block.ReadFromDisk(pblockindex, true))
-            throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: failed to read from disk.");
-
-        for(const CTransaction &tx: block.get_vtx()) {
-            for(const CTxIn &txin: tx.get_vin()) {
-                if(IsQairand03(txin.get_scriptSig())) {
-                    script_vector vch;
-                    ScriptOpcodes::opcodetype opcode;
-                    script_vector::const_iterator pc = txin.get_scriptSig().begin();
-                    int i=0;
-                    CScript aiscript;
-                    while(txin.get_scriptSig().GetOp(pc, opcode, vch)) {
-                        aiscript << vch;
-                        if(++i == 13)
-                            break;
-                    }
-
-                    int pos_xonly_pubkey = 0;
-                    key_vector recipient_agg_pubkey;
-                    while(txin.get_scriptSig().GetOp(pc, opcode, vch)) {
-                        if(++pos_xonly_pubkey == 2) {
-                            recipient_agg_pubkey = std::move(vch);
-                            break;
-                        }
-                    }
-                    if(recipient_agg_pubkey.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE)
-                        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: xonly_agg_pubkey is invalid.");
-                    XOnlyPubKey xonly_pubkey(recipient_agg_pubkey);
-
-                    CAITransaction03 aitx;
-                    if(!ai_script::aitx03_script_load(aitx, aiscript))
-                        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: failed to load in CAITransaction03.");
-                    if(!aitx.IsValid())
-                        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: CAITransaction03 is invalid.");
-                    if(aitx.GetID() != xonly_pubkey.GetID())
-                        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: Schnorr signature public key for SymmetricKey is invalid.");
-                    vaitx.emplace_back(std::make_tuple(nHeight, tx.get_nTime(), recipient_agg_pubkey, aitx));
-                }
-            }
-        }
-    }
-
-    //
-    // Compute SymmetricKey and decrypto messages
-    //
     json_spirit::Object result;
-    XOnlyKeys my_xonly_keys;
-    if(!XOnlyAggWalletInfo::GetAggKeys(cipher_begin_index, cipher_agg_size, my_xonly_keys))
-        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: SymmetricKey is invalid.");
-    CSecret my_agg_key;
-    my_xonly_keys.GetSecret(my_agg_key);
-    for(const auto &d: vaitx) {
-        const key_vector &recipient_agg_pubkey = std::get<2>(d);
-        secp256k1_symmetrickey symmetrickey;
-        if(SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL,  my_agg_key.data(), recipient_agg_pubkey.data(), &symmetrickey) != 1)
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: failed to compute in SymmetricKey");
-        SymmetricKey symkey(symmetrickey);
-
-        const CAITransaction03 &aitx = std::get<3>(d);
-        json_spirit::Array minfo;
-        for(const auto &token: aitx) {
-            SecureString message;
-            if(token.GetTokenMessage(symkey, message)) {
-                //print_str("cipher message", std::string(message.c_str()));
-                minfo.emplace_back(std::string(message.c_str()));
-            }
-        }
-        if(minfo.size() > 0) {
-            result.emplace_back(json_spirit::Pair("time", ai_time::get_localtime_format(std::get<1>(d))));
-            result.emplace_back(json_spirit::Pair("messages", minfo));
-        }
+    int num = 0;
+    for(const auto &d: vdata) {
+        json_spirit::Array obj;
+        obj.emplace_back(ai_time::get_localtime_format(d.first));
+        obj.emplace_back(std::string(d.second.c_str()));
+        result.emplace_back(json_spirit::Pair(std::to_string(++num), obj));
     }
 
     return result;
@@ -689,7 +601,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
     //! If no arguments, it can obtain a dedicated address for receiving encrypted messages
     if(params.size() == 0) {
         XOnlyPubKeys xonly_agg_pubkeys;
-        if(!XOnlyAggWalletInfo::GetAggPublicKeys(cipher_begin_index, cipher_agg_size, xonly_agg_pubkeys))
+        if(!XOnlyAggWalletInfo::GetAggPublicKeys(ai_cipher::cipher_begin_index, ai_cipher::cipher_agg_size, xonly_agg_pubkeys))
             throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
 
         XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
@@ -758,7 +670,7 @@ CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_p
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyAggWalletInfo is invalid");
 
     uint160 hash;
-    if(!xonly_agg_wallet.MakeNewKey(hash, cipher_agg_size))
+    if(!xonly_agg_wallet.MakeNewKey(hash, ai_cipher::cipher_agg_size))
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XonlyKey MakeNewKey is invalid");
 
     XOnlyPubKeys my_xonly_schnorr_pubkeys;

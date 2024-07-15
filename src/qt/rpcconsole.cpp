@@ -359,6 +359,26 @@ void RPCConsole::peers(bool ban, const QString &message, bool html/*=false*/) {
     ui->peersMessagesWidget->append(out);
 }
 
+void RPCConsole::ciphermessages(const QString &message, bool html/*=false*/) {
+    ui->cipherMessagesWidget->document()->setDefaultStyleSheet(
+                "table { }"
+                "td { font-family: Monospace; } "
+                "td.time { color: #FFFFFF; padding-top: 10px; } "
+                "td.cmd-request { color: #FFFFFF; } "
+                "td.cmd-error { color: red; } "
+                "b { color: #006060; } "
+                );
+
+    QTime time = QTime::currentTime();
+    QString timeString = time.toString();
+    QString out;
+    out += "<table width=\"600\"><tr><td class=\"time\" width=\"65\">" + timeString + "</td><td>";
+    if(html) out += message;
+    else out += GUIUtil::HtmlEscape(message, true);
+    out += "</td></tr></table>";
+    ui->cipherMessagesWidget->append(out);
+}
+
 void RPCConsole::message(int category, const QString &message, bool html/*=false*/) {
     QTime time = QTime::currentTime();
     QString timeString = time.toString();
@@ -422,7 +442,8 @@ void RPCConsole::startExecutor() {
     QThread *thread = new (std::nothrow) QThread;
     RPCExecutor *executor = new (std::nothrow) RPCExecutor;
     PeersWidget *pw = new (std::nothrow) PeersWidget;
-    if(!thread || !executor || !pw)
+    GetCipherWidget *pcipher = new (std::nothrow) GetCipherWidget;
+    if(!thread || !executor || !pw || !pcipher)
         throw qt_error("RPCConsole Failed to allocate memory.", this);
     executor->moveToThread(thread);
 
@@ -434,8 +455,12 @@ void RPCConsole::startExecutor() {
     connect(this, SIGNAL(cmdRequest(QString)), executor, SLOT(request(QString)));
     // Peers from executor object must go to this object
     connect(pw, SIGNAL(newnode(bool,QString,bool)), this, SLOT(peers(bool,QString,bool)));
+    // GetCipher from executor object must go to this object
+    connect(pcipher, SIGNAL(getciphermessages(QString,bool)), this, SLOT(ciphermessages(QString,bool)));
     // Peers connect
     connect(ui->updatePushButton, SIGNAL(clicked()), pw, SLOT(update()));
+    // GetCipher connect
+    connect(ui->getcipherPushButton, SIGNAL(clicked()), pcipher, SLOT(update()));
     // On stopExecutor signal
     // - queue executor for deletion (in execution thread)
     // - quit the Qt event loop in the execution thread
@@ -521,3 +546,5 @@ void RPCConsole::keyPressEvent(QKeyEvent *event) {
         close();
 #endif
 }
+
+//void RPCConsole::on_updatePushButton_clicked() {}

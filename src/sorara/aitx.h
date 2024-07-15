@@ -6,9 +6,9 @@
 #define SORA_QAI_AITX_H
 
 #include <uint256.h>
+#include <key/privkey.h>
 #include <key/pubkey.h>
-
-class SymmetricKey;
+#include <bip32/hdchain.h>
 
 //! SORA-QAI ver3: crypto message
 class CAIToken03
@@ -154,5 +154,22 @@ namespace ai_time {
 std::string get_localtime_format(time_t time);
 
 } // ai_time
+
+namespace ai_cipher {
+
+constexpr unsigned int cipher_begin_index = hdkeys_child_regenerate + 1;
+constexpr size_t cipher_agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
+
+bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &result, std::string &err);
+
+} // ai_cipher
+
+/*
+namespace ai_lang {
+
+std::string utf8_to_sjis(const std::string &utf8Str);
+
+} // ai_lang
+*/
 
 #endif // SORA_QAI_AITX_H
