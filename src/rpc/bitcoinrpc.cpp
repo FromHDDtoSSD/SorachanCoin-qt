@@ -1409,6 +1409,7 @@ json_spirit::Array bitrpc::RPCConvertValues(const std::string &strMethod, const 
 
     if (strMethod == "getnewschnorraddress"   && n > 1) { ConvertTo<int64_t>(params[1]); }
     if (strMethod == "getciphermessages"      && n > 0) { ConvertTo<int32_t>(params[0]); }
+    if (strMethod == "getnewcipheraddress"    && n > 2) { ConvertTo<int32_t>(params[2]); }
     if (strMethod == "getnetworkhashps"       && n > 0) { ConvertTo<int>(params[0]); }
 
     if (strMethod == "scaninput"              && n > 0) { ConvertTo<json_spirit::Object>(params[0]); }

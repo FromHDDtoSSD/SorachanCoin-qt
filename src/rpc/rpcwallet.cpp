@@ -590,15 +590,16 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
 
 json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &params, bool fHelp)
 {
-    if (fHelp || params.size() > 2) {
+    if (fHelp || params.size() > 3) {
         throw std::runtime_error(
             "getnewcipheraddress or "
-            "getnewcipheraddress [recipient address] [cipher message] "
+            "getnewcipheraddress [recipient address] [cipher message] (Stealth) "
             "If no arguments are provided, it can obtain a dedicated address for receiving encrypted messages. "
             "This is a special address that starts with cipher1.  "
             "If arguments are provided, please pass the address of the recipient "
             "it want to send the ciphertext to (an address starting with cipher1) "
-            "followed by the ciphertext you wish to embed.");
+            "followed by the ciphertext you wish to embed. "
+            "If Stealth is 1, Stealth is enabled. (Optional and disabled by default.) ");
     }
 
     //! If no arguments, it can obtain a dedicated address for receiving encrypted messages
@@ -613,10 +614,15 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
 
     //! If arguments are provided
     //! Creation SORA-QAI qai-v3 cipher message transaction
-    if(params.size() == 2) {
+    if(params.size() >= 2) {
         std::string recipient_pubkey = params[0].get_str();
         SecureString cipher = const_cast<std::string &&>(params[1].get_str());
-        CBitcoinAddress address = CreateNewCipherAddress(recipient_pubkey, cipher);
+        bool stealth = false;
+        if(params.size() == 3) {
+            if(params[2].get_int() == 1)
+                stealth = true;
+        }
+        CBitcoinAddress address = CreateNewCipherAddress(recipient_pubkey, cipher, stealth);
 
         /*
         uint160 rand_hash;
@@ -645,7 +651,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
     return std::string("");
 }
 
-CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher) {
+CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher, bool stealth) {
     using namespace ScriptOpcodes;
 
     if(!hd_wallet::get().enable)
@@ -707,12 +713,18 @@ CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_p
     // Build aitx and qrandhash
     //
     std::string recipient_agg_pubhex;
-    recipient_agg_pubhex.reserve(66);
-    recipient_agg_pubhex = std::string("[");
-    recipient_agg_pubhex += strenc::HexStr(recipient_agg_pubkey);
-    recipient_agg_pubhex += std::string("]");
-    if(recipient_agg_pubhex.size() != (XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE * 2) + 2)
-        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address hex is invalid");
+    if(!stealth) {
+        recipient_agg_pubhex.reserve(66);
+        recipient_agg_pubhex = std::string("[");
+        recipient_agg_pubhex += strenc::HexStr(recipient_agg_pubkey);
+        recipient_agg_pubhex += std::string("]");
+        if(recipient_agg_pubhex.size() != (XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE * 2) + 2)
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address hex is invalid");
+    } else {
+        recipient_agg_pubhex.reserve(2);
+        recipient_agg_pubhex = std::string("[");
+        recipient_agg_pubhex += std::string("]");
+    }
     SecureString cipher_and_pubkey = cipher;
     cipher_and_pubkey += std::move(recipient_agg_pubhex);
     CAITransaction03 aitx;

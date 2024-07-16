@@ -630,11 +630,13 @@ bool getmessages(uint32_t hours, std::vector<std::tuple<time_t, std::string, Sec
     return true;
 }
 
-bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher) {
+bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher, bool stealth) {
     try {
         json_spirit::Array obj;
         obj.emplace_back(recipient_pubkey);
         obj.emplace_back(std::move(cipher));
+        if(stealth)
+            obj.emplace_back((int32_t)1);
         CRPCTable::getnewcipheraddress(obj, false);
     } catch (const json_spirit::Object &) {
         return false;

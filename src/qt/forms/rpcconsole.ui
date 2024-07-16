@@ -1042,6 +1042,13 @@ color: rgb(0, 170, 255);</string>
           </widget>
          </item>
          <item>
+          <widget class="QCheckBox" name="stealthCheckBox">
+           <property name="text">
+            <string>Enable stealth mode</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <spacer name="__horizontalSpacer_4">
            <property name="orientation">
             <enum>Qt::Horizontal</enum>

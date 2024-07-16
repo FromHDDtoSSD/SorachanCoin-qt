@@ -172,7 +172,7 @@ constexpr size_t cipher_agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
 
 bool getmycipheraddress(std::string &cipher_address, std::string &err);
 bool getmessages(uint32_t hours, std::vector<std::tuple<time_t, std::string, SecureString>> &result, std::string &err);
-bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher);
+bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher, bool stealth);
 
 } // ai_cipher
 

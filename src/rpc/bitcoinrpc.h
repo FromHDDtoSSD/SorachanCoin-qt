@@ -305,7 +305,7 @@ private:
     static CBitcoinAddress CreateNewQaiAddress(CScript *create_redeem = nullptr);
     static CBitcoinAddress GetAccountAddress(std::string strAccount, bool bForceNew=false);
     static CBitcoinAddress CreateNewSchnorrAddress(size_t agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, CScript *create_redeem = nullptr);
-    static CBitcoinAddress CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher);
+    static CBitcoinAddress CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher, bool stealth);
     static CBitcoinAddress GetAccountQaiAddress(std::string strAccount, bool bForceNew=false);
     static CBitcoinAddress GetAccountSchnorrAddress(std::string strAccount, bool bForceNew = false);
     static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress);

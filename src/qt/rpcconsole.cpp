@@ -392,9 +392,10 @@ void RPCConsole::ciphermypubkey() {
 void RPCConsole::sendciphermessage() {
     QString q_recipient_pubkey = ui->cipheraddresslineEdit->text();
     QString q_cipher = ui->sendciphermessageWidget->toPlainText();
+    bool stealth = ui->stealthCheckBox->isChecked();
     std::string recipient_pubkey = q_recipient_pubkey.toStdString();
     std::string cipher = q_cipher.toStdString();
-    if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher)))
+    if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher), stealth))
         QMessageBox::critical(this, QString(_("Error").c_str()), QString("The operation failed."));
 }
 
@@ -524,7 +525,7 @@ void RPCConsole::startExecutor() {
     // Peers connect
     connect(ui->updatePushButton, SIGNAL(clicked()), pw, SLOT(update()));
     // Cipher from executor object must go to this object
-    connect(pcipher, SIGNAL(getciphermessages(QString,bool)), this, SLOT(ciphermessages(QString,bool)));
+    //connect(pcipher, SIGNAL(getciphermessages(QString,bool)), this, SLOT(ciphermessages(QString,bool)));
     // Cipher connect
     connect(ui->getcipherPushButton, SIGNAL(clicked()), this, SLOT(updateCipherMessage()));
     connect(ui->getmyaddressPushButton, SIGNAL(clicked()), this, SLOT(ciphermypubkey()));
