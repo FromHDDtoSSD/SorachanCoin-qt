@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 //
 // Call Table
 //
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[107] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[108] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                       &help,                        true,   true },
@@ -210,6 +210,7 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[107] =
     { "getnewqaiaddress",           &getnewqaiaddress,            true,   false },
     { "getnewschnorraddress",       &getnewschnorraddress,        true,   false },
     { "getnewcipheraddress",        &getnewcipheraddress,         true,   false },
+    { "getmysentmessages",          &getmysentmessages,           true,   false },
     { "getciphermessages",          &getciphermessages,           true,   false },
     //{ "getnewethlock",              &getnewethlock,               true,   false },
     { "getkeyentangle",             &getkeyentangle,              true,   false },
@@ -1408,6 +1409,7 @@ json_spirit::Array bitrpc::RPCConvertValues(const std::string &strMethod, const 
     if (strMethod == "listsinceblock"         && n > 1) { ConvertTo<int64_t>(params[1]); }
 
     if (strMethod == "getnewschnorraddress"   && n > 1) { ConvertTo<int64_t>(params[1]); }
+    if (strMethod == "getmysentmessages"      && n > 1) { ConvertTo<int32_t>(params[1]); }
     if (strMethod == "getciphermessages"      && n > 0) { ConvertTo<int32_t>(params[0]); }
     if (strMethod == "getnewcipheraddress"    && n > 2) { ConvertTo<int32_t>(params[2]); }
     if (strMethod == "getnetworkhashps"       && n > 0) { ConvertTo<int>(params[0]); }

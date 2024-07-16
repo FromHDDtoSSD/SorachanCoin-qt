@@ -646,4 +646,113 @@ bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher
     return true;
 }
 
+bool getsentmymessages(uint32_t hours, const std::string &recipient_address, std::vector<std::pair<time_t, SecureString>> &result, std::string &err) {
+    auto GetMyAitxQairand03 = [](const CScript &scriptSig, CAITransaction03 &aitx) {
+        const uint32_t qaisize = 33 + 1 + 1; // [qairand(33)][OP_3(1)][OP_CHECKMULTISIG(1)]
+        if(scriptSig.size() < qaisize)
+            return false;
+        if(scriptSig.back() != ScriptOpcodes::OP_CHECKMULTISIG)
+            return false;
+        CScript::const_iterator pc = scriptSig.begin() + (scriptSig.size() - qaisize);
+        qkey_vector randvch;
+        randvch.insert(randvch.end(), pc, pc + 33);
+        if(CqPubKey::IsRandHash(randvch) && randvch[1] == 0x03) {
+            CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+            LOCK(entry::pwalletMain->cs_wallet);
+            if(!walletdb.ExistsAitx03(randvch))
+                return false;
+            if(!walletdb.ReadAitx03(randvch, aitx))
+                return false;
+        }
+        return true;
+    };
+
+    auto Error = [&err](const char *c_err) {
+        err = std::string(c_err);
+        return false;
+    };
+
+    int block_begin = block_info::nBestHeight - (hours * 20);
+    if (block_begin < 0 || block_begin > block_info::nBestHeight)
+        return Error("Error: Block number out of range.");
+
+    //
+    // get My CAITransaction03
+    //
+    std::vector<std::tuple<int, uint32_t, CAITransaction03>> vaitx;
+    for (int nHeight = block_begin; nHeight <= block_info::nBestHeight; ++nHeight) {
+        CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
+        while (pblockindex->get_nHeight() > nHeight)
+            pblockindex = pblockindex->set_pprev();
+
+        pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
+        CBlock block;
+        if(!block.ReadFromDisk(pblockindex, true))
+            return Error("Error: failed to read from disk.");
+
+        for(const CTransaction &tx: block.get_vtx()) {
+            for(const CTxIn &txin: tx.get_vin()) {
+                CAITransaction03 aitx;
+                if(GetMyAitxQairand03(txin.get_scriptSig(), aitx)) {
+                    vaitx.emplace_back(std::make_tuple(nHeight, (uint32_t)aitx.GetTime(), aitx));
+                }
+            }
+        }
+    }
+
+    //for(const auto &d: vaitx) {
+    //    print_bytes("aitx GetID", std::get<2>(d).GetID().begin(), std::get<2>(d).GetID().size());
+    //}
+
+    //
+    // Compute SymmetricKey and sent decrypto my messages
+    //
+    const std::pair<std::string, bech32_vector> b32recipient_key = bech32::Decode(recipient_address);
+    if(b32recipient_key.first != GetHrpCipher())
+        return Error("Error: recipient_address is invalid");
+    bech32_vector recipient_agg_pubkey = DecodeFromSoraL1QAItxBech32(b32recipient_key.second);
+    // When decoding 32 bytes with bech32, a 0x00 is added at the end, making it 33 bytes.
+    if(recipient_agg_pubkey.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE + 1)
+        return Error("Error: recipient_address is invalid");
+    recipient_agg_pubkey.pop_back(); // erase at the end (0x00)
+
+    XOnlyAggWalletInfo xonly_agg_wallet;
+    if(!xonly_agg_wallet.LoadFromWalletInfo())
+        return Error("Error: XOnlyAggWalletInfo is invalid");
+
+    for(const auto &d: vaitx) {
+        const CAITransaction03 &aitx = std::get<2>(d);
+        XOnlyPubKeys my_xonly_schnorr_pubkeys;
+        XOnlyKeys my_xonly_schnorr_keys;
+        if(!xonly_agg_wallet.GetXOnlyKeys(aitx.GetID(), my_xonly_schnorr_pubkeys, my_xonly_schnorr_keys))
+            continue;
+        CSecret my_xonly_key_secret;
+        my_xonly_schnorr_keys.GetSecret(my_xonly_key_secret);
+
+        secp256k1_symmetrickey symmetrickey;
+        if(SymmetricKey::secp256k1_schnorrsig_symmetrickey(NULL,  my_xonly_key_secret.data(), recipient_agg_pubkey.data(), &symmetrickey) != 1)
+            return Error("Error: failed to compute in SymmetricKey");
+        SymmetricKey symkey(symmetrickey);
+
+        for(const auto &token: aitx) {
+            SecureString message;
+            if(token.GetTokenMessage(symkey, message)) {
+                uint32_t size = message.size();
+                if(size >= 66 && message[size - 66] == '[' && message[size - 1] == ']') {
+                    message.resize(size - 66);
+                } else if (size >= 2 && message[size - 2] == '[' && message[size - 1] == ']') {
+                    message.resize(size - 2);
+                } else {
+                    // Invalid format is skiped
+                    continue;
+                }
+                result.emplace_back(std::make_pair(std::get<1>(d), message));
+            }
+        }
+    }
+
+    err = std::string("");
+    return true;
+}
+
 } // ai_cipher

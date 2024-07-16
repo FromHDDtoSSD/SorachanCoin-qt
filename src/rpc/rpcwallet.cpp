@@ -552,13 +552,33 @@ CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggW
     return address;
 }
 
-/*
-const std::string hrp_cipher_main = "cipher";
-const std::string hrp_cipher_testnet = "ciphertest";
-static std::string GetHrpCipher() {
-    return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
+json_spirit::Value CRPCTable::getmysentmessages(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() > 2) {
+        throw std::runtime_error(
+            "getmysentmessages [recipient cipher message public key] [time(hours)] "
+            "Outputs the messages you sent to recipient cipher message address. "
+            "If omitted, it defaults to 168 hours (7 days).");
+    }
+
+    std::string recipient_address = params[0].get_str();
+    const int hours = (params.size() > 0) ? params[1].get_int() : 168;
+    std::string err;
+    std::vector<std::pair<time_t, SecureString>> vdata;
+    if(!ai_cipher::getsentmymessages(hours, recipient_address, vdata, err))
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, err.c_str());
+
+    json_spirit::Object result;
+    int num = 0;
+    for(const auto &d: vdata) {
+        json_spirit::Array obj;
+        obj.emplace_back(ai_time::get_localtime_format(d.first));
+        obj.emplace_back(std::string(d.second.c_str()));
+        result.emplace_back(json_spirit::Pair(std::to_string(++num), obj));
+    }
+
+    return result;
 }
-*/
 
 json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params, bool fHelp)
 {

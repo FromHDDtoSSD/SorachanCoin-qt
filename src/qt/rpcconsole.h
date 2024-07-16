@@ -70,6 +70,9 @@ public slots:
     void sendciphermessage();
     void updateCipherMessage();
     void ciphermessageClear();
+    void sentmymessages(const QString &message, bool html = false);
+    void updateSentMyMessages();
+    void sentmessagesClear();
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */

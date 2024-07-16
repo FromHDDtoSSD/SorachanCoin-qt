@@ -174,6 +174,8 @@ bool getmycipheraddress(std::string &cipher_address, std::string &err);
 bool getmessages(uint32_t hours, std::vector<std::tuple<time_t, std::string, SecureString>> &result, std::string &err);
 bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher, bool stealth);
 
+bool getsentmymessages(uint32_t hours, const std::string &recipient_address, std::vector<std::pair<time_t, SecureString>> &result, std::string &err);
+
 } // ai_cipher
 
 #endif // SORA_QAI_AITX_H

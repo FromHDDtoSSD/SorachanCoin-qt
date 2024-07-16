@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[107];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[108];    // Bitcoin RPC Command
 
     //
     // map command
@@ -399,6 +399,7 @@ public:
     static json_spirit::Value getnewqaiaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewschnorraddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewcipheraddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getmysentmessages(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getciphermessages(const json_spirit::Array &params, bool fHelp);
     //static json_spirit::Value getnewethlock(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getkeyentangle(const json_spirit::Array &params, bool fHelp);

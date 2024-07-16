@@ -446,6 +446,71 @@ void RPCConsole::ciphermessageClear() {
     ui->cipherMessagesWidget->clear();
 }
 
+void RPCConsole::sentmymessages(const QString &message, bool html/*=false*/) {
+    ui->cipherMessagesWidget->document()->setDefaultStyleSheet(
+                "table { }"
+                "td { font-family: Monospace; } "
+                "td.time { color: #FFFFFF; padding-top: 10px; } "
+                "td.cmd-request { color: #FFFFFF; } "
+                "td.cmd-error { color: red; } "
+                "b { color: #006060; } "
+                );
+
+    QTime time = QTime::currentTime();
+    QString timeString = time.toString();
+    QString out;
+    out += "<table width=\"100%\"><tr><td class=\"time\" width=\"80\">" + timeString + "</td><td>";
+    if(html) out += message;
+    else out += GUIUtil::HtmlEscape(message, true);
+    out += "</td></tr></table>";
+    ui->sentmessagesTextEdit->append(out);
+}
+
+static void GetSentMessages(std::string &dest, const std::string &recipient_address, uint32_t hours) {
+    std::vector<std::pair<time_t, SecureString>> vdata;
+    std::string err;
+    if(!ai_cipher::getsentmymessages(hours, recipient_address, vdata, err)) {
+        dest = err;
+        return;
+    }
+
+    dest = "";
+    for(const auto &d: vdata) {
+        std::string br_str;
+        br_str.reserve(d.second.size() * 1.2);
+        for(auto c: d.second) {
+            if(c != '\n')
+                br_str.push_back(c);
+            else {
+                br_str.push_back('<');
+                br_str.push_back('b');
+                br_str.push_back('r');
+                br_str.push_back('>');
+            }
+        }
+
+        dest += "<table><tr><td>time: </td><td>";
+        dest += ai_time::get_localtime_format(d.first);
+        dest += "</td></tr><tr><td>";
+        dest += "message: </td><td>";
+        dest += br_str;
+        dest += "</td></tr></table>";
+        dest += "<br />";
+    }
+}
+
+void RPCConsole::updateSentMyMessages() {
+    uint32_t hours = ui->getsentmessagesSpinBox->value();
+    std::string recipient_address = ui->sentaddressLineEdit->text().toStdString();
+    std::string result;
+    GetSentMessages(result, recipient_address, hours);
+    sentmymessages(QString(result.c_str()), true);
+}
+
+void RPCConsole::sentmessagesClear() {
+    ui->sentmessagesTextEdit->clear();
+}
+
 void RPCConsole::message(int category, const QString &message, bool html/*=false*/) {
     QTime time = QTime::currentTime();
     QString timeString = time.toString();
@@ -532,6 +597,10 @@ void RPCConsole::startExecutor() {
     connect(ui->sendPushButton, SIGNAL(clicked()), this, SLOT(sendciphermessage()));
     connect(ui->clearmessagePushButton, SIGNAL(clicked()), this, SLOT(ciphermessageClear()));
     ui->gethoursSpinBox->setValue(168);
+    // GetSentMessages connect
+    connect(ui->clearsentmessagesPushButton, SIGNAL(clicked()), this, SLOT(sentmessagesClear()));
+    connect(ui->sentmessagesPushButton, SIGNAL(clicked()), this, SLOT(updateSentMyMessages()));
+    ui->getsentmessagesSpinBox->setValue(168);
     // On stopExecutor signal
     // - queue executor for deletion (in execution thread)
     // - quit the Qt event loop in the execution thread
