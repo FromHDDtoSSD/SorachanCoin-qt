@@ -1969,14 +1969,16 @@ bool check_cipher_transaction3() {
 }
 
 bool check_cipher_transaction2() {
+    /*
     uint160 rand_hash;
     unsigned char buf[32];
     latest_crypto::random::GetRandBytes(buf, sizeof(buf));
     latest_crypto::CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
     std::string acc_hash = "cipher_" + rand_hash.GetHex();
+    */
 
     json_spirit::Array obj;
-    obj.push_back(acc_hash);
+    //obj.push_back(acc_hash);
     json_spirit::Value qaiAddress;
     try {
         qaiAddress = CRPCTable::getnewschnorraddress(obj, false);
@@ -1990,7 +1992,7 @@ bool check_cipher_transaction2() {
     CDataStream stream;
     double fee = 0.2;
     int64_t nAmount = util::roundint64(fee * util::COIN);
-    stream << qaiAddress.get_str() << acc_hash << nAmount << (int32_t)1;
+    stream << qaiAddress.get_str() << nAmount << (int32_t)1;
     CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
     if(thread.BeginThread(info)) {
         thread.Detach();

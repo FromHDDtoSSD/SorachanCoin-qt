@@ -66,6 +66,10 @@ public slots:
     void message(int category, const QString &message, bool html = false);
     void peers(bool ban, const QString &message, bool html = false);
     void ciphermessages(const QString &message, bool html = false);
+    void ciphermypubkey();
+    void sendciphermessage();
+    void updateCipherMessage();
+    void ciphermessageClear();
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */

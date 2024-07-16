@@ -552,11 +552,13 @@ CBitcoinAddress CRPCTable::CreateNewSchnorrAddress(size_t agg_size/* = XOnlyAggW
     return address;
 }
 
+/*
 const std::string hrp_cipher_main = "cipher";
 const std::string hrp_cipher_testnet = "ciphertest";
 static std::string GetHrpCipher() {
     return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
 }
+*/
 
 json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params, bool fHelp)
 {
@@ -569,7 +571,7 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
 
     const int hours = (params.size() > 0) ? params[0].get_int() : 168;
     std::string err;
-    std::vector<std::pair<time_t, SecureString>> vdata;
+    std::vector<std::tuple<time_t, std::string, SecureString>> vdata;
     if(!ai_cipher::getmessages(hours, vdata, err))
         throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, err.c_str());
 
@@ -577,8 +579,9 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
     int num = 0;
     for(const auto &d: vdata) {
         json_spirit::Array obj;
-        obj.emplace_back(ai_time::get_localtime_format(d.first));
-        obj.emplace_back(std::string(d.second.c_str()));
+        obj.emplace_back(ai_time::get_localtime_format(std::get<0>(d)));
+        obj.emplace_back(std::string(std::get<1>(d)));
+        obj.emplace_back(std::string(std::get<2>(d).c_str()));
         result.emplace_back(json_spirit::Pair(std::to_string(++num), obj));
     }
 
@@ -600,13 +603,11 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
 
     //! If no arguments, it can obtain a dedicated address for receiving encrypted messages
     if(params.size() == 0) {
-        XOnlyPubKeys xonly_agg_pubkeys;
-        if(!XOnlyAggWalletInfo::GetAggPublicKeys(ai_cipher::cipher_begin_index, ai_cipher::cipher_agg_size, xonly_agg_pubkeys))
-            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: XOnlyPubKeys is invalid");
-
-        XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
-        bech32_vector vchb32 = EncodeToSoraL1QAItxBech32(xonly_pubkey.GetPubVch());
-        std::string cipher_address = bech32::Encode(GetHrpCipher(), vchb32);
+        std::string cipher_address;
+        std::string err;
+        if(!ai_cipher::getmycipheraddress(cipher_address, err)) {
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, err.c_str());
+        }
         return cipher_address;
     }
 
@@ -617,18 +618,20 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
         SecureString cipher = const_cast<std::string &&>(params[1].get_str());
         CBitcoinAddress address = CreateNewCipherAddress(recipient_pubkey, cipher);
 
+        /*
         uint160 rand_hash;
         unsigned char buf[32];
         latest_crypto::random::GetRandBytes(buf, sizeof(buf));
         latest_crypto::CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
         std::string acc_hash = "cipher_" + rand_hash.GetHex();
         entry::pwalletMain->SetAddressBookName(address, acc_hash);
+        */
 
         CThread thread;
         CDataStream stream;
-        double fee = 1.0;
+        double fee = 0.2;
         int64_t nAmount = util::roundint64(fee * util::COIN);
-        stream << address.ToString() << acc_hash << nAmount << (int32_t)1;
+        stream << address.ToString() << nAmount << (int32_t)1;
         CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
         if(thread.BeginThread(info))
             thread.Detach();
@@ -703,8 +706,17 @@ CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_p
     //
     // Build aitx and qrandhash
     //
+    std::string recipient_agg_pubhex;
+    recipient_agg_pubhex.reserve(66);
+    recipient_agg_pubhex = std::string("[");
+    recipient_agg_pubhex += strenc::HexStr(recipient_agg_pubkey);
+    recipient_agg_pubhex += std::string("]");
+    if(recipient_agg_pubhex.size() != (XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE * 2) + 2)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address hex is invalid");
+    SecureString cipher_and_pubkey = cipher;
+    cipher_and_pubkey += std::move(recipient_agg_pubhex);
     CAITransaction03 aitx;
-    if(!aitx.PushTokenMessage(symkey, cipher))
+    if(!aitx.PushTokenMessage(symkey, cipher_and_pubkey))
         throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: fail to compute in CAITransaction03");
     aitx.SetSchnorrAggregateKeyID(my_xonly_schnorr_pubkeys.GetXOnlyPubKey());
 

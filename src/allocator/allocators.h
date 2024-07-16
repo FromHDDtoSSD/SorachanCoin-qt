@@ -407,7 +407,9 @@ public:
         str_.reserve(size);
     }
 
-    void resize(std::size_t)=delete; // must be used reserve(size_t).
+    void resize(std::size_t size) {
+        str_.resize(size);
+    }
 
     bool empty() const {
         return str_.empty();

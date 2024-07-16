@@ -8,6 +8,8 @@
 #include <util/time.h>
 #include <init.h>
 #include <ctime>
+#include <rpc/bitcoinrpc.h>
+#include <coincontrol.h>
 
 namespace {
 
@@ -113,6 +115,10 @@ CKeyID CAITransaction::GetID() const {
     return schnorrsigHash;
 }
 
+int64_t CAITransaction::GetTime() const {
+    return nTime;
+}
+
 void CAITransaction::ClearTx() {
     nTime = 0;
     schnorrsigHash = CKeyID(0);
@@ -203,12 +209,14 @@ CKeyID CAITransaction03::GetID() const {
     return aitx.GetID();
 }
 
-//#ifdef QT_GUI
-//# include <QMessageBox>
-//#endif
+int64_t CAITransaction03::GetTime() const {
+    return aitx.GetTime();
+}
+
 namespace aitx_thread {
 
 #if defined(QT_GUI) && defined(WIN32)
+
 class QMB
 {
 public:
@@ -220,77 +228,45 @@ public:
     QMB() = delete;
     QMB(status s) {
         if(s == M_OK) {
-            title = "Confirmation";
+            title = utf8_to_utf16(_("Confirmation"));
             icon = MB_ICONINFORMATION;
         } else if (s == M_ERROR) {
-            title = "Error";
+            title = utf8_to_utf16(_("Error"));
             icon = MB_ICONWARNING;
         } else {
             assert(!"QMB ERROR");
-            title = "";
+            title = L"";
             icon = 0;
         }
     }
 
     QMB &setText(const std::string &text) {
-        message = text;
+        message = utf8_to_utf16(text);
         return *this;
     }
 
     int exec() {
-        ::MessageBoxA(nullptr, message.c_str(), title.c_str(), MB_OK | icon);
+        ::MessageBoxW(nullptr, message.c_str(), title.c_str(), MB_OK | icon);
         return 0;
     }
 
 private:
 
-    std::string title;
-    std::string message;
+    std::wstring utf8_to_utf16(const std::string &utf8Str) {
+        const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
+        std::wstring wideStr(wideCharLen, 0);
+        ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
+        wideStr.pop_back(); // erase "\0"
+        return wideStr;
+    }
+
+    std::wstring title;
+    std::wstring message;
     UINT icon;
 };
 
-//!
-//! TODO: Currently replaced with WIN32API. Will replace with Qt in the future.
-//!
-/*
-class QMB
-{
-public:
-    enum status {
-        M_OK,
-        M_ERROR
-    };
-
-    QMB() = delete;
-    QMB(status s) {
-        if(s == M_OK) {
-            qbox.setWindowTitle(_("Confirmation").c_str());
-            qbox.setIcon(QMessageBox::Information);
-            qbox.setStandardButtons(QMessageBox::Ok);
-            qbox.setDefaultButton(QMessageBox::Ok);
-        } else if (s == M_ERROR) {
-            qbox.setWindowTitle(_("Error").c_str());
-            qbox.setIcon(QMessageBox::Critical);
-            qbox.setStandardButtons(QMessageBox::Ok);
-            qbox.setDefaultButton(QMessageBox::Ok);
-        }
-    }
-
-    QMB &setText(const std::string &text) {
-        qbox.setText(QString(text.c_str()));
-        return *this;
-    }
-
-    int exec() {
-        qbox.exec();
-        return 0;
-    }
-
-private:
-    QMessageBox qbox;
-};
-*/
 #else
+
 class QMB
 {
 public:
@@ -310,23 +286,22 @@ public:
         return 0;
     }
 };
+
 #endif
 
 void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
     //! get the SORA-QAI cipher address qai_address ans account hash
     std::string qai_address;
-    std::string acc_hash;
     int64_t nAmount;
     int32_t fMessage;
     try {
-       (*stream) >> qai_address >> acc_hash >> nAmount >> fMessage;
+       (*stream) >> qai_address >> nAmount >> fMessage;
     } catch (const std::exception &) {
         fMessage ? QMB(QMB::M_ERROR).setText(_("Failed to read from CDataStream.")).exec(): 0;
         return;
     }
 
     print_str("qai_address", qai_address);
-    print_str("acc_hash", acc_hash);
     print_num("nAmount", nAmount);
 
     if(!hd_wallet::get().enable) {
@@ -338,6 +313,8 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         return;
     }
 
+    uint256 txid(uint256(0));
+    int32_t vout_index = 0;
     {
         //! get the scriptPubKey
         CBitcoinAddress address(qai_address);
@@ -347,21 +324,37 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
 
         //! send to SORA-QAI cipher scriptPubKey
         CWalletTx wtx;
-        wtx.strFromAccount = std::string("");
+        //wtx.strFromAccount = std::string("");
         std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
         if (!strError.empty()) {
             fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
-            fMessage ? QMB(QMB::M_ERROR).setText(_("[A] The balance is likely insufficient. Please ensure a balance of at least 1 SORA.")).exec(): 0;
             return;
         }
 
-        const uint256 txid = wtx.GetHash();
+        txid = wtx.GetHash();
+        const std::vector<CTxOut> &vout = wtx.get_vout();
+        bool fexists = false;
+        for(const auto &d: vout) {
+            if(d.get_scriptPubKey().Find(ScriptOpcodes::OP_EQUAL) == 1) {
+                fexists = true;
+                break;
+            }
+            ++vout_index;
+        }
+        if(!fexists) {
+            fMessage ? QMB(QMB::M_ERROR).setText("Failed to get the transaction.").exec(): 0;
+            return;
+        }
+
         do {
             if(entry::pwalletMain->mapWallet.count(txid)) {
                 const CWalletTx &new_wtx = entry::pwalletMain->mapWallet[txid];
                 const int confirms = new_wtx.GetDepthInMainChain();
                 if(confirms > 0)
                     break;
+            } else {
+                fMessage ? QMB(QMB::M_ERROR).setText("Failed to wait for transaction.").exec(): 0;
+                return;
             }
             util::Sleep(300);
             if(args_bool::fShutdown)
@@ -384,11 +377,19 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
 
         //! send to reservedkey scriptPubKey
         CWalletTx wtx;
-        wtx.strFromAccount = acc_hash;
-        std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount / 2, wtx);
-        if (!strError.empty()) {
-            fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
-            fMessage ? QMB(QMB::M_ERROR).setText(_("[B] The balance is likely insufficient. Please ensure a balance of at least 1 SORA.")).exec(): 0;
+        const double dAmount = 0.01;
+        int64_t nAmount = util::roundint64(dAmount * util::COIN);
+        COutPoint out(txid, vout_index);
+        CCoinControl coinControl;
+        coinControl.Select(out);
+        CReserveKey reservekey(entry::pwalletMain);
+        int64_t nFeeRequired = 0;
+        if(!entry::pwalletMain->CreateTransaction(scriptPubKey, nAmount, wtx, reservekey, nFeeRequired, &coinControl)) {
+            fMessage ? QMB(QMB::M_ERROR).setText("Failed to create transaction.").exec(): 0;
+            return;
+        }
+        if(!entry::pwalletMain->CommitTransaction(wtx, reservekey)) {
+            fMessage ? QMB(QMB::M_ERROR).setText("Failed to commit transaction.").exec(): 0;
             return;
         }
 
@@ -399,6 +400,9 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
                 const int confirms = new_wtx.GetDepthInMainChain();
                 if(confirms > 0)
                     break;
+            } else {
+                fMessage ? QMB(QMB::M_ERROR).setText("Failed to wait for transaction.").exec(): 0;
+                return;
             }
             util::Sleep(500);
             if(args_bool::fShutdown)
@@ -488,7 +492,21 @@ std::string get_localtime_format(time_t time) {
 
 namespace ai_cipher {
 
-bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &result, std::string &err) {
+bool getmycipheraddress(std::string &cipher_address, std::string &err) {
+    XOnlyPubKeys xonly_agg_pubkeys;
+    if(!XOnlyAggWalletInfo::GetAggPublicKeys(ai_cipher::cipher_begin_index, ai_cipher::cipher_agg_size, xonly_agg_pubkeys)) {
+        err = std::string("Error: XOnlyPubKeys is invalid");
+        return false;
+    }
+
+    XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
+    bech32_vector vchb32 = EncodeToSoraL1QAItxBech32(xonly_pubkey.GetPubVch());
+    cipher_address = bech32::Encode(GetHrpCipher(), vchb32);
+    err = std::string("");
+    return true;
+}
+
+bool getmessages(uint32_t hours, std::vector<std::tuple<time_t, std::string, SecureString> > &result, std::string &err) {
     auto IsQairand03 = [](const CScript &scriptSig) {
         const uint32_t qaisize = 33 + 1 + 1; // [qairand(33)][OP_3(1)][OP_CHECKMULTISIG(1)]
         if(scriptSig.size() < qaisize)
@@ -557,7 +575,7 @@ bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &r
                         return Error("Error: CAITransaction03 is invalid.");
                     if(aitx.GetID() != xonly_pubkey.GetID())
                         return Error("Error: Schnorr signature public key for SymmetricKey is invalid.");
-                    vaitx.emplace_back(std::make_tuple(nHeight, tx.get_nTime(), recipient_agg_pubkey, aitx));
+                    vaitx.emplace_back(std::make_tuple(nHeight, (uint32_t)aitx.GetTime(), recipient_agg_pubkey, aitx));
                 }
             }
         }
@@ -582,7 +600,28 @@ bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &r
         for(const auto &token: aitx) {
             SecureString message;
             if(token.GetTokenMessage(symkey, message)) {
-                result.emplace_back(std::make_pair(std::get<1>(d), message));
+                // Message Structure: message + [schnorr pubkey key for cipher message(hex: 64 bytes)]
+                // If stealth is enabled, the address part contains only []
+                uint32_t size = message.size();
+                std::string cipher_public_key;
+                if(size >= 66 && message[size - 66] == '[' && message[size - 1] == ']') {
+                    // Encode recipient public key
+                    std::string hex_pub(message.c_str() + (size - 65));
+                    hex_pub.pop_back(); // erase ']'
+                    if(hex_pub.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE * 2)
+                        continue;
+                    bech32_vector vchpub = strenc::ParseHex(hex_pub);
+                    bech32_vector vchb32 = EncodeToSoraL1QAItxBech32(vchpub);
+                    cipher_public_key = bech32::Encode(GetHrpCipher(), vchb32);
+                    message.resize(size - 66);
+                } else if (size >= 2 && message[size - 2] == '[' && message[size - 1] == ']') {
+                    cipher_public_key = "---";
+                    message.resize(size - 2);
+                } else {
+                    // Invalid format is skiped
+                    continue;
+                }
+                result.emplace_back(std::make_tuple(std::get<1>(d), cipher_public_key, message));
             }
         }
     }
@@ -591,33 +630,18 @@ bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &r
     return true;
 }
 
+bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher) {
+    try {
+        json_spirit::Array obj;
+        obj.emplace_back(recipient_pubkey);
+        obj.emplace_back(std::move(cipher));
+        CRPCTable::getnewcipheraddress(obj, false);
+    } catch (const json_spirit::Object &) {
+        return false;
+    } catch (const std::exception &) {
+        return false;
+    }
+    return true;
+}
+
 } // ai_cipher
-
-/*
-namespace ai_lang {
-
-#ifdef QT_GUI
-
-std::string utf8_to_sjis(const std::string &utf8Str) {
-    const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
-    std::wstring wideStr(wideCharLen, 0);
-    ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
-    wideStr.pop_back(); // erase "\0"
-
-    const int32_t sjisCharLen = ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    std::string sjisStr(sjisCharLen, 0);
-    ::WideCharToMultiByte(CP_ACP, 0, wideStr.c_str(), -1, &sjisStr[0], sjisCharLen, nullptr, nullptr);
-    sjisStr.pop_back(); // erase "\0"
-    return sjisStr;
-}
-
-#else
-
-std::string utf8_to_sjis(const std::string &utf8Str) {
-    return utf8Str;
-}
-
-#endif
-
-} // ai_lang
-*/

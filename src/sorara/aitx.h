@@ -62,6 +62,8 @@ public:
     void SetSchnorrAggregateKeyID(const XOnlyPubKey &xonly_pubkey);
     CKeyID GetID() const;
 
+    int64_t GetTime() const;
+
     void ClearTx();
 
     std::pair<uint160, bool> GetMerkleRoot() const;
@@ -124,6 +126,8 @@ public:
     std::pair<qkey_vector, bool> GetSchnorrHash() const;
     CKeyID GetID() const;
 
+    int64_t GetTime() const;
+
     uint32_t GetSerializeSize() const {
         CSizeComputer sc((int)QaiVersion);
         sc << (*this);
@@ -155,21 +159,21 @@ std::string get_localtime_format(time_t time);
 
 } // ai_time
 
+const std::string hrp_cipher_main = "cipher";
+const std::string hrp_cipher_testnet = "ciphertest";
+static std::string GetHrpCipher() {
+    return args_bool::fTestNet ? hrp_cipher_testnet: hrp_cipher_main;
+}
+
 namespace ai_cipher {
 
 constexpr unsigned int cipher_begin_index = hdkeys_child_regenerate + 1;
 constexpr size_t cipher_agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS;
 
-bool getmessages(uint32_t hours, std::vector<std::pair<time_t, SecureString>> &result, std::string &err);
+bool getmycipheraddress(std::string &cipher_address, std::string &err);
+bool getmessages(uint32_t hours, std::vector<std::tuple<time_t, std::string, SecureString>> &result, std::string &err);
+bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher);
 
 } // ai_cipher
-
-/*
-namespace ai_lang {
-
-std::string utf8_to_sjis(const std::string &utf8Str);
-
-} // ai_lang
-*/
 
 #endif // SORA_QAI_AITX_H

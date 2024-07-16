@@ -8,6 +8,7 @@
 #include <ui_rpcconsole.h>
 #include <clientmodel.h>
 #include <rpc/bitcoinrpc.h>
+#include <sorara/aitx.h>
 #include <guiutil.h>
 #include <dialogwindowflags.h>
 #include <QTime>
@@ -372,11 +373,76 @@ void RPCConsole::ciphermessages(const QString &message, bool html/*=false*/) {
     QTime time = QTime::currentTime();
     QString timeString = time.toString();
     QString out;
-    out += "<table width=\"600\"><tr><td class=\"time\" width=\"65\">" + timeString + "</td><td>";
+    out += "<table width=\"100%\"><tr><td class=\"time\" width=\"80\">" + timeString + "</td><td>";
     if(html) out += message;
     else out += GUIUtil::HtmlEscape(message, true);
     out += "</td></tr></table>";
     ui->cipherMessagesWidget->append(out);
+}
+
+void RPCConsole::ciphermypubkey() {
+    std::string cipher_address;
+    std::string err;
+    if(!ai_cipher::getmycipheraddress(cipher_address, err))
+        cipher_address = err;
+
+    ui->cipheraddresslineEdit->setText(QString(cipher_address.c_str()));
+}
+
+void RPCConsole::sendciphermessage() {
+    QString q_recipient_pubkey = ui->cipheraddresslineEdit->text();
+    QString q_cipher = ui->sendciphermessageWidget->toPlainText();
+    std::string recipient_pubkey = q_recipient_pubkey.toStdString();
+    std::string cipher = q_cipher.toStdString();
+    if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher)))
+        QMessageBox::critical(this, QString(_("Error").c_str()), QString("The operation failed."));
+}
+
+static void GetCipherMessages(std::string &dest, uint32_t hours) {
+    std::vector<std::tuple<time_t, std::string, SecureString>> vdata;
+    std::string err;
+    if(!ai_cipher::getmessages(hours, vdata, err)) {
+        dest = err;
+        return;
+    }
+
+    dest = "";
+    for(const auto &d: vdata) {
+        std::string br_str;
+        br_str.reserve(std::get<2>(d).size() * 1.2);
+        for(auto c: std::get<2>(d)) {
+            if(c != '\n')
+                br_str.push_back(c);
+            else {
+                br_str.push_back('<');
+                br_str.push_back('b');
+                br_str.push_back('r');
+                br_str.push_back('>');
+            }
+        }
+
+        dest += "<table><tr><td>time: </td><td>";
+        dest += ai_time::get_localtime_format(std::get<0>(d));
+        dest += "</td></tr><tr><td>";
+        dest += "from: </td><td>";
+        dest += std::get<1>(d);
+        dest += "</td></tr><tr><td>";
+        dest += "message: </td><td>";
+        dest += br_str;
+        dest += "</td></tr></table>";
+        dest += "<br />";
+    }
+}
+
+void RPCConsole::updateCipherMessage() {
+    uint32_t hours = ui->gethoursSpinBox->value();
+    std::string result;
+    GetCipherMessages(result, hours);
+    ciphermessages(QString(result.c_str()), true);
+}
+
+void RPCConsole::ciphermessageClear() {
+    ui->cipherMessagesWidget->clear();
 }
 
 void RPCConsole::message(int category, const QString &message, bool html/*=false*/) {
@@ -442,7 +508,7 @@ void RPCConsole::startExecutor() {
     QThread *thread = new (std::nothrow) QThread;
     RPCExecutor *executor = new (std::nothrow) RPCExecutor;
     PeersWidget *pw = new (std::nothrow) PeersWidget;
-    GetCipherWidget *pcipher = new (std::nothrow) GetCipherWidget;
+    CipherWidget *pcipher = new (std::nothrow) CipherWidget;
     if(!thread || !executor || !pw || !pcipher)
         throw qt_error("RPCConsole Failed to allocate memory.", this);
     executor->moveToThread(thread);
@@ -455,12 +521,16 @@ void RPCConsole::startExecutor() {
     connect(this, SIGNAL(cmdRequest(QString)), executor, SLOT(request(QString)));
     // Peers from executor object must go to this object
     connect(pw, SIGNAL(newnode(bool,QString,bool)), this, SLOT(peers(bool,QString,bool)));
-    // GetCipher from executor object must go to this object
-    connect(pcipher, SIGNAL(getciphermessages(QString,bool)), this, SLOT(ciphermessages(QString,bool)));
     // Peers connect
     connect(ui->updatePushButton, SIGNAL(clicked()), pw, SLOT(update()));
-    // GetCipher connect
-    connect(ui->getcipherPushButton, SIGNAL(clicked()), pcipher, SLOT(update()));
+    // Cipher from executor object must go to this object
+    connect(pcipher, SIGNAL(getciphermessages(QString,bool)), this, SLOT(ciphermessages(QString,bool)));
+    // Cipher connect
+    connect(ui->getcipherPushButton, SIGNAL(clicked()), this, SLOT(updateCipherMessage()));
+    connect(ui->getmyaddressPushButton, SIGNAL(clicked()), this, SLOT(ciphermypubkey()));
+    connect(ui->sendPushButton, SIGNAL(clicked()), this, SLOT(sendciphermessage()));
+    connect(ui->clearmessagePushButton, SIGNAL(clicked()), this, SLOT(ciphermessageClear()));
+    ui->gethoursSpinBox->setValue(168);
     // On stopExecutor signal
     // - queue executor for deletion (in execution thread)
     // - quit the Qt event loop in the execution thread
