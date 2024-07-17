@@ -1,20 +1,19 @@
 // Copyright (c) 2010 Satoshi Nakamoto
 // Copyright (c) 2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
-//
+
 #ifndef BITCOIN_UI_INTERFACE_H
 #define BITCOIN_UI_INTERFACE_H
 
 #include <string>
 #include <boost/signals2/signal.hpp>
 #include <boost/signals2/last_value.hpp>
-
-#include "util.h"
+#include <util.h>
 
 class CBasicKeyStore;
 class CWallet;
-//class uint256;
 
 //
 // General change type (added, updated, removed)
@@ -35,12 +34,12 @@ class CClientUIInterface
 private:
     CClientUIInterface() {}
 
-    CClientUIInterface(const CClientUIInterface &); // {}
-    CClientUIInterface &operator=(const CClientUIInterface &); // {}
-
 public:
-    // Singleton Object: instance init.cpp
-    static CClientUIInterface uiInterface;
+    // Singleton Class
+    static CClientUIInterface &get() {
+        static CClientUIInterface uiInterface;
+        return uiInterface;
+    }
 
     /** Flags for CClientUIInterface::ThreadSafeMessageBox */
     enum MessageBoxFlags
@@ -82,11 +81,14 @@ public:
         //
         MSG_INFORMATION = ICON_INFORMATION,
         MSG_WARNING = (ICON_WARNING | OK | MODAL),
-        MSG_ERROR = (ICON_ERROR | OK | MODAL)
+        MSG_ERROR = (ICON_ERROR | OK | MODAL),
+        MSG_QUESTION = (ICON_QUESTION | YES_NO)
     };
 
     /** Show message box. */
     boost::signals2::signal<void (const std::string &message, const std::string &caption, int style)> ThreadSafeMessageBox;
+    boost::signals2::signal<void (const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)> ThreadSafeMessageOk;
+    boost::signals2::signal<bool (const std::string &message, const std::string &caption, const std::string &detail, unsigned int style), boost::signals2::last_value<bool> > ThreadSafeMessageAsk;
 
     /** Ask the user whether they want to pay a fee or not. */
     boost::signals2::signal<bool (int64_t nFeeRequired, const std::string &strCaption), boost::signals2::last_value<bool> > ThreadSafeAskFee;
@@ -115,8 +117,14 @@ public:
     //
     boost::signals2::signal<void (const uint256 &hash, ChangeType status)> NotifyAlertChanged;
 
+    //
+    // This is a static method that connects from the CUI.
+    // It either writes to the log or does nothing.
+    //
     static int noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style);
-    static bool noui_ThreadSafeAskFee(int64_t /*nFeeRequired*/, const std::string &/*strCaption*/);
+    static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption);
+    static void noui_ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
+    static bool noui_ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
 };
 
 //
@@ -125,9 +133,56 @@ public:
 //
 static std::string _(const char *psz)
 {
-    boost::optional<std::string> rv = CClientUIInterface::uiInterface.Translate(psz);
+    boost::optional<std::string> rv = CClientUIInterface::get().Translate(psz);
     return rv ? (*rv) : psz;
 }
 
+//!
+//! This is a class that displays information and warning message boxes.
+//! e.g. fMessage ? QMB(QMB::M_ERROR).setText(_("Failed to read from CDataStream.")).exec(): 0;
+//!
+class QMB
+{
+public:
+    enum status {
+        M_INFO,
+        M_QUESTION,
+        M_ERROR
+    };
+
+    QMB() = delete;
+    QMB(status s) {
+        if(s == M_INFO)
+            title = _("Confirmation");
+        else if (s == M_QUESTION)
+            title = _("Question");
+        else if (s == M_ERROR)
+            title = _("Error");
+        icon = s;
+    }
+
+    QMB &setText(const std::string &messageIn, const std::string &detailIn = std::string("")) {
+        message = messageIn;
+        detail = detailIn;
+        return *this;
+    }
+
+    int exec() {
+        CClientUIInterface::get().ThreadSafeMessageOk(message, title, detail,
+        ((icon == M_INFO) ? CClientUIInterface::ICON_INFORMATION : CClientUIInterface::ICON_WARNING) | CClientUIInterface::MODAL);
+        return 0;
+    }
+
+    bool ask() {
+        return CClientUIInterface::get().ThreadSafeMessageAsk(message, title, detail,
+        ((icon == M_QUESTION) ? CClientUIInterface::ICON_QUESTION : CClientUIInterface::ICON_WARNING) | CClientUIInterface::MODAL);
+    }
+
+private:
+    std::string title;
+    std::string message;
+    std::string detail;
+    status icon;
+};
+
 #endif
-//@

@@ -387,7 +387,7 @@ void ntp::ThreadNtpSamples(void *parg)
             std::string strMessage = _("Warning: Please check that your computer's date and time are correct! If your clock is wrong " strCoinName " will not work properly.");
             excep::set_strMiscWarning(strMessage);
             logging::LogPrintf("*** %s\n", strMessage.c_str());
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage + " ", strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
+            CClientUIInterface::get().ThreadSafeMessageBox(strMessage + " ", strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION);
         }
 
         logging::LogPrintf("nNtpOffset = %+" PRId64 "  (%+" PRId64 " minutes)\n", nNtpOffset, nNtpOffset / 60);

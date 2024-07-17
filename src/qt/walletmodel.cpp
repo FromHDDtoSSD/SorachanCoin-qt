@@ -256,7 +256,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
             }
             return TransactionCreationFailed;
         }
-        if(! CClientUIInterface::uiInterface.ThreadSafeAskFee(nFeeRequired, tr("Sending...").toStdString())) {
+        if(! CClientUIInterface::get().ThreadSafeAskFee(nFeeRequired, tr("Sending...").toStdString())) {
             return Aborted;
         }
         if(! wallet->CommitTransaction(wtx, keyChange)) {

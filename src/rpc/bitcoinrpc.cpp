@@ -849,7 +849,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
             strWhatAmI = tinyformat::format(_("To use the %s option"), "\"-daemon\"");
         }
 
-        CClientUIInterface::uiInterface.ThreadSafeMessageBox(tinyformat::format(
+        CClientUIInterface::get().ThreadSafeMessageBox(tinyformat::format(
                             _("%s, you must set a rpcpassword in the configuration file:\n %s\n"
                             "It is recommended you use the following random password:\n"
                             "rpcuser=%srpc\n"
@@ -985,7 +985,7 @@ void bitrpc::ThreadRPCServer2(void *parg)
     }
 
     if (! fListening) {
-        CClientUIInterface::uiInterface.ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
+        CClientUIInterface::get().ThreadSafeMessageBox(strerr, _("Error"), CClientUIInterface::OK | CClientUIInterface::MODAL);
         boot::StartShutdown();
         return;
     }

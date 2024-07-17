@@ -206,15 +206,15 @@ static void NotifyAlertChanged(ClientModel *clientmodel, const uint256 &hash, Ch
 void ClientModel::subscribeToCoreSignals()
 {
     // Connect signals to client
-    CClientUIInterface::uiInterface.NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this));
-    CClientUIInterface::uiInterface.NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
-    CClientUIInterface::uiInterface.NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));
+    CClientUIInterface::get().NotifyBlocksChanged.connect(boost::bind(NotifyBlocksChanged, this));
+    CClientUIInterface::get().NotifyNumConnectionsChanged.connect(boost::bind(NotifyNumConnectionsChanged, this, _1));
+    CClientUIInterface::get().NotifyAlertChanged.connect(boost::bind(NotifyAlertChanged, this, _1, _2));
 }
 
 void ClientModel::unsubscribeFromCoreSignals()
 {
     // Disconnect signals from client
-    CClientUIInterface::uiInterface.NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this));
-    CClientUIInterface::uiInterface.NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
-    CClientUIInterface::uiInterface.NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));
+    CClientUIInterface::get().NotifyBlocksChanged.disconnect(boost::bind(NotifyBlocksChanged, this));
+    CClientUIInterface::get().NotifyNumConnectionsChanged.disconnect(boost::bind(NotifyNumConnectionsChanged, this, _1));
+    CClientUIInterface::get().NotifyAlertChanged.disconnect(boost::bind(NotifyAlertChanged, this, _1, _2));
 }

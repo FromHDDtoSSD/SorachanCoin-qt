@@ -740,7 +740,7 @@ bool CBlock::AddToBlockIndex(unsigned int nFile, unsigned int nBlockPos)
 
     static int8_t counter = 0;
     if( (++counter & 0x0F) == 0 || !block_notify::IsInitialBlockDownload()) // repaint every 16 blocks if not in initial block download
-        CClientUIInterface::uiInterface.NotifyBlocksChanged();
+        CClientUIInterface::get().NotifyBlocksChanged();
 
     return true;
 }

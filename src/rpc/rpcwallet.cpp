@@ -655,7 +655,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
 
         CThread thread;
         CDataStream stream;
-        double fee = 0.2;
+        double fee = 1.0;
         int64_t nAmount = util::roundint64(fee * util::COIN);
         stream << address.ToString() << nAmount << (int32_t)1;
         CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);

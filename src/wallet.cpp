@@ -3270,7 +3270,7 @@ std::string CWallet::SendMoney(CScript scriptPubKey, int64_t nValue, CWalletTx &
         return strError;
     }
 
-    if (fAskFee && !CClientUIInterface::uiInterface.ThreadSafeAskFee(nFeeRequired, _("Sending..."))) {
+    if (fAskFee && !CClientUIInterface::get().ThreadSafeAskFee(nFeeRequired, _("Sending..."))) {
         return "ABORTED";
     }
 

@@ -46,7 +46,7 @@ public:
             std::string strMessage = _("Warning: Disk space is low!");
             excep::set_strMiscWarning( strMessage );
             logging::LogPrintf("*** %s\n", strMessage.c_str());
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(strMessage, strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            CClientUIInterface::get().ThreadSafeMessageBox(strMessage, strCoinName, CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
             boot::StartShutdown();
             return false;
         }

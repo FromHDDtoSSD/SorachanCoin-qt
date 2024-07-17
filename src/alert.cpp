@@ -223,11 +223,11 @@ bool CAlert::ProcessAlert()
             const CAlert &alert = (*mi).second;
             if (Cancels(alert)) {
                 printf("cancelling alert %d\n", alert.nID);
-                CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+                CClientUIInterface::get().NotifyAlertChanged((*mi).first, CT_DELETED);
                 CAlert::mapAlerts.erase(mi++);
             } else if (! alert.IsInEffect()) {
                 printf("expiring alert %d\n", alert.nID);
-                CClientUIInterface::uiInterface.NotifyAlertChanged((*mi).first, CT_DELETED);
+                CClientUIInterface::get().NotifyAlertChanged((*mi).first, CT_DELETED);
                 CAlert::mapAlerts.erase(mi++);
             } else {
                 mi++;
@@ -248,7 +248,7 @@ bool CAlert::ProcessAlert()
 
         // Notify UI if it applies to me
         if(AppliesToMe()) {
-            CClientUIInterface::uiInterface.NotifyAlertChanged(GetHash(), CT_NEW);
+            CClientUIInterface::get().NotifyAlertChanged(GetHash(), CT_NEW);
         }
     }
 

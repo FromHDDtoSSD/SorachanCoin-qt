@@ -171,7 +171,9 @@ public slots:
 
     /** Notify the user of an error in the network or transaction handling code. */
     void error(const QString &title, const QString &message, bool modal);
+    void ok(const QString &title, const QString &message, unsigned int style, const QString &detail);
     void message(const QString &title, const QString &message, unsigned int style, const QString &detail=QString());
+    void ask(const QString &title, const QString &message, unsigned int style, bool *result, const QString &detail=QString());
 
     /** Asks the user whether to pay the transaction fee or to cancel the transaction.
        It is currently not possible to pass a return value to another thread through

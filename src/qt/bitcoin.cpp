@@ -110,6 +110,37 @@ static void ThreadSafeMessageBox(const std::string &message, const std::string &
     }
 }
 
+static void ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
+{
+    if(guiref) {
+        QMetaObject::invokeMethod(guiref, "ok",
+                                  GUIUtil::blockingGUIThreadConnection(),
+                                  Q_ARG(QString, QString::fromStdString(caption)),
+                                  Q_ARG(QString, QString::fromStdString(message)),
+                                  Q_ARG(unsigned int, style),
+                                  Q_ARG(QString, QString::fromStdString(detail)));
+    }
+}
+
+static bool ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
+{
+    if(guiref) {
+        bool result = false;
+        QMetaObject::invokeMethod(guiref, "ask",
+                                  GUIUtil::blockingGUIThreadConnection(),
+                                  Q_ARG(QString, QString::fromStdString(caption)),
+                                  Q_ARG(QString, QString::fromStdString(message)),
+                                  Q_ARG(unsigned int, style),
+                                  Q_ARG(bool*, &result),
+                                  Q_ARG(QString, QString::fromStdString(detail)));
+        return result;
+    } else {
+        logging::LogPrintf("%s: %s\n", caption.c_str(), message.c_str());
+        fprintf(stderr, "%s: %s\n", caption.c_str(), message.c_str());
+        return true;
+    }
+}
+
 static bool ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption)
 {
     (void)strCaption;
@@ -269,12 +300,14 @@ int main(int argc, char *argv[])
     OptionsModel optionsModel;
 
     // Subscribe to global signals from core
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox.connect(ThreadSafeMessageBox);
-    CClientUIInterface::uiInterface.ThreadSafeAskFee.connect(ThreadSafeAskFee);
-    CClientUIInterface::uiInterface.ThreadSafeHandleURI.connect(ThreadSafeHandleURI);
-    CClientUIInterface::uiInterface.InitMessage.connect(InitMessage);
-    CClientUIInterface::uiInterface.QueueShutdown.connect(QueueShutdown);
-    CClientUIInterface::uiInterface.Translate.connect(Translate);
+    CClientUIInterface::get().ThreadSafeMessageBox.connect(ThreadSafeMessageBox);
+    CClientUIInterface::get().ThreadSafeMessageOk.connect(ThreadSafeMessageOk);
+    CClientUIInterface::get().ThreadSafeMessageAsk.connect(ThreadSafeMessageAsk);
+    CClientUIInterface::get().ThreadSafeAskFee.connect(ThreadSafeAskFee);
+    CClientUIInterface::get().ThreadSafeHandleURI.connect(ThreadSafeHandleURI);
+    CClientUIInterface::get().InitMessage.connect(InitMessage);
+    CClientUIInterface::get().QueueShutdown.connect(QueueShutdown);
+    CClientUIInterface::get().Translate.connect(Translate);
 
     // Show help message immediately after parsing command-line options (for "-lang") and setting locale,
     // but before showing splash screen.

@@ -19,7 +19,7 @@ public:
         strMiscWarning = strMessage;
         logging::LogPrintf("*** %s\n", strMessage);
 #ifdef QT_GUI
-        CClientUIInterface::uiInterface.ThreadSafeMessageBox(
+        CClientUIInterface::get().ThreadSafeMessageBox(
             userMessage.empty() ? _("Error: A fatal internal error occured, see debug.log for details") : userMessage,
             "", CClientUIInterface::MSG_ERROR);
 #endif
@@ -31,7 +31,7 @@ public:
     static void StartShutdown() {
 #ifdef QT_GUI
         // ensure we leave the Qt main loop for a clean GUI exit (Shutdown() is called in bitcoin.cpp afterwards)
-        CClientUIInterface::uiInterface.QueueShutdown();
+        CClientUIInterface::get().QueueShutdown();
 #else
         // Without UI, Shutdown() can simply be started in a new thread
         if(! bitthread::NewThread(Shutdown, nullptr))

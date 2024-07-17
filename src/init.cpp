@@ -40,7 +40,6 @@
 # include <signal.h>
 #endif
 
-CClientUIInterface CClientUIInterface::uiInterface;
 std::string entry::strWalletFileName;
 std::string entry::strWalletqFileName;
 CWallet *entry::pwalletMain = nullptr;
@@ -232,8 +231,10 @@ void entry::noui_connect()
     //
     // Connect bitcoind signal handlers
     //
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox.connect(CClientUIInterface::noui_ThreadSafeMessageBox);
-    CClientUIInterface::uiInterface.ThreadSafeAskFee.connect(CClientUIInterface::noui_ThreadSafeAskFee);
+    CClientUIInterface::get().ThreadSafeMessageBox.connect(CClientUIInterface::noui_ThreadSafeMessageBox);
+    CClientUIInterface::get().ThreadSafeAskFee.connect(CClientUIInterface::noui_ThreadSafeAskFee);
+    CClientUIInterface::get().ThreadSafeMessageOk(CClientUIInterface::noui_ThreadSafeMessageOk);
+    CClientUIInterface::get().ThreadSafeMessageAsk(CClientUIInterface::noui_ThreadSafeMessageAsk);
 }
 
 int main(int argc, char *argv[])
@@ -275,13 +276,13 @@ int main(int argc, char *argv[])
 
 bool entry::InitError(const std::string &str)
 {
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::MODAL);
+    CClientUIInterface::get().ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::MODAL);
     return false;
 }
 
 bool entry::InitWarning(const std::string &str)
 {
-    CClientUIInterface::uiInterface.ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+    CClientUIInterface::get().ThreadSafeMessageBox(str, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
     return true;
 }
 
@@ -815,7 +816,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 #endif
 
 #ifndef USE_LEVELDB
-    //CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] migrate from LevelDB to SQLite, Blockchain database ..."));
+    //CClientUIInterface::get().InitMessage(_("[Blockchain] migrate from LevelDB to SQLite, Blockchain database ..."));
     //leveldb_to_sqlite_blockchain();
     leveldb_oldblockchain_remove_once();
 #else
@@ -981,7 +982,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 5: verify database integrity
     I_DEBUG_CS("Step 5: verify database integrity (CDBEnv and CLevelDBEnv)")
 
-    CClientUIInterface::uiInterface.InitMessage(_("Verifying database integrity..."));
+    CClientUIInterface::get().InitMessage(_("Verifying database integrity..."));
 #ifdef USE_BERKELEYDB
     const fs::path bdbwallet_path = iofs::GetDataDir() / strWalletFileName.c_str();
 #endif
@@ -1014,7 +1015,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         const fs::path leveldb_path = iofs::GetDataDir() / CLevelDBEnv::getname_mainchain();
         if(fsbridge::dir_exists(leveldb_path)) { // Blockchain
             LOCK(CLevelDBEnv::cs_leveldb);
-            CClientUIInterface::uiInterface.InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
+            CClientUIInterface::get().InitMessage(_("[Blockchain] Data migrate from LevelDB to SQLite."));
             if(! CSqliteDB(CSqliteDBEnv::getname_mainchain(), "r+").PortToSqlite(std::move(CLevelDB(CLevelDBEnv::getname_mainchain(), "r").GetIteCursor()), CSqliteDB::MIGRATE_BLOCKCHAIN)) {
                 CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_mainchain());
                 const fs::path blksql_path = iofs::GetDataDir() / CSqliteDBEnv::getname_mainchain();
@@ -1031,7 +1032,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // port from CDB to CSqliteDB
     if(fsbridge::file_exists(bdbwallet_path)) { // wallet
         LOCK(CDBEnv::cs_db);
-        CClientUIInterface::uiInterface.InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
+        CClientUIInterface::get().InitMessage(_("[Wallet] Data migrate from BerkeleyDB to SQLite ..."));
         if(! CSqliteDB(CSqliteDBEnv::getname_wallet(), "r+").PortToSqlite(std::move(CDB(strWalletFileName.c_str(), "r").GetIteCursor()), CSqliteDB::MIGRATE_WALLET)) {
             CSqliteDBEnv::get_instance().CloseDb(CSqliteDBEnv::getname_wallet());
             const fs::path sqlwallet_path = iofs::GetDataDir() / CSqliteDBEnv::getname_wallet();
@@ -1059,7 +1060,7 @@ bool entry::AppInit2(bool restart/*=false*/)
                                           " Original wallet.dat saved as wallet.{timestamp}.bak in %s; if"
                                           " your balance or transactions are incorrect you should"
                                           " restore from a backup."), strDataDir.c_str());
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            CClientUIInterface::get().ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         } else if (r == CDBEnv::RECOVER_FAIL) {
             return InitError(_("wallet.dat corrupt, salvage failed"));
         } else if (r == CDBEnv::VERIFY_OK) {
@@ -1264,7 +1265,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     while (! fLoaded)
     {
         std::string strLoadError;
-        CClientUIInterface::uiInterface.InitMessage(_("Loading block index..."));
+        CClientUIInterface::get().InitMessage(_("Loading block index..."));
 
         nStart = util::GetTimeMillis();
         do 
@@ -1332,18 +1333,18 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 8: load wallet")
 
     if (map_arg::GetBoolArg("-zapwallettxes", false)) {
-        CClientUIInterface::uiInterface.InitMessage(_("Zapping all transactions from wallet..."));
+        CClientUIInterface::get().InitMessage(_("Zapping all transactions from wallet..."));
 
         CWallet walletMain(strWalletFileName, std::string("unused"), CSqliteDBEnv::getname_wallet());
         DBErrors nZapWalletRet = walletMain.ZapWalletTx();
         if (nZapWalletRet != DB_LOAD_OK) {
-            CClientUIInterface::uiInterface.InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
+            CClientUIInterface::get().InitMessage(_("Error loading wallet.dat: Wallet corrupted"));
             return false;
         }
         entry::pwalletMain = nullptr;
     }
 
-    CClientUIInterface::uiInterface.InitMessage(_("Loading wallet..."));
+    CClientUIInterface::get().InitMessage(_("Loading wallet..."));
     logging::LogPrintf("Loading wallet...\n");
     nStart = util::GetTimeMillis();
 
@@ -1362,7 +1363,7 @@ bool entry::AppInit2(bool restart/*=false*/)
             strErrors << _("Error loading wallet.dat: Wallet corrupted") << "\n";
         } else if (nLoadWalletRet == DB_NONCRITICAL_ERROR) {
             std::string msg(_("Warning: error reading wallet.dat! All keys read correctly, but transaction data or address book entries might be missing or incorrect."));
-            CClientUIInterface::uiInterface.ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
+            CClientUIInterface::get().ThreadSafeMessageBox(msg, _(strCoinName), CClientUIInterface::OK | CClientUIInterface::ICON_EXCLAMATION | CClientUIInterface::MODAL);
         } else if (nLoadWalletRet == DB_TOO_NEW) {
             strErrors << _("Error loading wallet.dat: Wallet requires newer version of coin") << "\n";
         } else if (nLoadWalletRet == DB_NEED_REWRITE) {
@@ -1431,7 +1432,7 @@ bool entry::AppInit2(bool restart/*=false*/)
         }
     }
     if (block_info::pindexBest != pindexRescan && block_info::pindexBest && pindexRescan && block_info::pindexBest->get_nHeight() > pindexRescan->get_nHeight()) {
-        CClientUIInterface::uiInterface.InitMessage(_("Rescanning..."));
+        CClientUIInterface::get().InitMessage(_("Rescanning..."));
         logging::LogPrintf("Rescanning last %i blocks (from block %i)...\n", block_info::pindexBest->get_nHeight() - pindexRescan->get_nHeight(), pindexRescan->get_nHeight());
         nStart = util::GetTimeMillis();
         entry::pwalletMain->ScanForWalletTransactions(pindexRescan, true);
@@ -1441,7 +1442,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 #ifdef WALLET_SQL_MODE
     if(entry::pwalletMain && (!map_arg::GetBoolArg("-restorehdwallet"))) {
         if(hd_wallet::get().enable == false && entry::pwalletMain->GetBalance() == 0) {
-            CClientUIInterface::uiInterface.InitMessage(_("Creating HD Wallet..."));
+            CClientUIInterface::get().InitMessage(_("Creating HD Wallet..."));
             try {
                 (void)hd_create::CreateHDWallet(true, CSeedSecret());
             }
@@ -1455,7 +1456,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     I_DEBUG_CS("Step 9: import blocks")
 
     if (map_arg::GetMapArgsCount("-loadblock")) {
-        CClientUIInterface::uiInterface.InitMessage(_("Importing blockchain data file."));
+        CClientUIInterface::get().InitMessage(_("Importing blockchain data file."));
         for(std::string strFile: map_arg::GetMapMultiArgsString("-loadblock")) {
             FILE *file = ::fopen(strFile.c_str(), "rb");
             if (file)
@@ -1466,7 +1467,7 @@ bool entry::AppInit2(bool restart/*=false*/)
 
     fs::path pathBootstrap = iofs::GetDataDir() / "bootstrap.dat";
     if (fs::exists(pathBootstrap)) {
-        CClientUIInterface::uiInterface.InitMessage(_("Importing bootstrap blockchain data file."));
+        CClientUIInterface::get().InitMessage(_("Importing bootstrap blockchain data file."));
         FILE *file = ::fopen(pathBootstrap.string().c_str(), "rb");
         if (file) {
             fs::path pathBootstrapOld = iofs::GetDataDir() / "bootstrap.dat.old";
@@ -1486,7 +1487,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 11: load peers
     I_DEBUG_CS("Step 11: load peers")
 
-    CClientUIInterface::uiInterface.InitMessage(_("Loading addresses..."));
+    CClientUIInterface::get().InitMessage(_("Loading addresses..."));
     logging::LogPrintf("Loading addresses...\n");
     nStart = util::GetTimeMillis();
 
@@ -1533,7 +1534,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     // ********************************************************* Step 14: finished
     I_DEBUG_CS("Step 14: finished")
 
-    CClientUIInterface::uiInterface.InitMessage(_("Done loading"));
+    CClientUIInterface::get().InitMessage(_("Done loading"));
     logging::LogPrintf("Done loading\n");
 
     if (! strErrors.str().empty())

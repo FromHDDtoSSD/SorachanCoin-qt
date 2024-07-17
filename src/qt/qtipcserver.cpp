@@ -92,7 +92,7 @@ void ipcThread2(void *pArg)
     {
         boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(100);
         if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d)) {
-            CClientUIInterface::uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));
+            CClientUIInterface::get().ThreadSafeHandleURI(std::string(buffer, nSize));
             util::Sleep(1000);
         }
 
@@ -131,7 +131,7 @@ void qti_server::ipcInit(int argc, char *argv[])
         {
             boost::posix_time::ptime d = boost::posix_time::microsec_clock::universal_time() + boost::posix_time::millisec(1);
             if (mq->timed_receive(&buffer, sizeof(buffer), nSize, nPriority, d)) {
-                CClientUIInterface::uiInterface.ThreadSafeHandleURI(std::string(buffer, nSize));
+                CClientUIInterface::get().ThreadSafeHandleURI(std::string(buffer, nSize));
             } else {
                 break;
             }

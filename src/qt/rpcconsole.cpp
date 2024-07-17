@@ -386,17 +386,23 @@ void RPCConsole::ciphermypubkey() {
     if(!ai_cipher::getmycipheraddress(cipher_address, err))
         cipher_address = err;
 
-    ui->cipheraddresslineEdit->setText(QString(cipher_address.c_str()));
+    ui->cipheraddresslineEdit->setText(QString::fromStdString(cipher_address));
 }
 
 void RPCConsole::sendciphermessage() {
+    if(!QMB(QMB::M_QUESTION).setText(_("Is it okay to record the ciphered message on the blockchain?"), _("")).ask())
+        return;
     QString q_recipient_pubkey = ui->cipheraddresslineEdit->text();
     QString q_cipher = ui->sendciphermessageWidget->toPlainText();
     bool stealth = ui->stealthCheckBox->isChecked();
     std::string recipient_pubkey = q_recipient_pubkey.toStdString();
     std::string cipher = q_cipher.toStdString();
     if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher), stealth))
-        QMessageBox::critical(this, QString(_("Error").c_str()), QString("The operation failed."));
+        QMB(QMB::M_ERROR).setText(_("An error occurred during the initiation of the recording process."), _("")).exec();
+
+    QMB(QMB::M_INFO).setText(_("The process of recording to the blockchain has started. "
+                               "Please keep your wallet open and wait for a while until the process is completed. "
+                               "SORA will notify you once the recording to the blockchain is finished."), _("")).exec();
 }
 
 static void GetCipherMessages(std::string &dest, uint32_t hours) {
@@ -439,7 +445,7 @@ void RPCConsole::updateCipherMessage() {
     uint32_t hours = ui->gethoursSpinBox->value();
     std::string result;
     GetCipherMessages(result, hours);
-    ciphermessages(QString(result.c_str()), true);
+    ciphermessages(QString::fromStdString(result), true);
 }
 
 void RPCConsole::ciphermessageClear() {
@@ -500,11 +506,17 @@ static void GetSentMessages(std::string &dest, const std::string &recipient_addr
 }
 
 void RPCConsole::updateSentMyMessages() {
+    if(!QMB(QMB::M_QUESTION).setText(_("If the number of processes is large, "
+                                       "the Schnorr aggregated signature process will take a considerable amount of time. "
+                                       "Please wait patiently until the process is completed. "
+                                       "SORA will notify you once it is finished."), _("")).ask())
+        return;
+
     uint32_t hours = ui->getsentmessagesSpinBox->value();
     std::string recipient_address = ui->sentaddressLineEdit->text().toStdString();
     std::string result;
     GetSentMessages(result, recipient_address, hours);
-    sentmymessages(QString(result.c_str()), true);
+    sentmymessages(QString::fromStdString(result), true);
 }
 
 void RPCConsole::sentmessagesClear() {

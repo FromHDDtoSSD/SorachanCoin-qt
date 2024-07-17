@@ -3,11 +3,9 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "ui_interface.h"
-#include "init.h"
+#include <ui_interface.h>
+#include <init.h>
 #include <rpc/bitcoinrpc.h>
-
-#include <string>
 
 int CClientUIInterface::noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style)
 {
@@ -16,9 +14,26 @@ int CClientUIInterface::noui_ThreadSafeMessageBox(const std::string &message, co
     return 4;
 }
 
-bool CClientUIInterface::noui_ThreadSafeAskFee(int64_t /*nFeeRequired*/, const std::string &/*strCaption*/)
+bool CClientUIInterface::noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption)
 {
-    //static_cast<int64_t>(nFeeRequired);
-    //static_cast<const std::string &>(strCaption);
+    (void)nFeeRequired;
+    (void)strCaption;
+    return true;
+}
+
+void CClientUIInterface::noui_ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
+{
+    (void)message;
+    (void)caption;
+    (void)detail;
+    (unsigned int)style;
+}
+
+bool CClientUIInterface::noui_ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
+{
+    (void)message;
+    (void)caption;
+    (void)detail;
+    (unsigned int)style;
     return true;
 }

@@ -215,80 +215,6 @@ int64_t CAITransaction03::GetTime() const {
 
 namespace aitx_thread {
 
-#if defined(QT_GUI) && defined(WIN32)
-
-class QMB
-{
-public:
-    enum status {
-        M_OK,
-        M_ERROR
-    };
-
-    QMB() = delete;
-    QMB(status s) {
-        if(s == M_OK) {
-            title = utf8_to_utf16(_("Confirmation"));
-            icon = MB_ICONINFORMATION;
-        } else if (s == M_ERROR) {
-            title = utf8_to_utf16(_("Error"));
-            icon = MB_ICONWARNING;
-        } else {
-            assert(!"QMB ERROR");
-            title = L"";
-            icon = 0;
-        }
-    }
-
-    QMB &setText(const std::string &text) {
-        message = utf8_to_utf16(text);
-        return *this;
-    }
-
-    int exec() {
-        ::MessageBoxW(nullptr, message.c_str(), title.c_str(), MB_OK | icon);
-        return 0;
-    }
-
-private:
-
-    std::wstring utf8_to_utf16(const std::string &utf8Str) {
-        const int32_t wideCharLen = ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, nullptr, 0);
-        std::wstring wideStr(wideCharLen, 0);
-        ::MultiByteToWideChar(CP_UTF8, 0, utf8Str.c_str(), -1, &wideStr[0], wideCharLen);
-        wideStr.pop_back(); // erase "\0"
-        return wideStr;
-    }
-
-    std::wstring title;
-    std::wstring message;
-    UINT icon;
-};
-
-#else
-
-class QMB
-{
-public:
-    enum status {
-        M_OK,
-        M_ERROR
-    };
-
-    QMB() = delete;
-    QMB(status s) {}
-
-    QMB &setText(const std::string &) {
-        return *this;
-    }
-
-    int exec() {
-        return 0;
-    }
-};
-
-#endif
-
 void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
     //! get the SORA-QAI cipher address qai_address ans account hash
     std::string qai_address;
@@ -301,8 +227,8 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         return;
     }
 
-    print_str("qai_address", qai_address);
-    print_num("nAmount", nAmount);
+    //print_str("qai_address", qai_address);
+    //print_num("nAmount", nAmount);
 
     if(!hd_wallet::get().enable) {
         fMessage ? QMB(QMB::M_ERROR).setText(_("The HD Wallet disable.")).exec(): 0;
@@ -320,11 +246,11 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         CBitcoinAddress address(qai_address);
         CScript scriptPubKey;
         scriptPubKey.SetAddress(address);
-        print_str("scruptPubKey", scriptPubKey.ToString());
+        //print_str("scruptPubKey", scriptPubKey.ToString());
 
         //! send to SORA-QAI cipher scriptPubKey
         CWalletTx wtx;
-        //wtx.strFromAccount = std::string("");
+        wtx.strFromAccount = std::string("");
         std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
         if (!strError.empty()) {
             fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
@@ -410,7 +336,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         } while(true);
     }
 
-    fMessage ? QMB(QMB::M_OK).setText(_("Successfully verified the encrypted message transaction.")).exec(): 0;
+    fMessage ? QMB(QMB::M_INFO).setText(_("Successfully verified the encrypted message transaction.")).exec(): 0;
 }
 
 } // aitx_thread

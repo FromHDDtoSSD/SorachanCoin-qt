@@ -820,6 +820,92 @@ void BitcoinGUI::message(const QString &title, const QString &message, unsigned 
     }
 }
 
+void BitcoinGUI::ok(const QString &title, const QString &message, unsigned int style, const QString &detail) {
+    QString strTitle = tr(strCoinName) + " - ";
+    // Default to information icon
+    int nMBoxIcon = QMessageBox::Ok;
+
+    // Check for usage of predefined title
+    switch (style)
+    {
+    case CClientUIInterface::MSG_ERROR:
+        strTitle += tr("Error");
+        break;
+    case CClientUIInterface::MSG_WARNING:
+        strTitle += tr("Warning");
+        break;
+    case CClientUIInterface::MSG_INFORMATION:
+        strTitle += tr("Information");
+        break;
+    case CClientUIInterface::MSG_QUESTION:
+        strTitle += tr("Question");
+        break;
+    default:
+        strTitle += title; // Use supplied title
+    }
+
+    // Check for error/warning icon
+    if (style & CClientUIInterface::ICON_ERROR) {
+        nMBoxIcon = QMessageBox::Critical;
+    } else if (style & CClientUIInterface::ICON_WARNING) {
+        nMBoxIcon = QMessageBox::Warning;
+    }
+
+    // Display message
+    // Check for buttons, use OK as default, if none was supplied
+    QMessageBox::StandardButton okbutton;
+    okbutton = QMessageBox::Ok;
+    QMessageBox mBox((QMessageBox::Icon)nMBoxIcon, strTitle, message, okbutton);
+    if(!detail.isEmpty()) { mBox.setDetailedText(detail); }
+    mBox.exec();
+}
+
+void BitcoinGUI::ask(const QString &title, const QString &message, unsigned int style, bool *result, const QString &detail) {
+    QString strTitle = tr(strCoinName) + " - ";
+    // Default to information icon
+    int nMBoxIcon = QMessageBox::Question;
+
+    // Check for usage of predefined title
+    switch (style)
+    {
+    case CClientUIInterface::MSG_ERROR:
+        strTitle += tr("Error");
+        break;
+    case CClientUIInterface::MSG_WARNING:
+        strTitle += tr("Warning");
+        break;
+    case CClientUIInterface::MSG_INFORMATION:
+        strTitle += tr("Information");
+        break;
+    case CClientUIInterface::MSG_QUESTION:
+        strTitle += tr("Question");
+        break;
+    default:
+        strTitle += title; // Use supplied title
+    }
+
+    // Check for error/warning icon
+    if (style & CClientUIInterface::ICON_ERROR) {
+        nMBoxIcon = QMessageBox::Critical;
+    } else if (style & CClientUIInterface::ICON_WARNING) {
+        nMBoxIcon = QMessageBox::Warning;
+    }
+
+    // Display message
+    // Check for buttons, use OK as default, if none was supplied
+    QMessageBox mBox;
+    mBox.setIcon((QMessageBox::Icon)nMBoxIcon);
+    mBox.setWindowTitle(strTitle);
+    mBox.setText(message);
+    mBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    mBox.setDefaultButton(QMessageBox::Yes);
+    if(!detail.isEmpty()) { mBox.setDetailedText(detail); }
+    if(mBox.exec() == QMessageBox::Yes)
+        *result = true;
+    else
+        *result = false;
+}
+
 void BitcoinGUI::changeEvent(QEvent *e) {
     QMainWindow::changeEvent(e);
 #ifndef Q_OS_MAC // Ignored on Mac

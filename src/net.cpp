@@ -864,7 +864,7 @@ void net_node::ThreadSocketHandler2(void *parg)
         }
         if(net_node::vNodes.size() != nPrevNodeCount) {
             nPrevNodeCount = net_node::vNodes.size();
-            CClientUIInterface::uiInterface.NotifyNumConnectionsChanged(net_node::vNodes.size());
+            CClientUIInterface::get().NotifyNumConnectionsChanged(net_node::vNodes.size());
         }
 
         //

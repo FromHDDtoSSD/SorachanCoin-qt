@@ -21,7 +21,7 @@ void block_check::manage::InvalidChainFound(CBlockIndex *pindexNew)
     if (pindexNew->get_nChainTrust() > block_info::nBestInvalidTrust) {
         block_info::nBestInvalidTrust = pindexNew->get_nChainTrust();
         CTxDB().WriteBestInvalidTrust(CBigNum(block_info::nBestInvalidTrust));
-        CClientUIInterface::uiInterface.NotifyBlocksChanged();
+        CClientUIInterface::get().NotifyBlocksChanged();
     }
 
     uint256 nBestInvalidBlockTrust = pindexNew->get_nChainTrust() - pindexNew->get_pprev()->get_nChainTrust();
