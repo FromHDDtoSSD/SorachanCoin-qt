@@ -73,6 +73,7 @@ public slots:
     void sentmymessages(const QString &message, bool html = false);
     void updateSentMyMessages();
     void sentmessagesClear();
+    void copyrecipientAddress();
     /** Set number of connections shown in the UI */
     void setNumConnections(int count);
     /** Set number of blocks shown in the UI */

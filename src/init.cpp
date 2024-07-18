@@ -233,8 +233,6 @@ void entry::noui_connect()
     //
     CClientUIInterface::get().ThreadSafeMessageBox.connect(CClientUIInterface::noui_ThreadSafeMessageBox);
     CClientUIInterface::get().ThreadSafeAskFee.connect(CClientUIInterface::noui_ThreadSafeAskFee);
-    CClientUIInterface::get().ThreadSafeMessageOk(CClientUIInterface::noui_ThreadSafeMessageOk);
-    CClientUIInterface::get().ThreadSafeMessageAsk(CClientUIInterface::noui_ThreadSafeMessageAsk);
 }
 
 int main(int argc, char *argv[])

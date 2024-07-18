@@ -730,13 +730,27 @@ CBitcoinAddress CRPCTable::CreateNewCipherAddress(const std::string &recipient_p
     SymmetricKey symkey(symmetrickey);
 
     //
+    // from my cipher public key
+    //
+    bech32_vector b32_my_cipher_xonly_agg_pubkey;
+    if(!stealth) {
+        XOnlyPubKeys my_cipher_xonly_agg_pubkeys;
+        if(!XOnlyAggWalletInfo::GetAggPublicKeys(ai_cipher::cipher_begin_index, ai_cipher::cipher_agg_size, my_cipher_xonly_agg_pubkeys))
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: my cipher XOnlyPubKeys is invalid");
+        XOnlyPubKey my_cipher_xonly_agg_pubkey = my_cipher_xonly_agg_pubkeys.GetXOnlyPubKey();
+        b32_my_cipher_xonly_agg_pubkey = my_cipher_xonly_agg_pubkey.GetPubVch();
+        if(b32_my_cipher_xonly_agg_pubkey.size() != XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE)
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: my cipher XOnlyPubKeys size is invalid");
+    }
+
+    //
     // Build aitx and qrandhash
     //
     std::string recipient_agg_pubhex;
     if(!stealth) {
         recipient_agg_pubhex.reserve(66);
         recipient_agg_pubhex = std::string("[");
-        recipient_agg_pubhex += strenc::HexStr(recipient_agg_pubkey);
+        recipient_agg_pubhex += strenc::HexStr(b32_my_cipher_xonly_agg_pubkey);
         recipient_agg_pubhex += std::string("]");
         if(recipient_agg_pubhex.size() != (XOnlyPubKey::XONLY_PUBLIC_KEY_SIZE * 2) + 2)
             throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: recipient_address hex is invalid");

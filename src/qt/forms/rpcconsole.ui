@@ -1035,6 +1035,13 @@ color: rgb(0, 170, 255);</string>
           </widget>
          </item>
          <item>
+          <widget class="QPushButton" name="copyaddressPushButton">
+           <property name="text">
+            <string>Copy Address</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="clearmessagePushButton">
            <property name="text">
             <string>Clear</string>

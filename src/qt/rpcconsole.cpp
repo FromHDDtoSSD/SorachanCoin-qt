@@ -1,6 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -18,6 +18,7 @@
 #include <QKeyEvent>
 #include <QUrl>
 #include <QScrollBar>
+#include <QClipboard>
 #ifdef USE_BERKELEYDB
 # include <db_cxx.h>
 #endif
@@ -393,7 +394,15 @@ void RPCConsole::sendciphermessage() {
     if(!QMB(QMB::M_QUESTION).setText(_("Is it okay to record the ciphered message on the blockchain?"), _("")).ask())
         return;
     QString q_recipient_pubkey = ui->cipheraddresslineEdit->text();
+    if(q_recipient_pubkey.size() == 0) {
+        QMB(QMB::M_ERROR).setText(_("The recipient's public key is empty."), _("")).exec();
+        return;
+    }
     QString q_cipher = ui->sendciphermessageWidget->toPlainText();
+    if(q_cipher.size() == 0) {
+        QMB(QMB::M_ERROR).setText(_("The encrypted message to be sent is empty."), _("")).exec();
+        return;
+    }
     bool stealth = ui->stealthCheckBox->isChecked();
     std::string recipient_pubkey = q_recipient_pubkey.toStdString();
     std::string cipher = q_cipher.toStdString();
@@ -514,6 +523,10 @@ void RPCConsole::updateSentMyMessages() {
 
     uint32_t hours = ui->getsentmessagesSpinBox->value();
     std::string recipient_address = ui->sentaddressLineEdit->text().toStdString();
+    if(recipient_address.size() == 0) {
+        QMB(QMB::M_ERROR).setText(_("The recipient's public key is empty."), _("")).exec();
+        return;
+    }
     std::string result;
     GetSentMessages(result, recipient_address, hours);
     sentmymessages(QString::fromStdString(result), true);
@@ -521,6 +534,13 @@ void RPCConsole::updateSentMyMessages() {
 
 void RPCConsole::sentmessagesClear() {
     ui->sentmessagesTextEdit->clear();
+}
+
+void RPCConsole::copyrecipientAddress() {
+    QClipboard *clipboard = QGuiApplication::clipboard();
+    QString text = ui->cipheraddresslineEdit->text();
+    if(text.size() > 0)
+        clipboard->setText(text);
 }
 
 void RPCConsole::message(int category, const QString &message, bool html/*=false*/) {
@@ -608,6 +628,7 @@ void RPCConsole::startExecutor() {
     connect(ui->getmyaddressPushButton, SIGNAL(clicked()), this, SLOT(ciphermypubkey()));
     connect(ui->sendPushButton, SIGNAL(clicked()), this, SLOT(sendciphermessage()));
     connect(ui->clearmessagePushButton, SIGNAL(clicked()), this, SLOT(ciphermessageClear()));
+    connect(ui->copyaddressPushButton, SIGNAL(clicked()), this, SLOT(copyrecipientAddress()));
     ui->gethoursSpinBox->setValue(168);
     // GetSentMessages connect
     connect(ui->clearsentmessagesPushButton, SIGNAL(clicked()), this, SLOT(sentmessagesClear()));

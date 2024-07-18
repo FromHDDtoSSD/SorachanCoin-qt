@@ -21,6 +21,7 @@ bool CClientUIInterface::noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::
     return true;
 }
 
+/*
 void CClientUIInterface::noui_ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
 {
     (void)message;
@@ -28,7 +29,9 @@ void CClientUIInterface::noui_ThreadSafeMessageOk(const std::string &message, co
     (void)detail;
     (unsigned int)style;
 }
+*/
 
+/*
 bool CClientUIInterface::noui_ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)
 {
     (void)message;
@@ -37,3 +40,4 @@ bool CClientUIInterface::noui_ThreadSafeMessageAsk(const std::string &message, c
     (unsigned int)style;
     return true;
 }
+*/

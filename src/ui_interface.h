@@ -86,9 +86,12 @@ public:
     };
 
     /** Show message box. */
+    // Please use ThreadSafeMessageOk and ThreadSafeMessageAsk only with Qt.
     boost::signals2::signal<void (const std::string &message, const std::string &caption, int style)> ThreadSafeMessageBox;
+#ifdef QT_GUI
     boost::signals2::signal<void (const std::string &message, const std::string &caption, const std::string &detail, unsigned int style)> ThreadSafeMessageOk;
     boost::signals2::signal<bool (const std::string &message, const std::string &caption, const std::string &detail, unsigned int style), boost::signals2::last_value<bool> > ThreadSafeMessageAsk;
+#endif
 
     /** Ask the user whether they want to pay a fee or not. */
     boost::signals2::signal<bool (int64_t nFeeRequired, const std::string &strCaption), boost::signals2::last_value<bool> > ThreadSafeAskFee;
@@ -123,8 +126,8 @@ public:
     //
     static int noui_ThreadSafeMessageBox(const std::string &message, const std::string &caption, int style);
     static bool noui_ThreadSafeAskFee(int64_t nFeeRequired, const std::string &strCaption);
-    static void noui_ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
-    static bool noui_ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
+    //static void noui_ThreadSafeMessageOk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
+    //static bool noui_ThreadSafeMessageAsk(const std::string &message, const std::string &caption, const std::string &detail, unsigned int style);
 };
 
 //
@@ -167,6 +170,7 @@ public:
         return *this;
     }
 
+#ifdef QT_GUI
     int exec() {
         CClientUIInterface::get().ThreadSafeMessageOk(message, title, detail,
         ((icon == M_INFO) ? CClientUIInterface::ICON_INFORMATION : CClientUIInterface::ICON_WARNING) | CClientUIInterface::MODAL);
@@ -177,6 +181,15 @@ public:
         return CClientUIInterface::get().ThreadSafeMessageAsk(message, title, detail,
         ((icon == M_QUESTION) ? CClientUIInterface::ICON_QUESTION : CClientUIInterface::ICON_WARNING) | CClientUIInterface::MODAL);
     }
+#else
+    int exec() {
+        return 0;
+    }
+
+    bool ask() {
+        return false;
+    }
+#endif
 
 private:
     std::string title;
