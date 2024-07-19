@@ -82,12 +82,7 @@ color: rgb(0, 170, 255);</string>
         <cursorShape>IBeamCursor</cursorShape>
        </property>
        <property name="text">
-        <string>Copyright © 2009-2018 The Bitcoin Developers
-Copyright © 2011-2012 The PPCoin Developers
-Copyright © 2014 The Peerunity Developers
-Copyright © 2014 The EmerCoin Developers
-Copyright © 2012-2016 The NovaCoin Developers
-Copyright © 2017-2021 The SorachanCoin Developers</string>
+        <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copyright © 2009-2018 The Bitcoin Developers&lt;/p&gt;&lt;p&gt;Copyright © 2011-2012 The PPCoin Developers&lt;/p&gt;&lt;p&gt;Copyright © 2014 The Peerunity Developers&lt;/p&gt;&lt;p&gt;Copyright © 2014 The EmerCoin Developers&lt;/p&gt;&lt;p&gt;Copyright © 2012-2016 The NovaCoin Developers&lt;/p&gt;&lt;p&gt;Copyright © 2017-2024 The SorachanCoin Developers&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
        </property>
        <property name="textInteractionFlags">
         <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByKeyboard|Qt::TextSelectableByMouse</set>

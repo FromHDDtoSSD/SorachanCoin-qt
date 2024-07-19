@@ -7,7 +7,7 @@
     <message>
         <location filename="../forms/aboutdialog.ui" line="14"/>
         <source>About SorachanCoin</source>
-        <translation>About SorachanCoin</translation>
+        <translation>About SorachanCoin SORA-QAI</translation>
     </message>
     <message>
         <location filename="../forms/aboutdialog.ui" line="56"/>
@@ -27,7 +27,7 @@ Copyright © 2011-2012 The PPCoin Developers
 Copyright © 2014 The Peerunity Developers
 Copyright © 2014 The EmerCoin Developers
 Copyright © 2012-2016 The NovaCoin developers
-Copyright © 2017-2019 The SorachanCoin Developers</translation>
+Copyright © 2018-2024 The SorachanCoin Developers</translation>
     </message>
     <message>
         <location filename="../forms/aboutdialog.ui" line="114"/>
@@ -340,6 +340,16 @@ Copyright © 2017-2019 The SorachanCoin Developers</translation>
         <location filename="../bitcoingui.cpp" line="245"/>
         <source>Show general overview of wallet</source>
         <translation>Show general overview of wallet</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>&amp;Minting</source>
+        <translation>Staking</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>&amp;Checkpoints</source>
+        <translation>Checkpoints</translation>
     </message>
     <message>
         <location filename="../bitcoingui.cpp" line="250"/>
@@ -1220,6 +1230,11 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>New receiving address</translation>
     </message>
     <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quantum and AI resistance Address (bech32 sora ...)</source>
+        <translation>Quantum and AI resistance, Schnorr sig-5000keys Address (sora1 ...)</translation>
+    </message>
+    <message>
         <location filename="../editaddressdialog.cpp" line="25"/>
         <source>New sending address</source>
         <translation>New sending address</translation>
@@ -1590,6 +1605,26 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location filename="../mintingview.cpp" line="210"/>
         <source>Balance</source>
         <translation>Balance</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>ECDSA Total:</source>
+        <translation>ECDSA Total:</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Quantum and AI resistance Total:</source>
+        <translation>ECDSA, Quantum and AI resistance, Schnorr sig-5000keys Total:</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Number of transactions:</source>
+        <translation>Number of transactions:</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>[SORA Network] Proof of Benchmark Miner</source>
+        <translation>[SORA Network] HDD/SSD benchmark</translation>
     </message>
     <message>
         <location filename="../mintingview.cpp" line="211"/>

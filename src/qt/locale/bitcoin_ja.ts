@@ -4,11 +4,11 @@
     <message>
         <location filename="../forms/aboutdialog.ui" line="+14"/>
         <source>About SorachanCoin</source>
-        <translation>SorachanCoinについて</translation>
+        <translation>SorachanCoin SORA-QAIについて</translation>
     </message>
     <message>
         <location line="+39"/>
-        <source>&lt;b&gt;SorachanCoin&lt;/b&gt; version</source>
+        <source>&lt;b&gt;SorachanCoin SORA-QAI&lt;/b&gt; version</source>
         <translation>&lt;b&gt;SorachanCoin&lt;/b&gt;バージョン</translation>
     </message>
     <message>
@@ -24,7 +24,7 @@ Copyright © 2011-2012 The PPCoin Developers
 Copyright © 2014 The Peerunity Developers
 Copyright © 2014 The EmerCoin Developers
 Copyright © 2012-2016 The NovaCoin developers
-Copyright © 2017-2019 The SorachanCoin Developers
+Copyright © 2018-2024 The SorachanCoin Developers
 </translation>
     </message>
     <message>
@@ -340,7 +340,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="+17"/>
         <source>&amp;Transactions</source>
-        <translation>処理(&amp;T)</translation>
+        <translation>トランザクション(&amp;T)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -349,8 +349,18 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     </message>
     <message>
         <location line="+5"/>
+        <source>&amp;Minting</source>
+        <translation>ステーキング(&amp;K)</translation>
+    </message>
+    <message>
+        <location line="+5"/>
+        <source>&amp;Checkpoints</source>
+        <translation>チェックポイント(&amp;C)</translation>
+    </message>
+    <message>
+        <location line="+5"/>
         <source>&amp;Address Book</source>
-        <translation>アドレス帳</translation>
+        <translation>アドレス帳(&amp;A)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -360,7 +370,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="-13"/>
         <source>&amp;Receive coins</source>
-        <translation>コインを受け取ります</translation>
+        <translation>&amp;コインを受け取ります(&amp;R)</translation>
     </message>
     <message>
         <location line="+1"/>
@@ -370,7 +380,7 @@ MIT/X11 ソフトウェア ライセンスの下で配布されています。�
     <message>
         <location line="-7"/>
         <source>&amp;Send coins</source>
-        <translation>コインを送ります</translation>
+        <translation>コインを送ります(&amp;S)</translation>
     </message>
     <message>
         <location line="+35"/>
@@ -1038,6 +1048,16 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>新しい受信アドレス</translation>
     </message>
     <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quantum and AI resistance Address (bech32 sora ...)</source>
+        <translation>量子AI耐性, Schnorr集約署名-5000鍵マルチシグ アドレス (sora1 ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Eth Style Address (0x ...)</source>
+        <translation>イーサリアム形式のアドレス (0x ...)</translation>
+    </message>
+    <message>
         <location line="+4"/>
         <source>New sending address</source>
         <translation>新しい送信アドレス</translation>
@@ -1333,6 +1353,105 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
 </context>
 <context>
+    <name>SyncWidget</name>
+    <message>
+        <location line="-80"/>
+        <source>Synchronizing ...</source>
+        <translation>同期中 ...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>until sync: %1 hours %2 min %3 sec ...</source>
+        <translation>同期完了までの残り時間: %1 時間 %2 分 %3 秒 ...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Blockchain can't acquire the exact balance until the sync is complete. Therefore, please wait for a while until the synchronization is completed.</source>
+        <translation>ブロックチェーンの残高は、同期完了まで正確ではありません。そのため、同期完了までお待ちください。</translation>
+    </message>
+</context>
+<context>
+    <name>AutocheckpointsWidget</name>
+    <message>
+        <location line="-80"/>
+        <source>Below is a list of Hardcode(static) Checkpoints.</source>
+        <translation>静的なハードコードによるチェックポイント一覧</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Below is a list of Automatic(dynamic) Checkpoints.</source>
+        <translation>動的に付与されたチェックポイント一覧</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Below is Automatic(dynamic) Checkpoints counter.</source>
+        <translation>動的に付与されたチェックポイント充填率</translation>
+    </message>
+</context>
+<context>
+    <name>MintingTableModel</name>
+    <message>
+        <location line="+8"/>
+        <source>minutes</source>
+        <translation>分</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>hours</source>
+        <translation>時間</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>days</source>
+        <translation>日</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>You have %1 chance to find a POS block if you mint %2 %3 at current difficulty.</source>
+        <translation>もし %2 %3 による現在の難易度で獲得できるのなら %1 の可能性でPoSブロックを獲得できます。</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>from %4 to %5</source>
+        <translation> %4 から %5 へ</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Destination address of the output.</source>
+        <translation>出力アドレス</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Original transaction id.</source>
+        <translation>起源のトランザクションID</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Age of the transaction in days.</source>
+        <translation>獲得可能性が蓄積されたトランザクションの日数</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Balance of the output.</source>
+        <translation>獲得できるステーキング報酬</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Coin age in the output.</source>
+        <translation>ステーキング出力の状況</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>Chance to mint a block within given time interval.</source>
+        <translation>PoSブロックから報酬を獲得できるとされる間隔</translation>
+    </message>
+    <message>
+        <location line="+8"/>
+        <source>The size of the potential rewards if the block is found at the beginning and the end given time interval.</source>
+        <translation>もしPoSブロックを獲得できたときの報酬に対する潜在的な可能性</translation>
+    </message>
+</context>
+<context>
     <name>OverviewPage</name>
     <message>
         <location filename="../forms/overviewpage.ui" line="+14"/>
@@ -1354,6 +1473,26 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+16"/>
         <source>Available:</source>
         <translation>利用可能残高：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>ECDSA Total:</source>
+        <translation>ECDSA 残高合計：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Quantum and AI resistance Total:</source>
+        <translation>ECDSA, 量子AI耐性鍵, Schnorr集約署名(5000鍵)マルチシグ 残高合計：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Number of transactions:</source>
+        <translation>トランザクション数：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>[SORA Network] Proof of Benchmark Miner</source>
+        <translation>[SORA Network] HDD/SSD ベンチマーク機能</translation>
     </message>
     <message>
         <location line="-160"/>
@@ -1517,6 +1656,16 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>使用中の OpenSSL のバージョン</translation>
     </message>
     <message>
+        <location line="+68"/>
+        <source>Using Wallet version</source>
+        <translation>使用中の ウォレット のバージョン</translation>
+    </message>
+    <message>
+        <location line="+68"/>
+        <source>Configuration file</source>
+        <translation>設定ファイル</translation>
+    </message>
+    <message>
         <location line="+49"/>
         <source>Startup time</source>
         <translation>起動した日時</translation>
@@ -1625,6 +1774,116 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+1"/>
         <source>Type &lt;b&gt;help&lt;/b&gt; for an overview of available commands.</source>
         <translation>使用可能なコマンド一覧を見るには &lt;b&gt;help&lt;/b&gt; と入力します。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>SendCipherMessage</source>
+        <translation>暗号メッセージを送信</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherAddress</source>
+        <translation>自分の暗号アドレスを取得</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copy Address</source>
+        <translation>アドレスをコピー</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Clear</source>
+        <translation>内容クリア</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Enable stealth mode</source>
+        <translation>ステルスモード</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieve (hours):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;暗号メッセージ受信 探索期間 (時間):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherMessage</source>
+        <translation>暗号メッセージを受信</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI 匿名暗号通信 メッセージアドレス&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get sent messages</source>
+        <translation>送った暗号メッセージの取得閲覧</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI The recipient's cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI 相手先 匿名暗号通信 メッセージアドレス&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieved (hours): &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;送信済み暗号メッセージ取得 探索期間 (時間):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Is it okay to record the ciphered message on the blockchain?</source>
+        <translation>ブロックチェーンに暗号メッセージを記録します。よろしいでしょうか？</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recipient's public cipher address is empty.</source>
+        <translation>相手先の公開暗号通信アドレスが空欄です。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The encrypted message to be sent is empty.</source>
+        <translation>送付する暗号メッセージが空です。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The process of recording to the blockchain has started. Please keep your wallet open and wait for a while until the process is completed. SORA will notify you once the recording to the blockchain is finished.</source>
+        <translation>ブロックチェーンへの記録を開始しました。このまま記録完了までお待ちください。完了次第、メッセージでお知らせいたします。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An error occurred during the initiation of the recording process.</source>
+        <translation>ブロックチェーン記録処理に失敗いたしました。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>If the number of processes is large, the Schnorr aggregated signature process will take a considerable amount of time. Please wait patiently until the process is completed. SORA will notify you once it is finished.</source>
+        <translation>探索数が大きい場合、Schnorr集約署名の再生成にお時間を要します。このため、処理完了までこのまましばらくお待ちください。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&amp;Network Traffic</source>
+        <translation>P2Pネットワーク送受信状況表示</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Peers</source>
+        <translation>ピア情報</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>CipherMessages</source>
+        <translation>匿名暗号通信メッセージ機能</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>GetSentMessages</source>
+        <translation>送った匿名暗号通信メッセージの取得閲覧</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>UPDATE</source>
+        <translation>ピア情報を表示</translation>
     </message>
 </context>
 <context>
@@ -2266,7 +2525,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location filename="../transactiondesc.cpp" line="253"/>
         <source>Generated coins must mature 15 blocks before they can be spent. When you generated this block, it was broadcast to the network to be added to the blockchain. If it fails to get into the chain, its state will change to &quot;not accepted&quot; and it won&apos;t be spendable. This may occasionally happen if another node generates a block within a few seconds of yours.</source>
-        <translation>生成したコインは15ブロックに承認されなければなりません。生成と同時に、ブロックチェーンに加えるため、SorachanCoinネットワークに接続いたします。そして、ブロックチェーンの追加に失敗した場合、「受け入れられない」に変わって、追加・承認されない状態(残高に入らない)となります。これは、自分のノードと、他のノードが同時に新しいブロックを発現させたときに起こります。そして、同時に生成した場合は、その先のチェーンが早く伸びた方に権利が移行し、そちらが承認されます。</translation>
+        <translation>生成されたコインが使えるようになるには15ブロックに承認されなければなりません。生成と同時にブロックチェーンに加えるためSorachanCoinネットワークに接続いたします。もしブロックチェーンの追加に失敗した場合は「受け入れられない」状態に変わり、追加承認されない状態(残高に入らない)となります。これは自分のノードと他のノードが同時に新しいブロックを発現させたときに起こります。同時生成の場合は、チェーンが早く伸びた方に権利が移行し承認されます。</translation>
     </message>
     <message>
         <location line="+7"/>
@@ -2276,7 +2535,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location line="+8"/>
         <source>Transaction</source>
-        <translation>処理</translation>
+        <translation>トランザクション</translation>
     </message>
     <message>
         <location line="+5"/>
@@ -2624,7 +2883,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location filename="../walletmodel.cpp" line="+206"/>
         <source>Sending...</source>
-        <translation>通信中...</translation>
+        <translation>送金中...</translation>
     </message>
 </context>
 <context>
@@ -2632,7 +2891,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     <message>
         <location filename="../bitcoinstrings.cpp" line="+33"/>
         <source>SorachanCoin version</source>
-        <translation>SorachanCoinバージョン</translation>
+        <translation>SorachanCoin SORA-QAIバージョン</translation>
     </message>
     <message>
         <location line="+1"/>

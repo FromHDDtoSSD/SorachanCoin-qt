@@ -823,7 +823,7 @@ void BitcoinGUI::message(const QString &title, const QString &message, unsigned 
 void BitcoinGUI::ok(const QString &title, const QString &message, unsigned int style, const QString &detail) {
     QString strTitle = tr(strCoinName) + " - ";
     // Default to information icon
-    int nMBoxIcon = QMessageBox::Ok;
+    int nMBoxIcon = QMessageBox::Information;
 
     // Check for usage of predefined title
     switch (style)
