@@ -331,6 +331,26 @@ void AddressTableModel::addQai_v2(const QString &label) {
     CRPCTable::getnewschnorraddress(obj, false);
 }
 
+bool AddressTableModel::addQai_v3(bool &mintflag) {
+    mintflag = CWallet::fWalletUnlockMintOnly;
+    bool ret = walletModel->requestUnlock_manualLock();
+    if(!ret) {
+        editStatus = WALLET_UNLOCK_FAILURE;
+        return false;
+    }
+
+    return true;
+}
+
+void AddressTableModel::addQai_v3_wallet_tolock(bool mintflag) {
+    if(walletModel->getEncryptionStatus() == WalletModel::Locked)
+        return;
+    if(mintflag)
+        CWallet::fWalletUnlockMintOnly = true;
+    else
+        walletModel->setWalletLocked(true);
+}
+
 QString AddressTableModel::addRow(const QString &type, const QString &label, const QString &address) {
     std::string strLabel = label.toStdString();
     std::string strAddress = address.toStdString();

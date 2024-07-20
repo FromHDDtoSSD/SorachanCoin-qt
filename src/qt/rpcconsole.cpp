@@ -8,6 +8,8 @@
 #include <ui_rpcconsole.h>
 #include <clientmodel.h>
 #include <rpc/bitcoinrpc.h>
+#include <qt/walletmodel.h>
+#include <qt/addresstablemodel.h>
 #include <sorara/aitx.h>
 #include <guiutil.h>
 #include <dialogwindowflags.h>
@@ -277,6 +279,10 @@ bool RPCConsole::eventFilter(QObject* obj, QEvent *event) {
     return QWidget::eventFilter(obj, event);
 }
 
+void RPCConsole::setWalletModel(WalletModel *model) {
+    this->walletModel = model;
+}
+
 void RPCConsole::setClientModel(ClientModel *model) {
     this->clientModel = model;
     ui->trafficGraph->setClientModel(model);
@@ -382,12 +388,19 @@ void RPCConsole::ciphermessages(const QString &message, bool html/*=false*/) {
 }
 
 void RPCConsole::ciphermypubkey() {
+    // manual wallet unlock
+    AddressTableModel *addressModel = walletModel->getAddressTableModel();
+    bool mintonly;
+    if(!addressModel->addQai_v3(mintonly))
+        return;
+
     std::string cipher_address;
     std::string err;
     if(!ai_cipher::getmycipheraddress(cipher_address, err))
         cipher_address = err;
 
     ui->cipheraddresslineEdit->setText(QString::fromStdString(cipher_address));
+    addressModel->addQai_v3_wallet_tolock(mintonly);
 }
 
 void RPCConsole::sendciphermessage() {
@@ -403,6 +416,13 @@ void RPCConsole::sendciphermessage() {
         QMB(QMB::M_ERROR).setText(tr("The encrypted message to be sent is empty.").toStdString(), _("")).exec();
         return;
     }
+
+    // manual wallet unlock
+    AddressTableModel *addressModel = walletModel->getAddressTableModel();
+    bool junk;
+    if(!addressModel->addQai_v3(junk))
+        return;
+
     bool stealth = ui->stealthCheckBox->isChecked();
     std::string recipient_pubkey = q_recipient_pubkey.toStdString();
     std::string cipher = q_cipher.toStdString();
@@ -450,10 +470,17 @@ static void GetCipherMessages(std::string &dest, uint32_t hours) {
 }
 
 void RPCConsole::updateCipherMessage() {
+    // manual wallet unlock
+    AddressTableModel *addressModel = walletModel->getAddressTableModel();
+    bool mintonly;
+    if(!addressModel->addQai_v3(mintonly))
+        return;
+
     uint32_t hours = ui->gethoursSpinBox->value();
     std::string result;
     GetCipherMessages(result, hours);
     ciphermessages(QString::fromStdString(result), true);
+    addressModel->addQai_v3_wallet_tolock(mintonly);
 }
 
 void RPCConsole::ciphermessageClear() {
@@ -526,9 +553,17 @@ void RPCConsole::updateSentMyMessages() {
         QMB(QMB::M_ERROR).setText(tr("The recipient's public cipher address is empty.").toStdString(), _("")).exec();
         return;
     }
+
+    // manual wallet unlock
+    AddressTableModel *addressModel = walletModel->getAddressTableModel();
+    bool mintflag;
+    if(!addressModel->addQai_v3(mintflag))
+        return;
+
     std::string result;
     GetSentMessages(result, recipient_address, hours);
     sentmymessages(QString::fromStdString(result), true);
+    addressModel->addQai_v3_wallet_tolock(mintflag);
 }
 
 void RPCConsole::sentmessagesClear() {

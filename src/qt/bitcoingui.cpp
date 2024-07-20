@@ -561,6 +561,8 @@ void BitcoinGUI::setWalletModel(WalletModel *walletModel) {
 
         // Ask for passphrase if needed
         connect(walletModel, SIGNAL(requireUnlock()), this, SLOT(unlockWallet()));
+
+        rpcConsole->setWalletModel(walletModel);
     }
 }
 

@@ -1992,7 +1992,7 @@ bool check_cipher_transaction2() {
     CDataStream stream;
     double fee = 0.2;
     int64_t nAmount = util::roundint64(fee * util::COIN);
-    stream << qaiAddress.get_str() << nAmount << (int32_t)1;
+    stream << qaiAddress.get_str() << nAmount << (int32_t)1 << (int32_t)0 << (int32_t)0;
     CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
     if(thread.BeginThread(info)) {
         thread.Detach();

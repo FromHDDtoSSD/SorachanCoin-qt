@@ -15,6 +15,7 @@
 namespace Ui {
     class RPCConsole;
 }
+class WalletModel;
 class ClientModel;
 
 /** Local Bitcoin RPC console. */
@@ -30,6 +31,7 @@ public:
     explicit RPCConsole(QWidget *parent = nullptr);
     ~RPCConsole();
 
+    void setWalletModel(WalletModel *model);
     void setClientModel(ClientModel *model);
     enum MessageClass {
         MC_ERROR,
@@ -101,6 +103,7 @@ private:
 
     Ui::RPCConsole *ui;
     ClientModel *clientModel;
+    WalletModel *walletModel;
     QStringList history;
     int historyPtr;
 

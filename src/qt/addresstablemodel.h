@@ -71,6 +71,8 @@ public:
     void addQai_eth(const QString &label);
     void addQai_v1(const QString &label);
     void addQai_v2(const QString &label);
+    bool addQai_v3(bool &mintflag);
+    void addQai_v3_wallet_tolock(bool mintflag);
 
     /* Look up label for address in address book, if not found return empty string. */
     QString labelForAddress(const QString &address) const;

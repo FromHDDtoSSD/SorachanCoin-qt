@@ -216,14 +216,28 @@ int64_t CAITransaction03::GetTime() const {
 namespace aitx_thread {
 
 void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
-    //! get the SORA-QAI cipher address qai_address ans account hash
+    //!
+    //! get the SORA-QAI cipher address qai_address
+    //!
     std::string qai_address;
     int64_t nAmount;
     int32_t fMessage;
+    int32_t fWalletlock;
+    int32_t fMintonly;
+    auto walletLock = [fMintonly]() {
+        if(entry::pwalletMain->IsCrypted() && entry::pwalletMain->IsLocked()) {
+            if(fMintonly) {
+                CWallet::fWalletUnlockMintOnly = true;
+            } else {
+                entry::pwalletMain->Lock();
+            }
+        }
+    };
     try {
-       (*stream) >> qai_address >> nAmount >> fMessage;
+       (*stream) >> qai_address >> nAmount >> fMessage >> fWalletlock >> fMintonly;
     } catch (const std::exception &) {
         fMessage ? QMB(QMB::M_ERROR).setText(_("Failed to read from CDataStream.")).exec(): 0;
+        if(fWalletlock) walletLock();
         return;
     }
 
@@ -232,10 +246,12 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
 
     if(!hd_wallet::get().enable) {
         fMessage ? QMB(QMB::M_ERROR).setText(_("The HD Wallet disable.")).exec(): 0;
+        if(fWalletlock) walletLock();
         return;
     }
     if(entry::pwalletMain->IsLocked()) {
         fMessage ? QMB(QMB::M_ERROR).setText(_("The Wallet is locked.")).exec(): 0;
+        if(fWalletlock) walletLock();
         return;
     }
 
@@ -254,6 +270,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         std::string strError = entry::pwalletMain->SendMoney(scriptPubKey, nAmount, wtx);
         if (!strError.empty()) {
             fMessage ? QMB(QMB::M_ERROR).setText(strError).exec(): 0;
+            if(fWalletlock) walletLock();
             return;
         }
 
@@ -269,6 +286,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         }
         if(!fexists) {
             fMessage ? QMB(QMB::M_ERROR).setText("Failed to get the transaction.").exec(): 0;
+            if(fWalletlock) walletLock();
             return;
         }
 
@@ -280,11 +298,14 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
                     break;
             } else {
                 fMessage ? QMB(QMB::M_ERROR).setText("Failed to wait for transaction.").exec(): 0;
+                if(fWalletlock) walletLock();
                 return;
             }
             util::Sleep(300);
-            if(args_bool::fShutdown)
+            if(args_bool::fShutdown) {
+                if(fWalletlock) walletLock();
                 return;
+            }
         } while(true);
     }
 
@@ -293,6 +314,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         CPubKey reserved_pubkey = hd_wallet::get().reserved_pubkey[0];
         if(!reserved_pubkey.IsFullyValid_BIP66()) {
             fMessage ? QMB(QMB::M_ERROR).setText(_("Detected an anomaly in the public key.")).exec(): 0;
+            if(fWalletlock) walletLock();
             return;
         }
 
@@ -312,10 +334,12 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         int64_t nFeeRequired = 0;
         if(!entry::pwalletMain->CreateTransaction(scriptPubKey, nAmount, wtx, reservekey, nFeeRequired, &coinControl)) {
             fMessage ? QMB(QMB::M_ERROR).setText("Failed to create transaction.").exec(): 0;
+            if(fWalletlock) walletLock();
             return;
         }
         if(!entry::pwalletMain->CommitTransaction(wtx, reservekey)) {
             fMessage ? QMB(QMB::M_ERROR).setText("Failed to commit transaction.").exec(): 0;
+            if(fWalletlock) walletLock();
             return;
         }
 
@@ -328,15 +352,19 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
                     break;
             } else {
                 fMessage ? QMB(QMB::M_ERROR).setText("Failed to wait for transaction.").exec(): 0;
+                if(fWalletlock) walletLock();
                 return;
             }
             util::Sleep(500);
-            if(args_bool::fShutdown)
+            if(args_bool::fShutdown) {
+                if(fWalletlock) walletLock();
                 return;
+            }
         } while(true);
     }
 
     fMessage ? QMB(QMB::M_INFO).setText(_("Successfully verified the encrypted message transaction.")).exec(): 0;
+    if(fWalletlock) walletLock();
 }
 
 } // aitx_thread
@@ -563,6 +591,10 @@ bool sendciphermessage(const std::string &recipient_pubkey, std::string &&cipher
         obj.emplace_back(std::move(cipher));
         if(stealth)
             obj.emplace_back((int32_t)1);
+        else
+            obj.emplace_back((int32_t)0);
+        obj.emplace_back((int32_t)1);
+        obj.emplace_back(CWallet::fWalletUnlockMintOnly ? (int32_t)1: (int32_t)0);
         CRPCTable::getnewcipheraddress(obj, false);
     } catch (const json_spirit::Object &) {
         return false;

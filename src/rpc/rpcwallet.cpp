@@ -610,7 +610,7 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
 
 json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &params, bool fHelp)
 {
-    if (fHelp || params.size() > 3) {
+    if (fHelp || params.size() > 5) {
         throw std::runtime_error(
             "getnewcipheraddress or "
             "getnewcipheraddress [recipient address] [cipher message] (Stealth) "
@@ -638,9 +638,19 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
         std::string recipient_pubkey = params[0].get_str();
         SecureString cipher = const_cast<std::string &&>(params[1].get_str());
         bool stealth = false;
-        if(params.size() == 3) {
+        int32_t wallet_lock = 0; // hyde option (locked wallet by transaction thread)
+        int32_t mint_only = 0; // hyde option (locked wallet by transaction thread)
+        if(params.size() >= 3) {
             if(params[2].get_int() == 1)
                 stealth = true;
+        }
+        if(params.size() >= 4) {
+            if(params[3].get_int() == 1)
+                wallet_lock = 1;
+        }
+        if(params.size() >= 5) {
+            if(params[4].get_int() == 1)
+                mint_only = 1;
         }
         CBitcoinAddress address = CreateNewCipherAddress(recipient_pubkey, cipher, stealth);
 
@@ -657,7 +667,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
         CDataStream stream;
         double fee = 1.0;
         int64_t nAmount = util::roundint64(fee * util::COIN);
-        stream << address.ToString() << nAmount << (int32_t)1;
+        stream << address.ToString() << nAmount << (int32_t)1 << wallet_lock << mint_only;
         CThread::THREAD_INFO info(&stream, aitx_thread::wait_for_confirm_transaction);
         if(thread.BeginThread(info))
             thread.Detach();
