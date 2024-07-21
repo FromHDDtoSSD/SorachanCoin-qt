@@ -2549,5 +2549,10 @@ void Debug_checking_sign_verify() {
     // Check_agg_ecdsa();
 }
 
+// if linux build, below blank instance
+//namespace predsystem {
+//void CreateMiniwindow(bool *) {}
+//}
+
 // called AppInit2
 void Debug_checking_sign_verify2() {}

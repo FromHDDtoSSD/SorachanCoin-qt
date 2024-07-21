@@ -546,18 +546,28 @@ contains(GUI_MODE, 1) {
         src/qt/multisigdialog.h \
         src/qt/secondauthdialog.h \
         src/qt/getciphermessageswidget.h \
-        src/winapi/winguimain.h \
-        src/winapi/drivebase.h \
-        src/winapi/drivewin.h \
-        src/winapi/sectorbase.h \
-        src/winapi/sectorwin.h \
-        src/winapi/miniwindow.h \
-        src/winapi/common.h \
+        #src/winapi/winguimain.h \
+        #src/winapi/drivebase.h \
+        #src/winapi/drivewin.h \
+        #src/winapi/sectorbase.h \
+        #src/winapi/sectorwin.h \
+        #src/winapi/miniwindow.h \
+        #src/winapi/common.h \
         src/winapi/p2pwebsorara.h \
         src/sorara/soraramodel.h \
         src/sorara/drivemodel.h \
         src/sorara/soraradb.h \
         src/sorara/soraranet.h
+
+    win32 {
+        HEADERS += src/winapi/winguimain.h \
+                   src/winapi/drivebase.h \
+                   src/winapi/drivewin.h \
+                   src/winapi/sectorbase.h \
+                   src/winapi/sectorwin.h \
+                   src/winapi/miniwindow.h \
+                   src/winapi/common.h
+    }
 
     SOURCES += \
         src/qt/bitcoin.cpp \
@@ -611,17 +621,26 @@ contains(GUI_MODE, 1) {
         src/qt/qtipcserver.cpp \
         src/qt/rpcconsole.cpp \
         src/qt/getciphermessageswidget.cpp \
-        src/winapi/winguimain.cpp \
-        src/winapi/drivebase.cpp \
-        src/winapi/drivewin.cpp \
-        src/winapi/sectorbase.cpp \
-        src/winapi/sectorwin.cpp \
-        src/winapi/miniwindow.cpp \
+        #src/winapi/winguimain.cpp \
+        #src/winapi/drivebase.cpp \
+        #src/winapi/drivewin.cpp \
+        #src/winapi/sectorbase.cpp \
+        #src/winapi/sectorwin.cpp \
+        #src/winapi/miniwindow.cpp \
         src/winapi/p2pwebsorara.cpp \
         src/sorara/soraramodel.cpp \
         src/sorara/drivemodel.cpp \
         src/sorara/soraradb.cpp \
         src/sorara/soraranet.cpp
+
+    win32 {
+        SOURCES += src/winapi/winguimain.cpp \
+                   src/winapi/drivebase.cpp \
+                   src/winapi/drivewin.cpp \
+                   src/winapi/sectorbase.cpp \
+                   src/winapi/sectorwin.cpp \
+                   src/winapi/miniwindow.cpp
+    }
 
     FORMS += \
         src/qt/forms/intro.ui \

@@ -258,7 +258,7 @@ void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
 #ifdef WIN32
     predsystem::CreateBenchmark();
 #else
-    QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
+    QMessageBox::information(this, tr("SORA-QAI benchmark"), tr("under development"), QMessageBox::Ok);
 #endif
 }
 #endif
@@ -266,7 +266,7 @@ void OverviewPage::on_BenchmarkCommandLinkButton_clicked()
 /*
 void OverviewPage::on_DriveVerifyCommandLinkButton_clicked()
 {
-    QMessageBox::question(this, tr("SORA under development"), tr("Sorry, under development."), QMessageBox::Ok);
+    QMessageBox::information(this, tr("SORA-QAI benchmark"), tr("under development"), QMessageBox::Ok);
 }
 */
 

@@ -45,7 +45,7 @@ SyncWidget::SyncWidget(QWidget *parent) :
     ui->labelStatus->setFont(font1);
     ui->labelRemain->setFont(font2);
 
-    ui->labelExplain->setText(tr("Blockchain can't acquire the exact balance until the sync is complete. "
+    ui->labelExplain->setText(tr("Blockchain can't acquire the exact balance until the sync is complete.\n"
                                  "Therefore, please wait for a while until the synchronization is completed."));
     ui->progressbarSync->setValue(0);
     ui->labelStatus->setText(tr("---"));
