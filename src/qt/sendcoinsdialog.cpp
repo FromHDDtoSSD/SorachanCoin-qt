@@ -137,101 +137,111 @@ void SendCoinsDialog::on_sendButton_clicked()
     // Pay to myself, All balances send to my QAI scriptPubKey(Quantum and AI resistance) transaction
     if(ui->checkBoxSendAllQAI->isChecked()) {
 
-    QList<SendCoinsRecipient> recqai;
-    try {
-        json_spirit::Array obj;
-        //json_spirit::Value qaiAddress = CRPCTable::getnewqaiaddress(obj, false);
-        json_spirit::Value qaiAddress = CRPCTable::getnewschnorraddress(obj, false);
-        SendCoinsRecipient rv;
-        rv.address = QString(qaiAddress.get_str().c_str());
-        rv.label = qaiTransaction;
-        rv.amount = model->getBalance();
-        recqai.append(rv);
-        sendstatus = model->sendCoins(recqai);
-    } catch (const json_spirit::Object &s) {
-        QMessageBox::warning(this, tr("Send Coins"), QString(s.at(1).value_.get_str().c_str()), QMessageBox::Ok, QMessageBox::Ok);
-        sendstatus.status = WalletModel::TransactionCreationFailed;
-    } catch (const std::exception &) {
-        sendstatus.status = WalletModel::TransactionCreationFailed;
-    }
-    if(sendstatus.status == WalletModel::OK) {
-        ui->checkBoxSendAllQAI->setChecked(false);
-    }
+        // manual wallet unlock (Can be substituted with v3)
+        AddressTableModel *addressModel = model->getAddressTableModel();
+        bool mintflag;
+        if(!addressModel->addQai_v3(mintflag))
+            return;
+
+        std::string tx_time = ai_time::get_localtime_format(bitsystem::GetAdjustedTime());
+        QList<SendCoinsRecipient> recqai;
+        try {
+            json_spirit::Array obj;
+            //json_spirit::Value qaiAddress = CRPCTable::getnewqaiaddress(obj, false);
+            json_spirit::Value qaiAddress = CRPCTable::getnewschnorraddress(obj, false);
+            SendCoinsRecipient rv;
+            rv.address = QString(qaiAddress.get_str().c_str());
+            rv.label = QString::fromStdString(tx_time) + QString("_") + qaiTransaction;
+            rv.amount = model->getBalance();
+            recqai.append(rv);
+            sendstatus = model->sendCoins(recqai);
+        } catch (const json_spirit::Object &s) {
+            QMessageBox::warning(this, tr("Send Coins"), QString(s.at(1).value_.get_str().c_str()), QMessageBox::Ok, QMessageBox::Ok);
+            sendstatus.status = WalletModel::TransactionCreationFailed;
+        } catch (const std::exception &) {
+            sendstatus.status = WalletModel::TransactionCreationFailed;
+        }
+        if(sendstatus.status == WalletModel::OK) {
+            ui->checkBoxSendAllQAI->setChecked(false);
+        }
+
+        // lock wallet
+        addressModel->addQai_v3_wallet_tolock(mintflag);
 
     // Normal transaction
     } else {
 
-    QList<SendCoinsRecipient> recipients;
-    bool valid = true;
+        QList<SendCoinsRecipient> recipients;
+        bool valid = true;
 
-    if(! model) {
-        return;
-    }
-
-    if (ui->lineEditCoinControlChange->isEnabled()) {
-        if(!ui->lineEditCoinControlChange->hasAcceptableInput() ||
-           (model && !model->validateAddress(ui->lineEditCoinControlChange->text()))) {
-            CoinControlDialog::coinControl->destChange = CBitcoinAddress();
-            ui->lineEditCoinControlChange->setValid(false);
-            valid = false;
-        } else {
-            CoinControlDialog::coinControl->destChange = CBitcoinAddress(ui->lineEditCoinControlChange->text().toStdString());
+        if(! model) {
+            return;
         }
-    }
 
-    for(int i = 0; i < ui->entries->count(); ++i)
-    {
-        SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->entries->itemAt(i)->widget());
-        if(entry) {
-            if(entry->validate()) {
-                recipients.append(entry->getValue());
-            } else {
+        if (ui->lineEditCoinControlChange->isEnabled()) {
+            if(!ui->lineEditCoinControlChange->hasAcceptableInput() ||
+               (model && !model->validateAddress(ui->lineEditCoinControlChange->text()))) {
+                CoinControlDialog::coinControl->destChange = CBitcoinAddress();
+                ui->lineEditCoinControlChange->setValid(false);
                 valid = false;
+            } else {
+                CoinControlDialog::coinControl->destChange = CBitcoinAddress(ui->lineEditCoinControlChange->text().toStdString());
             }
         }
-    }
 
-    if(!valid || recipients.isEmpty()) {
-        return;
-    }
+        for(int i = 0; i < ui->entries->count(); ++i)
+        {
+            SendCoinsEntry *entry = qobject_cast<SendCoinsEntry *>(ui->entries->itemAt(i)->widget());
+            if(entry) {
+                if(entry->validate()) {
+                    recipients.append(entry->getValue());
+                } else {
+                    valid = false;
+                }
+            }
+        }
 
-    // Format confirmation message
-    QStringList formatted;
-    foreach(const SendCoinsRecipient &rcp, recipients)
-    {
+        if(!valid || recipients.isEmpty()) {
+            return;
+        }
+
+        // Format confirmation message
+        QStringList formatted;
+        foreach(const SendCoinsRecipient &rcp, recipients)
+        {
 #if QT_VERSION < 0x050000
         formatted.append(tr("<b>%1</b> to %2 (%3)").arg(BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, rcp.amount), Qt::escape(rcp.label), rcp.address));
 #else
         formatted.append(tr("<b>%1</b> to %2 (%3)").arg(BitcoinUnits::formatWithUnit(BitcoinUnits::BTC, rcp.amount), rcp.label.toHtmlEscaped(), rcp.address));
 #endif
-    }
+        }
 
-    fNewRecipientAllowed = false;
+        fNewRecipientAllowed = false;
 
-    QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm send coins"),
-                          tr("Are you sure you want to send %1?").arg(formatted.join(tr(" and "))),
-          QMessageBox::Yes|QMessageBox::Cancel,
-          QMessageBox::Cancel);
+        QMessageBox::StandardButton retval = QMessageBox::question(this, tr("Confirm send coins"),
+                              tr("Are you sure you want to send %1?").arg(formatted.join(tr(" and "))),
+              QMessageBox::Yes|QMessageBox::Cancel,
+              QMessageBox::Cancel);
 
-    if(retval != QMessageBox::Yes) {
-        fNewRecipientAllowed = true;
-        return;
-    }
+        if(retval != QMessageBox::Yes) {
+            fNewRecipientAllowed = true;
+            return;
+        }
 
-    WalletModel::UnlockContext ctx(model->requestUnlock());
-    if(! ctx.isValid()) {
-        // Unlock wallet was cancelled
-        fNewRecipientAllowed = true;
-        return;
-    }
+        WalletModel::UnlockContext ctx(model->requestUnlock());
+        if(! ctx.isValid()) {
+            // Unlock wallet was cancelled
+            fNewRecipientAllowed = true;
+            return;
+        }
 
-    //WalletModel::SendCoinsReturn sendstatus;
+        //WalletModel::SendCoinsReturn sendstatus;
 
-    if (!model->getOptionsModel() || !model->getOptionsModel()->getCoinControlFeatures()) {
-        sendstatus = model->sendCoins(recipients);
-    } else {
-        sendstatus = model->sendCoins(recipients, CoinControlDialog::coinControl);
-    }
+        if (!model->getOptionsModel() || !model->getOptionsModel()->getCoinControlFeatures()) {
+            sendstatus = model->sendCoins(recipients);
+        } else {
+            sendstatus = model->sendCoins(recipients, CoinControlDialog::coinControl);
+        }
 
     } // if(ui->checkBoxSendAllQAI->isChecked())
 
