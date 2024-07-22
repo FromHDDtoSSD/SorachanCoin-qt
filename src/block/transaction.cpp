@@ -422,7 +422,11 @@ bool CTransaction::IsStandard(std::string &strReason) const
         // bytes of scriptSig, which we round off to 1650 bytes for some minor
         // future-proofing. That's also enough to spend a 20-of-20
         // CHECKMULTISIG scriptPubKey, though such a scriptPubKey is not considered standard)
-        if (txin.get_scriptSig().size() > 1650) {
+        //if (txin.get_scriptSig().size() > 1650) {
+        //    strReason = "scriptsig-size";
+        //    return false;
+        //}
+        if (txin.get_scriptSig().size() > 9450) {
             strReason = "scriptsig-size";
             return false;
         }

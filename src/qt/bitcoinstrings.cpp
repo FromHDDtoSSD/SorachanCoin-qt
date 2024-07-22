@@ -179,4 +179,7 @@ QT_TRANSLATE_NOOP("bitcoin-core", "Require a confirmations for change (default: 
 QT_TRANSLATE_NOOP("bitcoin-core", "Enforce transaction scripts to use canonical PUSH operators (default: 1)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "Set the number of script verification threads (1-16, 0=auto, default: 0)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "When creating transactions, ignore inputs with value less than this (default: %s)"),
+QT_TRANSLATE_NOOP("bitcoin-core", ""
+"Blockchain can't acquire the exact balance until the sync is complete.\n"
+"Therefore, please wait for a while until the synchronization is completed."),
 };
