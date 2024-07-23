@@ -590,6 +590,11 @@ public:
     bool IsPushOnly(const_iterator pc) const;
 
     //
+    // P2PKH Transaction
+    //
+    bool IsPayToPublicKeyHash() const;
+
+    //
     // If 1-1 multisig, in PayToEthID tarnsactions:
     //
     bool IsPayToEthID() const;

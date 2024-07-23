@@ -245,8 +245,8 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
         bool fCreated = false;
-        if(recipients.size() == 1 && recipients[0].label == qaiTransaction)
-            fCreated = wallet->CreateTransactionAllBalancesToQAI(vecSend, wtx, keyChange, nFeeRequired, coinControl);
+        if(recipients.size() == 1 && recipients[0].label.contains(qaiTransaction))
+            fCreated = wallet->CreateTransactionAllBalancesToQAI(vecSend, wtx, keyChange, nFeeRequired);
         else
             fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);
 

@@ -25,6 +25,7 @@
 #include <util/thread.h>
 #include <util/system.h>
 #include <init.h>
+#include <rpc/bitcoinrpc.h>
 
 bool CWallet::fWalletUnlockMintOnly = false;
 
@@ -2613,6 +2614,60 @@ bool CWallet::SelectCoinsSimple(int64_t nTargetValue, int64_t nMinValue, int64_t
     return true;
 }
 
+static bool IsQaiAllVin(const std::vector<CTxIn> &vtxin) {
+    if(vtxin.size() == 0)
+        return false;
+
+    for(const auto &d: vtxin) {
+        if(d.get_scriptSig().size() >= 35) {
+            if(d.get_scriptSig().back() != 0xAE) // OP_CHECKMULTISIG
+                return false;
+            qkey_vector vch;
+            vch.resize(33);
+            ::memcpy(&vch.front(), d.get_scriptSig().data() + (d.get_scriptSig().size() - 35), 33);
+            if(!CqPubKey::IsRandHash(vch))
+                return false;
+        } else {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+// In case of a processing failure, scriptPubKey will not be modified.
+static void SetQaiChangePubKey(const std::string &accountIn, CScript &scriptPubKey) {
+    if(!hd_wallet::get().enable)
+        return;
+
+    const std::string label = ai_time::get_localtime_format(bitsystem::GetAdjustedTime()) + std::string("_QAI_Change_address");
+    const std::string account = accountIn.empty() ? label: accountIn;
+    try {
+        json_spirit::Array obj;
+        obj.push_back(account);
+        json_spirit::Value qai = CRPCTable::getaccountschnorraddress(obj, false);
+        const std::string qaiAddress = qai.get_str();
+        print_str("Change address", qaiAddress);
+        CBitcoinAddress address;
+        address.SetString(qaiAddress);
+        CScriptID keyID;
+        assert(address.GetData().size() == sizeof(CScriptID) && keyID.size() == sizeof(CScriptID));
+        if(address.GetData().size() != sizeof(CScriptID) || keyID.size() != sizeof(CScriptID))
+            return;
+        ::memcpy(keyID.begin(), address.GetData().data(), keyID.size());
+        CScript redeemScript;
+        if(!entry::pwalletMain->GetCScript(keyID, redeemScript))
+            return;
+        scriptPubKey.clear();
+        scriptPubKey.SetDestination(redeemScript.GetID());
+        print_str("SetQaiScriptPubKey", scriptPubKey.ToString());
+    } catch (const json_spirit::Object &) {
+        return;
+    } catch (const std::exception &) {
+        return;
+    }
+}
+
 bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
 {
     debugcs::instance() << "called CreateTransaction vecSend: " << vecSend.size() << debugcs::endl();
@@ -2635,6 +2690,7 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
         LOCK2(block_process::cs_main, cs_wallet);
         // txdb must be opened before the mapWallet lock
 
+        bool fAllQaiVin = false;
         CTxDB txdb("r");
         {
             nFeeRet = block_info::nTransactionFee;
@@ -2694,6 +2750,10 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                         CPubKey vchPubKey = reservekey.GetReservedKey();
 
                         scriptChange.SetDestination(vchPubKey.GetID());
+
+                        if(fAllQaiVin) {
+                            SetQaiChangePubKey(wtxNew.strFromAccount, scriptChange);
+                        }
                     }
 
                     // Insert change txn at random position:
@@ -2721,6 +2781,11 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
                     if (! Script_util::SignSignature(*this, *coin.first, wtxNew, nIn++)) {
                         return false;
                     }
+                }
+
+                if((!fAllQaiVin) && IsQaiAllVin(wtxNew.get_vin())) {
+                    fAllQaiVin = true;
+                    continue;
                 }
 
                 // Limit size
@@ -2763,49 +2828,46 @@ bool CWallet::CreateTransaction(CScript scriptPubKey, int64_t nValue, CWalletTx 
     return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
 }
 
-bool CWallet::CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
+bool CWallet::CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet)
 {
     // Collecting only one QAI scriptPubKey
     if(vecSend.size() != 1)
         return false;
 
-    return CreateTransactionAllBalancesToQAI(vecSend[0].first, wtxNew, reservekey, nFeeRet, coinControl);
+    return CreateTransactionAllBalancesToQAI(vecSend[0].first, wtxNew, reservekey, nFeeRet);
 }
 
-bool CWallet::CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl)
+bool CWallet::CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet)
 {
     if(GetUnconfirmedBalance() > 0)
         return false;
     if(GetStake() > 0)
         return false;
-    if(coinControl)
-        return false;
 
-    int64_t nValue = GetBalance();
-    {
-        int64_t nFeeCheck = 0;
-        std::vector<std::pair<CScript, int64_t> > vecSendCheck;
-        vecSendCheck.push_back(std::make_pair(scriptPubKey, nValue));
-        CWalletTx wtxCheck;
-        (void)CreateTransaction(vecSendCheck, wtxCheck, reservekey, nFeeCheck, coinControl);
-        nValue -= nFeeCheck;
-
-        int64_t nFeeCheck2 = 0;
-        std::vector<std::pair<CScript, int64_t> > vecSendCheck2;
-        vecSendCheck2.push_back(std::make_pair(scriptPubKey, nValue));
-        CWalletTx wtxCheck2;
-        (void)CreateTransaction(vecSendCheck2, wtxCheck2, reservekey, nFeeCheck2, coinControl);
-
-        if(nFeeCheck2 > nFeeCheck) {
-            nValue -= nFeeCheck2 - nFeeCheck;
-        } else if (nFeeCheck2 < nFeeCheck) {
-            nValue += nFeeCheck2 - nFeeCheck;
+    CCoinControl coinControl;
+    std::vector<COutput> vCoins;
+    AvailableCoins(vCoins);
+    int64_t nValue = 0;
+    for(const auto &d: vCoins) {
+        if(d.fSpendable && d.tx->get_vout(d.i).get_scriptPubKey().IsPayToPublicKeyHash()) {
+            COutPoint out(d.tx->GetHash(), d.i);
+            coinControl.Select(out);
+            nValue += d.tx->get_vout(d.i).get_nValue();
         }
     }
 
-    std::vector<std::pair<CScript, int64_t> > vecSend;
-    vecSend.push_back(std::make_pair(scriptPubKey, nValue));
-    return CreateTransaction(vecSend, wtxNew, reservekey, nFeeRet, coinControl);
+    print_num("CreateTransactionAllBalancesToQAI", nValue);
+    if(nValue == 0)
+        return false;
+
+    {
+        int64_t nFeeRequired = 0;
+        (void)CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRequired, &coinControl);
+        nValue -= nFeeRequired;
+    }
+
+    print_num("Send nValue", nValue);
+    return CreateTransaction(scriptPubKey, nValue, wtxNew, reservekey, nFeeRet, &coinControl);
 }
 
 void CWallet::GetStakeWeightFromValue(const int64_t &nTime, const int64_t &nValue, uint64_t &nWeight)

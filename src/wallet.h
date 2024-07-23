@@ -303,8 +303,8 @@ public:
     //
     // QAI Transaction
     //
-    bool CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl);
-    bool CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet, const CCoinControl *coinControl);
+    bool CreateTransactionAllBalancesToQAI(const std::vector<std::pair<CScript, int64_t> > &vecSend, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet);
+    bool CreateTransactionAllBalancesToQAI(CScript scriptPubKey, CWalletTx &wtxNew, CReserveKey &reservekey, int64_t &nFeeRet);
 
     //
     // Stake, Merge

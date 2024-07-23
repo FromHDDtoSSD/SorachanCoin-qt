@@ -245,6 +245,15 @@ bool CScript::IsPayToScriptHash() const {
             at(22)  == ScriptOpcodes::OP_EQUAL);
 }
 
+bool CScript::IsPayToPublicKeyHash() const {
+    return (size() == 25 &&
+            at(0)  == ScriptOpcodes::OP_DUP &&
+            at(1)  == ScriptOpcodes::OP_HASH160 &&
+            at(2)  == 0x14 &&
+            at(23) == ScriptOpcodes::OP_EQUALVERIFY &&
+            at(24) == ScriptOpcodes::OP_CHECKSIG);
+}
+
 bool CScript::IsPayToEthID() const {
     return (size() == 37 &&
             at(0)  == ScriptOpcodes::OP_1 &&
