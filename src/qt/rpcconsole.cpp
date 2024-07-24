@@ -393,6 +393,7 @@ void RPCConsole::ciphermypubkey() {
     bool mintonly;
     if(!addressModel->addQai_v3(mintonly))
         return;
+    this->raise();
 
     std::string cipher_address;
     std::string err;
@@ -403,25 +404,37 @@ void RPCConsole::ciphermypubkey() {
     addressModel->addQai_v3_wallet_tolock(mintonly);
 }
 
+RPCConsole *g_console = nullptr;
+extern "C" void call_raise() {
+    if(g_console)
+        g_console->raise();
+}
+
 void RPCConsole::sendciphermessage() {
+    g_console = this;
     if(!QMB(QMB::M_QUESTION).setText(tr("Is it okay to record the ciphered message on the blockchain?").toStdString(), _("")).ask())
         return;
+    this->raise();
     QString q_recipient_pubkey = ui->cipheraddresslineEdit->text();
     if(q_recipient_pubkey.size() == 0) {
         QMB(QMB::M_ERROR).setText(tr("The recipient's public cipher address is empty.").toStdString(), _("")).exec();
+        this->raise();
         return;
     }
     QString q_cipher = ui->sendciphermessageWidget->toPlainText();
     if(q_cipher.size() == 0) {
         QMB(QMB::M_ERROR).setText(tr("The encrypted message to be sent is empty.").toStdString(), _("")).exec();
+        this->raise();
         return;
     }
 
     // manual wallet unlock
+    bool mintflag = walletModel->getMintflag();
     AddressTableModel *addressModel = walletModel->getAddressTableModel();
     bool junk;
     if(!addressModel->addQai_v3(junk))
         return;
+    this->raise();
 
     bool stealth = ui->stealthCheckBox->isChecked();
     std::string recipient_pubkey = q_recipient_pubkey.toStdString();
@@ -429,8 +442,11 @@ void RPCConsole::sendciphermessage() {
     QMB(QMB::M_INFO).setText(tr("The process of recording to the blockchain has started. "
                                "Please keep your wallet open and wait for a while until the process is completed. "
                                "SORA will notify you once the recording to the blockchain is finished.").toStdString(), _("")).exec();
-    if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher), stealth))
+    this->raise();
+    if(!ai_cipher::sendciphermessage(recipient_pubkey, std::move(cipher), stealth, mintflag)) {
         QMB(QMB::M_ERROR).setText(tr("An error occurred during the initiation of the recording process.").toStdString(), _("")).exec();
+        this->raise();
+    }
 }
 
 static void GetCipherMessages(std::string &dest, uint32_t hours) {
@@ -475,6 +491,7 @@ void RPCConsole::updateCipherMessage() {
     bool mintonly;
     if(!addressModel->addQai_v3(mintonly))
         return;
+    this->raise();
 
     uint32_t hours = ui->gethoursSpinBox->value();
     std::string result;
@@ -545,12 +562,16 @@ void RPCConsole::updateSentMyMessages() {
                                        "the Schnorr aggregated signature process will take a considerable amount of time. "
                                        "Please wait patiently until the process is completed. "
                                        "SORA will notify you once it is finished.").toStdString(), _("")).ask())
+        this->raise();
         return;
+
+    this->raise();
 
     uint32_t hours = ui->getsentmessagesSpinBox->value();
     std::string recipient_address = ui->sentaddressLineEdit->text().toStdString();
     if(recipient_address.size() == 0) {
         QMB(QMB::M_ERROR).setText(tr("The recipient's public cipher address is empty.").toStdString(), _("")).exec();
+        this->raise();
         return;
     }
 
@@ -559,6 +580,7 @@ void RPCConsole::updateSentMyMessages() {
     bool mintflag;
     if(!addressModel->addQai_v3(mintflag))
         return;
+    this->raise();
 
     std::string result;
     GetSentMessages(result, recipient_address, hours);

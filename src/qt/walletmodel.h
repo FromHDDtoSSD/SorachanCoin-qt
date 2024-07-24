@@ -81,6 +81,8 @@ public:
     MintingTableModel *getMintingTableModel();
     TransactionTableModel *getTransactionTableModel();
 
+    bool getMintflag() const;
+
     bool haveWatchOnly() const;
     qint64 getBalance() const;
     qint64 getBalanceWatchOnly() const;

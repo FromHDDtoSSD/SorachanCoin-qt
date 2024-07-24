@@ -584,7 +584,7 @@ json_spirit::Value CRPCTable::getciphermessages(const json_spirit::Array &params
 {
     if (fHelp || params.size() > 1) {
         throw std::runtime_error(
-            "getciphermessages [time(hours)] "
+            "getciphermessages [time(hours)]\n"
             "Specify the time you want to retrieve retrospectively in hours. "
             "If omitted, it defaults to 168 hours (7 days).");
     }
@@ -613,7 +613,7 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
     if (fHelp || params.size() > 5) {
         throw std::runtime_error(
             "getnewcipheraddress or "
-            "getnewcipheraddress [recipient address] [cipher message] (Stealth) "
+            "getnewcipheraddress [recipient address] [cipher message] (Stealth)\n"
             "If no arguments are provided, it can obtain a dedicated address for receiving encrypted messages. "
             "This is a special address that starts with cipher1.  "
             "If arguments are provided, please pass the address of the recipient "

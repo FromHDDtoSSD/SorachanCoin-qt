@@ -286,6 +286,10 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
     return SendCoinsReturn(OK, 0, hex);
 }
 
+bool WalletModel::getMintflag() const {
+    return CWallet::fWalletUnlockMintOnly;
+}
+
 OptionsModel *WalletModel::getOptionsModel()
 {
     return optionsModel;
