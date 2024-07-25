@@ -561,10 +561,10 @@ void RPCConsole::updateSentMyMessages() {
     if(!QMB(QMB::M_QUESTION).setText(tr("If the number of processes is large, "
                                        "the Schnorr aggregated signature process will take a considerable amount of time. "
                                        "Please wait patiently until the process is completed. "
-                                       "SORA will notify you once it is finished.").toStdString(), _("")).ask())
+                                        "SORA will notify you once it is finished.").toStdString(), _("")).ask()) {
         this->raise();
         return;
-
+    }
     this->raise();
 
     uint32_t hours = ui->getsentmessagesSpinBox->value();
