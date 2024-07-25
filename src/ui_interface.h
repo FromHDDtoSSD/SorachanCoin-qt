@@ -187,7 +187,7 @@ public:
     }
 
     bool ask() {
-        return false;
+        return true;
     }
 #endif
 

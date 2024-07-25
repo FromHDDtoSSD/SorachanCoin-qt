@@ -656,8 +656,8 @@ color: rgb(0, 170, 255);</string>
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>830</width>
-        <height>174</height>
+        <width>836</width>
+        <height>201</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -739,6 +739,13 @@ color: rgb(0, 170, 255);</string>
        </property>
        <property name="autoDefault">
         <bool>false</bool>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="qaitoecdsaPushButton">
+       <property name="text">
+        <string>QaiToEcdsa</string>
        </property>
       </widget>
      </item>

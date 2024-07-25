@@ -178,4 +178,8 @@ bool getsentmymessages(uint32_t hours, const std::string &recipient_address, std
 
 } // ai_cipher
 
+namespace ai_ecdsa {
+    bool qai_to_ecdsa_move_tx();
+} // ai_ecdsa
+
 #endif // SORA_QAI_AITX_H

@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin developers
+// Copyright (c) 2018-2024 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -61,6 +62,9 @@ SendCoinsDialog::SendCoinsDialog(QWidget *parent) :
         ui->lineEditCoinControlChange->setFont(GUIUtil::bitcoinAddressFont());
         connect(ui->pushButtonCoinControl, SIGNAL(clicked()), this, SLOT(coinControlButtonClicked()));
         connect(ui->checkBoxCoinControlChange, SIGNAL(stateChanged(int)), this, SLOT(coinControlChangeChecked(int)));
+
+        // from QAI to ECDSA transaction (send qai to ecdsa SORA)
+        connect(ui->qaitoecdsaPushButton, SIGNAL(clicked()), this, SLOT(on_qaitoecdsa_clicked()));
 
         // Coin Control: clipboard actions
         QAction *clipboardQuantityAction = new QAction(tr("Copy quantity"), this);
@@ -127,6 +131,24 @@ SendCoinsDialog::~SendCoinsDialog()
 {
     delete coinControl;
     delete ui;
+}
+
+void SendCoinsDialog::on_qaitoecdsa_clicked() {
+    if(QMB(QMB::M_QUESTION).setText(_("Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?"), _("")).ask()) {
+        AddressTableModel *address_model = model->getAddressTableModel();
+        bool mintflag;
+        if(!address_model->addQai_v3(mintflag)) {
+            QMB(QMB::M_ERROR).setText(_("Failed to the wallet unlocking."), _("")).exec();
+            return;
+        }
+
+        if(ai_ecdsa::qai_to_ecdsa_move_tx())
+            QMB(QMB::M_INFO).setText(_("Completed successfully."), _("")).exec();
+        else
+            QMB(QMB::M_ERROR).setText(_("The process has failed."), _("")).exec();
+
+        address_model->addQai_v3_wallet_tolock(mintflag);
+    }
 }
 
 void SendCoinsDialog::on_sendButton_clicked()

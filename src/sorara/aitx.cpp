@@ -772,3 +772,99 @@ bool getsentmymessages(uint32_t hours, const std::string &recipient_address, std
 }
 
 } // ai_cipher
+
+namespace ai_ecdsa {
+
+constexpr double dMVecdsa = 10.0;
+const std::string label_mv_ecdsa = "_ECDSA_Move_Transaction";
+bool qai_to_ecdsa_move_tx() {
+    if(!hd_wallet::get().enable)
+        return false;
+    if(entry::pwalletMain->IsLocked())
+        return false;
+
+    const int64_t nAmount = util::roundint64(dMVecdsa * util::COIN);
+    std::vector<COutput> vCoins;
+    entry::pwalletMain->AvailableCoins(vCoins);
+
+    //! check ecdsa balance
+    int64_t nValue = 0;
+    for(const auto &d: vCoins) {
+        if(d.fSpendable) {
+            const CScript &scriptPubKey = d.tx->get_vout(d.i).get_scriptPubKey();
+            if(scriptPubKey.IsPayToPublicKeyHash()) {
+                nValue += d.tx->get_vout(d.i).get_nValue();
+            }
+        }
+    }
+    if(nValue >= nAmount)
+        return true;
+
+    //! check qai balance
+    CCoinControl coinControl;
+    nValue = 0;
+    for(const auto &d: vCoins) {
+        if(d.fSpendable) {
+            const CScript &scriptPubKey = d.tx->get_vout(d.i).get_scriptPubKey();
+            if(scriptPubKey.IsPayToScriptHash()) {
+                CScriptID hash;
+                assert(sizeof(hash) == sizeof(uint160));
+                ::memcpy(hash.begin(), scriptPubKey.data() + 2, sizeof(hash)); // +2: OP_HASH160 0x14
+                CScript redeemScript;
+                if(!entry::pwalletMain->GetCScript(hash, redeemScript))
+                    return false;
+                if(redeemScript.size() < 35)
+                    continue;
+                if(redeemScript.back() != 0xAE) // OP_CHECKMULTISIG
+                    continue;
+                key_vector vch;
+                vch.resize(33);
+                ::memcpy(&vch.front(), redeemScript.data() + redeemScript.size() - 35, 33);
+                if(CqPubKey::IsRandHash(vch)) {
+                    COutPoint out(d.tx->GetHash(), d.i);
+                    coinControl.Select(out);
+                    nValue += d.tx->get_vout(d.i).get_nValue();
+                }
+            }
+        }
+    }
+    if(nValue < nAmount)
+        return false;
+
+    //! get the ECDSA address
+    std::string ecdsa_address;
+    try {
+        json_spirit::Array obj;
+        obj.emplace_back(ai_time::get_localtime_format(bitsystem::GetAdjustedTime()) + label_mv_ecdsa);
+        json_spirit::Value result = CRPCTable::getaccountaddress(obj, false);
+        ecdsa_address = result.get_str();
+    } catch (const json_spirit::Object &) {
+        return false;
+    } catch (const std::exception &) {
+        return false;
+    }
+
+    //! create transaction
+    CBitcoinAddress address(ecdsa_address);
+    CKeyID keyid;
+    if(!address.GetKeyID(keyid))
+        return false;
+    CScript scriptPubKey;
+    scriptPubKey.SetDestination(keyid);
+    CWalletTx wtx;
+    CReserveKey reservekey(entry::pwalletMain);
+    int64_t nFeeRequired = 0;
+    if(!entry::pwalletMain->CreateTransaction(scriptPubKey, nAmount, wtx, reservekey, nFeeRequired, &coinControl)) {
+        return false;
+    }
+    std::string message = tinyformat::format(_("A fee of %.2f will be charged. Do you wish to proceed?"), (double)nFeeRequired / util::COIN);
+    if(QMB(QMB::M_QUESTION).setText(message, _("")).ask()) {
+        if(!entry::pwalletMain->CommitTransaction(wtx, reservekey)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+} // ai_ecdsa
