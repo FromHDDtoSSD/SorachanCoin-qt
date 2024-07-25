@@ -1901,6 +1901,16 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>コインを送ります</translation>
     </message>
     <message>
+        <location line="+77"/>
+        <source>QaiToEcdsa</source>
+        <translation>ECDSAに少量送る</translation>
+    </message>
+    <message>
+        <location line="+77"/>
+        <source>All balances send to Quantum and AI resistance amount</source>
+        <translation>全ての残高を量子AI耐性 + Schnorr集約署名(5000鍵)に送ります</translation>
+    </message>
+    <message>
         <location line="+76"/>
         <source>Coin Control Features</source>
         <translation>上級者様向け：コインコントロール ※ 自由にコインを編集できますが、設定ミスによるGOXにご注意ください。</translation>
@@ -2028,6 +2038,21 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location line="+3"/>
         <source>S&amp;end</source>
         <translation>送る (&amp;e)</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?</source>
+        <translation>ECDSA側に手数料用途としての少量のSORAを移動します。よろしいでしょうか？</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Completed successfully.</source>
+        <translation>正常に完了いたしました。</translation>
+    </message>
+     <message>
+        <location line="+3"/>
+        <source>The process has failed.</source>
+        <translation>処理に失敗いたしました。</translation>
     </message>
     <message>
         <location filename="../sendcoinsdialog.cpp" line="-173"/>
@@ -3599,6 +3624,61 @@ rpcpassword=%s
         <location line="+14"/>
         <source>Error</source>
         <translation>エラー</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>A fee of %.2f SORA will be charged. Do you wish to proceed?</source>
+        <translation>ネットワーク手数料として %.2f SORA かかります。処理を進めてもよろしいでしょうか？</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to read from CDataStream.</source>
+        <translation>CDataStreamからの読み出しに失敗しました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The HD Wallet disable.</source>
+        <translation>HDウォレットが無効です。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>The Wallet is locked.</source>
+        <translation>ウォレットがロックされています。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>SORA L1 network fee is insufficient. Please charge the fee to the ECDSA total side.</source>
+        <translation>ネットワーク手数料が不足しています。ECDSA側に手数料分の残高を置いてください。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to create transaction.</source>
+        <translation>トランザクションの生成に失敗しました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to commit transaction.</source>
+        <translation>トランザクションのコミットに失敗いたしました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to wait for transaction.</source>
+        <translation>トランザクションの待機に失敗いたしました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Failed to get the transaction.</source>
+        <translation>トランザクションの取得に失敗いたしました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Detected an anomaly in the public key.</source>
+        <translation>公開鍵の導き出しに失敗いたしました。</translation>
+    </message>
+    <message>
+        <location line="+3"/>
+        <source>Successfully verified the ciphered message transaction.</source>
+        <translation>暗号メッセージのトランザクションに成功しました。</translation>
     </message>
     <message>
         <location line="+6"/>

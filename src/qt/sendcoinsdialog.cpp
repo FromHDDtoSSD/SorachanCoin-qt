@@ -134,18 +134,18 @@ SendCoinsDialog::~SendCoinsDialog()
 }
 
 void SendCoinsDialog::on_qaitoecdsa_clicked() {
-    if(QMB(QMB::M_QUESTION).setText(_("Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?"), _("")).ask()) {
+    if(QMB(QMB::M_QUESTION).setText(tr("Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?").toStdString(), tr("").toStdString()).ask()) {
         AddressTableModel *address_model = model->getAddressTableModel();
         bool mintflag;
         if(!address_model->addQai_v3(mintflag)) {
-            QMB(QMB::M_ERROR).setText(_("Failed to the wallet unlocking."), _("")).exec();
+            QMB(QMB::M_ERROR).setText(tr("Failed to the wallet unlocking.").toStdString(), tr("").toStdString()).exec();
             return;
         }
 
         if(ai_ecdsa::qai_to_ecdsa_move_tx())
-            QMB(QMB::M_INFO).setText(_("Completed successfully."), _("")).exec();
+            QMB(QMB::M_INFO).setText(tr("Completed successfully.").toStdString(), tr("").toStdString()).exec();
         else
-            QMB(QMB::M_ERROR).setText(_("The process has failed."), _("")).exec();
+            QMB(QMB::M_ERROR).setText(tr("The process has failed.").toStdString(), tr("").toStdString()).exec();
 
         address_model->addQai_v3_wallet_tolock(mintflag);
     }

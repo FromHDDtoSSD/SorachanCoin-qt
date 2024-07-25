@@ -420,7 +420,7 @@ void wait_for_confirm_transaction(std::shared_ptr<CDataStream> stream) {
         } while(true);
     }
 
-    fMessage ? QMB(QMB::M_INFO).setText(_("Successfully verified the encrypted message transaction.")).exec(): 0;
+    fMessage ? QMB(QMB::M_INFO).setText(_("Successfully verified the ciphered message transaction.")).exec(): 0;
     call_raise();
     if(fWalletlock) walletLock(fMintonly);
 }
@@ -857,7 +857,7 @@ bool qai_to_ecdsa_move_tx() {
     if(!entry::pwalletMain->CreateTransaction(scriptPubKey, nAmount, wtx, reservekey, nFeeRequired, &coinControl)) {
         return false;
     }
-    std::string message = tinyformat::format(_("A fee of %.2f will be charged. Do you wish to proceed?"), (double)nFeeRequired / util::COIN);
+    std::string message = tinyformat::format(_("A fee of %.2f SORA will be charged. Do you wish to proceed?"), (double)nFeeRequired / util::COIN);
     if(QMB(QMB::M_QUESTION).setText(message, _("")).ask()) {
         if(!entry::pwalletMain->CommitTransaction(wtx, reservekey)) {
             return false;

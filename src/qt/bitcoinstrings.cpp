@@ -179,23 +179,33 @@ QT_TRANSLATE_NOOP("bitcoin-core", "Require a confirmations for change (default: 
 QT_TRANSLATE_NOOP("bitcoin-core", "Enforce transaction scripts to use canonical PUSH operators (default: 1)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "Set the number of script verification threads (1-16, 0=auto, default: 0)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "When creating transactions, ignore inputs with value less than this (default: %s)"),
-QT_TRANSLATE_NOOP("bitcoin-core", ""
-"Blockchain can't acquire the exact balance until the sync is complete.\n"
-"Therefore, please wait for a while until the synchronization is completed."),
-QT_TRANSLATE_NOOP("bitcoin-core", "Is it okay to record the ciphered message on the blockchain?"),
-QT_TRANSLATE_NOOP("bitcoin-core", "The recipient's public cipher address is empty."),
-QT_TRANSLATE_NOOP("bitcoin-core",
-"The process of recording to the blockchain has started. "
-"Please keep your wallet open and wait for a while until the process is completed. "
-"SORA will notify you once the recording to the blockchain is finished."),
-QT_TRANSLATE_NOOP("bitcoin-core", "An error occurred during the initiation of the recording process."),
-QT_TRANSLATE_NOOP("bitcoin-core",
-"If the number of processes is large, "
-"the Schnorr aggregated signature process will take a considerable amount of time. "
-"Please wait patiently until the process is completed. "
-"SORA will notify you once it is finished."),
-QT_TRANSLATE_NOOP("bitcoin-core", "A fee of %.2f will be charged. Do you wish to proceed?"),
-QT_TRANSLATE_NOOP("bitcoin-core", "Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?"),
-QT_TRANSLATE_NOOP("bitcoin-core", "Completed successfully."),
-QT_TRANSLATE_NOOP("bitcoin-core", "The process has failed."),
+//QT_TRANSLATE_NOOP("bitcoin-core", ""
+//"Blockchain can't acquire the exact balance until the sync is complete.\n"
+//"Therefore, please wait for a while until the synchronization is completed."),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Is it okay to record the ciphered message on the blockchain?"),
+//QT_TRANSLATE_NOOP("bitcoin-core", "The recipient's public cipher address is empty."),
+//QT_TRANSLATE_NOOP("bitcoin-core",
+//"The process of recording to the blockchain has started. "
+//"Please keep your wallet open and wait for a while until the process is completed. "
+//"SORA will notify you once the recording to the blockchain is finished."),
+//QT_TRANSLATE_NOOP("bitcoin-core", "An error occurred during the initiation of the recording process."),
+//QT_TRANSLATE_NOOP("bitcoin-core",
+//"If the number of processes is large, "
+//"the Schnorr aggregated signature process will take a considerable amount of time. "
+//"Please wait patiently until the process is completed. "
+//"SORA will notify you once it is finished."),
+QT_TRANSLATE_NOOP("bitcoin-core", "A fee of %.2f SORA will be charged. Do you wish to proceed?"),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Is it okay to send a small amount of SORA from QAI to ECDSA to cover the fee?"),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Completed successfully."),
+//QT_TRANSLATE_NOOP("bitcoin-core", "The process has failed."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Failed to read from CDataStream."),
+QT_TRANSLATE_NOOP("bitcoin-core", "The HD Wallet disable."),
+QT_TRANSLATE_NOOP("bitcoin-core", "The Wallet is locked."),
+QT_TRANSLATE_NOOP("bitcoin-core", "SORA L1 network fee is insufficient. Please charge the fee to the ECDSA total side."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Failed to create transaction."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Failed to commit transaction."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Failed to wait for transaction."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Failed to get the transaction."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Detected an anomaly in the public key."),
+QT_TRANSLATE_NOOP("bitcoin-core", "Successfully verified the ciphered message transaction."),
 };
