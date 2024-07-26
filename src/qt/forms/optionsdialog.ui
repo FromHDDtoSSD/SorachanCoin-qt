@@ -37,7 +37,7 @@ color: rgb(0, 170, 255);</string>
        <item>
         <widget class="QLabel" name="transactionFeeInfoLabel">
          <property name="text">
-          <string>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.001 recommended.</string>
+          <string>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</string>
          </property>
          <property name="textFormat">
           <enum>Qt::PlainText</enum>
@@ -525,51 +525,55 @@ color: rgb(0, 170, 255);</string>
       <layout class="QVBoxLayout" name="verticalLayout_2">
        <item>
         <widget class="QCheckBox" name="bip66CheckBox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="text">
           <string>Enable strict verify as Bip66</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QCheckBox" name="fullSecureAllocatorCheckBox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="text">
           <string>Using a Secure Allocator for most of the string to process</string>
+         </property>
+         <property name="checked">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
        <item>
         <widget class="QCheckBox" name="connectBalanceCheckBox">
+         <property name="enabled">
+          <bool>true</bool>
+         </property>
          <property name="text">
           <string>Enable load balance to connect for destination</string>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QListView" name="bipListView"/>
-       </item>
-      </layout>
-     </widget>
-     <widget class="QWidget" name="tabSMART">
-      <attribute name="title">
-       <string>S.M.A.R.T.</string>
-      </attribute>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
-       <item>
-        <widget class="QCheckBox" name="smartCheckBox">
-         <property name="text">
-          <string>Enable drive failure prediction by S.M.A.R.T.</string>
+         <property name="checked">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QCheckBox" name="benchmarkCheckBox">
-         <property name="text">
-          <string>Enable drive failure prediction by Benchmark</string>
+        <spacer name="verticalSpacer_2">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QListWidget" name="smartListView"/>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>

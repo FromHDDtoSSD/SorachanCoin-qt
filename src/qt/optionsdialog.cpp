@@ -109,18 +109,24 @@ OptionsDialog::OptionsDialog(QWidget *parent) :
     }
 
 #if QT_VERSION >= 0x040700
-    ui->thirdPartyTxUrls->setPlaceholderText("https://sora.junkhdd.com:7350");
+    ui->thirdPartyTxUrls->setPlaceholderText("https://us.junkhdd.com:7350");
 #endif
 
     /* Security init */
+    /*
     if(entry::b66mode==entry::Bip66_STRICT)
         ui->bip66CheckBox->setChecked(true);
     ui->fullSecureAllocatorCheckBox->setChecked(false);
     ui->connectBalanceCheckBox->setChecked(false);
+    */
 
-    /* S.M.A.R.T. init */
-    ui->smartCheckBox->setChecked(false);
-    ui->benchmarkCheckBox->setChecked(false);
+    /* Security (forcelly enabled) */
+    ui->bip66CheckBox->setCheckState(Qt::Checked);
+    ui->bip66CheckBox->setEnabled(false);
+    ui->fullSecureAllocatorCheckBox->setCheckState(Qt::Checked);
+    ui->fullSecureAllocatorCheckBox->setEnabled(false);
+    ui->connectBalanceCheckBox->setCheckState(Qt::Checked);
+    ui->connectBalanceCheckBox->setEnabled(false);
 
     try {
         ui->unit->setModel(new BitcoinUnits(this));
@@ -204,15 +210,6 @@ void OptionsDialog::setMapper()
     mapper->addMapping(ui->displayAddresses, OptionsModel::DisplayAddresses);
     mapper->addMapping(ui->coinControlFeatures, OptionsModel::CoinControlFeatures);
     mapper->addMapping(ui->thirdPartyTxUrls, OptionsModel::ThirdPartyTxUrls);
-
-    /* Security */
-    mapper->addMapping(ui->bip66CheckBox, OptionsModel::Bip66Use);
-    mapper->addMapping(ui->fullSecureAllocatorCheckBox, OptionsModel::FullSecureString);
-    mapper->addMapping(ui->connectBalanceCheckBox, OptionsModel::ConnectBalanceUse);
-
-    /* S.M.A.R.T. */
-    mapper->addMapping(ui->smartCheckBox, OptionsModel::PredictionSMARTUse);
-    mapper->addMapping(ui->benchmarkCheckBox, OptionsModel::PredictionSMARTUse);
 }
 
 void OptionsDialog::enableApplyButton()

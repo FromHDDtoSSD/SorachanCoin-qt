@@ -189,43 +189,46 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         return OK;
     }
 
-    //debugcs::instance() << "Qt Wallet SendCoins" << debugcs::endl();
-
-    // Pre-check input data for validity
-    foreach(const SendCoinsRecipient &rcp, recipients)
-    {
-        if(! validateAddress(rcp.address)) {
-            return InvalidAddress;
-        }
-        setAddress.insert(rcp.address);
-
-        if(rcp.amount <= 0) {
-            return InvalidAmount;
-        }
-        total += rcp.amount;
-    }
-
-    if(recipients.size() > setAddress.size()) {
-        return DuplicateAddress;
-    }
-
+    const bool fToAllQaiTransaction = (recipients.size() == 1 && recipients[0].label.contains(qaiTransaction));
     int64_t nBalance = 0;
-    std::vector<COutput> vCoins;
-    wallet->AvailableCoins(vCoins, true, coinControl);
+    if(!fToAllQaiTransaction) {
+        //debugcs::instance() << "Qt Wallet SendCoins" << debugcs::endl();
 
-    for(const COutput &out: vCoins)
-    {
-        if(out.fSpendable) {
-            nBalance += out.tx->get_vout(out.i).get_nValue();
+        // Pre-check input data for validity
+        foreach(const SendCoinsRecipient &rcp, recipients)
+        {
+            if(! validateAddress(rcp.address)) {
+                return InvalidAddress;
+            }
+            setAddress.insert(rcp.address);
+
+            if(rcp.amount <= 0) {
+                return InvalidAmount;
+            }
+            total += rcp.amount;
         }
-    }
 
-    if(total > nBalance) {
-        return AmountExceedsBalance;
-    }
+        if(recipients.size() > setAddress.size()) {
+            return DuplicateAddress;
+        }
 
-    if((total + block_info::nTransactionFee) > nBalance) {
-        return SendCoinsReturn(AmountWithFeeExceedsBalance, block_info::nTransactionFee);
+        std::vector<COutput> vCoins;
+        wallet->AvailableCoins(vCoins, true, coinControl);
+
+        for(const COutput &out: vCoins)
+        {
+            if(out.fSpendable) {
+                nBalance += out.tx->get_vout(out.i).get_nValue();
+            }
+        }
+
+        if(total > nBalance) {
+            return AmountExceedsBalance;
+        }
+
+        if((total + block_info::nTransactionFee) > nBalance) {
+            return SendCoinsReturn(AmountWithFeeExceedsBalance, block_info::nTransactionFee);
+        }
     }
 
     {
@@ -245,7 +248,7 @@ WalletModel::SendCoinsReturn WalletModel::sendCoins(const QList<SendCoinsRecipie
         CReserveKey keyChange(wallet);
         int64_t nFeeRequired = 0;
         bool fCreated = false;
-        if(recipients.size() == 1 && recipients[0].label.contains(qaiTransaction))
+        if(fToAllQaiTransaction)
             fCreated = wallet->CreateTransactionAllBalancesToQAI(vecSend, wtx, keyChange, nFeeRequired);
         else
             fCreated = wallet->CreateTransaction(vecSend, wtx, keyChange, nFeeRequired, coinControl);

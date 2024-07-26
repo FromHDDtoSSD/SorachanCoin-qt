@@ -74,19 +74,21 @@ void OptionsModel::Init()
     // These are Qt-only settings:
     nDisplayUnit = (BitcoinUnits::Unit)(settings.value("nDisplayUnit", BitcoinUnits::BTC).toInt());
     bDisplayAddresses = settings.value("bDisplayAddresses", false).toBool();
-    //if (! settings.contains("strThirdPartyTxUrls")) {
-        if(args_bool::fTestNet) {
-            settings.setValue("strThirdPartyTxUrls", "");
-        } else {
-            settings.setValue("strThirdPartyTxUrls", "https://www.junkhdd.com:7350");
-        }
-    //}
-    strThirdPartyTxUrls = settings.value("strThirdPartyTxUrls", "https://www.junkhdd.com:7350").toString();
+    if(args_bool::fTestNet) {
+        settings.setValue("strThirdPartyTxUrls", "");
+    } else {
+        settings.setValue("strThirdPartyTxUrls", "https://us.junkhdd.com:7350");
+    }
+    strThirdPartyTxUrls = settings.value("strThirdPartyTxUrls", "https://us.junkhdd.com:7350").toString();
     fMinimizeToTray = settings.value("fMinimizeToTray", false).toBool();
     fMinimizeOnClose = settings.value("fMinimizeOnClose", false).toBool();
     fCoinControlFeatures = settings.value("fCoinControlFeatures", false).toBool();
-    block_info::nTransactionFee = settings.value("nTransactionFee").toLongLong();
+    //block_info::nTransactionFee = settings.value("nTransactionFee").toLongLong();
     language = settings.value("language", "").toString();
+
+    QVariant qfee;
+    qfee.setValue((qint64)block_info::nTransactionFee);
+    settings.setValue("nTransactionFee", qfee);
 
     // These are shared with core Bitcoin; we want
     // command-line options to override the GUI settings:
@@ -302,6 +304,15 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
             settings.setValue("externalSeeder", value.toString());
         break;
         case Fee:
+            {
+                int64_t checkfeeL = block_params::MIN_TX_FEE;
+                int64_t checkfeeH = util::roundint64(0.099 * util::COIN);
+                if(value.toLongLong() < checkfeeL || checkfeeH < value.toLongLong()) {
+                    QMB(QMB::M_ERROR).setText(tr("The fee is outside the acceptable range.").toStdString(), tr("").toStdString()).exec();
+                    successful = false;
+                    break;
+                }
+            }
             block_info::nTransactionFee = value.toLongLong();
             settings.setValue("block_info::nTransactionFee", static_cast<qlonglong>(block_info::nTransactionFee));
             emit transactionFeeChanged(block_info::nTransactionFee);

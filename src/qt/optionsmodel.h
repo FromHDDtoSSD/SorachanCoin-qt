@@ -50,8 +50,6 @@ public:
         Bip66Use,          // entry::b66mode
         FullSecureString,  // bool
         ConnectBalanceUse, // bool
-        PredictionSMARTUse, // bool
-        PredictionBenchUse, // bool
         OptionIDRowCount,
     };
 
