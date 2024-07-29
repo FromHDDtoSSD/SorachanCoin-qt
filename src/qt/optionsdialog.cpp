@@ -172,6 +172,7 @@ void OptionsDialog::setModel(OptionsModel *model)
     /* warn only when language selection changes by user action (placed here so init via mapper doesn't trigger this) */
     connect(ui->lang, SIGNAL(valueChanged()), this, SLOT(showRestartWarning_Lang()));
     connect(ui->thirdPartyTxUrls, SIGNAL(textChanged(const QString &)), this, SLOT(showRestartWarning_URL()));
+    connect(ui->smartfeeCheckBox, SIGNAL(clicked()), this, SLOT(on_smartfeecheck_clicked()));
 
     /* disable apply button after settings are loaded as there is nothing to save */
     disableApplyButton();
@@ -181,6 +182,8 @@ void OptionsDialog::setMapper()
 {
     /* Main */
     mapper->addMapping(ui->transactionFee, OptionsModel::Fee);
+    mapper->addMapping(ui->smartfeeCheckBox, OptionsModel::SmartFee);
+    mapper->addMapping(ui->smartfeeHorizontalSlider, OptionsModel::SmartFeePriority);
     mapper->addMapping(ui->bitcoinAtStartup, OptionsModel::StartAtStartup);
     mapper->addMapping(ui->detachDatabases, OptionsModel::DetachDatabases);
 
@@ -220,6 +223,16 @@ void OptionsDialog::enableApplyButton()
 void OptionsDialog::disableApplyButton()
 {
     ui->applyButton->setEnabled(false);
+}
+
+void OptionsDialog::on_smartfeecheck_clicked() {
+    if(ui->smartfeeCheckBox->isChecked()) {
+        ui->smartfeeHorizontalSlider->setEnabled(false);
+        ui->transactionFee->setEnabled(false);
+    } else {
+        ui->smartfeeHorizontalSlider->setEnabled(true);
+        ui->transactionFee->setEnabled(true);
+    }
 }
 
 void OptionsDialog::enableSaveButtons()

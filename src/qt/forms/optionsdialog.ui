@@ -88,6 +88,33 @@ color: rgb(0, 170, 255);</string>
         </layout>
        </item>
        <item>
+        <widget class="QCheckBox" name="smartfeeCheckBox">
+         <property name="text">
+          <string>Enable smart fee [Calculate the optimal fee from the last 10 blocks]</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QSlider" name="smartfeeHorizontalSlider">
+         <property name="minimum">
+          <number>2</number>
+         </property>
+         <property name="maximum">
+          <number>8</number>
+         </property>
+         <property name="orientation">
+          <enum>Qt::Horizontal</enum>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="smartfeeLabel">
+         <property name="text">
+          <string>Transaction priority: The further to the right, the higher the priority</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QCheckBox" name="bitcoinAtStartup">
          <property name="toolTip">
           <string>Automatically start SorachanCoin after logging in to the system.</string>

@@ -40,6 +40,8 @@ public:
         TorOnly,           // bool
         TorName,           // QString
         Fee,               // qint64
+        SmartFee,          // bool
+        SmartFeePriority,  // int32_t
         DisplayUnit,       // BitcoinUnits::Unit
         DisplayAddresses,  // bool
         ThirdPartyTxUrls,  // QString
@@ -68,6 +70,10 @@ public:
     bool getCoinControlFeatures();
     QString getThirdPartyTxUrls() { return strThirdPartyTxUrls; }
     QString getLanguage() { return language; }
+
+    //! SmartFee starting thread
+    static void beginSmartFee();
+    static void stopSmartFee();
 
 private:
     BitcoinUnits::Unit nDisplayUnit;

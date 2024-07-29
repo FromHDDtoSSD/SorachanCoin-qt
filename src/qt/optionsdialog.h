@@ -50,6 +50,7 @@ private slots:
     void on_okButton_clicked();
     void on_cancelButton_clicked();
     void on_applyButton_clicked();
+    void on_smartfeecheck_clicked();
 
     void showRestartWarning_Proxy();
     void showRestartWarning_Tor();

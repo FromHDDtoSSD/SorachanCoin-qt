@@ -376,6 +376,13 @@ int main(int argc, char *argv[])
                 if (splashref)
                     splash.finish(&window);
 
+                // Smartfee thread
+                QSettings settings;
+                bool fSmartFee = settings.value("smartFee", QVariant(false)).toBool();
+                //print_num("fSmartFee", fSmartFee ? 1: 0);
+                if(fSmartFee)
+                    OptionsModel::beginSmartFee();
+
                 ClientModel clientModel(&optionsModel);
                 WalletModel walletModel(entry::pwalletMain, &optionsModel);
                 CheckpointsModel checkpointsModel(&optionsModel);

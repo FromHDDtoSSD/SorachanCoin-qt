@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2024 The SorachanCoin Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -10,6 +11,106 @@
 #include <wallet.h>
 #include <walletdb.h>
 #include <qt/guiutil.h>
+#include <thread/threadqai.h>
+#include <init.h>
+#include <block/block_process.h>
+
+namespace {
+
+bool CheckFee(int64_t value) {
+    int64_t checkfeeL = block_params::MIN_TX_FEE;
+    int64_t checkfeeH = util::roundint64(0.099 * util::COIN);
+    if (value < checkfeeL || checkfeeH < value) {
+        return false;
+    }
+
+    return true;
+}
+
+constexpr int32_t nPriorityL = 2;
+constexpr int32_t nPriorityH = 8;
+std::atomic<bool> fEnableComputeSmartFeeThread(false);
+void ComputeSmartFee(std::shared_ptr<CDataStream> stream) {
+    int32_t nPriority;
+    int nInterval;
+    try {
+        (*stream) >> nPriority >> nInterval;
+    } catch (const std::exception &) {
+        return;
+    }
+
+    block_info::nTransactionFee = block_params::MIN_TX_FEE;
+    for(;;) {
+        {
+            LOCK2(block_process::cs_main, entry::pwalletMain->cs_wallet);
+            const int block_begin = block_info::nBestHeight - nInterval;
+            int32_t nSerSize = 0;
+            for (int nHeight = block_begin; nHeight <= block_info::nBestHeight; ++nHeight) {
+                CBlockIndex *pblockindex = block_info::mapBlockIndex[block_info::hashBestChain];
+                while (pblockindex->get_nHeight() > nHeight)
+                    pblockindex = pblockindex->set_pprev();
+
+                pblockindex = block_info::mapBlockIndex[*pblockindex->get_phashBlock()];
+                CBlock block;
+                if(!block.ReadFromDisk(pblockindex, true))
+                    return;
+
+                for(const CTransaction &tx: block.get_vtx()) {
+                    nSerSize += tx.GetSerializeSize();
+                }
+            }
+
+            // Check fee
+            //print_num("fee compute: transaction size", nSerSize);
+            double dAve = (double)nSerSize / nInterval;
+            bool fRaiseFee = false;
+            if(dAve > 30 * 1024) { // If over 30KB, raise fee
+                fRaiseFee = true;
+            }
+
+            // Raise fee
+            if(fRaiseFee) {
+                block_info::nTransactionFee = nPriority * block_params::MIN_TX_FEE;
+                if(!CheckFee(block_info::nTransactionFee))
+                    block_info::nTransactionFee = block_params::MIN_TX_FEE;
+            }
+            print_num("new fee", block_info::nTransactionFee);
+        }
+
+        // Wait: mainnet 60s, testnet 3s
+        const int nCheck = args_bool::fTestNet ? 3: 60;
+        for(int i=0; i < nCheck; ++i) {
+            util::Sleep(1000);
+            if(args_bool::fShutdown || fEnableComputeSmartFeeThread.load() == false)
+                return;
+        }
+    }
+}
+
+} // namespace
+
+void OptionsModel::beginSmartFee() {
+    if(fEnableComputeSmartFeeThread.load())
+        return;
+    fEnableComputeSmartFeeThread.store(true);
+
+    QSettings settings;
+    int32_t nPriority = settings.value("SmartFeePriority", QVariant(nPriorityL)).toInt();
+    int nInterval = 10;
+
+    CThread thread;
+    CDataStream stream;
+    stream << nPriority << nInterval;
+    CThread::THREAD_INFO info(&stream, ComputeSmartFee);
+    thread.BeginThread(info);
+    thread.Detach();
+}
+
+void OptionsModel::stopSmartFee() {
+    fEnableComputeSmartFeeThread.store(false);
+    QSettings settings;
+    block_info::nTransactionFee = settings.value("nTransactionFee", QVariant(block_params::MIN_TX_FEE)).toLongLong();
+}
 
 OptionsModel::OptionsModel(QObject *parent) :
     QAbstractListModel(parent)
@@ -198,9 +299,16 @@ QVariant OptionsModel::data(const QModelIndex &index, int role) const
             return QVariant(bDisplayAddresses);
         case ThirdPartyTxUrls:
             return QVariant(strThirdPartyTxUrls);
+        case SmartFee:
+            return settings.value("smartFee", QVariant(false));
+        case SmartFeePriority:
+            return settings.value("smartFeePriority", QVariant(0));
 #ifdef USE_BERKELEYDB
         case DetachDatabases:
             return QVariant(CDBEnv::get_instance().GetDetach());
+#else
+        case DetachDatabases:
+            return settings.value("detachDB", QVariant(false));
 #endif
         case Language:
             return settings.value("language", "");
@@ -303,18 +411,33 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
         case ExternalSeeder:
             settings.setValue("externalSeeder", value.toString());
         break;
-        case Fee:
+        case SmartFee:
             {
-                int64_t checkfeeL = block_params::MIN_TX_FEE;
-                int64_t checkfeeH = util::roundint64(0.099 * util::COIN);
-                if(value.toLongLong() < checkfeeL || checkfeeH < value.toLongLong()) {
-                    QMB(QMB::M_ERROR).setText(tr("The fee is outside the acceptable range.").toStdString(), tr("").toStdString()).exec();
-                    successful = false;
-                    break;
+                bool fSmartFee = value.toBool();
+                if(fSmartFee) {
+                    beginSmartFee();
+                } else {
+                    stopSmartFee();
                 }
+                settings.setValue("smartFee", fSmartFee);
+            }
+            break;
+        case SmartFeePriority:
+            {
+                int32_t nPriority = value.toInt();
+                settings.setValue("smartFeePriority", nPriority);
+            }
+            break;
+        case Fee:
+            if(!CheckFee(value.toLongLong())) {
+                QMB(QMB::M_ERROR).setText(tr("The fee is outside the acceptable range.").toStdString(), tr("").toStdString()).exec();
+                settings.setValue("nTransactionFee", static_cast<qlonglong>(block_info::nTransactionFee));
+                emit transactionFeeChanged(block_info::nTransactionFee);
+                successful = false;
+                break;
             }
             block_info::nTransactionFee = value.toLongLong();
-            settings.setValue("block_info::nTransactionFee", static_cast<qlonglong>(block_info::nTransactionFee));
+            settings.setValue("nTransactionFee", static_cast<qlonglong>(block_info::nTransactionFee));
             emit transactionFeeChanged(block_info::nTransactionFee);
             break;
         case DisplayUnit:
@@ -330,6 +453,9 @@ bool OptionsModel::setData(const QModelIndex &index, const QVariant &value, int 
 #ifdef USE_BERKELEYDB
             bool fDetachDB = value.toBool();
             CDBEnv::get_instance().SetDetach(fDetachDB);
+            settings.setValue("detachDB", fDetachDB);
+#else
+            bool fDetachDB = value.toBool();
             settings.setValue("detachDB", fDetachDB);
 #endif
             }
