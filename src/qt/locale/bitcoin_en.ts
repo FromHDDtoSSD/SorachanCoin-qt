@@ -1613,8 +1613,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="+16"/>
-        <source>Quantum and AI resistance Total:</source>
-        <translation>ECDSA, Quantum and AI resistance, Schnorr sig-5000keys Total:</translation>
+        <source>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</source>
+        <translation>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</translation>
     </message>
     <message>
         <location line="+16"/>
@@ -1623,8 +1623,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="+16"/>
-        <source>[SORA Network] Proof of Benchmark Miner</source>
-        <translation>[SORA Network] HDD/SSD benchmark</translation>
+        <source>[SORA Network] HDD/SSD Benchmark</source>
+        <translation>[SORA Network] HDD/SSD Benchmark</translation>
     </message>
     <message>
         <location filename="../mintingview.cpp" line="211"/>

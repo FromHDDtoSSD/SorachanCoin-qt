@@ -1926,8 +1926,18 @@ Reduce the number of addresses involved in the address creation.</source>
     </message>
     <message>
         <location filename="../forms/optionsdialog.ui" line="33"/>
-        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.001 recommended.</source>
-        <translation>Biaya transaksi opsional per kB yang membantu memastikan transaksi Anda diproses dengan cepat. Sebagian besar transaksi berukuran 1 kB. Biaya 0,001 direkomendasikan.</translation>
+        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</source>
+        <translation>Biaya transaksi opsional per kB yang membantu memastikan transaksi Anda diproses dengan cepat. Sebagian besar transaksi berukuran 1 kB. Biaya 0,01 direkomendasikan.</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Enable smart fee [Calculate the optimal fee from the last 10 blocks]</source>
+        <translation>Aktifkan biaya pintar [perhitungan otomatis biaya optimal dari 10 blok terakhir]</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Transaction priority: The further to the right, the higher the priority</source>
+        <translation>Prioritas transaksi: Semakin geser penggeser ke kanan, semakin tinggi prioritas.</translation>
     </message>
     <message>
         <location filename="../forms/optionsdialog.ui" line="48"/>
@@ -2178,6 +2188,24 @@ Reduce the number of addresses involved in the address creation.</source>
     </message>
 </context>
 <context>
+    <name>SyncWidget</name>
+    <message>
+        <location line="-80"/>
+        <source>Synchronizing ...</source>
+        <translation>Sinkronisasi ...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>until sync: %1 hours %2 min %3 sec ...</source>
+        <translation>hingga sinkronisasi: %1 jam %2 menit %3 detik ...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Blockchain can't acquire the exact balance until the sync is complete.</source>
+        <translation>Blockchain tidak dapat memperoleh saldo yang tepat sampai sinkronisasi selesai.</translation>
+    </message>
+</context>
+<context>
     <name>OverviewPage</name>
     <message>
         <location filename="../forms/overviewpage.ui" line="14"/>
@@ -2211,6 +2239,11 @@ Reduce the number of addresses involved in the address creation.</source>
         <location filename="../forms/overviewpage.ui" line="39"/>
         <source>Balances</source>
         <translation>Saldo</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</source>
+        <translation>Tahan terhadap Quantum dan AI - Tanda tangan teragregasi Schnorr untuk 5000 kunci Total:</translation>
     </message>
     <message>
         <location filename="../forms/overviewpage.ui" line="88"/>
@@ -2401,6 +2434,91 @@ Reduce the number of addresses involved in the address creation.</source>
         <location filename="../forms/rpcconsole.ui" line="14"/>
         <source>SorachanCoin - Debug window</source>
         <translation>SorachanCoin - Jendela debug</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>SendCipherMessage</source>
+        <translation>Kirim Pesan Sandi</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherAddress</source>
+        <translation>Dapatkan Alamat Sandi Saya</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copy Address</source>
+        <translation>Salin Alamat</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Clear</source>
+        <translation>Hapus</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Enable stealth mode</source>
+        <translation>Aktifkan mode sembunyi</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieve (hours):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;Waktu pengambilan (jam):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherMessage</source>
+        <translation>Dapatkan Pesan Sandi Saya</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;Alamat pesan sandi SORA-QAI:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get sent messages</source>
+        <translation>Dapatkan pesan yang dikirim</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI The recipient's cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;Alamat pesan sandi penerima SORA-QAI:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieved (hours): &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;Waktu pengambilan (jam):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Is it okay to record the ciphered message on the blockchain?</source>
+        <translation>Apakah boleh merekam pesan sandi di blockchain?</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recipient's public cipher address is empty.</source>
+        <translation>Alamat sandi publik penerima kosong.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The encrypted message to be sent is empty.</source>
+        <translation>Pesan terenkripsi yang akan dikirim kosong.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The process of recording to the blockchain has started. Please keep your wallet open and wait for a while until the process is completed. SORA will notify you once the recording to the blockchain is finished.</source>
+        <translation>Proses pencatatan ke blockchain telah dimulai. Harap tetap buka dompet Anda dan tunggu sebentar hingga proses selesai. SORA akan memberi tahu Anda setelah pencatatan ke blockchain selesai.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An error occurred during the initiation of the recording process.</source>
+        <translation>Terjadi kesalahan selama proses inisiasi pencatatan.</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>If the number of processes is large, the Schnorr aggregated signature process will take a considerable amount of time. Please wait patiently until the process is completed. SORA will notify you once it is finished.</source>
+        <translation>Jika jumlah prosesnya besar, proses tanda tangan teragregasi Schnorr akan memakan waktu yang cukup lama. Harap bersabar hingga proses selesai. SORA akan memberi tahu Anda setelah selesai.</translation>
     </message>
     <message>
         <location filename="../forms/rpcconsole.ui" line="24"/>
@@ -2894,6 +3012,11 @@ Reduce the number of addresses involved in the address creation.</source>
         <location filename="../forms/sendcoinsdialog.ui" line="731"/>
         <source>Balance:</source>
         <translation>Saldo:</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>[SORA Network] HDD/SSD Benchmark</source>
+        <translation>[SORA Network] HDD/SSD tolok ukur</translation>
     </message>
     <message>
         <source>123.456 SORA</source>

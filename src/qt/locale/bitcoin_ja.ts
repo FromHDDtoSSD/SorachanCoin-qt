@@ -1151,8 +1151,18 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location filename="../forms/optionsdialog.ui" line="33"/>
-        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.001 recommended.</source>
-        <translation>こちらは、トランザクション処理の手続きを早めるための手数料となります。設定される場合、0.001をおすすめいたします。</translation>
+        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</source>
+        <translation>こちらは、トランザクション処理の手続きを早めるための手数料となります。設定される場合、0.01をおすすめいたします。</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Enable smart fee [Calculate the optimal fee from the last 10 blocks]</source>
+        <translation>スマート手数料を有効にする [最後の10ブロックから最適な手数料を自動計算]</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Transaction priority: The further to the right, the higher the priority</source>
+        <translation>トランザクション優先度: スライダーを右に動かすほど、高い優先度となります。</translation>
     </message>
     <message>
         <location line="+15"/>
@@ -1366,8 +1376,8 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="-80"/>
-        <source>Blockchain can't acquire the exact balance until the sync is complete. Therefore, please wait for a while until the synchronization is completed.</source>
-        <translation>ブロックチェーンの残高は、同期完了まで正確ではありません。そのため、同期完了までお待ちください。</translation>
+        <source>Blockchain can't acquire the exact balance until the sync is complete.</source>
+        <translation>ブロックチェーンの残高は、同期完了まで正確ではありません。</translation>
     </message>
 </context>
 <context>
@@ -1481,7 +1491,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="+16"/>
-        <source>Quantum and AI resistance Total:</source>
+        <source>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</source>
         <translation>ECDSA, 量子AI耐性鍵, Schnorr集約署名(5000鍵)マルチシグ 残高合計：</translation>
     </message>
     <message>
@@ -1491,7 +1501,7 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
     </message>
     <message>
         <location line="+16"/>
-        <source>[SORA Network] Proof of Benchmark Miner</source>
+        <source>[SORA Network] HDD/SSD Benchmark</source>
         <translation>[SORA Network] HDD/SSD ベンチマーク機能</translation>
     </message>
     <message>

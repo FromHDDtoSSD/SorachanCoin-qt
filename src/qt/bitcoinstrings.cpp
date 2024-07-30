@@ -179,9 +179,7 @@ QT_TRANSLATE_NOOP("bitcoin-core", "Require a confirmations for change (default: 
 QT_TRANSLATE_NOOP("bitcoin-core", "Enforce transaction scripts to use canonical PUSH operators (default: 1)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "Set the number of script verification threads (1-16, 0=auto, default: 0)"),
 QT_TRANSLATE_NOOP("bitcoin-core", "When creating transactions, ignore inputs with value less than this (default: %s)"),
-//QT_TRANSLATE_NOOP("bitcoin-core", ""
-//"Blockchain can't acquire the exact balance until the sync is complete.\n"
-//"Therefore, please wait for a while until the synchronization is completed."),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Blockchain can't acquire the exact balance until the sync is complete."),
 //QT_TRANSLATE_NOOP("bitcoin-core", "Is it okay to record the ciphered message on the blockchain?"),
 //QT_TRANSLATE_NOOP("bitcoin-core", "The recipient's public cipher address is empty."),
 //QT_TRANSLATE_NOOP("bitcoin-core",
@@ -208,4 +206,7 @@ QT_TRANSLATE_NOOP("bitcoin-core", "Failed to wait for transaction."),
 QT_TRANSLATE_NOOP("bitcoin-core", "Failed to get the transaction."),
 QT_TRANSLATE_NOOP("bitcoin-core", "Detected an anomaly in the public key."),
 QT_TRANSLATE_NOOP("bitcoin-core", "Successfully verified the ciphered message transaction."),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:"),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Enable smart fee [Calculate the optimal fee from the last 10 blocks]"),
+//QT_TRANSLATE_NOOP("bitcoin-core", "Transaction priority: The further to the right, the higher the priority"),
 };

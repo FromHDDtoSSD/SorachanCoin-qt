@@ -1954,6 +1954,24 @@ Reduce the number of addresses involved in the address creation.</source>
     </message>
 </context>
 <context>
+    <name>SyncWidget</name>
+    <message>
+        <location line="-80"/>
+        <source>Synchronizing ...</source>
+        <translation>同步中...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>until sync: %1 hours %2 min %3 sec ...</source>
+        <translation>剩餘時間：%1小時%2分鐘%3秒...</translation>
+    </message>
+    <message>
+        <location line="-80"/>
+        <source>Blockchain can't acquire the exact balance until the sync is complete.</source>
+        <translation>在同步完成之前，區塊鏈無法獲得精確的餘額。</translation>
+    </message>
+</context>
+<context>
     <name>OptionsDialog</name>
     <message>
         <location filename="../forms/optionsdialog.ui" line="14"/>
@@ -1967,8 +1985,18 @@ Reduce the number of addresses involved in the address creation.</source>
     </message>
     <message>
         <location filename="../forms/optionsdialog.ui" line="33"/>
-        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.001 recommended.</source>
+        <source>Optional transaction fee per kB that helps make sure your transactions are processed quickly. Most transactions are 1 kB. Fee 0.01 recommended.</source>
         <translation>每KB的可選交易費用有助於確保快速處理您的交易。大多數交易是 1kB。建議費用0.001。</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Enable smart fee [Calculate the optimal fee from the last 10 blocks]</source>
+        <translation>啟用智能手續費 [根據最近10個區塊自動計算最佳手續費]</translation>
+    </message>
+    <message>
+        <location filename="../forms/optionsdialog.ui" line="33"/>
+        <source>Transaction priority: The further to the right, the higher the priority</source>
+        <translation>交易優先級：將滑塊向右移動，優先級越高。</translation>
     </message>
     <message>
         <location filename="../forms/optionsdialog.ui" line="48"/>
@@ -2442,6 +2470,91 @@ Reduce the number of addresses involved in the address creation.</source>
         <location filename="../forms/rpcconsole.ui" line="14"/>
         <source>SorachanCoin - Debug window</source>
         <translation>SorachanCoin - Debug window</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>SendCipherMessage</source>
+        <translation>發送加密消息</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherAddress</source>
+        <translation>獲取我的加密地址</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Copy Address</source>
+        <translation>複製地址</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Clear</source>
+        <translation>清除</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Enable stealth mode</source>
+        <translation>啟用隱身模式</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieve (hours):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;檢索時間(小時):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get My CipherMessage</source>
+        <translation>獲取我的加密消息</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI加密消息地址:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Get sent messages</source>
+        <translation>獲取已發送消息</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI The recipient's cipher message address&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=" font-size:11pt; font-weight:600;"&gt;SORA-QAI接收者的加密消息地址:&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;The time to retrieved (hours): &lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</source>
+        <translation>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align="right"&gt;&lt;span style=" font-weight:600;"&gt;檢索時間(小時):&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>Is it okay to record the ciphered message on the blockchain?</source>
+        <translation>可以在區塊鏈上記錄加密消息嗎？</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The recipient's public cipher address is empty.</source>
+        <translation>接收者的公共加密地址為空。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The encrypted message to be sent is empty.</source>
+        <translation>要發送的加密消息為空。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>The process of recording to the blockchain has started. Please keep your wallet open and wait for a while until the process is completed. SORA will notify you once the recording to the blockchain is finished.</source>
+        <translation>記錄到區塊鏈的過程已經開始。請保持錢包打開，並等待一段時間，直到過程完成。記錄到區塊鏈完成後，SORA會通知您。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>An error occurred during the initiation of the recording process.</source>
+        <translation>啟動記錄過程時發生錯誤。</translation>
+    </message>
+    <message>
+        <location line="+1"/>
+        <source>If the number of processes is large, the Schnorr aggregated signature process will take a considerable amount of time. Please wait patiently until the process is completed. SORA will notify you once it is finished.</source>
+        <translation>如果處理數量較大，Schnorr聚合簽名過程將需要相當長的時間。請耐心等待，直到過程完成。完成後，SORA會通知您。</translation>
     </message>
     <message>
         <location filename="../forms/rpcconsole.ui" line="24"/>
@@ -2935,6 +3048,16 @@ Reduce the number of addresses involved in the address creation.</source>
         <location filename="../forms/sendcoinsdialog.ui" line="731"/>
         <source>Balance:</source>
         <translation>平衡：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</source>
+        <translation>量子和AI抗性 - 針對5000個密鑰的Schnorr聚合簽名 總計：</translation>
+    </message>
+    <message>
+        <location line="+16"/>
+        <source>[SORA Network] HDD/SSD Benchmark</source>
+        <translation>[SORA Network] HDD/SSD 基準測試</translation>
     </message>
     <message>
         <source>123.456 SORA</source>

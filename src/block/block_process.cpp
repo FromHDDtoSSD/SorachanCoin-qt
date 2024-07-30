@@ -35,6 +35,12 @@ void wallet_process::AcceptScript(const CTransaction &tx)
                 script_vector data;
                 if(!script.GetOp(it, opcode, data))
                     break;
+                if(data.size() >= 35) {
+                    // Skip SORA-QAI Version
+                    if(data.at(data.size() - 34) == 0x03) {
+                        continue;
+                    }
+                }
                 CScript redeemScript(data.begin(), data.end());
                 if(redeemScript.IsPayToQAIResistance()) {
                     CScript::const_iterator it2 = redeemScript.begin();

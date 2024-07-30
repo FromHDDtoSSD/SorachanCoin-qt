@@ -331,7 +331,7 @@
           <item row="6" column="0">
            <widget class="QLabel" name="labelQaiText">
             <property name="text">
-             <string>Quantum and AI resistance Total:</string>
+             <string>Quantum and AI resistance - Schnorr aggregated signature for 5000 keys Total:</string>
             </property>
            </widget>
           </item>
@@ -424,7 +424,7 @@
         <item>
          <widget class="QCommandLinkButton" name="BenchmarkCommandLinkButton">
           <property name="text">
-           <string>[SORA Network] Proof of Benchmark Miner</string>
+           <string>[SORA Network] HDD/SSD Benchmark</string>
           </property>
          </widget>
         </item>
