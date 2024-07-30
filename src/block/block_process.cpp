@@ -37,7 +37,8 @@ void wallet_process::AcceptScript(const CTransaction &tx)
                     break;
                 if(data.size() >= 35) {
                     // Skip SORA-QAI Version
-                    if(data.at(data.size() - 34) == 0x03) {
+                    qkey_vector vch(data.begin() + data.size() - 35, data.end() - 2);
+                    if(CqPubKey::IsRandHash(vch) && data.at(data.size() - 34) == 0x03) {
                         continue;
                     }
                 }
