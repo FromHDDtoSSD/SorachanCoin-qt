@@ -37,10 +37,14 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->label_2->setVisible(false);
             ui->addressEdit->setEnabled(false);
             ui->addressEdit->setVisible(false);
-            ui->qaicheckbutton->setEnabled(true);
-            ui->qaicheckbutton->setVisible(true);
-            ui->ethcheckbutton->setEnabled(true);
-            ui->ethcheckbutton->setVisible(true);
+            ui->radioButtonECDSA->setEnabled(true);
+            ui->radioButtonECDSA->setVisible(true);
+            ui->radioButtonQaiv1->setEnabled(true);
+            ui->radioButtonQaiv1->setVisible(true);
+            ui->radioButtonQaiV2->setEnabled(true);
+            ui->radioButtonQaiV2->setVisible(true);
+            ui->radioButtonEthStyle->setEnabled(true);
+            ui->radioButtonEthStyle->setVisible(true);
             break;
         case NewSendingAddress:
             setWindowTitle(tr("New sending address"));
@@ -52,10 +56,14 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->label_2->setVisible(true);
             ui->addressEdit->setEnabled(true);
             ui->addressEdit->setVisible(true);
-            ui->qaicheckbutton->setEnabled(false);
-            ui->qaicheckbutton->setVisible(false);
-            ui->ethcheckbutton->setEnabled(false);
-            ui->ethcheckbutton->setVisible(false);
+            ui->radioButtonECDSA->setEnabled(false);
+            ui->radioButtonECDSA->setVisible(false);
+            ui->radioButtonQaiv1->setEnabled(false);
+            ui->radioButtonQaiv1->setVisible(false);
+            ui->radioButtonQaiV2->setEnabled(false);
+            ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonEthStyle->setEnabled(false);
+            ui->radioButtonEthStyle->setVisible(false);
             break;
         case EditReceivingAddress:
             setWindowTitle(tr("Edit receiving address"));
@@ -67,10 +75,14 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->label_2->setVisible(false);
             ui->addressEdit->setEnabled(false);
             ui->addressEdit->setVisible(false);
-            ui->qaicheckbutton->setEnabled(false);
-            ui->qaicheckbutton->setVisible(false);
-            ui->ethcheckbutton->setEnabled(false);
-            ui->ethcheckbutton->setVisible(false);
+            ui->radioButtonECDSA->setEnabled(false);
+            ui->radioButtonECDSA->setVisible(false);
+            ui->radioButtonQaiv1->setEnabled(false);
+            ui->radioButtonQaiv1->setVisible(false);
+            ui->radioButtonQaiV2->setEnabled(false);
+            ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonEthStyle->setEnabled(false);
+            ui->radioButtonEthStyle->setVisible(false);
             break;
         case EditSendingAddress:
             setWindowTitle(tr("Edit sending address"));
@@ -82,10 +94,14 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->label_2->setVisible(true);
             ui->addressEdit->setEnabled(true);
             ui->addressEdit->setVisible(true);
-            ui->qaicheckbutton->setEnabled(false);
-            ui->qaicheckbutton->setVisible(false);
-            ui->ethcheckbutton->setEnabled(false);
-            ui->ethcheckbutton->setVisible(false);
+            ui->radioButtonECDSA->setEnabled(false);
+            ui->radioButtonECDSA->setVisible(false);
+            ui->radioButtonQaiv1->setEnabled(false);
+            ui->radioButtonQaiv1->setVisible(false);
+            ui->radioButtonQaiV2->setEnabled(false);
+            ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonEthStyle->setEnabled(false);
+            ui->radioButtonEthStyle->setVisible(false);
             break;
         }
 
@@ -125,18 +141,21 @@ bool EditAddressDialog::saveCurrentRow()
         return false;
     }
 
+    /*
     if(ui->ethcheckbutton->isChecked() && ui->qaicheckbutton->isChecked()) {
         QMessageBox::warning(this, windowTitle(),
             tr("It cannot choose both. Please make only one selection."),
             QMessageBox::Ok, QMessageBox::Ok);
         return false;
     }
+    */
 
     switch(mode)
     {
     case NewReceivingAddress:
     case NewSendingAddress:
         try {
+            /*
             if(ui->ethcheckbutton->isChecked()) {
                 model->addQai_eth(ui->labelEdit->text());
                 return true;
@@ -144,6 +163,19 @@ bool EditAddressDialog::saveCurrentRow()
                 model->addQai_v2(ui->labelEdit->text());
                 return true;
             }
+            */
+
+            if(ui->radioButtonQaiv1->isChecked()) {
+                model->addQai_v1(ui->labelEdit->text());
+                return true;
+            } else if (ui->radioButtonQaiV2->isChecked()) {
+                model->addQai_v2(ui->labelEdit->text());
+                return true;
+            } else if (ui->radioButtonEthStyle->isChecked()) {
+                model->addQai_eth(ui->labelEdit->text());
+                return true;
+            }
+
         } catch (const json_spirit::Object &s) {
             QMessageBox::warning(this, windowTitle(),
                 tr(s.at(1).value_.get_str().c_str()),

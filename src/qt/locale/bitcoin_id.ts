@@ -21,7 +21,7 @@ Copyright © 2011-2012 The PPCoin Developers
 Copyright © 2014 The Peerunity Developers
 Copyright © 2014 The EmerCoin Developers
 Copyright © 2012-2016 The NovaCoin developers
-Copyright © 2017-2018 The SorachanCoin Developers</source>
+Copyright © 2017-2024 The SorachanCoin Developers</source>
         <translation>Hak Cipta © 2009-2016 Pengembang Bitcoin Hak Cipta © 2011-2012 Pengembang PPCoin Hak Cipta © 2014 Pengembang Peerunity Hak Cipta © 2014 Pengembang EmerCoin Hak Cipta © 2012-2016 Pengembang NovaCoin Hak Cipta © 2017-2019 Pengembang SorachanCoin</translation>
     </message>
     <message>
@@ -1172,6 +1172,21 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location filename="../forms/editaddressdialog.ui" line="42"/>
         <source>&amp;Address</source>
         <translation>&amp;Alamat</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Eth Style Address (0x ...)</source>
+        <translation>Alamat format Ethereum (0x ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quanrum and AI reisitance (sora1 ...)</source>
+        <translation>Alamat format dukungan ketahanan AI Kuantum (sora1 ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quantum ans AI resistance / Schnorr agg - sig 5000 keys (sora1 ,,,)</source>
+        <translation>Alamat format dukungan ketahanan AI Kuantum + Schnorr - dukungan agregasi 5000 kunci (sora1 ...)</translation>
     </message>
     <message>
         <location filename="../forms/editaddressdialog.ui" line="52"/>

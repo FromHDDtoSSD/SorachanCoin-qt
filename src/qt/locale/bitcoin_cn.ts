@@ -27,7 +27,7 @@ Copyright © 2011-2012 The PPCoin Developers
 Copyright © 2014 The Peerunity Developers
 Copyright © 2014 The EmerCoin Developers
 Copyright © 2012-2016 The NovaCoin developers
-Copyright © 2017-2019 The SorachanCoin Developers</translation>
+Copyright © 2017-2024 The SorachanCoin Developers</translation>
     </message>
     <message>
         <location filename="../forms/aboutdialog.ui" line="114"/>
@@ -1218,6 +1218,21 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <location filename="../editaddressdialog.cpp" line="21"/>
         <source>New receiving address</source>
         <translation>新的接收地址</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Eth Style Address (0x ...)</source>
+        <translation>以太坊格式地址 (0x ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quanrum and AI reisitance (sora1 ...)</source>
+        <translation>量子AI抗性支持格式地址 (sora1 ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quantum ans AI resistance / Schnorr agg - sig 5000 keys (sora1 ,,,)</source>
+        <translation>量子AI抗性 + Schnorr集约签名 - 支持5000键集约格式地址 (sora1 ...)</translation>
     </message>
     <message>
         <location filename="../editaddressdialog.cpp" line="25"/>

@@ -31,6 +31,8 @@ rm -f missing
 rm -f stamp-h1
 rm -f compile
 rm -f configure
+rm -f src/soracoind
+rm -f src/soracoin-cli
 
 if [ -f ${srcdir}/src/Makefile.am.sqlite ]; then
  if [ -f ${srcdir}/src/Makefile.am ]; then

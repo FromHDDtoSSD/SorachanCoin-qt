@@ -1058,6 +1058,16 @@ This label turns red, if the priority is smaller than &quot;medium&quot;.
         <translation>イーサリアム形式のアドレス (0x ...)</translation>
     </message>
     <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quanrum and AI reisitance (sora1 ...)</source>
+        <translation>量子AI耐性サポート形式のアドレス (sora1 ...)</translation>
+    </message>
+    <message>
+        <location filename="../editaddressdialog.cpp" line="+20"/>
+        <source>Quantum ans AI resistance / Schnorr agg - sig 5000 keys (sora1 ,,,)</source>
+        <translation>量子AI耐性 + Schnorr集約署名 - 5000鍵集約サポート形式のアドレス (sora1 ...)</translation>
+    </message>
+    <message>
         <location line="+4"/>
         <source>New sending address</source>
         <translation>新しい送信アドレス</translation>

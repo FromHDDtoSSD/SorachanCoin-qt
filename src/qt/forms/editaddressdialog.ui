@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>457</width>
-    <height>126</height>
+    <height>195</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -57,17 +57,34 @@ color: rgb(0, 170, 255);</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
-      <widget class="QCheckBox" name="ethcheckbutton">
+     <item row="3" column="1">
+      <widget class="QRadioButton" name="radioButtonECDSA">
        <property name="text">
-        <string>Eth Style Address (0x ...)</string>
+        <string>ECDSA P2PKH (S ...)</string>
+       </property>
+       <property name="checked">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
-     <item row="3" column="1">
-      <widget class="QCheckBox" name="qaicheckbutton">
+     <item row="4" column="1">
+      <widget class="QRadioButton" name="radioButtonQaiv1">
        <property name="text">
-        <string>Quantum and AI resistance Address (bech32 sora ...)</string>
+        <string>Quanrum and AI reisitance (sora1 ...)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="5" column="1">
+      <widget class="QRadioButton" name="radioButtonQaiV2">
+       <property name="text">
+        <string>Quantum ans AI resistance / Schnorr agg - sig 5000 keys (sora1 ,,,)</string>
+       </property>
+      </widget>
+     </item>
+     <item row="6" column="1">
+      <widget class="QRadioButton" name="radioButtonEthStyle">
+       <property name="text">
+        <string>Eth Style Address (0x ...)</string>
        </property>
       </widget>
      </item>

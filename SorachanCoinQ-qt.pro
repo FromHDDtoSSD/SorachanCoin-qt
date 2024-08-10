@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.89.15
+VERSION = 3.92.15
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -21,7 +21,7 @@ ONLYTESTNET=0
 # 0: with debug console, DEBUG mode
 # 1: no debug console, Release mode
 #
-RELEASE=0
+RELEASE=1
 
 #
 # GUI_MODE
