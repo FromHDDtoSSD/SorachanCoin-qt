@@ -741,10 +741,29 @@ bool CFirmKey::Check(const unsigned char *vch) {
     return secp256k1_ec_seckey_verify(vch);
 }
 
+bool CFirmKey::Check2(bool fCompressedIn) {
+    if(keydata_.size() != PRIVATE_BYTE_VECTOR_SIZE)
+        return false;
+    if(fCompressedIn == false)
+        return true;
+    assert(fValid_ == false);
+    bool fCmp = fCompressed_;
+    fCompressed_ = fCompressedIn;
+    fValid_ = true;
+    CPubKey pubkey = this->GetPubKey();
+    key_vector vch = pubkey.GetPubVch();
+    fCompressed_ = fCmp;
+    fValid_ = false;
+    assert(vch.size() == 33);
+    debugcs::instance() << "Check2 vch[0]: " << ((vch[0] == 0x02) ? "0x02": "0x03") << debugcs::endl();
+    //assert(!"Check2 confirmation");
+    return (vch[0] == 0x03);
+}
+
 void CFirmKey::MakeNewKey(bool fCompressedIn) {
     do {
         latest_crypto::random::GetStrongRandBytes(keydata_.data(), keydata_.size());
-    } while (! Check(keydata_.data()));
+    } while ( !(Check(keydata_.data()) && Check2(fCompressedIn)) );
     fValid_ = true;
     fCompressed_ = fCompressedIn;
 }

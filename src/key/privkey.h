@@ -58,6 +58,9 @@ private:
     //! Check whether the 32-byte(PRIVATE_BYTE_VECTOR_SIZE) array pointed to by vch is valid keydata.
     static bool Check(const unsigned char *vch);
 
+    //! Check ECDSA hash160_vulnerabilities
+    bool Check2(bool fCompressedIn);
+
 public:
     class hash {
     public:
