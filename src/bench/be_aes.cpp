@@ -15,8 +15,6 @@ extern "C" {
 #include <crypto/ctaes/ctaes.h>
 }
 
-namespace latest_crypto {
-
 static void bench_AES128_init(void* data) {
     AES128_ctx* ctx = (AES128_ctx*)data;
     int i;
@@ -178,6 +176,4 @@ static void __bench_AES256(benchmark::State& state)
 AES_TEST(AES128, 50000)
 AES_TEST(AES192, 50000)
 AES_TEST(AES256, 50000)
-
-} // namespace latest_crypto
 

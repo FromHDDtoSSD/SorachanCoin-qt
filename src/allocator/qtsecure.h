@@ -25,7 +25,6 @@ public:
 
 // SorachanCoin: QtSecureAllocator
 // singleton class
-using namespace latest_crypto;
 class QtSecureAllocator { // mlock() and OPENSSL_cleanse
     static constexpr size_t s_size = 2048 * 1024;
     static constexpr size_t block = 4096; // eg QtString: larger than passphrase size

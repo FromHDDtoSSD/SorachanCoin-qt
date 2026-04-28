@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-namespace latest_crypto {
-
 /** A hasher class for SHA1. */
 class CSHA1
 {
@@ -25,7 +23,5 @@ public:
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CSHA1& Reset();
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_SHA1_H

@@ -473,7 +473,7 @@ CBitcoinAddress CRPCTable::CreateNewQaiAddress(CScript *create_redeem/* = nullpt
     if(qkey.IsValid()) {
         std::string check = redeemScript.ToString();
         uint256 h256;
-        latest_crypto::CHash256().Write((const unsigned char *)check.data(), check.size()).Finalize(h256.begin());
+        CHash256().Write((const unsigned char *)check.data(), check.size()).Finalize(h256.begin());
         qkey_vector sig;
         qkey.SignQai(h256, sig);
         if(sig.size() == 128) {
@@ -657,8 +657,8 @@ json_spirit::Value CRPCTable::getnewcipheraddress(const json_spirit::Array &para
         /*
         uint160 rand_hash;
         unsigned char buf[32];
-        latest_crypto::random::GetRandBytes(buf, sizeof(buf));
-        latest_crypto::CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
+        random::GetRandBytes(buf, sizeof(buf));
+        CHash160().Write(buf, sizeof(buf)).Finalize(rand_hash.begin());
         std::string acc_hash = "cipher_" + rand_hash.GetHex();
         entry::pwalletMain->SetAddressBookName(address, acc_hash);
         */

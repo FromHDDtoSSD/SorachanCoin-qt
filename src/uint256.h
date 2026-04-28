@@ -305,8 +305,6 @@ public:
 typedef base_uint<160> base_uint160;
 typedef base_uint<256> base_uint256;
 typedef base_uint<512> base_uint512;
-typedef base_uint<65536> base_uint65536;
-typedef base_uint<131072> base_uint131072;
 
 static void inline HashMix(uint32_t &a, uint32_t &b, uint32_t &c)
 {
@@ -428,8 +426,6 @@ inline const obj_uint operator-(const obj_uint &a, const obj_uint &b) { return (
 UINT_DEF(uint160, base_uint160)
 UINT_DEF(uint256, base_uint256)
 UINT_DEF(uint512, base_uint512)
-UINT_DEF(uint65536, base_uint65536)
-UINT_DEF(uint131072, base_uint131072)
 
 inline const base_uint256 operator*(const base_uint256 &a, const base_uint256 &b) {
     base_uint256 u = a;

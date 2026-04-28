@@ -8,6 +8,8 @@
 #include <kernel.h>
 #include <kernel_worker.h>
 #include <util/thread.h>
+#include <crypto/sha256.h>
+#include <crypto/sha3_256.h>
 
 void KernelWorker::Do_generic()
 {
@@ -25,9 +27,9 @@ void KernelWorker::Do_generic()
     // Search forward in time from the given timestamp
     // Stopping search in case of shutting down
 
-    latest_crypto::CSHA256 sha256;
+    CSHA256 sha256;
     sha256.Write(kernel, 8 + 16);
-    latest_crypto::CSHA256 workerSha256 = sha256;
+    CSHA256 workerSha256 = sha256;
 
     SHA256_CTX ctx;
     SHA256_Init(&ctx);
@@ -38,7 +40,7 @@ void KernelWorker::Do_generic()
         uint256 hashC;
         sha256.Write((unsigned char *)&nTimeTx, 4);
         sha256.Finalize((unsigned char *)&hashC);
-        latest_crypto::CSHA256().Write((unsigned char *)&hashC, sizeof(hashC)).Finalize((unsigned char *)&hashProofOfStakeC);
+        CSHA256().Write((unsigned char *)&hashC, sizeof(hashC)).Finalize((unsigned char *)&hashProofOfStakeC);
         sha256 = workerSha256;
 
         // Complete first hashing iteration
@@ -51,6 +53,46 @@ void KernelWorker::Do_generic()
         assert(!"debug hashC == hash1");
         assert(hashC==hash1);
         assert(*pnHashProofOfStake==*pnHashProofOfStakeC);
+
+        // Skip if hash doesn't satisfy the maximum target
+        if (hashProofOfStake[7] > nMaxTarget32) {
+            continue;
+        } else {
+            CBigNum bnCoinDayWeight = bnValueIn * bitkernel::GetWeight((int64_t)nInputTxTime, (int64_t)nTimeTx) / util::COIN / util::nOneDay;
+            CBigNum bnTargetProofOfStake = bnCoinDayWeight * bnTargetPerCoinDay;
+            if (bnTargetProofOfStake >= CBigNum(*pnHashProofOfStake)) {
+                solutions.push_back(std::pair<uint256, uint32_t>(*pnHashProofOfStake, nTimeTx));
+            }
+        }
+    }
+}
+
+void KernelWorker::Do_generic_testnet()
+{
+    bitthread::SetThreadPriority(THREAD_PRIORITY_LOWEST);
+
+    // Compute maximum possible target to filter out majority of obviously insufficient hashes
+    CBigNum bnTargetPerCoinDay; bnTargetPerCoinDay.SetCompact(nBits);
+    uint256 nMaxTarget = (bnTargetPerCoinDay * bnValueIn * block_check::nStakeMaxAge / util::COIN / util::nOneDay).getuint256();
+
+    // SORA2 result buffer
+    uint32_t hashProofOfStake[8];
+    uint256 *pnHashProofOfStake = (uint256 *)&hashProofOfStake;
+
+    // Search forward in time from the given timestamp
+    // Stopping search in case of shutting down
+
+    CSHA3_256 sha3;
+    sha3.Write(kernel, 8 + 16);       // Init new sha3 context and update it with first 24 bytes of kernel
+    CSHA3_256 workerSha3 = sha3;   // save context
+    for (uint32_t nTimeTx = nIntervalBegin, nMaxTarget32 = nMaxTarget.Get32(7); nTimeTx < nIntervalEnd && !args_bool::fShutdown; nTimeTx++)
+    {
+        // Complete first hashing iteration
+        uint256 hash;
+        sha3.Write((unsigned char *)&nTimeTx, 4);
+        sha3.Finalize((unsigned char *)&hash);
+        CSHA3_256().Write((unsigned char *)&hash, sizeof(hash)).Finalize((unsigned char *)&hashProofOfStake);
+        sha3 = workerSha3;
 
         // Skip if hash doesn't satisfy the maximum target
         if (hashProofOfStake[7] > nMaxTarget32) {

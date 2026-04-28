@@ -17,8 +17,6 @@ extern "C" {
 #include <crypto/ctaes/ctaes.h>
 }
 
-namespace latest_crypto {
-
 typedef struct {
    int keysize;
    const char* key;
@@ -117,5 +115,3 @@ int check_all_aes() {
    }
    return (fail != 0);
 }
-
-} // namespace latest_crypto

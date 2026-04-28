@@ -887,18 +887,6 @@ public:
     bool operator!=(const uint512 &obj) const {
         return !(operator==(obj));
     }
-    bool operator==(const uint65536 &obj) const {
-        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
-    }
-    bool operator!=(const uint65536 &obj) const {
-        return !(operator==(obj));
-    }
-    bool operator==(const uint131072 &obj) const {
-        return ::strcmp((LPCSTR)*this, obj.ToString().c_str())==0;
-    }
-    bool operator!=(const uint131072 &obj) const {
-        return !(operator==(obj));
-    }
 
     void split(CMString *pstr, wchar_t delim, int count, bool *p_exists) const {
         (pstr)? splitfast(*pstr, delim, 0, 0, count, p_exists): (void)0;
@@ -1033,14 +1021,6 @@ public:
         setnull();
         operator=(obj.ToString());
     }
-    CMString(const uint65536 &obj) {
-        setnull();
-        operator=(obj.ToString());
-    }
-    CMString(const uint131072 &obj) {
-        setnull();
-        operator=(obj.ToString());
-    }
     CMString(const std::string &str) {
         setnull();
         operator=(str.c_str());
@@ -1113,12 +1093,6 @@ public:
     friend class CMString operator+(const CMString &s1, const uint512 &u2) {
         return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
     }
-    friend class CMString operator+(const CMString &s1, const uint65536 &u2) {
-        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
-    }
-    friend class CMString operator+(const CMString &s1, const uint131072 &u2) {
-        return CMString(s1).operator+(u2); // if +u2, ISO C++ ambiguous
-    }
 
     //
     // (CMString, primitive or other object) + CMString
@@ -1172,12 +1146,6 @@ public:
         return CMString(u1)+s2;
     }
     friend class CMString operator+(const uint512 &u1, const CMString &s2) {
-        return CMString(u1)+s2;
-    }
-    friend class CMString operator+(const uint65536 &u1, const CMString &s2) {
-        return CMString(u1)+s2;
-    }
-    friend class CMString operator+(const uint131072 &u1, const CMString &s2) {
         return CMString(u1)+s2;
     }
 
@@ -1328,14 +1296,6 @@ static inline bool operator==(const uint256 &u1, const CMString &s2) {
 }
 
 static inline bool operator==(const uint512 &u1, const CMString &s2) {
-    return (s2==u1);
-}
-
-static inline bool operator==(const uint65536 &u1, const CMString &s2) {
-    return (s2==u1);
-}
-
-static inline bool operator==(const uint131072 &u1, const CMString &s2) {
     return (s2==u1);
 }
 

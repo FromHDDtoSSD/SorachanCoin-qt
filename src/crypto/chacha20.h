@@ -11,8 +11,6 @@
 #include <uint256.h>
 #include <allocator/allocators.h>
 
-namespace latest_crypto {
-
 /** SORA-QAI for CChaCha20. */
 class CChaCha20
 {
@@ -73,7 +71,5 @@ public:
     void Seek(uint64_t pos);
     void Output(unsigned char* output, size_t bytes);
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_CHACHA20_H

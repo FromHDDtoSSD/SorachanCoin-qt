@@ -69,10 +69,8 @@ SorachanCoind_SOURCES = \
  crypto/aes.cpp \
  crypto/blake2.cpp \
  crypto/chacha20.cpp \
- crypto/hmac_qhash65536.cpp \
  crypto/hmac_sha256.cpp \
  crypto/hmac_sha512.cpp \
- crypto/qhash65536.cpp \
  crypto/ripemd160.cpp \
  crypto/sha1.cpp \
  crypto/sha256.cpp \
@@ -82,6 +80,8 @@ SorachanCoind_SOURCES = \
  crypto/sha256_sse41.cpp \
  crypto/sha512.cpp \
  crypto/keccak256.cpp \
+ crypto/sha3_256.cpp \
+ crypto/sha3_512.cpp \
  file_operate/fs.cpp \
  file_operate/iofs.cpp \
  json/json_spirit_reader_template.cpp \
@@ -164,6 +164,7 @@ SorachanCoind_SOURCES = \
  version.cpp \
  wallet.cpp \
  walletdb.cpp \
+ hash.cpp \
  scrypt.cpp
 
 SorachanCoin_cli_SOURCES = \
@@ -199,10 +200,8 @@ SorachanCoin_cli_SOURCES = \
  crypto/aes.cpp \
  crypto/blake2.cpp \
  crypto/chacha20.cpp \
- crypto/hmac_qhash65536.cpp \
  crypto/hmac_sha256.cpp \
  crypto/hmac_sha512.cpp \
- crypto/qhash65536.cpp \
  crypto/ripemd160.cpp \
  crypto/sha1.cpp \
  crypto/sha256.cpp \
@@ -212,6 +211,8 @@ SorachanCoin_cli_SOURCES = \
  crypto/sha256_sse41.cpp \
  crypto/sha512.cpp \
  crypto/keccak256.cpp \
+ crypto/sha3_256.cpp \
+ crypto/sha3_512.cpp \
  file_operate/fs.cpp \
  file_operate/iofs.cpp \
  json/json_spirit_reader_template.cpp \
@@ -294,4 +295,5 @@ SorachanCoin_cli_SOURCES = \
  version.cpp \
  wallet.cpp \
  walletdb.cpp \
+ hash.cpp \
  scrypt.cpp

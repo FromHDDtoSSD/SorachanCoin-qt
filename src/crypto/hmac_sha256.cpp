@@ -6,8 +6,6 @@
 #include <string.h>
 #include <cstring>
 
-namespace latest_crypto {
-
 CHMAC_SHA256::CHMAC_SHA256(const unsigned char *key, size_t keylen) {
     Init(key, keylen);
 }
@@ -37,5 +35,3 @@ void CHMAC_SHA256::Finalize(unsigned char hash[OUTPUT_SIZE])
     inner.Finalize(temp);
     outer.Write(temp, 32).Finalize(hash);
 }
-
-} // namespace latest_crypto

@@ -14,11 +14,6 @@
 #include <const/amount.h>
 #include <prevector/prevector.h>
 
-#ifndef SWITCH_LYRE2RE_BLOCK
-# define SWITCH_LYRE2RE_BLOCK (84950000) // hardfork: to Lyra2REv2
-# define SWITCH_LYRE2RE_BLOCK_TESTNET (84950000)
-#endif
-
 /** Capture information about block/transaction validation */
 class CValidationState
 {
@@ -153,15 +148,11 @@ public:
 };
 
 class CBlockHeader_impl : public CBlockHeader {
-private:
-    uint256 GetHash(int type) const;
 public:
     bool IsNull() const {
         return (CBlockHeader::nBits == 0);
     }
-    int set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const; // return: BLOCK_HASH_TYPE
-    //uint256 GetPoHash() const;
-    uint256 GetPoHash(int32_t height, int type) const;
+
     int64_t GetBlockTime() const {
         return (int64_t)CBlockHeader::nTime;
     }

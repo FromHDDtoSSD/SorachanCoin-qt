@@ -187,7 +187,7 @@ json_spirit::Value CRPCTable::stop(const json_spirit::Array &params, bool fHelp)
 //
 // Call Table
 //
-const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[108] =
+const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[111] =
 { //  name                      function                 safemd  unlocked
   //  ------------------------  -----------------------  ------  --------
     { "help",                       &help,                        true,   true },
@@ -298,6 +298,9 @@ const CRPCTable::CRPCCommand CRPCTable::vRPCCommands[108] =
     { "decryptdata",                &decryptdata,                 false,  false },
     { "encryptmessage",             &encryptmessage,              false,  false },
     { "decryptmessage",             &decryptmessage,              false,  false },
+    { "sora2hash",                  &sora2hash,                   false,  false },
+    { "sha2hash",                   &sha2hash,                    false,  false },
+    { "sora2mining",                &sora2mining,                 false,  false },
     { "sendalert",                  &sendalert,                   false,  false},
 };
 

@@ -169,8 +169,6 @@ int Keccak::Finalize(void *hash) {
 
 } // namespace keccak256_lib
 
-namespace latest_crypto {
-
 CKECCAK256::CKECCAK256() {
     keccak.Init();
 }
@@ -188,5 +186,3 @@ CKECCAK256& CKECCAK256::Reset() {
     keccak.Init();
     return *this;
 }
-
-} // namespace latest_crypto

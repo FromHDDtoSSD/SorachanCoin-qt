@@ -32,9 +32,11 @@ unsigned int diff::amount::ComputeMaxBits(CBigNum bnTargetLimit, unsigned int nB
 // select stake target limit according to hard-coded conditions
 CBigNum diff::amount::GetProofOfStakeLimit(int nHeight, unsigned int nTime)
 {
-    if(args_bool::fTestNet)
-        return diff::bnProofOfStakeLimit;
-    else {
+    if(args_bool::fTestNet) {
+        //return diff::bnProofOfStakeLimit;
+        if(nTime > timestamps::TARGETS_SWITCH_WORK) return diff::bnProofOfStakeLimit;
+        return diff::bnProofOfWorkLimit; // return bnProofOfWorkLimit(PoW_Limit) of none matched
+    } else {
         if(nTime > timestamps::TARGETS_SWITCH_WORK) return diff::bnProofOfStakeLimit;
         return diff::bnProofOfWorkLimit; // return bnProofOfWorkLimit(PoW_Limit) of none matched
     }
@@ -70,99 +72,37 @@ bool diff::check::CheckProofOfWork(uint256 hash, unsigned int nBits)
     return true;
 }
 
-// BLOCK_HASH_MOFIFIER: check block type
-// Note: since there are blocks other than PoW, it is exactly check.
-bool diff::check::CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl &header, int &type) // height is current
-{
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(height < sw_height) {
-        type = HASH_TYPE_NONE;
-        return CheckProofOfWork(header.GetPoHash(height, HASH_TYPE_NONE), header.get_nBits());
-    }
-
-    // other than PoW check
-    if(block_hash_helper::is_proof(SCRYPT_POS_TYPE, nonce_zero_value)) {
-        type = SCRYPT_POS_TYPE;
-        return true;
-    }
-    if(block_hash_helper::is_proof(SCRYPT_MASTERNODE_TYPE, nonce_zero_value)) {
-        type = SCRYPT_MASTERNODE_TYPE;
-        return true;
-    }
-    if(block_hash_helper::is_proof(SCRYPT_POBENCH_TYPE, nonce_zero_value)) {
-        type = SCRYPT_POBENCH_TYPE;
-        return true;
-    }
-    if(block_hash_helper::is_proof(SCRYPT_POSPACE_TYPE, nonce_zero_value)) {
-        type = SCRYPT_POSPACE_TYPE;
-        return true;
-    }
-    if(block_hash_helper::is_proof(SCRYPT_POPREDICT_TYPE, nonce_zero_value)) {
-        type = SCRYPT_POPREDICT_TYPE;
-        return true;
-    }
-
-    auto hash_check = [](uint256 hash, const CBigNum &bn) {
-        if(hash > bn.getuint256())
-            return false; // logging::error("diff::check::CheckProofOfWork2() : hash doesn't match nBits");
-        else
-            return true;
-    };
-
-    CBigNum bnTarget;
-    bnTarget.SetCompact(header.get_nBits());
-
-    // Check range
-    if (bnTarget <= 0 || bnTarget > diff::bnProofOfWorkLimit)
-        return false; // logging::error("diff::check::CheckProofOfWork2() : nBits below minimum work");
-
-    // Check hash type
-    type = LYRA2REV2_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_Lyra2REV2((const char *)&header), bnTarget))
-        return true;
-
-    type = SCRYPT_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_Scrypt((const char *)&header), bnTarget))
-        return true;
-
-    type = BLAKE2S_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_Blake2S((const char *)&header), bnTarget))
-        return true;
-
-    type = SHA256D_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_SHA256D((const char *)&header), bnTarget))
-        return true;
-
-    type = LYRA2RE_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_Lyra2RE((const char *)&header), bnTarget))
-        return true;
-
-    type = SHA512D_POW_TYPE;
-    if(hash_check(block_hash_func::GetPoW_SHA512D((const char *)&header), bnTarget))
-        return true;
-
-    //debugcs::instance() << "CheckProofOfWork2 Error header: " << header.ToString().c_str() << debugcs::endl();
-    type = HASH_TYPE_NONE;
-    return false;
-}
-
 // miner's coin base reward based on nBits
 int64_t diff::reward::GetProofOfWorkReward(unsigned int nBits, int64_t nFees /*= 0*/)
 {
     int64_t nSubsidy = block_params::MAX_MINT_PROOF_OF_WORK;
     if (block_info::nBestHeight == 0)
-        nSubsidy = block_params::COIN_PREMINE;
+        nSubsidy = args_bool::fTestNet ? block_params::COIN_PREMINE_TESTNET: block_params::COIN_PREMINE;
     else {
-        for(std::list<std::pair<int, int64_t> >::const_iterator it = blockreward::POW_REWARD_BLOCK.begin(); it != blockreward::POW_REWARD_BLOCK.end(); ++it) {
-            std::pair<int, int64_t> data1 = *it;
-            nSubsidy = data1.second;
-            std::list<std::pair<int, int64_t> >::const_iterator next = it; ++next;
-            if(next == blockreward::POW_REWARD_BLOCK.end())
-                break;
+        if(args_bool::fTestNet) {
+            for(std::list<std::pair<int, int64_t> >::const_iterator it = blockreward::POW_REWARD_BLOCK_SORA2.begin(); it != blockreward::POW_REWARD_BLOCK_SORA2.end(); ++it) {
+                std::pair<int, int64_t> data1 = *it;
+                nSubsidy = data1.second;
+                std::list<std::pair<int, int64_t> >::const_iterator next = it; ++next;
+                if(next == blockreward::POW_REWARD_BLOCK_SORA2.end())
+                    break;
 
-            std::pair<int, int64_t> data2 = *next;
-            if(data1.first <= block_info::nBestHeight && block_info::nBestHeight < data2.first)
-                break;
+                std::pair<int, int64_t> data2 = *next;
+                if(data1.first <= block_info::nBestHeight && block_info::nBestHeight < data2.first)
+                    break;
+            }
+        } else {
+            for(std::list<std::pair<int, int64_t> >::const_iterator it = blockreward::POW_REWARD_BLOCK.begin(); it != blockreward::POW_REWARD_BLOCK.end(); ++it) {
+                std::pair<int, int64_t> data1 = *it;
+                nSubsidy = data1.second;
+                std::list<std::pair<int, int64_t> >::const_iterator next = it; ++next;
+                if(next == blockreward::POW_REWARD_BLOCK.end())
+                    break;
+
+                std::pair<int, int64_t> data2 = *next;
+                if(data1.first <= block_info::nBestHeight && block_info::nBestHeight < data2.first)
+                    break;
+            }
         }
     }
     //logging::LogPrintf("diff::reward::GetProofOfWork nSubsidy_%" PRId64 "\n", nSubsidy);
@@ -205,7 +145,7 @@ int64_t diff::spacing::GetTargetSpacingWorkMax(int nHeight, unsigned int nTime)
     if(nTime < timestamps::TARGETS_SWITCH_WORK)
         return 3 * block_check::nPowTargetSpacing;
     if(args_bool::fTestNet)
-        return 1 * block_check::nPowTargetSpacing;
+        return 2 * block_check::nPowTargetSpacing; // return 1 * block_check::nPowTargetSpacing;
     else
         return 2 * block_check::nPowTargetSpacing;
 }

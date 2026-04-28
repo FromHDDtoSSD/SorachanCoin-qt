@@ -8,8 +8,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-namespace latest_crypto {
-
 /** A hasher class for RIPEMD-160. */
 class CRIPEMD160
 {
@@ -25,7 +23,5 @@ public:
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
     CRIPEMD160& Reset();
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_RIPEMD160_H

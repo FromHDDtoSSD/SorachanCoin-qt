@@ -123,7 +123,7 @@ template <typename T>
 CAutocheckPoint_impl<T>::~CAutocheckPoint_impl() {}
 
 template <typename T>
-bool CAutocheckPoint_impl<T>::Check() const { // nCheckBlocks blocks, autocheckpoints qhash(uint65536) check
+bool CAutocheckPoint_impl<T>::Check() const {
     LOCK(cs_autocp);
     try {
         if(block_info::mapBlockIndex.empty())

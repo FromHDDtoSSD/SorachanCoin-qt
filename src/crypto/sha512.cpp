@@ -6,8 +6,6 @@
 #include <crypto/common.h>
 #include <string.h>
 
-namespace latest_crypto {
-
 namespace
 {
 
@@ -205,5 +203,3 @@ CSHA512& CSHA512::Reset()
     sha512::Initialize(s);
     return *this;
 }
-
-} // namespace latest_crypto

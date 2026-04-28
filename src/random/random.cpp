@@ -1,14 +1,15 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2021 The SorachanCoin developers
+// Copyright (c) 2018-2025 The SorachanCoin developers
+// Copyright (c) 2025 The SS256/SORA2 developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <random/random.h>
-#include <crypto/sha512.h>
 #include <cleanse/cleanse.h>
 
 #ifdef WIN32
+# include <windows.h>
 # include <compat.h> // for Windows API
 # include <wincrypt.h>
 #endif
@@ -50,8 +51,6 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 #include <openssl/conf.h>
-
-namespace latest_crypto {
 
 [[noreturn]] void random::RandFailure() {
     logging::LogPrintf("Failed to read randomness, aborting\n");
@@ -198,7 +197,7 @@ void random::ReportHardwareRand() {}
 #endif // [A] macro
 
 /** Add 64 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */
-void random::SeedHardwareFast(CSHA512 &hasher) {
+void random::SeedHardwareFast(CSHA3_512 &hasher) {
 #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)
     if (g_rdrand_supported) {
         uint64_t out = GetRdRand();
@@ -209,7 +208,7 @@ void random::SeedHardwareFast(CSHA512 &hasher) {
 }
 
 /** Add 256 bits of entropy gathered from hardware to hasher. Do nothing if not supported. */
-void random::SeedHardwareSlow(CSHA512 &hasher) {
+void random::SeedHardwareSlow(CSHA3_512 &hasher) {
 #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)
     // When we want 256 bits of entropy, prefer RdSeed over RdRand, as it's
     // guaranteed to produce independent randomness on every call.
@@ -233,7 +232,7 @@ void random::SeedHardwareSlow(CSHA512 &hasher) {
 #endif
 }
 
-void random::RandAddSeedPerfmon(CSHA512 &hasher) {
+void random::RandAddSeedPerfmon(CSHA3_512 &hasher) {
 #ifdef WIN32
     // Don't need this on Linux, OpenSSL automatically uses /dev/urandom
     // Seed with the entire set of perfmon data
@@ -447,10 +446,10 @@ public:
      *
      * If this function has never been called with strong_seed = true, false is returned.
      */
-    bool MixExtract(unsigned char* out, size_t num, CSHA512 &&hasher, bool strong_seed) {
+    bool MixExtract(unsigned char* out, size_t num, CSHA3_512 &hasher, bool strong_seed) {
         assert(num <= 32);
         unsigned char buf[64];
-        static_assert(sizeof(buf) == CSHA512::OUTPUT_SIZE, "Buffer needs to have hasher's output size");
+        static_assert(sizeof(buf) == CSHA3_512::OUTPUT_SIZE, "Buffer needs to have hasher's output size");
         bool ret;
         {
             LOCK(m_mutex);
@@ -479,6 +478,7 @@ public:
     //! RNGState: Secure allocator
     // OPENSSL_malloc and OPENSSL_free do NOT fill zero or dummy to object
     // when the time of release.
+    /*
     void *operator new(size_t size, const std::nothrow_t &) {
         DEBUG_LSYNC_CS("called GetRNGState() new operator");
         unsigned char *p = (unsigned char *)::malloc(size + sizeof(size_t));
@@ -496,8 +496,10 @@ public:
         ::free(head);
     }
     void operator delete[](void *p)=delete;
+    */
 
     static RNGState &GetRNGState() {
+        /*
         class manage {
         private:
             RNGState *m_ptr;
@@ -512,6 +514,18 @@ public:
             }
             RNGState &get() {
                 return *m_ptr;
+            }
+        };
+        */
+
+        class manage {
+        private:
+            RNGState obj;
+        public:
+            manage() {}
+            ~manage() {}
+            RNGState &get() {
+                return obj;
             }
         };
 
@@ -548,12 +562,12 @@ class OpenSSL_startup {
 public:
     OpenSSL_startup() {
         unsigned char ch[32] = {0};
-        CSHA512 hasher;
+        CSHA3_512 hasher;
         hasher.Write(ch, sizeof(ch));
         RNGState &obj = RNGState::GetRNGState(); // generate RNGState
-        obj.MixExtract(g_dummy, sizeof(g_dummy)/sizeof(char) - 1, std::move(hasher), false);
+        obj.MixExtract(g_dummy, sizeof(g_dummy)/sizeof(char) - 1, hasher, false);
         g_dummy[9] = '\0';
-        DEBUG_LSYNC_CS("called OpenSSL_startup()");
+        //DEBUG_LSYNC_CS("called OpenSSL_startup()");
     }
 };
 OpenSSL_startup dummy_openssl;
@@ -575,12 +589,12 @@ OpenSSL_startup dummy_openssl;
  * everything can become noexcept here.
  */
 
-void random::SeedTimestamp(CSHA512 &hasher) {
+void random::SeedTimestamp(CSHA3_512 &hasher) {
     int64_t perfcounter = GetPerformanceCounter();
     hasher.Write((const unsigned char *)&perfcounter, sizeof(perfcounter));
 }
 
-void random::SeedFast(CSHA512 &hasher) {
+void random::SeedFast(CSHA3_512 &hasher) {
     unsigned char buffer[32];
 
     // Stack pointer to indirectly commit to thread/callstack
@@ -596,7 +610,7 @@ void random::SeedFast(CSHA512 &hasher) {
     cleanse::OPENSSL_cleanse(buffer, sizeof(buffer));
 }
 
-void random::SeedSlow(CSHA512 &hasher) {
+void random::SeedSlow(CSHA3_512 &hasher) {
     unsigned char buffer[32];
 
     // Everything that the 'fast' seeder includes
@@ -620,7 +634,7 @@ void random::SeedSlow(CSHA512 &hasher) {
     cleanse::OPENSSL_cleanse(buffer, sizeof(buffer));
 }
 
-void random::SeedSleep(CSHA512 &hasher) {
+void random::SeedSleep(CSHA3_512 &hasher) {
     // Everything that the 'fast' seeder includes
     SeedFast(hasher);
 
@@ -637,7 +651,7 @@ void random::SeedSleep(CSHA512 &hasher) {
     RandAddSeedPerfmon(hasher);
 }
 
-void random::SeedStartup(CSHA512 &hasher) {
+void random::SeedStartup(CSHA3_512 &hasher) {
 #ifdef WIN32
     // Seed random number generator with screen scrape and other hardware sources
     //::RAND_screen(); // case OpenSSL
@@ -659,7 +673,7 @@ void random::ProcRand(unsigned char *out, int num, RNGLevel level) {
     RNGState &rng = RNGState::GetRNGState();
     assert(num <= 32);
 
-    CSHA512 hasher;
+    CSHA3_512 hasher;
     switch (level) {
     case RNGLevel::FAST:
         SeedFast(hasher);
@@ -673,28 +687,31 @@ void random::ProcRand(unsigned char *out, int num, RNGLevel level) {
     }
 
     // Combine with and update state
-    if (! rng.MixExtract(out, num, std::move(hasher), false)) {
+    if (! rng.MixExtract(out, num, hasher, false)) {
         // On the first invocation, also seed with SeedStartup().
-        CSHA512 startup_hasher;
+        CSHA3_512 startup_hasher;
         SeedStartup(startup_hasher);
-        rng.MixExtract(out, num, std::move(startup_hasher), true);
+        rng.MixExtract(out, num, startup_hasher, true);
     }
 
     // For anything but the 'fast' level, feed the resulting RNG output (after an additional hashing step) back into OpenSSL.
     if (level != RNGLevel::FAST) {
         unsigned char buf[64];
-        CSHA512().Write(out, num).Finalize(buf);
+        CSHA3_512().Write(out, num).Finalize(buf);
         ::RAND_add(buf, sizeof(buf), num);
         cleanse::memory_cleanse(buf, 64);
     }
 }
 
+/*
 void random::FastRandomContext::RandomSeed() {
     uint256 seed = GetRandHash();
     rng.SetKey(seed.begin(), 32);
     requires_seed = false;
 }
+*/
 
+/*
 void random::FastRandomContext::FillByteBuffer() {
     if (requires_seed)
         RandomSeed();
@@ -702,12 +719,16 @@ void random::FastRandomContext::FillByteBuffer() {
     rng.Output(bytebuf, sizeof(bytebuf));
     bytebuf_size = sizeof(bytebuf);
 }
+*/
 
+/*
 void random::FastRandomContext::FillBitBuffer() {
     bitbuf = rand64();
     bitbuf_size = 64;
 }
+*/
 
+/*
 uint256 random::FastRandomContext::rand256() {
     if (bytebuf_size < 32)
         FillByteBuffer();
@@ -717,7 +738,9 @@ uint256 random::FastRandomContext::rand256() {
     bytebuf_size -= 32;
     return ret;
 }
+*/
 
+/*
 std::vector<unsigned char> random::FastRandomContext::randbytes(size_t len) {
     if (requires_seed) RandomSeed();
     std::vector<unsigned char> ret(len);
@@ -726,24 +749,28 @@ std::vector<unsigned char> random::FastRandomContext::randbytes(size_t len) {
 
     return ret;
 }
+*/
 
+/*
 random::FastRandomContext::FastRandomContext(const uint256 &seed) : requires_seed(false), bytebuf_size(0), bitbuf_size(0) {
     rng.SetKey(seed.begin(), 32);
 }
+*/
 
+/*
 bool random::Random_SanityCheck() {
     uint64_t start = GetPerformanceCounter();
 
-    /* This does not measure the quality of randomness, but it does test that
-     * OSRandom() overwrites all 32 bytes of the output given a maximum
-     * number of tries.
-     */
+    // This does not measure the quality of randomness, but it does test that
+    // OSRandom() overwrites all 32 bytes of the output given a maximum
+    // number of tries.
+    //
     static constexpr ssize_t MAX_TRIES = 1024;
     uint8_t data[NUM_OS_RANDOM_BYTES];
-    bool overwritten[NUM_OS_RANDOM_BYTES] = {}; /* Tracks which bytes have been overwritten at least once */
+    bool overwritten[NUM_OS_RANDOM_BYTES] = {}; // Tracks which bytes have been overwritten at least once
     int num_overwritten;
     int tries = 0;
-    /* Loop until all bytes have been overwritten at least once, or max number tries reached */
+    // Loop until all bytes have been overwritten at least once, or max number tries reached
     do {
         std::memset(data, 0, NUM_OS_RANDOM_BYTES);
         GetOSRand(data);
@@ -760,7 +787,7 @@ bool random::Random_SanityCheck() {
 
         tries += 1;
     } while (num_overwritten < NUM_OS_RANDOM_BYTES && tries < MAX_TRIES);
-    if (num_overwritten != NUM_OS_RANDOM_BYTES) return false; /* If this failed, bailed out after too many tries */
+    if (num_overwritten != NUM_OS_RANDOM_BYTES) return false; // If this failed, bailed out after too many tries
 
     // Check that GetPerformanceCounter increases at least during a GetOSRand() call + 1ms sleep.
     std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -768,21 +795,25 @@ bool random::Random_SanityCheck() {
     if (stop == start) return false;
 
     // We called GetPerformanceCounter. Use it as entropy.
-    CSHA512 to_add;
+    CSHA3_512 to_add;
     to_add.Write((const unsigned char*)&start, sizeof(start));
     to_add.Write((const unsigned char*)&stop, sizeof(stop));
     RNGState::GetRNGState().MixExtract(nullptr, 0, std::move(to_add), false);
 
     return true;
 }
+*/
 
+/*
 random::FastRandomContext::FastRandomContext(bool fDeterministic) : requires_seed(!fDeterministic), bytebuf_size(0), bitbuf_size(0) {
     if (! fDeterministic)
         return;
     uint256 seed;
     rng.SetKey(seed.begin(), 32);
 }
+*/
 
+/*
 random::FastRandomContext &random::FastRandomContext::operator=(random::FastRandomContext &&from) {
     requires_seed = from.requires_seed;
     rng = from.rng;
@@ -795,12 +826,13 @@ random::FastRandomContext &random::FastRandomContext::operator=(random::FastRand
     from.bitbuf_size = 0;
     return *this;
 }
+*/
 
+/*
 void random::RandomInit() {
     // Invoke RNG code to trigger initialization (if not already performed)
     ProcRand(nullptr, 0, RNGLevel::FAST);
 
     ReportHardwareRand();
 }
-
-} // namespace latest_crypto
+*/

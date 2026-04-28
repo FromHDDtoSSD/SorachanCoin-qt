@@ -407,8 +407,6 @@ int blake2s_hash::blake2s_final( blake2s_state *S, void *out, size_t outlen )
   return 0;
 }
 
-namespace latest_crypto {
-
 CBLAKE2S::CBLAKE2S() {
     Reset();
 }
@@ -429,5 +427,3 @@ CBLAKE2S& CBLAKE2S::Reset() {
 void CBLAKE2S::Clean() {
     cleanse::OPENSSL_cleanse(&S, sizeof(S));
 }
-
-} // latest_crypto

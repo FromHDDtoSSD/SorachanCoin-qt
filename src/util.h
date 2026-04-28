@@ -295,14 +295,14 @@ public:
         uint64_t nRange = ((std::numeric_limits<uint64_t>::max)() / nMax) * nMax;
         uint64_t nRand = 0;
         do {
-            latest_crypto::random::GetStrongRandBytes((unsigned char *)&nRand, sizeof(nRand));
+            random::GetStrongRandBytes((unsigned char *)&nRand, sizeof(nRand));
         } while (nRand >= nRange);
 
         return (nRand % nMax);
     }
     static uint256 GetRandHash() {
         uint256 hash;
-        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hash, sizeof(hash));
+        random::GetStrongRandBytes((unsigned char *)&hash, sizeof(hash));
         return hash;
     }
     static int64_t GetNodesOffset() {

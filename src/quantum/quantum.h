@@ -32,8 +32,6 @@
 // LAMPORT  Lamport Signature: https://github.com/GEO-Protocol/lib-crypto-lamport
 //
 
-namespace latest_crypto {
-
 //
 // Secure library
 //
@@ -99,10 +97,10 @@ public:
 //
 // Hash Secure lib
 //
-namespace quantum_hash
+namespace quantum_hash // checked: size_hash is only 32 bytes
 {
-    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data) ;
-    void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data) ;
+    void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data);
+    //void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data);
 }
 
 //
@@ -532,6 +530,7 @@ namespace Lamport {
     * BLAKE2KeyHash implements container for storing, serialization and deserialization
     * of hashes of private and public keys.
     */
+    /*
     class BLAKE2KeyHash
     {
     public:
@@ -542,14 +541,17 @@ namespace Lamport {
         BLAKE2KeyHash(BLAKE2KeyHash &&)=delete;
         BLAKE2KeyHash &operator=(const BLAKE2KeyHash &)=delete;
         BLAKE2KeyHash &operator=(BLAKE2KeyHash &&)=delete;
+
         byte data[BLAKE2KeyHash::kBytesSize];
     public:
         constexpr static size_t Size() {return kBytesSize;}
-        explicit BLAKE2KeyHash(const CPrivateKey &key) ;
+
+        explicit BLAKE2KeyHash(const CPrivateKey &key);
         explicit BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key);
         explicit BLAKE2KeyHash(std::shared_ptr<CPublicKey> key);
         explicit BLAKE2KeyHash(byte *buffer);
-        const byte *get_addr() const  {
+
+        const byte *get_addr() const {
             return data;
         }
         friend bool operator==(const BLAKE2KeyHash &kh1, const BLAKE2KeyHash &kh2) {
@@ -559,6 +561,7 @@ namespace Lamport {
             return !(kh1 == kh2);
         }
     };
+    */
 
     class CSignature
     {
@@ -664,8 +667,6 @@ namespace Lamport {
 
 } // namespace Lamport
 
-} // namespace latest_crypto
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 // quantum resist CqKey and CqPubKey
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -700,7 +701,7 @@ constexpr int qpubkey_compress_offset[] = {
 1924,1932,1940,1944,1952,1960,1972,1980,1984,1992,2004,2012,2016,2028,2036,2040};
 */
 
-class CqPubKey : public latest_crypto::Lamport::CPublicKey {
+class CqPubKey : public Lamport::CPublicKey {
 public:
     constexpr static int FULLY_PUBLIC_KEY_SIZE = 16384;
     constexpr static int COMPRESSED_PUBLIC_KEY_SIZE = 1024;
@@ -708,19 +709,19 @@ public:
 
     CqPubKey() : _valid(false) {}
 
-    CqPubKey(const latest_crypto::Lamport::CPublicKey &obj) {
-        *static_cast<latest_crypto::Lamport::CPublicKey *>(this) = obj;
+    CqPubKey(const Lamport::CPublicKey &obj) {
+        *static_cast<Lamport::CPublicKey *>(this) = obj;
         _valid = true;
     }
 
     CqPubKey &operator=(const CqPubKey &obj) {
-        *static_cast<latest_crypto::Lamport::CPublicKey *>(this) = static_cast<const latest_crypto::Lamport::CPublicKey &>(obj);
+        *static_cast<Lamport::CPublicKey *>(this) = static_cast<const Lamport::CPublicKey &>(obj);
         _valid = true;
         return *this;
     }
 
-    CqPubKey &operator=(const latest_crypto::Lamport::CPublicKey &obj) {
-        *static_cast<latest_crypto::Lamport::CPublicKey *>(this) = obj;
+    CqPubKey &operator=(const Lamport::CPublicKey &obj) {
+        *static_cast<Lamport::CPublicKey *>(this) = obj;
         _valid = true;
         return *this;
     }
@@ -729,11 +730,11 @@ public:
         if(! _valid)
             return false;
 
-        return *static_cast<const latest_crypto::Lamport::CPublicKey *>(this) == static_cast<const latest_crypto::Lamport::CPublicKey &>(obj);
+        return *static_cast<const Lamport::CPublicKey *>(this) == static_cast<const Lamport::CPublicKey &>(obj);
     }
 
     bool operator!=(const CqPubKey &obj) const {
-        return !(*static_cast<const latest_crypto::Lamport::CPublicKey *>(this) == static_cast<const latest_crypto::Lamport::CPublicKey &>(obj));
+        return !(*static_cast<const Lamport::CPublicKey *>(this) == static_cast<const Lamport::CPublicKey &>(obj));
     }
 
     // verify can by "data" and "signatured" then ... "pubkey".
@@ -823,7 +824,7 @@ public:
 
 private:
     bool _valid;
-    latest_crypto::Lamport::CLamport *_lamport; // instance includes secure_free (SecureAllocator)
+    Lamport::CLamport *_lamport; // instance includes secure_free (SecureAllocator)
 };
 
 #endif // SORACHANCOIN_QUANTUM_HEADER

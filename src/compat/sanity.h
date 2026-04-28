@@ -70,22 +70,16 @@ namespace check_prevector
     void SecurevectorAssertcheckTrivial(benchmark::State& state);
 }
 
-namespace latest_crypto
-{
-    void bench_AES128(benchmark::State& state);
-    void bench_AES192(benchmark::State& state);
-    void bench_AES256(benchmark::State& state);
-    int check_all_aes();
-}
+void bench_AES128(benchmark::State& state);
+void bench_AES192(benchmark::State& state);
+void bench_AES256(benchmark::State& state);
+int check_all_aes();
 
-namespace latest_crypto
-{
-    void Ripemd160Assertcheck(benchmark::State& state);
-    void SHA256Assertcheck(benchmark::State& state);
-    void SHA512Assertcheck(benchmark::State& state);
-    void Blake2Assertcheck(benchmark::State& state);
-    void LamportAssertcheck(benchmark::State& state);
-}
+void Ripemd160Assertcheck(benchmark::State& state);
+void SHA256Assertcheck(benchmark::State& state);
+void SHA512Assertcheck(benchmark::State& state);
+void Blake2Assertcheck(benchmark::State& state);
+void LamportAssertcheck(benchmark::State& state);
 
 namespace latest_json
 {

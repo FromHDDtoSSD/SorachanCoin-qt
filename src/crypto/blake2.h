@@ -134,8 +134,6 @@ namespace blake2s_hash {
   int blake2s_final( blake2s_state *S, void *out, size_t outlen );
 }
 
-namespace latest_crypto {
-
 class CBLAKE2S
 {
 private:
@@ -151,7 +149,5 @@ public:
     static constexpr size_t Size() {return OUTPUT_SIZE;}
     void Clean();
 };
-
-} // latest_crypto
 
 #endif

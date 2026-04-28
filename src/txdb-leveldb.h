@@ -129,8 +129,6 @@ public:
     bool ReadModifierUpgradeTime(unsigned int &nUpgradeTime);
     bool WriteModifierUpgradeTime(const unsigned int &nUpgradeTime);
 
-    bool WriteBlockHashType(uint256 hash, const BLOCK_HASH_MODIFIER &modifier);
-
     bool LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
                         std::set<std::pair<COutPoint, unsigned int> > &setStakeSeen,
                         CBlockIndex *&pindexGenesisBlock,

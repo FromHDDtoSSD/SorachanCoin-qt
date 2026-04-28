@@ -441,13 +441,13 @@ bool CScript::GetScriptOp(const_iterator &pc, const_iterator end, ScriptOpcodes:
         else if (opcode == OP_PUSHDATA2) {
             if (end - pc < 2)
                 return false;
-            nSize = latest_crypto::ReadLE16(&pc[0]);
+            nSize = ReadLE16(&pc[0]);
             pc += 2;
         }
         else if (opcode == OP_PUSHDATA4) {
             if (end - pc < 4)
                 return false;
-            nSize = latest_crypto::ReadLE32(&pc[0]);
+            nSize = ReadLE32(&pc[0]);
             pc += 4;
         }
         if (end - pc < 0 || (unsigned int)(end - pc) < nSize)
@@ -924,7 +924,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         buildScriptsig << ecdsasig;
                         buildScriptsig << pubkey;
                         uint256 hash;
-                        latest_crypto::CHash256().Write(buildScriptsig.data(), buildScriptsig.size()).Finalize(hash.begin());
+                        CHash256().Write(buildScriptsig.data(), buildScriptsig.size()).Finalize(hash.begin());
 
                         // QAI signature verify
                         CqPubKey qpubkey;
@@ -1451,7 +1451,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                             std::memcpy(&vchHash[0], &hash160, sizeof(hash160));
                         } else if (opcode == OP_HASHETH) {
                             uint160 hash160;
-                            latest_crypto::CHashEth().Write(&vch[0], vch.size()).Finalize((unsigned char *)&hash160);
+                            CHashEth().Write(&vch[0], vch.size()).Finalize((unsigned char *)&hash160);
                             std::memcpy(&vchHash[0], &hash160, sizeof(hash160));
                         } else if (opcode == OP_HASH256) {
                             uint256 hash = hash_basis::Hash(vch.begin(), vch.end());
@@ -1836,7 +1836,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                                     qaiScriptsig << nCurrentQaiVersion;
                                     qaiScriptsig << nHashType;
                                     uint256 hash;
-                                    latest_crypto::CHash256().Write(qaiScriptsig.data(), qaiScriptsig.size()).Finalize(hash.begin());
+                                    CHash256().Write(qaiScriptsig.data(), qaiScriptsig.size()).Finalize(hash.begin());
 
                                     // signature QAI verify
                                     qaisig.erase(qaisig.begin() + 8192, qaisig.end());
@@ -2561,7 +2561,7 @@ bool Script_util::Sign1(const CKeyID &address, const CKeyStore &keystore, const 
 /*
 bool Script_util::SignQAI(const CqKey &qkey, const CScript &scriptSig, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet) {
     uint256 hash;
-    latest_crypto::CHash256().Write(scriptSig.data(), scriptSig.size()).Finalize(hash.begin());
+    CHash256().Write(scriptSig.data(), scriptSig.size()).Finalize(hash.begin());
     key_vector vchSig;
     vchSig.reserve(8192 + 32 + 1);
     qkey.Sign(hash, vchSig);
@@ -2714,7 +2714,7 @@ static bool VerifySignatureQAI(const CScript &scriptSigQAI, const CScript &Scrip
     }
 
     uint256 hash;
-    latest_crypto::CHash256().Write(ScriptSigECDSA.data(), ScriptSigECDSA.size()).Finalize(hash.begin());
+    CHash256().Write(ScriptSigECDSA.data(), ScriptSigECDSA.size()).Finalize(hash.begin());
     if(qsig.size() != (8192 + 32 + 1))
         return false;
     //if(qsig.back() != Script_param::SIGHASH_ALL)

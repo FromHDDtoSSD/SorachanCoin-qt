@@ -12,65 +12,6 @@
 #include <script/script.h>
 #include <uint256.h>
 
-namespace {
-
-/** Compute the (single) SHA256 of the concatenation of all prevouts of a tx. */
-template <class T>
-uint256 GetPrevoutsSHA256(const T& txTo)
-{
-    CHashWriter ss(SER_GETHASH, 0);
-    for (const auto& txin : txTo.vin) {
-        ss << txin.get_prevout();
-    }
-    return ss.GetSingleHash();
-}
-
-/** Compute the (single) SHA256 of the concatenation of all nSequences of a tx. */
-template <class T>
-uint256 GetSequencesSHA256(const T& txTo)
-{
-    CHashWriter ss(SER_GETHASH, 0);
-    for (const auto& txin : txTo.vin) {
-        ss << txin.get_nSequence();
-    }
-    return ss.GetSingleHash();
-}
-
-/** Compute the (single) SHA256 of the concatenation of all txouts of a tx. */
-template <class T>
-uint256 GetOutputsSHA256(const T& txTo)
-{
-    CHashWriter ss(SER_GETHASH, 0);
-    for (const auto& txout : txTo.vout) {
-        ss << txout;
-    }
-    return ss.GetSingleHash();
-}
-
-/** Compute the (single) SHA256 of the concatenation of all amounts spent by a tx. */
-uint256 GetSpentAmountsSHA256(const std::vector<CTxOut>& outputs_spent)
-{
-    CHashWriter ss(SER_GETHASH, 0);
-    for (const auto& txout : outputs_spent) {
-        ss << txout.get_nValue();
-    }
-    return ss.GetSingleHash();
-}
-
-/** Compute the (single) SHA256 of the concatenation of all scriptPubKeys spent by a tx. */
-uint256 GetSpentScriptsSHA256(const std::vector<CTxOut>& outputs_spent)
-{
-    CHashWriter ss(SER_GETHASH, 0);
-    for (const auto& txout : outputs_spent) {
-        ss << txout.get_scriptPubKey();
-    }
-    return ss.GetSingleHash();
-}
-
-} // namespace
-
-
-
 bool Script_util::set_success(ScriptError *ret)
 {
     if (ret)
@@ -533,7 +474,7 @@ bool Script_util::VerifyWitnessProgram(const CScriptWitness &witness, int witver
             scriptPubKey = CScript(witness.stack.back().begin(), witness.stack.back().end());
             stack = statype(witness.stack.begin(), witness.stack.end() - 1);
             uint256 hashScriptPubKey;
-            latest_crypto::CSHA256().Write(&scriptPubKey[0], scriptPubKey.size()).Finalize(hashScriptPubKey.begin());
+            CSHA256().Write(&scriptPubKey[0], scriptPubKey.size()).Finalize(hashScriptPubKey.begin());
             if (memcmp(hashScriptPubKey.begin(), program.data(), 32)) {
                 return set_error(serror, SCRIPT_ERR_WITNESS_PROGRAM_MISMATCH);
             }

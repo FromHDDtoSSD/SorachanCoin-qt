@@ -9,8 +9,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-namespace latest_crypto {
-
 /** A hasher class for HMAC-SHA-256. */
 class CHMAC_SHA256
 {
@@ -29,7 +27,5 @@ public:
     }
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_HMAC_SHA256_H

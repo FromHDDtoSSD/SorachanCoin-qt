@@ -287,14 +287,6 @@ int main(int argc, char *argv[])
     }
 
     entry::SetupServerArgs();
-    /* under developmrnt
-    std::string config_error;
-    if(! ARGS.ReadConfigFiles(config_error)) {
-        QMessageBox::critical(0, strCoinName,
-            QObject::tr("Error: ARGS::ReadConfigFile() %1").arg(config_error.c_str()));
-        return 1;
-    }
-    */
 
     // ... then GUI settings:
     OptionsModel optionsModel;

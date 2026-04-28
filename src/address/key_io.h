@@ -25,7 +25,7 @@ namespace key_io {
         SCRIPT_ADDRESS = 20,
 
         PUBKEY_PAIR_ADDRESS_TEST = 6,
-        PUBKEY_ADDRESS_TEST = 145,
+        PUBKEY_ADDRESS_TEST = 23,
         SCRIPT_ADDRESS_TEST = 196,
 
         // from implementation
@@ -100,7 +100,7 @@ public:
 
 /** vchData: CKeyID and Eth address Hybrid */
 const std::string hrp_main = "sora";
-const std::string hrp_test = "soratest";
+const std::string hrp_test = "sora2hash";
 class CBase58Data : public IKeyData {
 protected:
     CBase58Data() {}
@@ -279,7 +279,6 @@ public:
     }
 };
 using CBitcoinSecret = CBitcoinSecret_impl<CBase58Data>;
-//using CWitnessSecret = CBitcoinSecret_impl<CBech32Data>;
 
 // BIP32 and WIF
 namespace key_io {
@@ -292,11 +291,6 @@ std::string EncodeExtPubKey(const CExtPubKey &extpubkey, unsigned char nVersion)
 
 CExtKey DecodeExtKey(const SecureString &str);
 SecureString EncodeExtKey(const CExtKey &extkey);
-
-std::string EncodeDestination(const CTxDestination &dest);
-CTxDestination DecodeDestination(const std::string &str);
-bool IsValidDestinationString(const std::string &str);
-bool IsValidDestinationString(const std::string &str, const CChainParams &params);
 
 } // namespace key_io
 

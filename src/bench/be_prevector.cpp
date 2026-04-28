@@ -251,7 +251,7 @@ static void SecurevectorAssertcheck(benchmark::State& state)
             const T obj[] = { T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T() };
             data.insert(data.end(), (const T *)std::begin(obj), (const T *)std::end(obj));
         }
-        latest_crypto::secure_segment::vector<T> vch(data.begin(), data.end());
+        secure_segment::vector<T> vch(data.begin(), data.end());
         auto ite = vch.begin();
         if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
             assert(*ite == *((T *)(&ch[0])) && *(ite + 6) == *((T *)&ch[6]));

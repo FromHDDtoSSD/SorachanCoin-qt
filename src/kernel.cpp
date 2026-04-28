@@ -27,8 +27,7 @@ public:
             };
         bitkernel::mapStakeModifierCheckpointsTestNet =
             {
-                { 0, 0xfd11f4e7u }
-                //{ 10, 0xfd11f4e7u } // [OK] NG test
+                { 0, 0xa49adbb8u }
             };
     }
 };
@@ -75,7 +74,7 @@ int64_t bitkernel::GetStakeModifierSelectionInterval()
     return nSelectionInterval;
 }
 
-bool bitkernel::SelectBlockFromCandidates(std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected)
+bool bitkernel::SelectBlockFromCandidates(const std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected)
 {
     bool fSelected = false;
     uint256 hashBest = 0;
@@ -92,6 +91,60 @@ bool bitkernel::SelectBlockFromCandidates(std::vector<std::pair<int64_t, uint256
         }
         if (mapSelectedBlocks.count(pindex->GetBlockHash()) > 0) {
             continue;
+        }
+
+        // compute the selection hash by hashing its proof-hash and the
+        // previous proof-of-stake modifier
+        uint256 hashProof = pindex->IsProofOfStake()? pindex->get_hashProofOfStake() : pindex->GetBlockHash();
+        CDataStream ss(SER_GETHASH, 0);
+        ss << hashProof << nStakeModifierPrev;
+        uint256 hashSelection = hash_basis::Hash(ss.begin(), ss.end());
+
+        // the selection hash is divided by 2**32 so that proof-of-stake block
+        // is always favored over proof-of-work block. this is to preserve
+        // the energy efficiency property
+        if (pindex->IsProofOfStake()) {
+            hashSelection >>= 32;
+        }
+        if (fSelected && hashSelection < hashBest) {
+            hashBest = hashSelection;
+            *pindexSelected = pindex;
+        } else if (! fSelected) {
+            fSelected = true;
+            hashBest = hashSelection;
+            *pindexSelected = pindex;
+        }
+    }
+    if (args_bool::fDebug && map_arg::GetBoolArg("-printstakemodifier")) {
+        logging::LogPrintf("bitkernel::SelectBlockFromCandidates: selection hash=%s\n", hashBest.ToString().c_str());
+    }
+    return fSelected;
+}
+
+bool bitkernel::SelectBlockFromCandidates2(const std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected)
+{
+    if(! args_bool::fTestNet)
+        return SelectBlockFromCandidates(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifierPrev, pindexSelected);
+
+    bool fSelected = false;
+    uint256 hashBest = 0;
+    *pindexSelected = (const CBlockIndex *)0;
+    for(const std::pair<int64_t, uint256> &item: vSortedByTimestamp)
+    {
+        const CBlockIndex *pindex = nullptr;
+        if(block_info::mapBlockIndex.count(item.second)) {
+            pindex = block_info::mapBlockIndex[item.second];
+            if (fSelected && pindex->GetBlockTime() > nSelectionIntervalStop) {
+                break;
+            }
+            if (mapSelectedBlocks.count(pindex->GetBlockHash()) > 0) {
+                continue;
+            }
+        } else {
+            pindex = block_info::pindexBest;
+            if(! pindex) {
+                pindex = block_info::pindexGenesisBlock;
+            }
         }
 
         // compute the selection hash by hashing its proof-hash and the
@@ -216,7 +269,7 @@ bool bitkernel::ComputeNextStakeModifier(const CBlockIndex *pindexCurrent, uint6
         //
         // select a block from the candidates of current round
         //
-        if (! SelectBlockFromCandidates(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifier, &pindex)) {
+        if (! SelectBlockFromCandidates2(vSortedByTimestamp, mapSelectedBlocks, nSelectionIntervalStop, nStakeModifier, &pindex)) {
             return logging::error("bitkernel::ComputeNextStakeModifier: unable to select block at round %d", nRound);
         }
 

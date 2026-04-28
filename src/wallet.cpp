@@ -539,12 +539,12 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
     CKeyingMaterial vMasterKey;
     seed::RandAddSeedPerfmon();
     vMasterKey.resize(crypter_param::WALLET_CRYPTO_KEY_SIZE);
-    latest_crypto::random::GetStrongRandBytes(&vMasterKey[0], crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    random::GetStrongRandBytes(&vMasterKey[0], crypter_param::WALLET_CRYPTO_KEY_SIZE);
 
     CMasterKey kMasterKey;
     seed::RandAddSeedPerfmon();
     kMasterKey.vchSalt.resize(crypter_param::WALLET_CRYPTO_SALT_SIZE);
-    latest_crypto::random::GetStrongRandBytes(&kMasterKey.vchSalt[0], crypter_param::WALLET_CRYPTO_SALT_SIZE);
+    random::GetStrongRandBytes(&kMasterKey.vchSalt[0], crypter_param::WALLET_CRYPTO_SALT_SIZE);
 
     CCrypter crypter;
     int64_t nStartTime = util::GetTimeMillis();
@@ -621,7 +621,7 @@ bool CWallet::EncryptWallet(const SecureString &strWalletPassphrase)
             for(int i=0; i<strWalletPassphrase.size(); ++i)
                 vchWalletPassphrase.push_back(strWalletPassphrase[i]);
 
-            unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+            unsigned char keyhash[AES256_KEYSIZE];
             SeedCrypto::CreateKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
 
             CSeedSecret vchextkeySig = SeedCrypto::DataAddSignature(hd_wallet::get().vchextkey);
@@ -817,7 +817,7 @@ bool CWallet::UnlockHDSeed(const SecureString &strWalletPassphrase, CSeedSecret 
         vchWalletPassphrase.push_back(strWalletPassphrase[i]);
 
     __printf("HD_WALLET unlock decrypt\n");
-    unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+    unsigned char keyhash[AES256_KEYSIZE];
     SeedCrypto::GetKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
     CSeedSecret vchextkeyDec;
     vchextkeyDec.resize(hd_wallet::get().vchextkey.size() * 3);
@@ -873,7 +873,7 @@ bool CWallet::EncryptHDSeed(const SecureString &strWalletPassphrase) {
         for(int i=0; i<strWalletPassphrase.size(); ++i)
             vchWalletPassphrase.push_back(strWalletPassphrase[i]);
 
-        unsigned char keyhash[latest_crypto::AES256_KEYSIZE];
+        unsigned char keyhash[AES256_KEYSIZE];
         SeedCrypto::CreateKeyToHash(vchWalletPassphrase, hd_wallet::get().cryptosalt, keyhash);
 
         // note that need to vchextkey in dec(plain)
@@ -1133,44 +1133,12 @@ bool CWallet::AddToWallet(const CWalletTx &wtxIn)
 
         if (! strCmd.empty()) {
             boost::replace_all(strCmd, "%s", wtxIn.GetHash().GetHex());
-            boost::thread t(lutil::runCommand, strCmd); // thread runs free
+            boost::thread t(util::runCommand, strCmd); // thread runs free
         }
     }
 
     return true;
 }
-
-//
-// Add a transaction to the wallet, or update it.
-// pblock is optional, but should be provided if the transaction is known to be in a block.
-// If fUpdate is true, existing transactions will be updated.
-//
-/*
-bool CWallet::AddToWalletIfInvolvingMe(const CTransaction &tx, const CBlock *pblock, bool fUpdate)
-{
-    uint256 hash = tx.GetHash();
-    {
-        LOCK(cs_wallet);
-        bool fExisted = mapWallet.count(hash) != 0;
-        if (fExisted && !fUpdate) {
-            return false;
-        }
-        if (fExisted || IsMine(tx) || IsFromMe(tx)) {
-            CWalletTx wtx(this,tx);
-            //
-            // Get merkle branch if transaction was found in a block
-            //
-            if (pblock) {
-                wtx.SetMerkleBranch(pblock);
-            }
-            return AddToWallet(wtx);
-        } else {
-            WalletUpdateSpent(tx);
-        }
-    }
-    return false;
-}
-*/
 
 //
 // Add a transaction to the wallet, or update it.

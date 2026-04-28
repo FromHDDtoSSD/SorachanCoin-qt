@@ -1,5 +1,6 @@
 // Copyright (c) 2009-2014 The Bitcoin developers
-// Copyright (c) 2018-2021 The Sora neko developers
+// Copyright (c) 2018-2025 The SorachanCoin developers
+// Copyright (c) 2025 The SS256 developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,12 +8,13 @@
 #define BITCOIN_BLOCK_KEYHASHER_H
 
 #include <uint256.h>
+#include <crypto/sora2.h>
 
 // for std::unordered_map inner HASH
 class CCoinsKeyHasher
 {
-private:
-    uint256b salt;
+//private:
+//    uint256b salt;
 
 public:
     CCoinsKeyHasher();
@@ -22,8 +24,11 @@ public:
      * unordered_map will behave unpredictably if the custom hasher returns a
      * uint64_t, resulting in failures when syncing the chain (#4634).
      */
-    std::size_t operator()(const uint256b &key) const { // even if std::unordered_map, require std::size_t
-        return key.GetHash(salt);
+    std::size_t operator()(const uint256b &key) const {
+        //return key.GetHash(salt);
+        uint64_t hash;
+        CSORA2_64().Write(key.begin(), key.size()).Finalize((unsigned char *)&hash);
+        return (std::size_t)hash;
     }
 };
 

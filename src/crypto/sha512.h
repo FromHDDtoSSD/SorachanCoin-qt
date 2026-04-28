@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <cleanse/cleanse.h>
 
-namespace latest_crypto {
-
 /** A hasher class for SHA-512. */
 class CSHA512
 {
@@ -32,7 +30,5 @@ public:
         cleanse::OPENSSL_cleanse(buf, sizeof(buf));
     }
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_SHA512_H

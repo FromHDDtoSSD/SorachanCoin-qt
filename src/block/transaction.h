@@ -50,9 +50,11 @@ namespace block_transaction
 
     constexpr unsigned int MAX_ORPHAN_SERIALIZESIZE = 5000; // send-big-orphans memory exhaustion attack. 10,000 orphans, each of which is at most 5,000 bytes big is at most 500 megabytes of orphans
 
+    /*
     namespace testnet {
         const int nCoinbaseMaturity = 6;
     }
+    */
     namespace mainnet {
         const int nCoinbaseMaturity = 15;
     }

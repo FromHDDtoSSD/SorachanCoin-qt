@@ -1341,7 +1341,7 @@ bool CSqliteDB::TxnCommit() {
             if(rsize>32)
                 cleanse::OPENSSL_cleanse(&rbuf[0], rsize);
             else
-                latest_crypto::random::GetStrongRandBytes(&rbuf[0], rsize); // assert(num <= 32);
+                random::GetStrongRandBytes(&rbuf[0], rsize); // assert(num <= 32);
             if(::sqlite3_prepare_v2(pdb, "update key_value set value=$1 where key=$2;", -1, &stmt, nullptr)!=SQLITE_OK) break;
             if(::sqlite3_bind_blob(stmt, 1, &rbuf[0], rsize, SQLITE_STATIC)!=SQLITE_OK) break;
             if(::sqlite3_bind_blob(stmt, 2, &data.first[0], data.first.size(), SQLITE_STATIC)!=SQLITE_OK) break;

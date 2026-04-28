@@ -16,10 +16,8 @@
 #include <allocator/allocators.h>
 #include <key/pubkey.h>
 #include <key.h> // CKey, CPrivKey(279 vch), CSecret(32 vch)
-
-namespace latest_crypto {
-    class CHMAC_SHA256;
-}
+#include <crypto/hmac_sha256.h>
+#include <crypto/hmac_sha3_256.h>
 
 /**
  * secure_allocator is defined in allocators.h
@@ -64,25 +62,34 @@ private:
 public:
     class hash {
     public:
-        using secp256k1_sha256 = latest_crypto::CSHA256;
-        using secp256k1_hmac_sha256 = latest_crypto::CHMAC_SHA256;
-        typedef struct {
+        //! SHA256 or SHA3 auto selected (mainnet or testnet)
+        struct secp256k1_hash {
+            CSHA256 sha256;
+            CSHA3_256 sora2_256;
+            void InitSet(const uint32_t dIn[], uint64_t bytesIn);
+        };
+
+        static void secp256k1_hash_initialize(secp256k1_hash *hash);
+        static void secp256k1_hash_write(secp256k1_hash *hash, const unsigned char *data, size_t size);
+        static void secp256k1_hash_finalize(secp256k1_hash *hash, unsigned char *out32);
+
+        //! SHA256 or SHA-3 auto selected (mainnet or testnet)
+        struct secp256k1_rfc6979_hmac_hash_t {
+            CHMAC_SHA256 sha256;
+            CHMAC_SHA3_256 sha3_256;
             unsigned char v[32];
             unsigned char k[32];
             int retry;
-        } secp256k1_rfc6979_hmac_sha256_t;
+        };
 
-        static void secp256k1_sha256_initialize(secp256k1_sha256 *hash);
-        static void secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *data, size_t size);
-        static void secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32);
+        static void secp256k1_rfc6979_hmac_hash_initialize(secp256k1_rfc6979_hmac_hash_t *rng, const unsigned char *key, size_t keylen);
+        static void secp256k1_rfc6979_hmac_hash_generate(secp256k1_rfc6979_hmac_hash_t *rng, unsigned char *out, size_t outlen);
+        static void secp256k1_rfc6979_hmac_hash_finalize(secp256k1_rfc6979_hmac_hash_t *rng);
 
-        static void secp256k1_hmac_sha256_initialize(secp256k1_hmac_sha256 *hash, const unsigned char *key, size_t size);
-        static void secp256k1_hmac_sha256_write(secp256k1_hmac_sha256 *hash, const unsigned char *data, size_t size);
-        static void secp256k1_hmac_sha256_finalize(secp256k1_hmac_sha256 *hash, unsigned char *out32);
-
-        static void secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen);
-        static void secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen);
-        static void secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng);
+    private:
+        static void secp256k1_hmac_hash_initialize(secp256k1_rfc6979_hmac_hash_t *hash, const unsigned char *key, size_t size);
+        static void secp256k1_hmac_hash_write(secp256k1_rfc6979_hmac_hash_t *hash, const unsigned char *data, size_t size);
+        static void secp256k1_hmac_hash_finalize(secp256k1_rfc6979_hmac_hash_t *hash, unsigned char *out32);
     };
 
     class nonce {
@@ -265,17 +272,17 @@ public:
 namespace bip340_tagged {
     /* Initializes a sha256 struct and writes the 64 byte string
      * SHA256(tag)||SHA256(tag) into it. */
-    void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256* hash, const unsigned char* tag, size_t taglen);
+    void secp256k1_hash_initialize_tagged(CFirmKey::hash::secp256k1_hash *hash, const unsigned char* tag, size_t taglen);
 
     /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
      * SHA256 to SHA256("BIP0340/nonce")||SHA256("BIP0340/nonce"). */
-    void secp256k1_nonce_function_bip340_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha);
+    void secp256k1_nonce_function_bip340_hash_tagged(CFirmKey::hash::secp256k1_hash *hash);
 
     /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
      * SHA256 to SHA256("BIP0340/aux")||SHA256("BIP0340/aux"). */
-    void secp256k1_nonce_function_bip340_sha256_tagged_aux(CFirmKey::hash::secp256k1_sha256* sha);
+    void secp256k1_nonce_function_bip340_hash_tagged_aux(CFirmKey::hash::secp256k1_hash *hash);
 
-    int nonce_function_bip340(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* xonly_pk32, const unsigned char* algo16, void* data);
+    int nonce_function_bip340(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *xonly_pk32, const unsigned char *algo16, void *data);
 }
 
 // Schnorr signature

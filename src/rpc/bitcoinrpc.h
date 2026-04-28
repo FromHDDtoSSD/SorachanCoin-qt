@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[108];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[111];    // Bitcoin RPC Command
 
     //
     // map command
@@ -460,6 +460,9 @@ public:
     static json_spirit::Value decryptdata(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value encryptmessage(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value decryptmessage(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value sora2hash(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value sha2hash(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value sora2mining(const json_spirit::Array &params, bool fHelp);
 
     static json_spirit::Value getrawtransaction(const json_spirit::Array &params, bool fHelp); // in rcprawtransaction.cpp
     static json_spirit::Value listunspent(const json_spirit::Array &params, bool fHelp);

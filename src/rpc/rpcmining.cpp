@@ -690,17 +690,34 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
 
     std::string hex = params[0].get_str();
     if(hex.size() < 2*80) {
-        return false;
+        throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "invalid size");
     }
 
     // CBlockHeader
     std::string header_hex = hex.substr(0, 2*80);
     CDataStream ssBlockHeader(strenc::ParseHex(header_hex), SER_NETWORK, version::PROTOCOL_VERSION);
     CBlockHeader blockheader;
-    try {
-        ssBlockHeader >> blockheader;
-    } catch (const std::exception &) {
-        return false;
+
+    // if getwork submit: CBlock
+    if(hex.size() == 2*80) {
+        CBlock block;
+        try {
+            ssBlockHeader >> block;
+        } catch (const std::exception &) {
+            throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "Block decode failed");
+        }
+
+        bool fAccepted = block_process::manage::ProcessBlock(nullptr, &block);
+        if (! fAccepted) {
+            throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
+        }
+        return json_spirit::Value::null;
+    } else {
+        try {
+            ssBlockHeader >> blockheader;
+        } catch (const std::exception &) {
+            throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "BlockHeader decode failed");
+        }
     }
 
     // CTransactionVch
@@ -710,7 +727,7 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
     try {
         ssTxs >> txsvch;
     } catch (const std::exception &) {
-        return false;
+        throw bitjson::JSONRPCError(RPC_DESERIALIZATION_ERROR, "Transactions decode failed");
     }
 
     CBlock block;
@@ -722,29 +739,14 @@ json_spirit::Value CRPCTable::submitblock(const json_spirit::Array &params, bool
     block.set_nNonce(blockheader.get_nNonce());
     block.set_vtx() = txsvch.vtx;
 
-    // debug
-    debugcs::instance() << "block: " << block.get_hashMerkleRoot().GetHex() << debugcs::endl();
-    for(const auto &d: mapGbtNewBlock)
-        debugcs::instance() << "mapBlock: " << d.second.first->get_hashMerkleRoot().GetHex() << debugcs::endl();
-
-    // reward (coinbase)
     if(block.get_vtx(0).get_vout().size()==0) {
-        CTransaction txCoinBase;
-        txCoinBase.set_vin().resize(1);
-        txCoinBase.set_vin(0).set_prevout().SetNull();
-        txCoinBase.set_vout().resize(1);
-        CReserveKey reservekey(entry::pwalletMain);
-        txCoinBase.set_vout(0).set_scriptPubKey().SetDestination(reservekey.GetReservedKey().GetID());
-        block.set_vtx().clear();
-        block.set_vtx().push_back(txCoinBase);
-        block.set_vtx(0).set_vout(0).set_nValue(diff::reward::GetProofOfWorkReward(block.get_nBits(), 0));
-        return false;
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "Invalid coinbase transaction");
     }
 
     static CReserveKey reservekey(entry::pwalletMain);
     bool fAccepted = miner::CheckWork(&block, *entry::pwalletMain, reservekey);
     if (! fAccepted) {
-        return false;
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMETER, "rejected");
     }
 
     return json_spirit::Value::null;

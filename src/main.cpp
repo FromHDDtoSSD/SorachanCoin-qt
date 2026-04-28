@@ -162,12 +162,12 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         block_info::gpchMessageStart[2] = 0xc0;
         block_info::gpchMessageStart[3] = 0xef;
 
-        diff::bnProofOfWorkLimit = diff::testnet::bnProofOfWorkLimit;
-        block_check::nStakeMinAge = block_check::testnet::nStakeMinAge;
-        block_check::nModifierInterval = block_check::testnet::nModifierInterval;
-        block_transaction::nCoinbaseMaturity = block_transaction::testnet::nCoinbaseMaturity;
-        block_check::nStakeTargetSpacing = block_check::testnet::nStakeTargetSpacing;
-        block_check::nPowTargetSpacing = block_check::testnet::nPowTargetSpacing;
+        //diff::bnProofOfWorkLimit = diff::testnet::bnProofOfWorkLimit;
+        //block_check::nStakeMinAge = block_check::testnet::nStakeMinAge;
+        //block_check::nModifierInterval = block_check::testnet::nModifierInterval;
+        //block_transaction::nCoinbaseMaturity = block_transaction::testnet::nCoinbaseMaturity;
+        //block_check::nStakeTargetSpacing = block_check::testnet::nStakeTargetSpacing;
+        //block_check::nPowTargetSpacing = block_check::testnet::nPowTargetSpacing;
     }
 
     //
@@ -196,7 +196,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         //
         // Genesis block
         //
-        const char *pszTimestamp = block_params::pszTimestamp;
+        const char *pszTimestamp = args_bool::fTestNet ? block_params::pszTimestampTestnet: block_params::pszTimestamp;
 
         CTransaction txNew;
         txNew.set_nTime( !args_bool::fTestNet ? block_params::nGenesisTimeMainnet: block_params::nGenesisTimeTestnet );
@@ -238,7 +238,7 @@ bool block_load::LoadBlockIndex(bool fAllowNew/*=true*/)    // Call by init.cpp
         logging::LogPrintf("block.nTime = %u \n", block.get_nTime());
         logging::LogPrintf("block.nNonce = %u \n", block.get_nNonce());
 
-        assert(block.get_hashMerkleRoot() == block_params::hashMerkleRoot);
+        assert(block.get_hashMerkleRoot() == (!args_bool::fTestNet ? block_params::hashMerkleRoot : block_params::hashMerkleRootTestNet));
         assert(block.GetPoHash() == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet));
         assert(block.CheckBlock());
 

@@ -6,8 +6,6 @@
 #include <crypto/common.h>
 #include <string.h>
 
-namespace latest_crypto {
-
 namespace
 {
 
@@ -290,6 +288,3 @@ CRIPEMD160& CRIPEMD160::Reset()
     ripemd160::Initialize(s);
     return *this;
 }
-
-} // namespace latest_crypto
-

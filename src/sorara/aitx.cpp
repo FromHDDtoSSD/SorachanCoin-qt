@@ -18,7 +18,7 @@ constexpr static int HASH160_DIGEST_LENGTH = sizeof(uint160);
 // Function to build the Merkle tree and compute the Merkle root
 void hash160_get_merkle_root(uint160 &merkle_root, const std::vector<uint160> &vhashes) {
     auto compute_hash160 = [](const unsigned char *data, size_t len, unsigned char *hash) {
-        latest_crypto::CHash160().Write(data, len).Finalize(hash);
+        CHash160().Write(data, len).Finalize(hash);
     };
 
     if (vhashes.size() == 0) {
@@ -69,7 +69,7 @@ bool CAIToken03::IsValid() const {
 
 bool CAIToken03::SetTokenMessage(const SymmetricKey &key, const SecureString &message) {
     std::pair<CSecureBytes, bool> cipher;
-    latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
+    CAES256CBCPKCS7(key.data(), key.size()).Encrypt((const unsigned char *)message.data(), message.size()).Finalize(cipher);
     if(!cipher.second)
         return false;
     crypto = std::move(cipher.first);
@@ -80,7 +80,7 @@ bool CAIToken03::GetTokenMessage(const SymmetricKey &key, SecureString &message)
     if(crypto.size() == 0)
         return false;
     std::pair<CSecureBytes, bool> plain;
-    latest_crypto::CAES256CBCPKCS7(key.data(), key.size()).Decrypt(crypto.data(), crypto.size()).Finalize(plain);
+    CAES256CBCPKCS7(key.data(), key.size()).Decrypt(crypto.data(), crypto.size()).Finalize(plain);
     if(!plain.second)
         return false;
     message.clear();
@@ -94,7 +94,7 @@ std::pair<uint160, bool> CAIToken03::GetHash() const {
     if(crypto.size() == 0)
         return std::make_pair(uint160(0), false);
     uint160 hash;
-    latest_crypto::CHash160().Write(crypto.data(), crypto.size()).Finalize(hash.begin());
+    CHash160().Write(crypto.data(), crypto.size()).Finalize(hash.begin());
     return std::make_pair(hash, true);
 }
 

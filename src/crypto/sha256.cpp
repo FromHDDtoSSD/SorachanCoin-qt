@@ -9,8 +9,6 @@
 #include <string.h>
 #include <atomic>
 
-namespace latest_crypto {
-
 #if defined(__x86_64__) || defined(__amd64__) || defined(__i386__)
 #if defined(USE_ASM)
 #include <cpuid.h>
@@ -642,6 +640,7 @@ std::string SHA256AutoDetect()
 
 ////// SHA-256
 
+#include <util/args.h>
 CSHA256::CSHA256() : bytes(0)
 {
     sha256::Initialize(s);
@@ -649,6 +648,10 @@ CSHA256::CSHA256() : bytes(0)
 
 CSHA256& CSHA256::Write(const unsigned char* data, size_t len)
 {
+    //if(args_bool::fTestNet) {
+    //    assert(!"called SHA-256, require recheck.");
+    //}
+
     const unsigned char* end = data + len;
     size_t bufsize = bytes % 64;
     if (bufsize && bufsize + len >= 64) {
@@ -736,5 +739,3 @@ void SHA256D64(unsigned char* out, const unsigned char* in, size_t blocks)
         --blocks;
     }
 }
-
-} // namespace latest_crypto

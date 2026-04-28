@@ -33,8 +33,8 @@ typedef std::vector<unsigned char, secure_allocator<unsigned char> > CKeyingMate
 class CMasterKey
 {
 private:
-    CMasterKey(const CMasterKey &); // {}
-    // CMasterKey &operator=(const CMasterKey &); // {}
+    CMasterKey(const CMasterKey &) = delete;
+    // CMasterKey &operator=(const CMasterKey &) = delete;
 
 public:
     std::vector<unsigned char> vchCryptedKey;
@@ -43,10 +43,11 @@ public:
     //
     // 0 = EVP_sha512()
     // 1 = scrypt()
+    // 2 = SHA3_512()
     //
     unsigned int nDerivationMethod;
     unsigned int nDeriveIterations;
-    
+
     //
     // Use this for more parameters to key derivation,
     // such as the various parameters to scrypt
@@ -59,7 +60,7 @@ public:
         // ie slightly lower than the lowest hardware we need bother supporting
         //
         nDeriveIterations = 25000;
-        nDerivationMethod = 0;
+        nDerivationMethod = args_bool::fTestNet ? 2: 0;
         vchOtherDerivationParameters = std::vector<unsigned char>(0);
     }
 

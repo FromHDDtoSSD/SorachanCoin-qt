@@ -436,11 +436,6 @@ public:
         return *this;
     }
 
-    CScript &operator<<(const uint65536 &b) {
-        script_vector vch(BEGIN(b), END(b));
-        return (*this) << vch;
-    }
-
     CScript &operator<<(const CPubKey &pubkey) {
         script_vector vchpubKey(pubkey.begin(), pubkey.end());
         return (*this) << vchpubKey;

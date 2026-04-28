@@ -6,8 +6,6 @@
 #include <string.h>
 #include <cstring>
 
-namespace latest_crypto {
-
 CHMAC_SHA512::CHMAC_SHA512(const unsigned char* key, size_t keylen)
 {
     unsigned char rkey[128];
@@ -34,5 +32,3 @@ void CHMAC_SHA512::Finalize(unsigned char hash[OUTPUT_SIZE])
     inner.Finalize(temp);
     outer.Write(temp, 64).Finalize(hash);
 }
-
-} // latest_crypto

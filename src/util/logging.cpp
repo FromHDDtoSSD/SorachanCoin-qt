@@ -12,25 +12,24 @@
 #include <debugcs/debugcs.h>
 
 BCLog::Logger &LogInstance() {
-/**
- * NOTE: the logger instances is leaked on exit. This is ugly, but will be
- * cleaned up by the OS/libc. Defining a logger as a global object doesn't work
- * since the order of destruction of static/global objects is undefined.
- * Consider if the logger gets destroyed, and then some later destructor calls
- * LogPrintf, maybe indirectly, and you get a core dump at shutdown trying to
- * access the logger. When the shutdown sequence is fully audited and tested,
- * explicit destruction of these objects can be implemented by changing this
- * from a raw pointer to a std::unique_ptr.
- * Since the destructor is never called, the logger and all its members must
- * have a trivial destructor.
- *
- * This method of initialization was originally introduced in
- * ee3374234c60aba2cc4c5cd5cac1c0aefc2d817c.
- */
-    // SorachanCoin: replace from (BCLog::Logger *) to (void *)
-    static unsigned char buf[sizeof(BCLog::Logger)];
-    static void *g_logger{(void *)new(buf) BCLog::Logger};
-    return *(BCLog::Logger *)g_logger;
+    /**
+     * NOTE: the logger instances is leaked on exit. This is ugly, but will be
+     * cleaned up by the OS/libc. Defining a logger as a global object doesn't work
+     * since the order of destruction of static/global objects is undefined.
+     * Consider if the logger gets destroyed, and then some later destructor calls
+     * LogPrintf, maybe indirectly, and you get a core dump at shutdown trying to
+     * access the logger. When the shutdown sequence is fully audited and tested,
+     * explicit destruction of these objects can be implemented by changing this
+     * from a raw pointer to a std::unique_ptr.
+     * Since the destructor is never called, the logger and all its members must
+     * have a trivial destructor.
+     *
+     * This method of initialization was originally introduced in
+     * ee3374234c60aba2cc4c5cd5cac1c0aefc2d817c.
+     */
+
+    static BCLog::Logger logger;
+    return logger;
 }
 
 int BCLog::Logger::FileWriteStr(const std::string &str, FILE *fp) {
@@ -41,20 +40,21 @@ bool BCLog::Logger::OpenDebugLog() {
     std::lock_guard<std::recursive_mutex> scoped_lock(m_file_mutex);
 
     assert(m_fileout == nullptr);
-    // if(m_fileout) ::fclose(m_fileout);
+    if(m_fileout)
+        ::fclose(m_fileout);
     assert(! m_file_path.empty());
+
     fs::path dir = m_file_path;
     dir.remove_filename();
+
     fsbridge::dir_create(dir);
-    //debugcs::instance() << "open logging path: " << m_file_path.string().c_str() << debugcs::endl();
     m_fileout = fsbridge::fopen(m_file_path, "a");
     if (! m_fileout) {
-        debugcs::instance() << "open FAIL logging path: " << m_file_path.string().c_str() << debugcs::endl();
         return false;
     }
-    debugcs::instance() << "open OK logging path: " << m_file_path.string().c_str() << debugcs::endl();
 
     setbuf(m_fileout, nullptr); // unbuffered
+
     // dump buffered messages from before we opened the log
     while (! m_msgs_before_open.empty()) {
         FileWriteStr(m_msgs_before_open.front(), m_fileout);
@@ -70,7 +70,9 @@ void BCLog::Logger::EnableCategory(BCLog::LogFlags flag) {
 
 bool BCLog::Logger::EnableCategory(const std::string &str) {
     BCLog::LogFlags flag;
-    if (! GetLogCategory(flag, str)) return false;
+    if (! GetLogCategory(flag, str))
+        return false;
+
     EnableCategory(flag);
     return true;
 }
@@ -81,7 +83,9 @@ void BCLog::Logger::DisableCategory(BCLog::LogFlags flag) {
 
 bool BCLog::Logger::DisableCategory(const std::string &str) {
     BCLog::LogFlags flag;
-    if (! GetLogCategory(flag, str)) return false;
+    if (! GetLogCategory(flag, str))
+        return false;
+
     DisableCategory(flag);
     return true;
 }
@@ -201,26 +205,24 @@ std::string BCLog::Logger::LogTimestampStr(const std::string &str) {
     return strStamped;
 }
 
-namespace BCLog {
-    /** Belts and suspenders: make sure outgoing log messages don't contain
-     * potentially suspicious characters, such as terminal control codes.
-     *
-     * This escapes control characters except newline ('\n') in C syntax.
-     * It escapes instead of removes them to still allow for troubleshooting
-     * issues where they accidentally end up in strings.
-     */
-    std::string LogEscapeMessage(const std::string &str) {
-        std::string ret;
-        for (char ch_in: str) {
-            uint8_t ch = (uint8_t)ch_in;
-            if ((ch >= 32 || ch == '\n') && ch != '\x7f') {
-                ret += ch_in;
-            } else {
-                ret += tfm::format("\\x%02x", ch);
-            }
+/** Belts and suspenders: make sure outgoing log messages don't contain
+ * potentially suspicious characters, such as terminal control codes.
+ *
+ * This escapes control characters except newline ('\n') in C syntax.
+ * It escapes instead of removes them to still allow for troubleshooting
+ * issues where they accidentally end up in strings.
+ */
+static std::string LogEscapeMessage(const std::string &str) {
+    std::string ret;
+    for (char ch_in: str) {
+        uint8_t ch = (uint8_t)ch_in;
+        if ((ch >= 32 || ch == '\n') && ch != '\x7f') {
+            ret += ch_in;
+        } else {
+            ret += tfm::format("\\x%02x", ch);
         }
-        return ret;
     }
+    return ret;
 }
 
 void BCLog::Logger::LogPrintStr(const std::string &str) {
@@ -256,8 +258,9 @@ void BCLog::Logger::LogPrintStr(const std::string &str) {
 bool BCLog::Logger::ShrinkDebugFile() {
     // Amount of debug.log to save at end when shrinking (must fit in memory)
     constexpr size_t RECENT_DEBUG_HISTORY_SIZE = 10 * 1000000;
-    if(m_file_path.empty())
+    if(m_file_path.empty()) {
         return false;
+    }
 
     // Scroll debug.log if it's getting too big
     FILE *file = fsbridge::fopen(m_file_path, "r");
@@ -307,8 +310,9 @@ bool BCLog::Logger::ShrinkDebugFile() {
             logging::LogPrintf("Failed to shrink debug log file: memory allocate failure\n");
             return false;
         }
-    } else if (file != nullptr)
+    } else if (file != nullptr) {
         ::fclose(file);
+    }
 
     return true;
 }
@@ -319,15 +323,22 @@ bool BCLog::Logger::ShrinkDebugFile() {
  * Note that this is called very early in the process lifetime, so you should be
  * careful about what global state you rely on here.
  */
+
+static bool def_GetBoolArg(const std::string &strArg, bool fDefault) {
+    return fDefault;
+}
+
+static std::string def_GetArg(const std::string &strArg, const std::string &def) {
+    return def;
+}
+
 void InitLogging() {
 #ifdef QT_GUI
     LogInstance().m_print_to_file = true; //!gArgs.IsArgNegated("-debuglogfile");
-    LogInstance().m_file_path = lutil::AbsPathForConfigVal(ARGS.GetArg("-debuglogfile", DEFAULT_DEBUGLOGFILE), false, args_bool::fTestNet);
-    if(args_bool::fTestNet)
-        debugcs::instance() << "called: InitLogging() m_file_path: " << LogInstance().m_file_path.string().c_str() << debugcs::endl();
+    LogInstance().m_file_path = util::AbsPathForConfigVal(def_GetArg("-debuglogfile", DEFAULT_DEBUGLOGFILE), false, args_bool::fTestNet);
 #else
     LogInstance().m_print_to_file = true; //!gArgs.IsArgNegated("-debuglogfile");
-    LogInstance().m_file_path = lutil::AbsPathForConfigVal(DEFAULT_DEBUGLOGFILE, false, args_bool::fTestNet);
+    LogInstance().m_file_path = util::AbsPathForConfigVal(DEFAULT_DEBUGLOGFILE, false, args_bool::fTestNet);
 #endif
 
     // Add newlines to the logfile to distinguish this execution from the last
@@ -344,24 +355,23 @@ void InitLogging() {
     LogInstance().m_print_to_console = false;
 #endif
 
-    LogInstance().m_log_timestamps = ARGS.GetBoolArg("-logtimestamps", BCLog::Logger::DEFAULT_LOGTIMESTAMPS);
-    LogInstance().m_log_time_micros = ARGS.GetBoolArg("-logtimemicros", BCLog::Logger::DEFAULT_LOGTIMEMICROS);
-
-    LogInstance().m_fLogIPs = ARGS.GetBoolArg("-logips", BCLog::Logger::DEFAULT_LOGIPS);
-
+    LogInstance().m_log_timestamps = def_GetBoolArg("-logtimestamps", BCLog::Logger::DEFAULT_LOGTIMESTAMPS);
+    LogInstance().m_log_time_micros = def_GetBoolArg("-logtimemicros", BCLog::Logger::DEFAULT_LOGTIMEMICROS);
+    LogInstance().m_fLogIPs = def_GetBoolArg("-logips", BCLog::Logger::DEFAULT_LOGIPS);
     std::string version_string = format_version::FormatFullVersion();
+
 #ifdef DEBUG
     version_string += " (debug build)";
 #else
     version_string += " (release build)";
 #endif
-    //logging::LogPrintf(PACKAGE_NAME " version %s\n", version_string);
-    logging::LogPrintf(" version %s\n", version_string);
+
+    logging::LogPrintf("SORA version %s\n", version_string);
 }
 
 bool OpenDebugFile() {
     if (LogInstance().m_print_to_file) {
-        if (ARGS.GetBoolArg("-shrinkdebugfile", LogInstance().DefaultShrinkDebugFile())) {
+        if (def_GetBoolArg("-shrinkdebugfile", LogInstance().DefaultShrinkDebugFile())) {
             // Do this first since it both loads a bunch of debug.log into memory,
             // and because this needs to happen before any other debug.log printing
             // LogInstance().ShrinkDebugFile(); // after latest core

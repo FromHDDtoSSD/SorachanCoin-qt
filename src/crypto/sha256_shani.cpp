@@ -13,8 +13,6 @@
 
 #include <crypto/common.h>
 
-namespace latest_crypto {
-
 namespace {
 
 const __m128i MASK = _mm_set_epi64x(0x0c0d0e0f08090a0bULL, 0x0405060700010203ULL);
@@ -356,7 +354,5 @@ void Transform_2way(unsigned char* out, const unsigned char* in)
 }
 
 }
-
-} // namespace latest_crypto
 
 #endif

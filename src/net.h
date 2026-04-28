@@ -763,7 +763,7 @@ public:
 
     void PushRequest(const char *pszCommand, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
+        random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -774,7 +774,7 @@ public:
     template<typename T1>
     void PushRequest(const char *pszCommand, const T1 &a1, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
+        random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);
@@ -785,7 +785,7 @@ public:
     template<typename T1, typename T2>
     void PushRequest(const char *pszCommand, const T1 &a1, const T2 &a2, void(*fn)(void *, CDataStream &), void *param1) {
         uint256 hashReply;
-        latest_crypto::random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
+        random::GetStrongRandBytes((unsigned char *)&hashReply, sizeof(hashReply));
         {
             LOCK(cs_mapRequests);
             mapRequests[hashReply] = CRequestTracker(fn, param1);

@@ -4090,7 +4090,7 @@ bool XOnlyAggWalletInfo::GetXOnlyKeysStrictOrder(const uint160 &hash, XOnlyPubKe
     uint160 step = uint160(0);
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         uint64_t t = (step + uint160(i)).GetLow64();
-        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
         const unsigned int r = step.Get32() % childs_mod;
         //print_num("step hash", r);
         CExtPubKey extpub;
@@ -4102,7 +4102,7 @@ bool XOnlyAggWalletInfo::GetXOnlyKeysStrictOrder(const uint160 &hash, XOnlyPubKe
     step = uint160(0);
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         uint64_t t = (step + uint160(i)).GetLow64();
-        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
         const unsigned int r = step.Get32() % childs_mod;
         CExtKey extkey;
         if(!extkeyseed.Derive(extkey, r))
@@ -4134,7 +4134,7 @@ bool XOnlyAggWalletInfo::GetXOnlyPubKeysStrictOrder(const uint160 &hash, XOnlyPu
     uint160 step = uint160(0);
     for(unsigned int i=info.first; i < info.first + info.second; ++i) {
         uint64_t t = (step + uint160(i)).GetLow64();
-        latest_crypto::CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
+        CRIPEMD160().Write((const unsigned char *)&t, sizeof(uint64_t)).Finalize(step.begin());
         const unsigned int r = step.Get32() % 80000;
         CExtPubKey extpub;
         if(!extpubseed.Derive(extpub, r))
@@ -4240,7 +4240,7 @@ static bool GetAggPublicKeyHash(unsigned int begin_index, size_t agg_size, uint1
     }
 
     XOnlyPubKey xonly_pubkey = xonly_agg_pubkeys.GetXOnlyPubKey();
-    latest_crypto::CHash160().Write((const unsigned char *)xonly_pubkey.data(), xonly_pubkey.size()).Finalize(hash.begin());
+    CHash160().Write((const unsigned char *)xonly_pubkey.data(), xonly_pubkey.size()).Finalize(hash.begin());
     return true;
 }
 
@@ -4407,45 +4407,45 @@ namespace schnorr_nonce {
     /* This nonce function is described in BIP-schnorr
      * (https://github.com/sipa/bips/blob/bip-schnorr/bip-schnorr.mediawiki) */
     int secp256k1_nonce_function_bipschnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
-        CFirmKey::hash::secp256k1_sha256 sha;
+        CFirmKey::hash::secp256k1_hash hash;
         (void)data;
         (void)counter;
         VERIFY_CHECK(counter == 0);
 
         /* Hash x||msg as per the spec */
-        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_hash_initialize(&hash);
+        CFirmKey::hash::secp256k1_hash_write(&hash, key32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&hash, msg32, 32);
         /* Hash in algorithm, which is not in the spec, but may be critical to
          * users depending on it to avoid nonce reuse across algorithms. */
-        if (algo16 != NULL) {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
+        if (algo16 != nullptr) {
+            CFirmKey::hash::secp256k1_hash_write(&hash, algo16, 16);
         }
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        CFirmKey::hash::secp256k1_hash_finalize(&hash, nonce32);
         return 1;
     }
 
     int secp256k1_nonce_and_random_function_schnorr(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* algo16, void* data, unsigned int counter) {
-        CFirmKey::hash::secp256k1_sha256 sha;
+        CFirmKey::hash::secp256k1_hash hash;
         (void)data;
         (void)counter;
         VERIFY_CHECK(counter == 0);
 
         /* add strong rand bytes */
         unsigned char buf32[32];
-        latest_crypto::random::GetStrongRandBytes(buf32, 32);
+        random::GetStrongRandBytes(buf32, 32);
 
         /* Hash x||msg||rand as per the spec */
-        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, buf32, 32);
+        CFirmKey::hash::secp256k1_hash_initialize(&hash);
+        CFirmKey::hash::secp256k1_hash_write(&hash, key32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&hash, msg32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&hash, buf32, 32);
         /* Hash in algorithm, which is not in the spec, but may be critical to
          * users depending on it to avoid nonce reuse across algorithms. */
-        if (algo16 != NULL) {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, algo16, 16);
+        if (algo16 != nullptr) {
+            CFirmKey::hash::secp256k1_hash_write(&hash, algo16, 16);
         }
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        CFirmKey::hash::secp256k1_hash_finalize(&hash, nonce32);
         return 1;
     }
 } // schnorr_nonce
@@ -4453,52 +4453,60 @@ namespace schnorr_nonce {
 namespace schnorr_e_hash {
     /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
      * SHA256 to SHA256("BIP0340/challenge")||SHA256("BIP0340/challenge"). */
-    static void secp256k1_schnorrsig_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+    static const unsigned char bip340_challenge[20] = {'B','I','P','0','3','4','0','/','c','h','a','l','l','e','n','g','e','\0','\0','\0'};
+    static void secp256k1_schnorrsig_hash_tagged(CFirmKey::hash::secp256k1_hash *hash)
     {
-        uint32_t d[8];
-        d[0] = 0x9cecba11ul;
-        d[1] = 0x23925381ul;
-        d[2] = 0x11679112ul;
-        d[3] = 0xd1627e0ful;
-        d[4] = 0x97c87550ul;
-        d[5] = 0x003cc765ul;
-        d[6] = 0x90f61164ul;
-        d[7] = 0x33e9b66aul;
+        if(args_bool::fTestNet) {
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_challenge, 20);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_challenge, 20);
+        } else {
+            uint32_t d[8];
+            d[0] = 0x9cecba11ul;
+            d[1] = 0x23925381ul;
+            d[2] = 0x11679112ul;
+            d[3] = 0xd1627e0ful;
+            d[4] = 0x97c87550ul;
+            d[5] = 0x003cc765ul;
+            d[6] = 0x90f61164ul;
+            d[7] = 0x33e9b66aul;
 
-        CFirmKey::hash::secp256k1_sha256_initialize(sha);
-        sha->InitSet(d, 64);
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            hash->InitSet(d, 64);
+        }
     }
 
     void secp256k1_schnorrsig_challenge(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
     {
         unsigned char hash[32];
-        CFirmKey::hash::secp256k1_sha256 sha;
+        CFirmKey::hash::secp256k1_hash obj;
 
         /* tagged hash(r.x, pk.x, msg32) */
-        secp256k1_schnorrsig_sha256_tagged(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+        secp256k1_schnorrsig_hash_tagged(&obj);
+        CFirmKey::hash::secp256k1_hash_write(&obj, r32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&obj, pubkey32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&obj, msg32, 32);
+        CFirmKey::hash::secp256k1_hash_finalize(&obj, hash);
+
         /* Set scalar e to the challenge hash modulo the curve order as per
          * BIP340. */
-        CPubKey::secp256k1_scalar_set_b32(e, hash, NULL);
+        CPubKey::secp256k1_scalar_set_b32(e, hash, nullptr);
     }
 
     void secp256k1_schnorrsig_standard(CPubKey::secp256k1_scalar *e, const unsigned char *r32, const unsigned char *msg32, const unsigned char *pubkey32)
     {
         unsigned char hash[32];
-        CFirmKey::hash::secp256k1_sha256 sha;
+        CFirmKey::hash::secp256k1_hash obj;
 
         /* standard hash(r.x, pk.x, msg32) */
-        CFirmKey::hash::secp256k1_sha256_initialize(&sha);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, r32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, pubkey32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, hash);
+        CFirmKey::hash::secp256k1_hash_initialize(&obj);
+        CFirmKey::hash::secp256k1_hash_write(&obj, r32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&obj, pubkey32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&obj, msg32, 32);
+        CFirmKey::hash::secp256k1_hash_finalize(&obj, hash);
         /* Set scalar e to the challenge hash modulo the curve order as per
          * BIP340. */
-        CPubKey::secp256k1_scalar_set_b32(e, hash, NULL);
+        CPubKey::secp256k1_scalar_set_b32(e, hash, nullptr);
     }
 } // namespace schnorr_e_hash
 
@@ -4678,7 +4686,7 @@ bool XOnlyPubKey::VerifySchnorr(const uint256& msg, Span<const unsigned char> si
 CKeyID XOnlyPubKey::GetID() const
 {
     uint160 hash;
-    latest_crypto::CHash160().Write((const unsigned char *)data(), size()).Finalize(hash.begin());
+    CHash160().Write((const unsigned char *)data(), size()).Finalize(hash.begin());
     return CKeyID(hash);
 }
 

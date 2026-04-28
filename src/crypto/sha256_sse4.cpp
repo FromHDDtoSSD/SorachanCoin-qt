@@ -10,8 +10,6 @@
 
 #if defined(__x86_64__) || defined(__amd64__)
 
-namespace latest_crypto {
-
 namespace sha256_sse4
 {
 void Transform(uint32_t* s, const unsigned char* chunk, size_t blocks)
@@ -1504,7 +1502,5 @@ _SHUF_00BA:              ddq 0xFFFFFFFFFFFFFFFF0b0a090803020100
 ; shuffle xDxC -> DC00
 _SHUF_DC00:              ddq 0x0b0a090803020100FFFFFFFFFFFFFFFF
 */
-
-} // namespace latest_crypto
 
 #endif

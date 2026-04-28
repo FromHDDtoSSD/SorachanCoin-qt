@@ -12,6 +12,7 @@
 #include <uint256.h>
 #include <vector>
 #include <script/scriptnum.h>
+#include <util/args.h>
 
 class KernelWorker
 {
@@ -26,7 +27,10 @@ public:
 
     // Start thread
     void Do() {
-        Do_generic();
+        if(args_bool::fTestNet)
+            Do_generic_testnet();
+        else
+            Do_generic();
     }
 
     // Get result
@@ -42,6 +46,7 @@ private:
 
     // One way hashing.
     void Do_generic();
+    void Do_generic_testnet();
 
     // Kernel solutions.
     kernel_worker_result solutions;

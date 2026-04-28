@@ -27,6 +27,10 @@
  * online backup system.
  */
 
+// About SORA2 mining
+// Copyright (c) 2025 The SorachanCoin developers
+// Copyright (c) 2025 The SS256 SORA2 developers
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <scrypt.h>
@@ -34,24 +38,25 @@
 #include <crypto/sha256.h>
 #include <crypto/sha512.h>
 #include <crypto/blake2.h>
-#include <crypto/qhash65536.h>
 #include <block/block.h>
+#include <pbkdf2.h>
+#include <crypto/sora2.h>
+#include <crypto/sha3_256.h>
 
 #define SCRYPT_BUFFER_SIZE (131072 + 63)
 
 #if defined (OPTIMIZED_SALSA) && ( defined (__x86_64__) || defined (__i386__) || defined(__arm__) )
-    extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
+extern "C" void scrypt_core(unsigned int *X, unsigned int *V);
 #else
 
-using pbkdf2 = pbkdf2_impl<latest_crypto::CSHA256>;
-using pbkdf5 = pbkdf2_impl<latest_crypto::CSHA512>;
-using pbkdfB = pbkdf2_impl<latest_crypto::CBLAKE2S>;
-using pbkdf65536 = pbkdf2_impl<latest_crypto::CQHASH65536>;
+using pbkdf2 = pbkdf2_impl<CSHA256>;
+using pbkdf5 = pbkdf2_impl<CSHA512>;
+using pbkdfB = pbkdf2_impl<CBLAKE2S>;
 
 //
 // Generic scrypt_core implementation
 //
-void bitscrypt::xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
+static void xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
 {
     unsigned int x00,x01,x02,x03,x04,x05,x06,x07,x08,x09,x10,x11,x12,x13,x14,x15;
 
@@ -119,19 +124,19 @@ void bitscrypt::xor_salsa8(unsigned int B[16], const unsigned int Bx[16])
     B[15] += x15;
 }
 
-void bitscrypt::scrypt_core(unsigned int *X, unsigned int *V)
+static void scrypt_core(unsigned int *X, unsigned int *V)
 {
     for (unsigned int i = 0; i < 1024; ++i) {
         std::memcpy(&V[i * 32], X, 128);
-        bitscrypt::xor_salsa8(&X[0], &X[16]);
-        bitscrypt::xor_salsa8(&X[16], &X[0]);
+        xor_salsa8(&X[0], &X[16]);
+        xor_salsa8(&X[16], &X[0]);
     }
     for (unsigned int i = 0; i < 1024; ++i) {
         unsigned int j = 32 * (X[16] & 1023);
         for (unsigned int k = 0; k < 32; ++k)
             X[k] ^= V[j + k];
-        bitscrypt::xor_salsa8(&X[0], &X[16]);
-        bitscrypt::xor_salsa8(&X[16], &X[0]);
+        xor_salsa8(&X[0], &X[16]);
+        xor_salsa8(&X[16], &X[0]);
     }
 }
 
@@ -141,7 +146,7 @@ void bitscrypt::scrypt_core(unsigned int *X, unsigned int *V)
    scratchpad size needs to be at least 63 + (128 * r * p) + (256 * r + 64) + (128 * r * N) bytes
    r = 1, p = 1, N = 1024
  */
-uint256 bitscrypt::scrypt_nosalt(const void *input, size_t inputlen, void *scratchpad)
+static uint256 scrypt_nosalt(const void *input, size_t inputlen, void *scratchpad)
 {
     unsigned int *V;
     unsigned int X[32];
@@ -155,21 +160,7 @@ uint256 bitscrypt::scrypt_nosalt(const void *input, size_t inputlen, void *scrat
     return result;
 }
 
-uint65536 bitscrypt::scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad)
-{
-    unsigned int *V;
-    unsigned int X[32];
-    uint65536 result = 0;
-    V = (unsigned int *)(((uintptr_t)(scratchpad) + 63) & ~ (uintptr_t)(63));
-
-    pbkdf65536::PBKDF2_HASH((const uint8_t *)input, inputlen, (const uint8_t *)input, inputlen, 1, (uint8_t *)X, 128);
-    scrypt_core(X, V);
-    pbkdf65536::PBKDF2_HASH((const uint8_t *)input, inputlen, (uint8_t *)X, 128, 1, (uint8_t *)&result, 8192);
-
-    return result;
-}
-
-uint256 bitscrypt::scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad)
+static uint256 scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad)
 {
     unsigned int *V;
     unsigned int X[32];
@@ -183,19 +174,13 @@ uint256 bitscrypt::scrypt(const void *data, size_t datalen, const void *salt, si
     return result;
 }
 
-uint256 bitscrypt::scrypt_hash(const void *input, size_t inputlen)
-{
-    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
-    return scrypt_nosalt(input, inputlen, scratchpad);
-}
-
-uint256 bitscrypt::scrypt_salted_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen)
+static uint256 scrypt_salted_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
     return scrypt(input, inputlen, salt, saltlen, scratchpad);
 }
 
-uint256 bitscrypt::scrypt_salted_multiround_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen, const unsigned int nRounds)
+static uint256 scrypt_salted_multiround_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen, const unsigned int nRounds)
 {
     uint256 resultHash = scrypt_salted_hash(input, inputlen, salt, saltlen);
     uint256 transitionalHash = resultHash;
@@ -207,14 +192,66 @@ uint256 bitscrypt::scrypt_salted_multiround_hash(const void *input, size_t input
     return resultHash;
 }
 
-uint256 bitscrypt::scrypt_blockhash(const void *input)
+uint256 bitmining::scrypt_hash(const void *input, size_t inputlen)
+{
+    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
+    return scrypt_nosalt(input, inputlen, scratchpad);
+}
+
+uint256 bitmining::scrypt_blockhash(const void *input)
 {
     unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
     return scrypt_nosalt(input, 80, scratchpad);
 }
 
-uint65536 bitscrypt::scrypt_blockhash_65536(const void *input)
+uint256 bitmining::sha256d_hash(const void *input, size_t inputlen)
 {
-    unsigned char scratchpad[SCRYPT_BUFFER_SIZE];
-    return scrypt_nosalt_65536(input, 80, scratchpad);
+    uint256 hash;
+    CHash256().Write((const unsigned char *)input, inputlen).Finalize(hash.begin());
+    return hash;
+}
+
+uint256 bitmining::sha256d_blockhash(const void *input)
+{
+    uint256 hash;
+    CHash256().Write((const unsigned char *)input, 80).Finalize(hash.begin());
+    return hash;
+}
+
+/*
+uint256 bitmining::sora2_hash(const void *input, size_t inputlen)
+{
+    uint256 hash;
+    CSORA2_256().Write((const unsigned char *)input, inputlen).Finalize(hash.begin());
+    return hash;
+}
+
+uint256 bitmining::sora2_blockhash(const void *input)
+{
+    uint256 hash;
+    CSORA2_256().Write((const unsigned char *)input, 80).Finalize(hash.begin());
+    return hash;
+}
+*/
+
+uint256 bitmining::sha3d_hash(const void *input, size_t inputlen)
+{ // SHA-3(SHA-256D)
+    uint256 hash;
+    CSHA256().Write((const unsigned char *)input, inputlen).Finalize(hash.begin());
+    uint256 hash2;
+    CSHA256().Write((const unsigned char *)hash.begin(), hash.size()).Finalize(hash2.begin());
+    uint256 hash3;
+    CSHA3_256().Write((const unsigned char *)hash2.begin(), hash2.size()).Finalize(hash3.begin());
+    return hash3;
+}
+
+uint256 bitmining::sha3d_blockhash(const void *input)
+{ // SHA-3(SHA-256D)
+    uint256 hash;
+    CSHA256().Write((const unsigned char *)input, 80).Finalize(hash.begin());
+    uint256 hash2;
+    CSHA256().Write((const unsigned char *)hash.begin(), hash.size()).Finalize(hash2.begin());
+    uint256 hash3;
+    CSHA3_256().Write((const unsigned char *)hash2.begin(), hash2.size()).Finalize(hash3.begin());
+    return hash3;
 }

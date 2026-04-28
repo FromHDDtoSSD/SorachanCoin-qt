@@ -13,6 +13,7 @@
 
 namespace block_check
 {
+    /*
     namespace testnet
     {
         const unsigned int nStakeMinAge = 2 * util::nOneHour;       // test net min age is 2 hours
@@ -20,6 +21,7 @@ namespace block_check
         const unsigned int nStakeTargetSpacing = 1 * 60;            // test block spacing is 1 minutes
         const unsigned int nPowTargetSpacing = 60;
     }
+    */
     namespace mainnet
     {
         const unsigned int nStakeMinAge = 8 * util::nOneHour;

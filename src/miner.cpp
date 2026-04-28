@@ -425,12 +425,9 @@ CBlock *miner::CreateNewBlock(CWallet *pwallet, CTransaction *txCoinStake/*=NULL
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
         } else {
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(true, false, false)); // IsProofOfStake, IsProofOfMasterNode, IsProofOfBench is unavaivable.
         }
         pblock->set_nNonce(0);
     }
@@ -735,12 +732,9 @@ CBlockTemplate *miner::CreateNewBlock2(CWallet *pwallet, CTransaction *txCoinSta
             pblock->set_nTime(std::max(pindexPrev->GetMedianTimePast()+1, pblock->GetMaxTransactionTime()));
             pblock->set_nTime(std::max(pblock->GetBlockTime(), block_check::manage::PastDrift(pindexPrev->GetBlockTime())));
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
             pblock->UpdateTime(pindexPrev);
         } else {
             pblock->set_LastHeight(pindexPrev->get_nHeight());
-            pblock->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(),
-                                             block_hash_helper::create_proof_nonce_zero(true, false, false)); // IsProofOfStake, IsProofOfMasterNode, IsProofOfBench is unavaivable.
         }
         pblock->set_nNonce(0);
         //pblocktemplate->vTxSigOps[0] = GetLegacySigOpCount(pblock->vtx[0]);
@@ -884,8 +878,8 @@ bool miner::CheckStake(CBlock *pblock, CWallet &wallet)
 {
     uint256 proofHash = 0, hashTarget = 0;
     logging::LogPrintf("miner::CheckStake() : LastHeight: %d\n", pblock->get_LastHeight());
-    int type = pblock->set_Last_LyraHeight_hash(pblock->get_LastHeight(), block_hash_helper::create_proof_nonce_zero(true, false, false));
-    logging::LogPrintf("miner::CheckStake() : type: %d\n", type);
+    //int type = pblock->set_Last_LyraHeight_hash(pblock->get_LastHeight(), block_hash_helper::create_proof_nonce_zero(true, false, false));
+    //logging::LogPrintf("miner::CheckStake() : type: %d\n", type);
     uint256 hashBlock = pblock->GetPoHash();
 
     if (! pblock->IsProofOfStake()) {

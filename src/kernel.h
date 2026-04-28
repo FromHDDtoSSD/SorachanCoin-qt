@@ -40,7 +40,8 @@ private:
     // select a block from the candidate blocks in vSortedByTimestamp, excluding
     // already selected blocks in vSelectedBlocks, and with timestamp up to
     // nSelectionIntervalStop.
-    static bool SelectBlockFromCandidates(std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
+    static bool SelectBlockFromCandidates(const std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
+    static bool SelectBlockFromCandidates2(const std::vector<std::pair<int64_t, uint256> > &vSortedByTimestamp, std::map<uint256, const CBlockIndex *> &mapSelectedBlocks, int64_t nSelectionIntervalStop, uint64_t nStakeModifierPrev, const CBlockIndex **pindexSelected);
 
     // The stake modifier used to hash for a stake kernel is chosen as the stake
     // modifier about a selection interval later than the coin generating the kernel

@@ -49,19 +49,17 @@ const MapCheckpoints Checkpoints::manage::mapCheckpoints =
         { 627453, uint256("0x27e250658705ddb55129e94f615b36f344f0de1648f1ec286b5562d85befe96a") },  // 1647145568
         { 681173, uint256("0x9a5616190f4ef00470ca4ca2cf40e893a16fbc16e92993ed23db7003f84e8c8d") },  // 1658537428
         { 946279, uint256("0x000000000023a0d2a571f156b4ca4c0817f692785b8246b33524d7565448e9d6") },  // 1706666355
-        { 1028909, uint256("0x00000000013a5ce77d53f98a20bcfd32881395d014a63de9adb4ca0dbb6204bf") }  // 1722407522
+        { 1028909, uint256("0x00000000013a5ce77d53f98a20bcfd32881395d014a63de9adb4ca0dbb6204bf") }, // 1722407522
+        { 1308357, uint256("0x00000000002603b2d186c8b6bd9f2c8cb64eb04b21288ae7d9f7b4ea6a029f6c") }  // 1777114390
     };
 
 const MapCheckpoints Checkpoints::manage::mapCheckpointsTestnet = 
     {
-        { 0, block_params::hashGenesisBlockTestNet },
-        { 5330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }    // 1533660799
-        //{ 1488851, uint256("0x000019df8993b5c0dd756a25be579f76c08b3f10eeaa2b97b667f0bd1de80c7a") }  // 1619607581
-        //{ 15330, uint256("0x000011410a666bec2c474fe25c847ea903279f96d47422ebe4dda1fd44450406") }  // [OK] NG test 1533660799
+        { 0, block_params::hashGenesisBlockTestNet }
     };
 
-const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1722407522;
-const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1533660799;
+const LastCheckpointTime Checkpoints::manage::CheckpointLastTime = 1777114390;
+const LastCheckpointTime Checkpoints::manage::CheckpointLastTimeTestnet = 1777195800;
 
 //
 // Banned

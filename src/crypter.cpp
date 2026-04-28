@@ -1,4 +1,6 @@
 // Copyright (c) 2009-2012 The Bitcoin Developers
+// Copyright (c) 2018-2026 The SORA Developers
+// Copyright (c) 2025 The SS256/SORA2 Developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -7,12 +9,67 @@
 #include <cleanse/cleanse.h>
 #include <vector>
 #include <string>
-
-#include "crypter.h"
-
+//#include <crypto/sora2.h>
+#include <crypto/sha3_512.h>
+#include <crypter.h>
+#include <debugcs/debugcs.h>
 #ifdef WIN32
-#include <windows.h>
+# include <windows.h>
 #endif
+
+/*
+static int SORA2_512_BytesToKey(const unsigned char *salt, const unsigned char *data, int datal, int count, unsigned char *key, unsigned char *iv) {
+    std::vector<unsigned char> vch;
+    vch.resize(datal + 8);
+    ::memcpy(&vch.front(), data, datal);
+    ::memcpy(&vch.front() + datal, salt, 8);
+
+    unsigned char hash[64];
+    CSORA2_512().Write(vch.data(), vch.size()).Finalize(hash);
+    for(int i=0; i < count; ++i) {
+        unsigned char tmp[64];
+        CSORA2_512().Write(hash, 64).Finalize(tmp);
+        ::memcpy(hash, tmp, 64);
+        cleanse::OPENSSL_cleanse(tmp, 64);
+    }
+
+    ::memcpy(key, hash, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    ::memcpy(iv, hash + crypter_param::WALLET_CRYPTO_KEY_SIZE, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+
+    debugcs::instance() << __func__ << " hash: " << util::HexStr(BEGIN(hash), END(hash)) << debugcs::endl();
+    debugcs::instance() << __func__ << " key: " << util::HexStr(key, key + 32) << debugcs::endl();
+    debugcs::instance() << __func__ << " iv: " << util::HexStr(iv, iv + 32) << debugcs::endl();
+
+    cleanse::OPENSSL_cleanse(hash, 64);
+    return crypter_param::WALLET_CRYPTO_KEY_SIZE;
+}
+*/
+
+static int SHA3_512_BytesToKey(const unsigned char *salt, const unsigned char *data, int datal, int count, unsigned char *key, unsigned char *iv) {
+    std::vector<unsigned char> vch;
+    vch.resize(datal + 8);
+    ::memcpy(&vch.front(), data, datal);
+    ::memcpy(&vch.front() + datal, salt, 8);
+
+    unsigned char hash[64];
+    CSHA3_512().Write(vch.data(), vch.size()).Finalize(hash);
+    for(int i=0; i < count; ++i) {
+        unsigned char tmp[64];
+        CSHA3_512().Write(hash, 64).Finalize(tmp);
+        ::memcpy(hash, tmp, 64);
+        cleanse::OPENSSL_cleanse(tmp, 64);
+    }
+
+    ::memcpy(key, hash, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+    ::memcpy(iv, hash + crypter_param::WALLET_CRYPTO_KEY_SIZE, crypter_param::WALLET_CRYPTO_KEY_SIZE);
+
+    debugcs::instance() << __func__ << " hash: " << util::HexStr(BEGIN(hash), END(hash)) << debugcs::endl();
+    debugcs::instance() << __func__ << " key: " << util::HexStr(key, key + 32) << debugcs::endl();
+    debugcs::instance() << __func__ << " iv: " << util::HexStr(iv, iv + 32) << debugcs::endl();
+
+    cleanse::OPENSSL_cleanse(hash, 64);
+    return crypter_param::WALLET_CRYPTO_KEY_SIZE;
+}
 
 bool CCrypter::SetKeyFromPassphrase(const SecureString &strKeyData, const std::vector<unsigned char> &chSalt, const unsigned int nRounds, const unsigned int nDerivationMethod)
 {
@@ -23,6 +80,8 @@ bool CCrypter::SetKeyFromPassphrase(const SecureString &strKeyData, const std::v
     int i = 0;
     if (nDerivationMethod == 0) {
         i = ::EVP_BytesToKey(::EVP_aes_256_cbc(), ::EVP_sha512(), &chSalt[0], (unsigned char *)&strKeyData[0], strKeyData.size(), nRounds, chKey, chIV);
+    } else if (nDerivationMethod == 2) {
+        i = SHA3_512_BytesToKey(&chSalt[0], (unsigned char *)&strKeyData[0], strKeyData.size(), nRounds, chKey, chIV);
     }
 
     if (i != (int)crypter_param::WALLET_CRYPTO_KEY_SIZE) {

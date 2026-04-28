@@ -3,30 +3,24 @@
 
 #include <stdint.h>
 #include <stdlib.h>
-#include <util.h>
-#include <pbkdf2.h>
+#include <uint256.h>
 
-class CBlockIndex;
+namespace bitmining {
+    // Scrypt: LTC mining
+    uint256 scrypt_hash(const void *input, size_t inputlen);
+    uint256 scrypt_blockhash(const void *input);
 
-class bitscrypt : private no_instance
-{
-private:
-#if defined (OPTIMIZED_SALSA) && ( defined (__x86_64__) || defined (__i386__) || defined(__arm__) )
-    extern "C" static void scrypt_core(unsigned int *X, unsigned int *V);
-#else
-    static void xor_salsa8(unsigned int B[16], const unsigned int Bx[16]);
-    static void scrypt_core(unsigned int *X, unsigned int *V);
-#endif
+    // SHA-256D: BTC mining
+    uint256 sha256d_hash(const void *input, size_t inputlen);
+    uint256 sha256d_blockhash(const void *input);
 
-    static uint256 scrypt_nosalt(const void *input, size_t inputlen, void *scratchpad);
-    static uint256 scrypt(const void *data, size_t datalen, const void *salt, size_t saltlen, void *scratchpad);
-    static uint256 scrypt_hash(const void *input, size_t inputlen);
-    static uint256 scrypt_salted_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen);
-    static uint65536 scrypt_nosalt_65536(const void *input, size_t inputlen, void *scratchpad);
-    static uint256 scrypt_salted_multiround_hash(const void *input, size_t inputlen, const void *salt, size_t saltlen, const unsigned int nRounds);
-public:
-    static uint256 scrypt_blockhash(const void *input);
-    static uint65536 scrypt_blockhash_65536(const void *input);
-};
+    // SORA2: SS256 SORA mining
+    //uint256 sora2_hash(const void *input, size_t inputlen);
+    //uint256 sora2_blockhash(const void *input);
+
+    // SHA-3D: mining
+    uint256 sha3d_hash(const void *input, size_t inputlen);
+    uint256 sha3d_blockhash(const void *input);
+} // namespace bitmining
 
 #endif

@@ -308,10 +308,6 @@ bool CTxDB::WriteModifierUpgradeTime(const unsigned int &nUpgradeTime)
     return Write(std::string("nUpgradeTime"), nUpgradeTime);
 }
 
-bool CTxDB::WriteBlockHashType(uint256 hash, const BLOCK_HASH_MODIFIER &modifier) {
-    return Write(std::make_pair(std::string("blockhashtype"), hash), modifier); // overwrite: true
-}
-
 // like block_info::mapBlockIndex
 // must be singleton model
 class CmapBlockIndex final {
@@ -545,42 +541,13 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
 
 #ifdef BLK_SQL_MODE
 
-    // Seek to start blockhashtype.
-    IDB::DbIterator iterator1 = this->GetIteCursor(std::string("%blockhashtype%"));
-
-    // Now read each blockhashtype.
-    int ret=DB_NOTFOUND;
-    std::vector<char> vchBuffer;
-    CDBStream ssData(&vchBuffer, 10000);
-
-    while((ret=CSqliteDB::ReadAtCursor(iterator1, CDBStreamInvalid(), ssData))!=DB_NOTFOUND)
-    {
-        if(ret>0)
-            return logging::error("LoadBlockIndex() : sql read failure");
-
-        // Unpack values.
-        if (args_bool::fRequestShutdown)
-            break;
-
-        //CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
-        //CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
-        //ssKey.ignore();
-        ssData.ignore();
-
-        uint256 hash;
-        ::Unserialize(ssData, hash);
-        BLOCK_HASH_MODIFIER data;
-        ::Unserialize(ssData, data);
-
-        block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-        //debugcs::instance() << "LoadBlockIndex height: " << data.nHeight << " hash: " << hash.ToString().c_str() << debugcs::endl();
-    }
-
     // Seek to start key.
     IDB::DbIterator iterator2 = this->GetIteCursor(std::string("%blockindex%"));
 
     // Now read each entry.
-    ret=DB_NOTFOUND;
+    int ret=DB_NOTFOUND;
+    std::vector<char> vchBuffer;
+    CDBStream ssData(&vchBuffer, 10000);
     while((ret=CSqliteDB::ReadAtCursor(iterator2, CDBStreamInvalid(), ssData))!=DB_NOTFOUND)
     {
         if(ret>0)
@@ -645,32 +612,6 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
     */
 
 #else
-
-    // Seek to start blockhashtype.
-    if(! this->seek(std::string("blockhashtype"), uint256(0)))
-        return logging::error("LoadBlockIndex() Error: memory allocate failure.");
-
-    // Now read each blockhashtype.
-    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
-    {
-        // Unpack keys and values.
-        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
-        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
-        std::string strType;
-        ::Unserialize(ssKey, strType);
-
-        // Did we reach the end of the data to read?
-        if (args_bool::fRequestShutdown || strType != "blockhashtype")
-            break;
-
-        uint256 hash;
-        ::Unserialize(ssKey, hash);
-        BLOCK_HASH_MODIFIER data;
-        ::Unserialize(ssValue, data);
-
-        block_info::mapBlockLyraHeight.insert(std::make_pair(hash, data));
-        //debugcs::instance() << "LoadBlockIndex height: " << data.get_nHeight() << " hash: " << hash.ToString().c_str() << debugcs::endl();
-    }
 
     // Seek to start key.
     if(! this->seek(std::string("blockindex"), uint256(0)))
@@ -742,6 +683,7 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
 
     // BLOCK_HASH_MODIFIER orphan checker
     // Note: when -debug, Checkpoints take from the Blockchain where no assert.
+    /*
     if(0 < block_info::mapBlockLyraHeight.size()) {
         std::vector<std::pair<int32_t, BLOCK_HASH_MODIFIER *> > vSortedModiByHeight;
         vSortedModiByHeight.reserve(block_info::mapBlockLyraHeight.size());
@@ -764,6 +706,7 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
             assert(orphan_block.size()==0);
         }
     }
+    */
 
     // Calculate nChainTrust
     for(const auto &item: vSortedByHeight) {

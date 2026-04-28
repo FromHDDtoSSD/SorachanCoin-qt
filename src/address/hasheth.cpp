@@ -41,7 +41,7 @@ std::string hasheth::EncodeHashEth(const CPubKey &pubkey) {
 
 std::string hasheth::EncodeHashEth(const unsigned char *pbegin, const unsigned char *pend) {
     uint160 hash;
-    latest_crypto::CHashEth().Write(pbegin, (size_t)(pend - pbegin)).Finalize((unsigned char *)&hash);
+    CHashEth().Write(pbegin, (size_t)(pend - pbegin)).Finalize((unsigned char *)&hash);
     std::string str = "0x";
     str += strenc::HexStr(key_vector(hash.begin(), hash.end()));
     return str;
@@ -54,9 +54,9 @@ std::string hasheth::EncodeHashEth2(const CPubKey &pubkey) {
 
 std::string hasheth::EncodeHashEth2(const unsigned char *pbegin, const unsigned char *pend) {
     uint160 hash;
-    latest_crypto::CHashEth().Write(pbegin, (size_t)(pend - pbegin)).Finalize((unsigned char *)&hash);
+    CHashEth().Write(pbegin, (size_t)(pend - pbegin)).Finalize((unsigned char *)&hash);
     uint160 hash2;
-    latest_crypto::CHashEth().Write(hash.begin(), hash.size()).Finalize((unsigned char *)&hash2);
+    CHashEth().Write(hash.begin(), hash.size()).Finalize((unsigned char *)&hash2);
     std::string str = "0x";
     str += strenc::HexStr(key_vector(hash2.begin(), hash2.end()));
     return str;

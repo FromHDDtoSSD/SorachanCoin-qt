@@ -12,8 +12,6 @@
 #include <random/random.h>
 #include <hash.h>
 
-namespace latest_crypto {
-
 void CChaCha20::chacha20_round(uint32_t x[], uint32_t a, uint32_t b, uint32_t c, uint32_t d) {
     auto rotL32 = [](uint32_t v, uint32_t n) {
         return ((v << n) | (v >> (32 - n)));
@@ -81,7 +79,7 @@ const unsigned char *CChaCha20::createnonce() {
 
 CChaCha20::CheckHash CChaCha20::checking(const unsigned char *data, uint32_t data_len) {
     uint256 hash;
-    latest_crypto::CHash256().Write(data, data_len).Finalize(hash.begin());
+    CHash256().Write(data, data_len).Finalize(hash.begin());
     CheckHash chash;
     for (uint32_t i=0; i < chashsize; ++i)
         chash.c[i] = *(hash.begin() + i);
@@ -313,5 +311,3 @@ void ChaCha20::Output(unsigned char* c, size_t bytes)
         c += 64;
     }
 }
-
-} // namespace latest_crypto

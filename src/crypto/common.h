@@ -15,8 +15,6 @@
 #include <compat/endian.h>
 #include <const/no_instance.h>
 
-namespace latest_crypto {
-
 uint16_t static inline ReadLE16(const unsigned char *ptr)
 {
     uint16_t x;
@@ -134,7 +132,5 @@ public:
         return (tmp==0) ? 0: getnumbits_32(val)-1;
     }
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_COMMON_H

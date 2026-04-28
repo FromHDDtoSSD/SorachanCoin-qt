@@ -25,13 +25,13 @@ inline void nprintf(const char *, ...) {}
 class CExtKey;
 using CSeedSecret = std::vector<unsigned char, secure_allocator<unsigned char> >; // seed-phrase in secure allocator
 namespace SeedCrypto {
-    void CreateKeyToHash(const CSeedSecret &keydata, CSeedSecret &outkeysalt, unsigned char keyhash[latest_crypto::AES256_KEYSIZE]);
-    void GetKeyToHash(const CSeedSecret &keydata, const CSeedSecret &keysalt, unsigned char keyhash[latest_crypto::AES256_KEYSIZE]);
+    void CreateKeyToHash(const CSeedSecret &keydata, CSeedSecret &outkeysalt, unsigned char keyhash[AES256_KEYSIZE]);
+    void GetKeyToHash(const CSeedSecret &keydata, const CSeedSecret &keysalt, unsigned char keyhash[AES256_KEYSIZE]);
     CSeedSecret DataAddSignature(const CSeedSecret &org);
     bool IsValidData(const CSeedSecret &data, CSeedSecret &out);
     bool IsValidDataPermitBlank(const CSeedSecret &data, CSeedSecret &out); // crypto memo
-    bool Encrypto(const unsigned char key[latest_crypto::AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize);
-    bool Decrypto(const unsigned char key[latest_crypto::AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize);
+    bool Encrypto(const unsigned char key[AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize);
+    bool Decrypto(const unsigned char key[AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize);
 }
 
 // HD keys param

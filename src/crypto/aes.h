@@ -13,8 +13,6 @@ extern "C" {
 }
 #include <hash.h>
 
-namespace latest_crypto {
-
 static constexpr int AES_BLOCKSIZE = 16;
 static constexpr int AES128_KEYSIZE = 16;
 static constexpr int AES256_KEYSIZE = 32;
@@ -129,7 +127,7 @@ private:
     CSecureBytes buffer;
     bool fcheck;
     constexpr static uint32_t chashsize = sizeof(uint256);
-    constexpr static uint32_t bsize = latest_crypto::AES_BLOCKSIZE;
+    constexpr static uint32_t bsize = AES_BLOCKSIZE;
     struct CheckHash {
         unsigned char c[chashsize];
         CheckHash() {
@@ -150,7 +148,5 @@ private:
     static uint256_cleanse getkeyhash(const CSecureBytes &key);
     unsigned char *createiv();
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_AES_H

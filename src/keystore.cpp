@@ -73,7 +73,7 @@ static uint256 SignatureHash(const CScript &scriptCodeIn, const CTransaction &tx
     ss.reserve(10000);
     ss << txTmp << nHashType;
     uint256 hash;
-    latest_crypto::CHash256().Write((const unsigned char *)&ss[0], ss.size()).Finalize((unsigned char *)&hash);
+    CHash256().Write((const unsigned char *)&ss[0], ss.size()).Finalize((unsigned char *)&hash);
     return hash;
 }
 
@@ -117,7 +117,7 @@ static void debug1(const T &key) {
 
     {
         uint256 hashke;
-        latest_crypto::CKECCAK256().Write((const unsigned char *)"hello", 5).Finalize((unsigned char *)&hashke);
+        CKECCAK256().Write((const unsigned char *)"hello", 5).Finalize((unsigned char *)&hashke);
         debugcs::instance() << strenc::HexStr(key_vector(hashke.begin(), hashke.begin() + 32)) << debugcs::endl();
     }
     */
@@ -137,7 +137,7 @@ static void debug1(const T &key) {
         debugcs::instance() << "pubkey CKeyID: " << strenc::HexStr(pubkey.GetID()) << debugcs::endl();
         key_vector vchPubKey = pubkey.GetPubEth();
         uint160 hash;
-        latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
+        CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
         debugcs::instance() << "Eth Style public key: 0x" << strenc::HexStr(key_vector(hash.begin(), hash.end())) << debugcs::endl();
     }
     */
@@ -151,7 +151,7 @@ static void debug1(const T &key) {
 
         uint256 privhash;
         CSecret target = fikey.GetSecret();
-        latest_crypto::CHash256().Write((const unsigned char *)target.data(), target.size()).Finalize((unsigned char *)&privhash);
+        CHash256().Write((const unsigned char *)target.data(), target.size()).Finalize((unsigned char *)&privhash);
 
         CTxIn txin;
         txin.set_prevout().SetNull();
@@ -392,7 +392,7 @@ static void debug1(const T &key) {
 
     uint256 target;
     std::string info = "happy new year!";
-    latest_crypto::CSHA256().Write((const unsigned char *)info.c_str(), info.size()).Finalize((unsigned char *)&target);
+    CSHA256().Write((const unsigned char *)info.c_str(), info.size()).Finalize((unsigned char *)&target);
     key_vector sig1, sig2;
     fikey.SignCompact(target, sig1);
     CPubKey pub1;
@@ -440,7 +440,7 @@ static void debug1(const T &key) {
 
     uint256 target;
     std::string info = "happy new year!";
-    latest_crypto::CSHA256().Write((const unsigned char *)info.c_str(), info.size()).Finalize((unsigned char *)&target);
+    CSHA256().Write((const unsigned char *)info.c_str(), info.size()).Finalize((unsigned char *)&target);
     key_vector sig1, sig2;
     fikey.Sign(target, sig1);
     sokey.Sign(target, sig2);
@@ -849,7 +849,7 @@ bool CCryptoKeyStore::GetKey(const CKeyID &address, CFirmKey &keyOut) const
 CEthID CBasicKeyStore::GetEthAddr(const CPubKey &pubkey) {
     key_vector vchPubKey = pubkey.GetPubEth();
     uint160 hash;
-    latest_crypto::CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
+    CHashEth().Write((const unsigned char *)vchPubKey.data(), vchPubKey.size()).Finalize((unsigned char *)&hash);
     return CEthID(hash);
 }
 

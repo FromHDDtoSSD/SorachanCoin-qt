@@ -13,8 +13,6 @@ extern "C" {
 #include <crypto/ctaes/ctaes.c>
 }
 
-namespace latest_crypto {
-
 AES128Encrypt::AES128Encrypt(const unsigned char key[16])
 {
     AES128_init(&ctx, key);
@@ -244,7 +242,7 @@ bool CAES256CBCPKCS7::padcheck(CSecureBytes::iterator end, uint32_t pad_num) {
 
 CAES256CBCPKCS7::CheckHash CAES256CBCPKCS7::checking(unsigned char *data, uint32_t data_len) {
     uint256 hash;
-    latest_crypto::CHash256().Write(data, data_len).Finalize(hash.begin());
+    CHash256().Write(data, data_len).Finalize(hash.begin());
     CheckHash chash;
     for (uint32_t i=0; i < chashsize; ++i)
         chash.c[i] = *(hash.begin() + i);
@@ -336,5 +334,3 @@ CAES256CBCPKCS7 &CAES256CBCPKCS7::Decrypt(const unsigned char *data, uint32_t si
 void CAES256CBCPKCS7::Finalize(std::pair<CSecureBytes, bool> &vch) {
     vch = std::make_pair(std::move(buffer), fcheck);
 }
-
-} // namespace latest_crypto

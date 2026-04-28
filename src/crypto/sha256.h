@@ -11,8 +11,6 @@
 #include <string>
 #include <cleanse/cleanse.h>
 
-namespace latest_crypto {
-
 /** A hasher class for SHA-256. */
 class CSHA256
 {
@@ -48,7 +46,5 @@ std::string SHA256AutoDetect();
  *  blocks:  the number of hashes to compute.
  */
 void SHA256D64(unsigned char* output, const unsigned char* input, size_t blocks);
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_SHA256_H

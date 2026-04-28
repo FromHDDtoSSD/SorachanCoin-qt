@@ -200,7 +200,7 @@ private:
 
     int __RAND_bytes(unsigned char *&buf, int num) {
         //return ::RAND_bytes(buf, num);
-        latest_crypto::random::GetStrongRandBytes(buf, num);
+        random::GetStrongRandBytes(buf, num);
         return 1; // 1 on success.
     }
 public:

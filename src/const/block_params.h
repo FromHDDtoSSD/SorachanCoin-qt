@@ -30,23 +30,26 @@ namespace block_params
     const int MAX_SCRIPTCHECK_THREADS = 16;                                // Maximum number of script-checking threads allowed
 
     const int64_t COIN_PREMINE = 860000 * util::COIN;
+    const int64_t COIN_PREMINE_TESTNET = 0 * util::COIN;
 
     //
     // Genesis
     //
     const char *const pszTimestamp = "SorachanCoin ... www.junkhdd.com 06-Aug-2018 10:00:00 UTC";
+    const char *const pszTimestampTestnet = "SHA-256 - cryptocurrency is inscribed — the oracle of Satoshi Nakamoto";
     const uint32_t nGenesisTimeMainnet = timestamps::GENESIS_TIME_STAMP;
-    const uint32_t nGenesisTimeTestnet = timestamps::GENESIS_TIME_STAMP;
+    const uint32_t nGenesisTimeTestnet = timestamps::GENESIS_TIME_STAMP_TESTNET;
 
     const uint32_t nGenesisNonceMainnet = 1181853;
-    const uint32_t nGenesisNonceTestnet = 51764;
+    const uint32_t nGenesisNonceTestnet = 3559558;
 
     const uint256 hashMerkleRoot("0x56eaf6327efb5ce6ece504d585e7f802f0ed5f65b6b262350ee530e2894dce84");
+    const uint256 hashMerkleRootTestNet("0x9b869f9e1067f61193143ac8e9b506f102307c237c74be9945d2547ed615e30c");
     const uint256 hashGenesisBlock("0x0000030d0ed5a5492e703714059aead5e3800d02de651c1f4079b8d55e6963c7");
-    const uint256 hashGenesisBlockTestNet("0x00002f6601da66030580c89a4652b44cf330102c42e2b4e06d97958df7738478");
+    const uint256 hashGenesisBlockTestNet("0x00000d7652add6753b1f05f5cf9c36c5841368be96441652a7f252d42933d91a");
 }
 
-static inline const uint256 &get_hashGenesisBlock(bool fTestNet) {
+inline uint256 get_hashGenesisBlock(bool fTestNet) {
     return fTestNet ? block_params::hashGenesisBlockTestNet: block_params::hashGenesisBlock;
 }
 

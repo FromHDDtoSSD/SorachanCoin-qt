@@ -4,7 +4,6 @@
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <crypto/hmac_sha256.h>
 #include <crypto/common.h>
 #include <key/privkey.h>
 #include <random/random.h>
@@ -139,32 +138,8 @@ bool CFirmKey::ecmult::secp256k1_ge_set_all_gej_var(CPubKey::ecmult::secp256k1_g
 }
 
 // hash
-void CFirmKey::hash::secp256k1_sha256_initialize(secp256k1_sha256 *hash) {
-    hash->Reset();
-}
-
-void CFirmKey::hash::secp256k1_sha256_write(secp256k1_sha256 *hash, const unsigned char *data, size_t size) {
-    hash->Write(data, size);
-}
-
-void CFirmKey::hash::secp256k1_sha256_finalize(secp256k1_sha256 *hash, unsigned char *out32) {
-    hash->Finalize(out32);
-}
-
-void CFirmKey::hash::secp256k1_hmac_sha256_initialize(secp256k1_hmac_sha256 *hash, const unsigned char *key, size_t size) {
-    hash->Init(key, size);
-}
-
-void CFirmKey::hash::secp256k1_hmac_sha256_write(secp256k1_hmac_sha256 *hash, const unsigned char *data, size_t size) {
-    hash->Write(data, size);
-}
-
-void CFirmKey::hash::secp256k1_hmac_sha256_finalize(secp256k1_hmac_sha256 *hash, unsigned char *out32) {
-    hash->Finalize(out32);
-}
-
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_hmac_sha256_t *rng, const unsigned char *key, size_t keylen) {
-    latest_crypto::CHMAC_SHA256 hmac;
+void CFirmKey::hash::secp256k1_rfc6979_hmac_hash_initialize(secp256k1_rfc6979_hmac_hash_t *rng, const unsigned char *key, size_t keylen) {
+    //debugcs::instance() << __func__ << debugcs::endl();
     static constexpr unsigned char zero[1] = {0x00};
     static constexpr unsigned char one[1] = {0x01};
 
@@ -172,47 +147,46 @@ void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(secp256k1_rfc6979_
     std::memset(rng->k, 0x00, 32); /* RFC6979 3.2.c. */
 
     /* RFC6979 3.2.d. */
-    secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-    secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-    secp256k1_hmac_sha256_write(&hmac, zero, 1);
-    secp256k1_hmac_sha256_write(&hmac, key, keylen);
-    secp256k1_hmac_sha256_finalize(&hmac, rng->k);
-    secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-    secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-    secp256k1_hmac_sha256_finalize(&hmac, rng->v);
+    secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+    secp256k1_hmac_hash_write(rng, rng->v, 32);
+    secp256k1_hmac_hash_write(rng, zero, 1);
+    secp256k1_hmac_hash_write(rng, key, keylen);
+    secp256k1_hmac_hash_finalize(rng, rng->k);
+    secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+    secp256k1_hmac_hash_write(rng, rng->v, 32);
+    secp256k1_hmac_hash_finalize(rng, rng->v);
 
     /* RFC6979 3.2.f. */
-    secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-    secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-    secp256k1_hmac_sha256_write(&hmac, one, 1);
-    secp256k1_hmac_sha256_write(&hmac, key, keylen);
-    secp256k1_hmac_sha256_finalize(&hmac, rng->k);
-    secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-    secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-    secp256k1_hmac_sha256_finalize(&hmac, rng->v);
+    secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+    secp256k1_hmac_hash_write(rng, rng->v, 32);
+    secp256k1_hmac_hash_write(rng, one, 1);
+    secp256k1_hmac_hash_write(rng, key, keylen);
+    secp256k1_hmac_hash_finalize(rng, rng->k);
+    secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+    secp256k1_hmac_hash_write(rng, rng->v, 32);
+    secp256k1_hmac_hash_finalize(rng, rng->v);
     rng->retry = 0;
 }
 
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hmac_sha256_t *rng, unsigned char *out, size_t outlen) {
+void CFirmKey::hash::secp256k1_rfc6979_hmac_hash_generate(secp256k1_rfc6979_hmac_hash_t *rng, unsigned char *out, size_t outlen) {
+    //debugcs::instance() << __func__ << debugcs::endl();
     /* RFC6979 3.2.h. */
     static constexpr unsigned char zero[1] = {0x00};
     if (rng->retry) {
-        latest_crypto::CHMAC_SHA256 hmac;
-        secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-        secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-        secp256k1_hmac_sha256_write(&hmac, zero, 1);
-        secp256k1_hmac_sha256_finalize(&hmac, rng->k);
-        secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-        secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-        secp256k1_hmac_sha256_finalize(&hmac, rng->v);
+        secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+        secp256k1_hmac_hash_write(rng, rng->v, 32);
+        secp256k1_hmac_hash_write(rng, zero, 1);
+        secp256k1_hmac_hash_finalize(rng, rng->k);
+        secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+        secp256k1_hmac_hash_write(rng, rng->v, 32);
+        secp256k1_hmac_hash_finalize(rng, rng->v);
     }
 
     while (outlen > 0) {
-        latest_crypto::CHMAC_SHA256 hmac;
         int now = outlen;
-        secp256k1_hmac_sha256_initialize(&hmac, rng->k, 32);
-        secp256k1_hmac_sha256_write(&hmac, rng->v, 32);
-        secp256k1_hmac_sha256_finalize(&hmac, rng->v);
+        secp256k1_hmac_hash_initialize(rng, rng->k, 32);
+        secp256k1_hmac_hash_write(rng, rng->v, 32);
+        secp256k1_hmac_hash_finalize(rng, rng->v);
         if (now > 32) {
             now = 32;
         }
@@ -224,12 +198,67 @@ void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(secp256k1_rfc6979_hm
     rng->retry = 1;
 }
 
-void CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(secp256k1_rfc6979_hmac_sha256_t *rng) {
+void CFirmKey::hash::secp256k1_rfc6979_hmac_hash_finalize(secp256k1_rfc6979_hmac_hash_t *rng) {
+    //debugcs::instance() << __func__ << debugcs::endl();
     //std::memset(rng->k, 0, 32);
     //std::memset(rng->v, 0, 32);
     cleanse::memory_cleanse(rng->k, 32);
     cleanse::memory_cleanse(rng->v, 32);
     rng->retry = 0;
+}
+
+void CFirmKey::hash::secp256k1_hash::InitSet(const uint32_t dIn[], uint64_t bytesIn) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(! args_bool::fTestNet)
+        sha256.InitSet(dIn, bytesIn);
+}
+
+void CFirmKey::hash::secp256k1_hash_initialize(secp256k1_hash *hash) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sora2_256.Reset();
+    else
+        hash->sha256.Reset();
+}
+
+void CFirmKey::hash::secp256k1_hash_write(secp256k1_hash *hash, const unsigned char *data, size_t size) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sora2_256.Write(data, size);
+    else
+        hash->sha256.Write(data, size);
+}
+
+void CFirmKey::hash::secp256k1_hash_finalize(secp256k1_hash *hash, unsigned char *out32) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sora2_256.Finalize(out32);
+    else
+        hash->sha256.Finalize(out32);
+}
+
+void CFirmKey::hash::secp256k1_hmac_hash_initialize(secp256k1_rfc6979_hmac_hash_t *hash, const unsigned char *key, size_t size) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sha3_256.Init(key, size);
+    else
+        hash->sha256.Init(key, size);
+}
+
+void CFirmKey::hash::secp256k1_hmac_hash_write(secp256k1_rfc6979_hmac_hash_t *hash, const unsigned char *data, size_t size) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sha3_256.Write(data, size);
+    else
+        hash->sha256.Write(data, size);
+}
+
+void CFirmKey::hash::secp256k1_hmac_hash_finalize(secp256k1_rfc6979_hmac_hash_t *hash, unsigned char *out32) {
+    //debugcs::instance() << __func__ << debugcs::endl();
+    if(args_bool::fTestNet)
+        hash->sha3_256.Finalize(out32);
+    else
+        hash->sha256.Finalize(out32);
 }
 
 void CFirmKey::ecmult::secp256k1_fe_storage_cmov(CPubKey::ecmult::secp256k1_fe_storage *r, const CPubKey::ecmult::secp256k1_fe_storage *a, int flag) {
@@ -460,7 +489,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
     CPubKey::ecmult::secp256k1_gej gb;
     CPubKey::ecmult::secp256k1_fe s;
     unsigned char nonce32[32];
-    CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_t rng;
+    CFirmKey::hash::secp256k1_rfc6979_hmac_hash_t rng;
     CPubKey::ecmult::secp256k1_gej_set_ge(&initial_, CPubKey::ecmult::secp256k1_get_ge_const_g());
     CFirmKey::ecmult::secp256k1_gej_neg(&initial_, &initial_);
     CPubKey::secp256k1_scalar_set_int(&blind_, 1);
@@ -475,14 +504,14 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
         unsigned char keydata[64] = {0};
         std::memcpy(keydata, nonce32, 32);
         std::memcpy(keydata + 32, seed32, 32);
-        CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, 64);
+        CFirmKey::hash::secp256k1_rfc6979_hmac_hash_initialize(&rng, keydata, 64);
         cleanse::memory_cleanse(keydata, sizeof(keydata));
     }
 
     /* Retry for out of range results to achieve uniformity. */
     int retry;
     do {
-        CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
+        CFirmKey::hash::secp256k1_rfc6979_hmac_hash_generate(&rng, nonce32, 32);
         retry = !CPubKey::ecmult::secp256k1_fe_set_b32(&s, nonce32);
         retry |= CPubKey::ecmult::secp256k1_fe_is_zero(&s);
     } while (retry); /* This branch true is cryptographically unreachable. Requires sha256_hmac output > Fp. */
@@ -492,7 +521,7 @@ bool CFirmKey::ecmult::secp256k1_gen_context::secp256k1_ecmult_gen_blind(const u
 
     CPubKey::ecmult::secp256k1_fe_clear(&s);
     do {
-        CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
+        CFirmKey::hash::secp256k1_rfc6979_hmac_hash_generate(&rng, nonce32, 32);
         CPubKey::secp256k1_scalar_set_b32(&b, nonce32, &retry);
         /* A blinding value of 0 works, but would undermine the projection hardening. */
         retry |= CPubKey::secp256k1_scalar_is_zero(&b);
@@ -668,8 +697,8 @@ bool CFirmKey::ecmult::secp256k1_gen_context::build() {
 #endif
 
     unsigned char seed32[32];
-    latest_crypto::random::GetRandBytes(seed32, 32);
-    print_bytes("CFirmKey: called prevent side channel attack", seed32, sizeof(seed32));
+    random::GetRandBytes(seed32, 32);
+    //print_bytes("CFirmKey: called prevent side channel attack", seed32, sizeof(seed32));
     bool ret = secp256k1_ecmult_gen_blind(seed32);
     cleanse::memory_cleanse(seed32, sizeof(seed32));
 
@@ -762,8 +791,13 @@ bool CFirmKey::Check2(bool fCompressedIn) {
 
 void CFirmKey::MakeNewKey(bool fCompressedIn) {
     do {
-        latest_crypto::random::GetStrongRandBytes(keydata_.data(), keydata_.size());
-    } while ( !(Check(keydata_.data()) && Check2(fCompressedIn)) );
+        random::GetStrongRandBytes(keydata_.data(), keydata_.size());
+    } while (! Check(keydata_.data()));
+
+    //do {
+    //    random::GetStrongRandBytes(keydata_.data(), keydata_.size());
+    //} while ( !(Check(keydata_.data()) && Check2(fCompressedIn)) );
+
     fValid_ = true;
     fCompressed_ = fCompressedIn;
 }
@@ -937,7 +971,7 @@ CSecret CFirmKey::GetSecret(bool &fCompressed) const {
 int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *algo16, void *data, unsigned int counter) {
    unsigned char keydata[112];
    int keylen = 64;
-   CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_t rng;
+   CFirmKey::hash::secp256k1_rfc6979_hmac_hash_t rng;
    /* We feed a byte array to the PRNG as input, consisting of:
     * - the private key (32 bytes) and message (32 bytes), see RFC 6979 3.2d.
     * - optionally 32 extra bytes of data, see RFC 6979 3.6 Additional Data.
@@ -956,12 +990,12 @@ int CFirmKey::nonce::nonce_function_rfc6979(unsigned char *nonce32, const unsign
        std::memcpy(keydata + keylen, algo16, 16);
        keylen += 16;
    }
-   CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_initialize(&rng, keydata, keylen);
+   CFirmKey::hash::secp256k1_rfc6979_hmac_hash_initialize(&rng, keydata, keylen);
    std::memset(keydata, 0, sizeof(keydata));
    for (unsigned int i = 0; i <= counter; ++i) {
-       CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_generate(&rng, nonce32, 32);
+       CFirmKey::hash::secp256k1_rfc6979_hmac_hash_generate(&rng, nonce32, 32);
    }
-   CFirmKey::hash::secp256k1_rfc6979_hmac_sha256_finalize(&rng);
+   CFirmKey::hash::secp256k1_rfc6979_hmac_hash_finalize(&rng);
    return 1;
 }
 
@@ -1120,7 +1154,7 @@ bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_
     vchSig.resize(CPubKey::SIGNATURE_SIZE);
     size_t nSigLen = CPubKey::SIGNATURE_SIZE;
     unsigned char extra_entropy[32] = {0};
-    latest_crypto::WriteLE32(extra_entropy, test_case);
+    WriteLE32(extra_entropy, test_case);
     CPubKey::secp256k1_signature sig;
     uint32_t counter = 0;
     CFirmKey::ecmult::secp256k1_gen_context gen_ctx;
@@ -1129,7 +1163,7 @@ bool CFirmKey::Sign(const uint256 &hash, key_vector &vchSig, bool grind, uint32_
 
     // Grind for low R
     while (ret && !SigHasLowR(&sig) && grind) {
-        latest_crypto::WriteLE32(extra_entropy, ++counter);
+        WriteLE32(extra_entropy, ++counter);
         ret = CFirmKey::secp256k1_ecdsa_sign(&gen_ctx, &sig, hash.begin(), begin(), CFirmKey::nonce::nonce_function_rfc6979, extra_entropy);
     }
     ARG_BOOL_CHECK(ret);
@@ -1266,9 +1300,9 @@ bool CFirmKey::VerifyPubKey(const CPubKey &pubkey) const {
         return false;
     unsigned char rnd[8];
     std::string str = "Bitcoin key verification\n";
-    latest_crypto::random::GetRandBytes(rnd, sizeof(rnd));
+    random::GetRandBytes(rnd, sizeof(rnd));
     uint256 hash;
-    latest_crypto::CHash256().Write((unsigned char *)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
+    CHash256().Write((unsigned char *)str.data(), str.size()).Write(rnd, sizeof(rnd)).Finalize(hash.begin());
     key_vector vchSig;
     Sign(hash, vchSig);
     bool ret = pubkey.Verify_BIP66(hash, vchSig);
@@ -1416,72 +1450,86 @@ void CFirmKey::DecryptData(const key_vector &encrypted, key_vector &data) const 
 namespace bip340_tagged {
     /* Initializes a sha256 struct and writes the 64 byte string
      * SHA256(tag)||SHA256(tag) into it. */
-    void secp256k1_sha256_initialize_tagged(CFirmKey::hash::secp256k1_sha256* hash, const unsigned char* tag, size_t taglen)
+    void secp256k1_hash_initialize_tagged(CFirmKey::hash::secp256k1_hash *hash, const unsigned char *tag, size_t taglen)
     {
         unsigned char buf[32];
-        CFirmKey::hash::secp256k1_sha256_initialize(hash);
-        CFirmKey::hash::secp256k1_sha256_write(hash, tag, taglen);
-        CFirmKey::hash::secp256k1_sha256_finalize(hash, buf);
+        CFirmKey::hash::secp256k1_hash_initialize(hash);
+        CFirmKey::hash::secp256k1_hash_write(hash, tag, taglen);
+        CFirmKey::hash::secp256k1_hash_finalize(hash, buf);
 
-        CFirmKey::hash::secp256k1_sha256_initialize(hash);
-        CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
-        CFirmKey::hash::secp256k1_sha256_write(hash, buf, 32);
+        CFirmKey::hash::secp256k1_hash_initialize(hash);
+        CFirmKey::hash::secp256k1_hash_write(hash, buf, 32);
+        CFirmKey::hash::secp256k1_hash_write(hash, buf, 32);
     }
 
     /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
      * SHA256 to SHA256("BIP0340/nonce")||SHA256("BIP0340/nonce"). */
-    void secp256k1_nonce_function_bip340_sha256_tagged(CFirmKey::hash::secp256k1_sha256* sha)
+    static const unsigned char bip340_algo16[16] = {'B','I','P','0','3','4','0','/','n','o','n','c','e','\0','\0','\0'};
+    void secp256k1_nonce_function_bip340_hash_tagged(CFirmKey::hash::secp256k1_hash *hash)
     {
-        uint32_t d[8];
-        d[0] = 0x46615b35ul;
-        d[1] = 0xf4bfbff7ul;
-        d[2] = 0x9f8dc671ul;
-        d[3] = 0x83627ab3ul;
-        d[4] = 0x60217180ul;
-        d[5] = 0x57358661ul;
-        d[6] = 0x21a29e54ul;
-        d[7] = 0x68b07b4cul;
+        if(args_bool::fTestNet) {
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_algo16, 16);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_algo16, 16);
+        } else {
+            uint32_t d[8];
+            d[0] = 0x46615b35ul;
+            d[1] = 0xf4bfbff7ul;
+            d[2] = 0x9f8dc671ul;
+            d[3] = 0x83627ab3ul;
+            d[4] = 0x60217180ul;
+            d[5] = 0x57358661ul;
+            d[6] = 0x21a29e54ul;
+            d[7] = 0x68b07b4cul;
 
-        CFirmKey::hash::secp256k1_sha256_initialize(sha);
-        sha->InitSet(d, 64);
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            hash->InitSet(d, 64);
+        }
     }
 
     /* Initializes SHA256 with fixed midstate. This midstate was computed by applying
      * SHA256 to SHA256("BIP0340/aux")||SHA256("BIP0340/aux"). */
-    void secp256k1_nonce_function_bip340_sha256_tagged_aux(CFirmKey::hash::secp256k1_sha256* sha)
+    static const unsigned char bip340_aux[14] = {'B','I','P','0','3','4','0','/','a','u','x','\0','\0','\0'};
+    void secp256k1_nonce_function_bip340_hash_tagged_aux(CFirmKey::hash::secp256k1_hash *hash)
     {
-        uint32_t d[8];
-        d[0] = 0x24dd3219ul;
-        d[1] = 0x4eba7e70ul;
-        d[2] = 0xca0fabb9ul;
-        d[3] = 0x0fa3166dul;
-        d[4] = 0x3afbe4b1ul;
-        d[5] = 0x4c44df97ul;
-        d[6] = 0x4aac2739ul;
-        d[7] = 0x249e850aul;
+        if(args_bool::fTestNet) {
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_aux, 14);
+            CFirmKey::hash::secp256k1_hash_write(hash, bip340_aux, 14);
+        } else {
+            uint32_t d[8];
+            d[0] = 0x24dd3219ul;
+            d[1] = 0x4eba7e70ul;
+            d[2] = 0xca0fabb9ul;
+            d[3] = 0x0fa3166dul;
+            d[4] = 0x3afbe4b1ul;
+            d[5] = 0x4c44df97ul;
+            d[6] = 0x4aac2739ul;
+            d[7] = 0x249e850aul;
 
-        CFirmKey::hash::secp256k1_sha256_initialize(sha);
-        sha->InitSet(d, 64);
+            CFirmKey::hash::secp256k1_hash_initialize(hash);
+            hash->InitSet(d, 64);
+        }
     }
 
     /* algo16 argument for nonce_function_bip340 to derive the nonce exactly as stated in BIP-340
      * by using the correct tagged hash function. */
-    static const unsigned char bip340_algo16[16] = {'B','I','P','0','3','4','0','/','n','o','n','c','e','\0','\0','\0'};
+    //static const unsigned char bip340_algo16[16] = {'B','I','P','0','3','4','0','/','n','o','n','c','e','\0','\0','\0'};
 
-    int nonce_function_bip340(unsigned char* nonce32, const unsigned char* msg32, const unsigned char* key32, const unsigned char* xonly_pk32, const unsigned char* algo16, void* data)
+    int nonce_function_bip340(unsigned char *nonce32, const unsigned char *msg32, const unsigned char *key32, const unsigned char *xonly_pk32, const unsigned char *algo16, void *data)
     {
-        CFirmKey::hash::secp256k1_sha256 sha;
+        CFirmKey::hash::secp256k1_hash sha;
         unsigned char masked_key[32];
         int i;
 
-        if (algo16 == NULL) {
+        if (algo16 == nullptr) {
             return 0;
         }
 
-        if (data != NULL) {
-            secp256k1_nonce_function_bip340_sha256_tagged_aux(&sha);
-            CFirmKey::hash::secp256k1_sha256_write(&sha, (const unsigned char *)data, 32);
-            CFirmKey::hash::secp256k1_sha256_finalize(&sha, masked_key);
+        if (data != nullptr) {
+            secp256k1_nonce_function_bip340_hash_tagged_aux(&sha);
+            CFirmKey::hash::secp256k1_hash_write(&sha, (const unsigned char *)data, 32);
+            CFirmKey::hash::secp256k1_hash_finalize(&sha, masked_key);
             for (i = 0; i < 32; i++) {
                 masked_key[i] ^= key32[i];
             }
@@ -1491,25 +1539,25 @@ namespace bip340_tagged {
          * algorithms. If this nonce function is used in BIP-340 signing as defined
          * in the spec, an optimized tagging implementation is used. */
         if (secp256k1_util::secp256k1_memcmp_var(algo16, bip340_algo16, 16) == 0) {
-            secp256k1_nonce_function_bip340_sha256_tagged(&sha);
+            secp256k1_nonce_function_bip340_hash_tagged(&sha);
         } else {
             int algo16_len = 16;
             /* Remove terminating null bytes */
             while (algo16_len > 0 && !algo16[algo16_len - 1]) {
                 algo16_len--;
             }
-            secp256k1_sha256_initialize_tagged(&sha, algo16, algo16_len);
+            secp256k1_hash_initialize_tagged(&sha, algo16, algo16_len);
         }
 
         /* Hash (masked-)key||pk||msg using the tagged hash as per the spec */
         if (data != NULL) {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, masked_key, 32);
+            CFirmKey::hash::secp256k1_hash_write(&sha, masked_key, 32);
         } else {
-            CFirmKey::hash::secp256k1_sha256_write(&sha, key32, 32);
+            CFirmKey::hash::secp256k1_hash_write(&sha, key32, 32);
         }
-        CFirmKey::hash::secp256k1_sha256_write(&sha, xonly_pk32, 32);
-        CFirmKey::hash::secp256k1_sha256_write(&sha, msg32, 32);
-        CFirmKey::hash::secp256k1_sha256_finalize(&sha, nonce32);
+        CFirmKey::hash::secp256k1_hash_write(&sha, xonly_pk32, 32);
+        CFirmKey::hash::secp256k1_hash_write(&sha, msg32, 32);
+        CFirmKey::hash::secp256k1_hash_finalize(&sha, nonce32);
         return 1;
     }
 } // namespace bip340_tagged
@@ -1745,7 +1793,7 @@ int SymmetricKey::secp256k1_schnorrsig_symmetrickey(CFirmKey::ecmult::secp256k1_
     CPubKey::secp256k1_scalar nonce;
     do {
         unsigned char rand[32];
-        latest_crypto::random::GetStrongRandBytes(rand, 32);
+        random::GetStrongRandBytes(rand, 32);
         CPubKey::secp256k1_scalar_set_b32(&nonce, rand, &overflow);
     } while (overflow);
 
@@ -1900,7 +1948,10 @@ CExtPubKey CExtKey::Neuter() const {
 bool CExtKey::SetSeed(const unsigned char *seed, unsigned int nSeedLen) {
     static const unsigned char hashkey[] = {'F','r','o','m','H','D','D','t','o','S','S','D'};
     std::vector<unsigned char, secure_allocator<unsigned char> > vout(64);
-    latest_crypto::CHMAC_SHA512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());
+    if(args_bool::fTestNet)
+        CHMAC_SHA3_512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());
+    else
+        CHMAC_SHA512(hashkey, sizeof(hashkey)).Write(seed, nSeedLen).Finalize(vout.data());
     privkey_.Set(vout.data(), vout.data() + 32, true);
     if(! privkey_.IsValid())
         return false;

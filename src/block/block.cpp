@@ -207,123 +207,8 @@ bool block_notify::IsInitialBlockDownload()
 }
 
 void CBlockHeader::set_LastHeight(int32_t _in) const { // _in is indexPrev
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(_in + 1 >= sw_height) { // _in + 1 is myself
-        CBlockHeader::LastHeight = _in;
-        CBlockHeader::nVersion = CURRENT_VERSION_Lyra2REV2;
-    } else {
-        CBlockHeader::LastHeight = _in;
-        //CBlockHeader::nVersion = CURRENT_VERSION;
-    }
-}
-
-int CBlockHeader_impl::set_Last_LyraHeight_hash(int32_t _in, int32_t nonce_zero_proof) const { // _in is indexPrev
-    int type = HASH_TYPE_NONE;
-    if(! diff::check::CheckProofOfWork2(_in+1, nonce_zero_proof, *(static_cast<const CBlockHeader_impl *>(this)), type))
-        return type; // do nothing (no confirm block)
-
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    static std::map<int32_t, uint256> mapPrevHash;
-    static CCriticalSection cs_height;
-    if(_in + 1 >= sw_height) {
-        LOCK(cs_height);
-        BlockHeight::const_iterator mi = block_info::mapBlockLyraHeight.find(GetPoHash(_in+1, type));
-        if(mi!=block_info::mapBlockLyraHeight.end()) { // current exists
-            auto ite = mapPrevHash.find(_in+1);
-            if(ite==mapPrevHash.end())
-                mapPrevHash.insert(std::make_pair(_in+1, (*mi).second.GetBlockModifierHash()));
-            return type;
-        }
-        if(_in + 1 == sw_height) {
-            BLOCK_HASH_MODIFIER modifier_gene = block_hash_modifier_genesis::create_block_hash_modifier_genesis(); // Genesis block
-            mapPrevHash.insert(std::make_pair(_in, modifier_gene.GetBlockModifierHash())); // Genesis hash
-            uint256 hash_prev = GetPoHash(_in, type);
-            if(! block_hash_modifier_checkpoints::CheckOrphanBlock(modifier_gene.get_nHeight(), modifier_gene.GetBlockModifierHash()))
-                throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
-            block_info::mapBlockLyraHeight.insert(std::make_pair(hash_prev, modifier_gene));
-            if(! CTxDB().WriteBlockHashType(hash_prev, modifier_gene))
-                throw std::runtime_error("BLOCK_HASH_MODIFIER prev DB write ERROR.");
-            if(args_bool::fDebug) {
-                logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d info:%s\n", _in, modifier_gene.ToString().c_str());
-                //logging::LogPrintf("BLOCK_HASH_MODIFIER Genesis height:%d hash:%s\n", _in, modifier_gene.GetBlockModifierHash().ToString().c_str());
-            }
-
-            // for CBlock
-            BLOCK_HASH_MODIFIER modiffer_cblock = BLOCK_HASH_MODIFIER(_in-1, 0, HASH_TYPE_NONE);
-            uint256 hash_cblock = GetPoHash(_in-1, HASH_TYPE_NONE);
-            block_info::mapBlockLyraHeight.insert(std::make_pair(hash_cblock, modiffer_cblock));
-            if(! CTxDB().WriteBlockHashType(hash_cblock, modiffer_cblock))
-                throw std::runtime_error("BLOCK_HASH_MODIFIER cblock DB write ERROR.");
-        }
-
-        BLOCK_HASH_MODIFIER modifier_current = BLOCK_HASH_MODIFIER(_in+1, this->get_nTime(), type);
-        auto mi2 = mapPrevHash.find(_in);
-        uint256 prevHash("0");
-        if(mi2==mapPrevHash.end()) {
-            for(const auto &ite: block_info::mapBlockLyraHeight) {
-                if(ite.second.get_nHeight()==_in) {
-                    prevHash = ite.second.GetBlockModifierHash();
-                    break;
-                }
-            }
-            if(prevHash==uint256("0")) {
-                //for(auto ite: mapPrevHash)
-                //    logging::LogPrintf("set_Last mapPrevHash height:%d hash:%s\n", ite.first, ite.second.ToString().c_str());
-                //for(auto ite: block_info::mapBlockLyraHeight)
-                //    logging::LogPrintf("set_Last block_info::mapBlockLyraHeight ToString:%s\n", ite.second.ToString().c_str());
-                debugcs::instance() << "set_Last invalid nHeight: " << _in+1 << debugcs::endl();
-                assert(!"prevHash==T(\"0\")");
-                throw std::runtime_error("prevHash==T(\"0\")");
-            }
-        } else
-            prevHash = (*mi2).second;
-        debugcs::instance() << "set_Last current HASH: " << prevHash.ToString().c_str() << debugcs::endl();
-        modifier_current.set_prevHash(prevHash);
-        mapPrevHash.insert(std::make_pair(_in+1, modifier_current.GetBlockModifierHash()));
-        uint256 hash_current = GetPoHash(_in+1, type);
-        if(! block_hash_modifier_checkpoints::CheckOrphanBlock(modifier_current.get_nHeight(), modifier_current.GetBlockModifierHash(), modifier_current.ToString()))
-            throw std::runtime_error("BLOCK_HASH_MODIFIER block_hash_modifier_checkpoints invalid checkpoint.");
-        block_info::mapBlockLyraHeight.insert(std::make_pair(hash_current, modifier_current)); // current
-
-        if(! CTxDB().WriteBlockHashType(hash_current, modifier_current))
-            throw std::runtime_error("BLOCK_HASH_MODIFIER DB current write ERROR.");
-        return type;
-    } else { // debug (no write to DB)
-        // do nothing (no write)
-        //debugcs::instance() << "debug set_Last_LyraHeight_hash: " << _in + 1 << debugcs::endl();
-        return HASH_TYPE_NONE;
-    }
-}
-
-uint256 CBlockHeader_impl::GetHash(int type) const { // private
-    if(type==HASH_TYPE_NONE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if(type==LYRA2REV2_POW_TYPE) {
-        return block_hash_func::GetPoW_Lyra2REV2((const char *)this);
-    } else if (type==SCRYPT_POS_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SCRYPT_MASTERNODE_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SCRYPT_POBENCH_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SCRYPT_POSPACE_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SCRYPT_POPREDICT_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SCRYPT_POW_TYPE) {
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
-    } else if (type==SHA256D_POW_TYPE) {
-        return block_hash_func::GetPoW_SHA256D((const char *)this);
-    } else if (type==SHA512D_POW_TYPE) {
-        return block_hash_func::GetPoW_SHA512D((const char *)this);
-    } else if (type==BLAKE2S_POW_TYPE) {
-        return block_hash_func::GetPoW_Blake2S((const char *)this);
-    } else if (type==LYRA2RE_POW_TYPE) {
-        return block_hash_func::GetPoW_Lyra2RE((const char *)this);
-    } else {
-        throw std::runtime_error("CBlockHeader_impl::GetHash(int type) No support HASH Algorithm.");
-        return ~uint256("0");
-    }
+    CBlockHeader::LastHeight = _in;
+    //CBlockHeader::nVersion = CURRENT_VERSION;
 }
 
 uint256 CDiskBlockIndex::GetBlockHash() const {
@@ -343,39 +228,11 @@ uint256 CDiskBlockIndex::GetBlockHash() const {
     return this->blockHash;
 }
 
-// GetPoHash(): CBlock
-// GetPoHash(height, type): CBlockHeader_imp
 uint256 CBlock::GetPoHash() const {
-    //if(this->get_LastHeight()==-1)
-    //    return block_hash_func::GetPoW_Scrypt((const char *)(static_cast<const CBlockHeader_impl *>(this)));
-
-    if(args_bool::fDebug)
-        debugcs::instance() << "CBlock::GetPoHash() testnet: " << (int)args_bool::fTestNet << " LastHeight: " << this->get_LastHeight() << debugcs::endl();
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(this->get_LastHeight()+1 < sw_height)
+    if(args_bool::fTestNet)
+        return block_hash_func::GetPoW_Sha3d((const char *)(static_cast<const CBlockHeader_impl *>(this)));
+    else
         return block_hash_func::GetPoW_Scrypt((const char *)(static_cast<const CBlockHeader_impl *>(this)));
-
-    int type = CBlockHeader_impl::set_Last_LyraHeight_hash(this->get_LastHeight(),
-                                                              block_hash_helper::create_proof_nonce_zero(
-                                                              this->IsProofOfStake(), this->IsProofOfMasternode(), this->IsProofOfBench()));
-    if(args_bool::fDebug)
-        debugcs::instance() << "CBlock::GetPoHash() Last_Lyra height: " << this->get_LastHeight()+1 << " type: " << type << debugcs::endl();
-    return CBlockHeader_impl::GetPoHash(this->get_LastHeight()+1, type);
-}
-
-uint256 CBlockHeader_impl::GetPoHash(int32_t height, int type) const { // height is current
-    //if(height==-1)
-    //   return block_hash_func::GetPoW_Scrypt((const char *)this);
-
-    if(args_bool::fDebug)
-        debugcs::instance() << "CBlock::GetPoHash(int32_t height, int type) height: " << height << " info: " << this->ToString().c_str() << debugcs::endl();
-    const int32_t sw_height=args_bool::fTestNet ? SWITCH_LYRE2RE_BLOCK_TESTNET: SWITCH_LYRE2RE_BLOCK;
-    if(height >= sw_height) {
-        if(args_bool::fDebug)
-            debugcs::instance() << "CBlock::GetPoHash(int32_t height, int type) type: " << type << debugcs::endl();
-        return this->GetHash(type);
-    } else
-        return block_hash_func::GetPoW_Scrypt((const char *)this);
 }
 
 void CBlockHeader_impl::UpdateTime(const CBlockIndex *pindexPrev) {
@@ -409,9 +266,6 @@ bool CBlock::DisconnectBlock(CTxDB &txdb, CBlockIndex *pindex)
 bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=false*/)
 {
     CBlockHeader::set_LastHeight(pindex->get_nHeight() - 1);
-    CBlockHeader_impl::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1,
-                                                   block_hash_helper::create_proof_nonce_zero(
-                                                       pindex->IsProofOfStake(), pindex->IsProofOfMasternode(), pindex->IsProofOfBench()));
 
     // Check it again in case a previous version let a bad block in, but skip BlockSig checking
     if (! CheckBlock(!fJustCheck, !fJustCheck, false))
@@ -549,9 +403,7 @@ bool CBlock::ConnectBlock(CTxDB &txdb, CBlockIndex *pindex, bool fJustCheck/*=fa
 bool CBlock::ReadFromDisk(const CBlockIndex *pindex, bool fReadTransactions/*=true*/)
 {
     CBlockHeader::set_LastHeight(pindex->get_nHeight() - 1);
-    CBlockHeader_impl::set_Last_LyraHeight_hash(pindex->get_nHeight() - 1,
-                                                   block_hash_helper::create_proof_nonce_zero(
-                                                   pindex->IsProofOfStake(), pindex->IsProofOfMasternode(), pindex->IsProofOfBench()));
+
     if (! fReadTransactions) {
         *this = pindex->GetBlockHeader();
         return true;
@@ -662,7 +514,7 @@ bool CBlock::SetBestChain(CTxDB &txdb, CBlockIndex *pindexNew)
     std::string strCmd = map_arg::GetArg("-blocknotify", "");
     if (!fIsInitialDownload && !strCmd.empty()) {
         boost::replace_all(strCmd, "%s", block_info::hashBestChain.GetHex());
-        boost::thread t(lutil::runCommand, strCmd); // thread runs free
+        boost::thread t(util::runCommand, strCmd); // thread runs free
     }
 
     return true;
@@ -799,11 +651,8 @@ bool CBlock::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*=true*/,
                     CBlockIndex *pindexPrev = (*mi).second;
                     if (pindexPrev != nullptr) {
                         // Check proof of work matches claimed amount
-                        int type = HASH_TYPE_NONE;
-                        if(fCheckPOW) {
-                            type = this->set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::PoW_nonce_zero);
-                        }
-                        if (fCheckPOW && !diff::check::CheckProofOfWork(CBlockHeader_impl::GetPoHash(pindexPrev->get_nHeight()+1, type), CBlockHeader_impl::get_nBits()))
+                        //int type = HASH_TYPE_NONE;
+                        if (fCheckPOW && !diff::check::CheckProofOfWork(GetPoHash(), CBlockHeader_impl::get_nBits()))
                             return DoS(50, logging::error("CheckBlock() : proof of work failed"));
                     }
                 }
@@ -811,8 +660,10 @@ bool CBlock::CheckBlock(bool fCheckPOW/*=true*/, bool fCheckMerkleRoot/*=true*/,
         }
 
         // Check timestamp
-        if (CBlockHeader_impl::GetBlockTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime()))
-            return logging::error("CheckBlock() : block timestamp too far in the future");
+        if (CBlockHeader_impl::GetBlockTime() > block_check::manage::FutureDrift(bitsystem::GetAdjustedTime())) {
+            if(block_info::nBestHeight > 0)
+                return logging::error("CheckBlock() : block timestamp too far in the future, block_height: %d", block_info::nBestHeight);
+        }
 
         // Check coinbase timestamp
         if (CBlockHeader_impl::GetBlockTime() < block_check::manage::PastDrift((int64_t)Merkle_t::vtx[0].get_nTime()))
@@ -874,7 +725,6 @@ bool CBlock::AcceptBlock()
     CBlockIndex *pindexPrev = (*mi).second;
     int nHeight = pindexPrev->get_nHeight() + 1;
     CBlockHeader::set_LastHeight(pindexPrev->get_nHeight());
-    CBlockHeader_impl::set_Last_LyraHeight_hash(pindexPrev->get_nHeight(), block_hash_helper::create_proof_nonce_zero(IsProofOfStake(), IsProofOfMasternode(), IsProofOfBench()));
     ACCEPT_DEBUG_CS("CBlock::AcceptBlock nHeight: ", nHeight);
 
     // Check for duplicate
@@ -1092,35 +942,22 @@ bool CBlock::ReadFromDisk(unsigned int nFile, unsigned int nBlockPos, bool fRead
     }
 
     // get: BLOCK_HASH_MODIFIER type
-    int type = HASH_TYPE_NONE;
-    auto mi = block_info::mapBlockLyraHeight.find(this->get_hashPrevBlock());
-    if(mi==block_info::mapBlockLyraHeight.end()) {
-        type = SCRYPT_POW_TYPE;
-    } else {
-        const BLOCK_HASH_MODIFIER &prevModifier = (*mi).second;
-        CBlockHeader::set_LastHeight(prevModifier.get_nHeight());
-        type = this->set_Last_LyraHeight_hash(CBlockHeader::get_LastHeight(),
-                                              block_hash_helper::create_proof_nonce_zero(
-                                              IsProofOfStake(), IsProofOfMasternode(), IsProofOfBench()));
-        if(args_bool::fDebug)
-            debugcs::instance() << "CBlock::ReadFromDisk prevHeight: " << prevModifier.get_nHeight() << " type: " << type << debugcs::endl();
-    }
+    /*
+    int type = SCRYPT_POW_TYPE;
+    if(args_bool::fDebug)
+        debugcs::instance() << "CBlock::ReadFromDisk prevHeight: " << prevModifier.get_nHeight() << " type: " << type << debugcs::endl();
+    */
 
     // Check the header
-    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(CBlockHeader_impl::GetPoHash(CBlockHeader::get_LastHeight()+1, type), CBlockHeader::nBits))
+    if (fReadTransactions && IsProofOfWork() && !diff::check::CheckProofOfWork(GetPoHash(), CBlockHeader::nBits))
         return logging::error("CBlock::ReadFromDisk() : errors in block header");
 
     return true;
 }
 
 void CBlock::print() const {
-    int type = this->set_Last_LyraHeight_hash(CBlockHeader::get_LastHeight()+1,
-                                              block_hash_helper::create_proof_nonce_zero(
-                                              IsProofOfStake(), IsProofOfMasternode(), IsProofOfBench()));
-
-    logging::LogPrintf("CBlock(hash()=%s, hash(height, type)=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
+    logging::LogPrintf("CBlock(hash()=%s, ver=%d, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%" PRIszu ", vchBlockSig=%s)\n",
         GetPoHash().ToString().c_str(),
-        CBlockHeader_impl::GetPoHash(CBlockHeader::get_LastHeight()+1, type).ToString().c_str(),
         CBlockHeader::nVersion,
         CBlockHeader::hashPrevBlock.ToString().c_str(),
         CBlockHeader::hashMerkleRoot.ToString().c_str(),

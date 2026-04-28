@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.95.15
+VERSION = 3.120.16
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -741,14 +741,17 @@ HEADERS += \
     src/crypto/hmac_sha256.h \
     src/crypto/hmac_sha512.h \
     src/crypto/ripemd160.h \
-    #src/crypto/_scrypt.h \
     src/crypto/sha1.h \
     src/crypto/sha256.h \
     src/crypto/sha512.h \
-    src/crypto/qhash65536.h \
     src/crypto/blake2.h \
-    src/crypto/hmac_qhash65536.h \
     src/crypto/keccak256.h \
+    src/crypto/sora2.h \
+    src/crypto/sha3_256.h \
+    src/crypto/sha3_512.h \
+    src/crypto/hmac_sha3_256.h \
+    src/crypto/hmac_sha3_512.h \
+    src/crypto/hmac_sora2.h \
     src/univalue/univalue.h \
     src/univalue/univalue_escapes.h \
     src/univalue/univalue_utffilter.h \
@@ -818,16 +821,6 @@ HEADERS += \
     src/masternode/masternode.h \
     src/masternode/masternode_sync.h \
     src/masternode/masternode_config.h \
-    #src/noexcept/throw.hpp \
-    #src/noexcept/try.hpp \
-    #src/noexcept/noexcept_detail/ceh.hpp \
-    #src/noexcept/noexcept_detail/eh.hpp \
-    #src/noexcept/noexcept_detail/error.hpp \
-    #src/noexcept/noexcept_config/assert.hpp \
-    #src/noexcept/noexcept_config/inline.hpp \
-    #src/noexcept/noexcept_config/rtti.hpp \
-    #src/noexcept/noexcept_config/thread_local.hpp \
-    #src/noexcept/noexcept_config/throw_exception.hpp \
     src/nvme/nvme.h \
     src/nvme/nvme_internal.h \
     src/nvme/nvme_common.h \
@@ -901,6 +894,7 @@ SOURCES += \
     src/ecies.cpp \
     src/uint256.cpp \
     src/ipcollector.cpp \
+    src/hash.cpp \
     src/quantum/quantum.cpp \
     src/bench/be_bench.cpp \
     src/bench/be_prevector.cpp \
@@ -912,14 +906,11 @@ SOURCES += \
     src/compat/glibcxx_sanity.cpp \
     src/crypto/ctaes/ctaes.c \
     src/crypto/ctaes/ctaestest.cpp \
-    #src/crypto/ctaes/_bench.cpp \
     src/crypto/aes.cpp \
     src/crypto/chacha20.cpp \
     src/crypto/hmac_sha256.cpp \
     src/crypto/hmac_sha512.cpp \
     src/crypto/ripemd160.cpp \
-    #src/crypto/_scrypt.cpp \
-    #src/crypto/_scrypt-sse2.cpp \
     src/crypto/sha1.cpp \
     src/crypto/sha256.cpp \
     src/crypto/sha256_avx2.cpp \
@@ -927,10 +918,10 @@ SOURCES += \
     src/crypto/sha256_sse4.cpp \
     src/crypto/sha256_sse41.cpp \
     src/crypto/sha512.cpp \
-    src/crypto/qhash65536.cpp \
     src/crypto/blake2.cpp \
-    src/crypto/hmac_qhash65536.cpp \
     src/crypto/keccak256.cpp \
+    src/crypto/sha3_256.cpp \
+    src/crypto/sha3_512.cpp \
     src/univalue/univalue.cpp \
     src/univalue/univalue_get.cpp \
     src/univalue/univalue_read.cpp \
@@ -984,8 +975,6 @@ SOURCES += \
     src/masternode/masternode.cpp \
     src/masternode/masternode_sync.cpp \
     src/masternode/masternode_config.cpp \
-    #src/noexcept/noexcept_detail/eh.cpp \
-    #src/noexcept/noexcept_detail/error.cpp \
     src/json/json_spirit_reader_template.cpp \
     src/json/json_spirit_writer.cpp \
     src/json/json_spirit_reader.cpp \

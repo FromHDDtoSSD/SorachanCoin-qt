@@ -17,15 +17,21 @@ namespace SeedCrypto {
     static const unsigned char civ[] = {'S','o','r','a','c','h','a','n','C','o','i','n','S','e','e','d'}; // AES_BLOCKSIZE: 16 bytes
     constexpr int keysaltsize = 32;
 
-    void CreateKeyToHash(const CSeedSecret &keydata, CSeedSecret &outkeysalt, unsigned char keyhash[latest_crypto::AES256_KEYSIZE]) {
+    void CreateKeyToHash(const CSeedSecret &keydata, CSeedSecret &outkeysalt, unsigned char keyhash[AES256_KEYSIZE]) {
         seed::RandAddSeedPerfmon();
         outkeysalt.resize(keysaltsize);
-        latest_crypto::random::GetStrongRandBytes(&outkeysalt.front(), keysaltsize);
-        latest_crypto::CHMAC_SHA256(outkeysalt.data(), outkeysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
+        random::GetStrongRandBytes(&outkeysalt.front(), keysaltsize);
+        if(args_bool::fTestNet)
+            CHMAC_SHA3_256(outkeysalt.data(), outkeysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
+        else
+            CHMAC_SHA256(outkeysalt.data(), outkeysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
     }
 
-    void GetKeyToHash(const CSeedSecret &keydata, const CSeedSecret &keysalt, unsigned char keyhash[latest_crypto::AES256_KEYSIZE]) {
-        latest_crypto::CHMAC_SHA256(keysalt.data(), keysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
+    void GetKeyToHash(const CSeedSecret &keydata, const CSeedSecret &keysalt, unsigned char keyhash[AES256_KEYSIZE]) {
+        if(args_bool::fTestNet)
+            CHMAC_SHA3_256(keysalt.data(), keysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
+        else
+            CHMAC_SHA256(keysalt.data(), keysalt.size()).Write(keydata.data(), keydata.size()).Finalize(keyhash);
     }
 
     CSeedSecret DataAddSignature(const CSeedSecret &org) {
@@ -64,20 +70,20 @@ namespace SeedCrypto {
         return true;
     }
 
-    bool Encrypto(const unsigned char key[latest_crypto::AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize) {
+    bool Encrypto(const unsigned char key[AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize) {
         std::vector<unsigned char> iv;
-        iv.resize(latest_crypto::AES_BLOCKSIZE);
-        ::memcpy(&iv.front(), civ, latest_crypto::AES_BLOCKSIZE);
-        latest_crypto::AES256CBCEncrypt context(key, iv.data(), true);
+        iv.resize(AES_BLOCKSIZE);
+        ::memcpy(&iv.front(), civ, AES_BLOCKSIZE);
+        AES256CBCEncrypt context(key, iv.data(), true);
         *outsize = context.Encrypt(data, size, out);
         return *outsize != 0;
     }
 
-    bool Decrypto(const unsigned char key[latest_crypto::AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize) {
+    bool Decrypto(const unsigned char key[AES256_KEYSIZE], const unsigned char *data, size_t size, unsigned char *out, size_t *outsize) {
         std::vector<unsigned char> iv;
-        iv.resize(latest_crypto::AES_BLOCKSIZE);
-        ::memcpy(&iv.front(), civ, latest_crypto::AES_BLOCKSIZE);
-        latest_crypto::AES256CBCDecrypt context(key, iv.data(), true);
+        iv.resize(AES_BLOCKSIZE);
+        ::memcpy(&iv.front(), civ, AES_BLOCKSIZE);
+        AES256CBCDecrypt context(key, iv.data(), true);
         *outsize = context.Decrypt(data, size, out);
         return *outsize != 0;
     }
@@ -320,7 +326,10 @@ CqSecretKey hd_wallet::GetSecretKey() {
     for(int i=0; i < qkeysize; i+=sizeof(uint512)) {
         salt += std::to_string(i);
         uint512 hash;
-        latest_crypto::CHMAC_SHA512((const unsigned char *)salt.data(), salt.size()).Write(hd_wallet::get().pkeyseed->privkey_.begin(), hd_wallet::get().pkeyseed->privkey_.size()).Finalize(hash.begin());
+        if(args_bool::fTestNet)
+            CHMAC_SHA3_512((const unsigned char *)salt.data(), salt.size()).Write(hd_wallet::get().pkeyseed->privkey_.begin(), hd_wallet::get().pkeyseed->privkey_.size()).Finalize(hash.begin());
+        else
+            CHMAC_SHA512((const unsigned char *)salt.data(), salt.size()).Write(hd_wallet::get().pkeyseed->privkey_.begin(), hd_wallet::get().pkeyseed->privkey_.size()).Finalize(hash.begin());
         ::memcpy(&qsecretkey.front() + i, hash.begin(), sizeof(uint512));
         cleanse::OPENSSL_cleanse(hash.begin(), sizeof(uint512));
     }
@@ -402,9 +411,9 @@ void Debug_checking_sign_verify2() {
     CqPubKey qpubkey = hd_wallet::get().GetPubKeyQai();
     CqKey qkey(hd_wallet::get().GetSecretKey());
     uint256 hash;
-    latest_crypto::CHash256().Write((unsigned char *)data, ::strlen(data)).Finalize(hash.begin());
+    CHash256().Write((unsigned char *)data, ::strlen(data)).Finalize(hash.begin());
     uint256 hash2;
-    latest_crypto::CHash256().Write((unsigned char *)data2, ::strlen(data2)).Finalize(hash2.begin());
+    CHash256().Write((unsigned char *)data2, ::strlen(data2)).Finalize(hash2.begin());
     qkey.SignQai(hash, sig);
     qkey.SignQai(hash2, sig2);
     assert(sig.size()==128 && sig2.size()==128);
@@ -462,9 +471,9 @@ void Debug_checking_sign_verify2() {
     ret = true;
     for(int i=0; i < 100000; ++i) {
         unsigned char buf[32];
-        latest_crypto::random::GetStrongRandBytes(buf, 32);
+        random::GetStrongRandBytes(buf, 32);
         uint256 hash3;
-        latest_crypto::CHash256().Write((unsigned char *)buf, 32).Finalize(hash3.begin());
+        CHash256().Write((unsigned char *)buf, 32).Finalize(hash3.begin());
         qkey_vector sig3;
         qkey.SignQai(hash, sig3);
         assert(sig3.size() == 128);
@@ -541,7 +550,7 @@ bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &se
             seed = seedIn;
         } else {
             seed.resize(32);
-            latest_crypto::random::GetStrongRandBytes(&seed.front(), seed.size());
+            random::GetStrongRandBytes(&seed.front(), seed.size());
         }
 
         if(seed.size() < 16)

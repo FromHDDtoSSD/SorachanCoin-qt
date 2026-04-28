@@ -6,8 +6,6 @@
 #include <crypto/sha256.h>
 #include <crypto/common.h>
 
-namespace latest_crypto {
-
 namespace sha256d64_sse41 {
 namespace {
 
@@ -315,7 +313,5 @@ void Transform_4way(unsigned char* out, const unsigned char* in)
 }
 
 }
-
-} // namespace latest_crypto
 
 #endif

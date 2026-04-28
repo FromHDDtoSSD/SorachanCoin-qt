@@ -1,12 +1,13 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2018 The Bitcoin Core developers
-// Copyright (c) 2018-2024 The SorachanCoin developers
+// Copyright (c) 2018-2025 The SorachanCoin developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <script/interpreter.h>
 #include <script/standard.h>
 #include <crypto/sha256.h>
+#include <crypto/sha3_256.h>
 #include <key/pubkey.h>
 #include <script/script.h>
 #include <util/system.h>
@@ -26,7 +27,11 @@ bool Script_param::fAcceptDatacarrier = Script_param::DEFAULT_ACCEPT_DATACARRIER
 unsigned Script_param::nMaxDatacarrierBytes = Script_param::MAX_OP_RETURN_RELAY;
 
 WitnessV0ScriptHash::WitnessV0ScriptHash(const CScript &in) {
-    latest_crypto::CSHA256().Write(in.data(), in.size()).Finalize(begin());
+    if(args_bool::fTestNet) {
+        CSHA3_256().Write(in.data(), in.size()).Finalize(begin());
+    } else {
+        CSHA256().Write(in.data(), in.size()).Finalize(begin());
+    }
 }
 
 namespace {

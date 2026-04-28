@@ -16,10 +16,12 @@ class CBlockIndex;
 // PoW / PoS difficulty
 namespace diff
 {
+    /*
     namespace testnet
     {
         const CBigNum bnProofOfWorkLimit(~uint256(0) >> 16);                // 16 bits PoW target limit for testnet
     }
+    */
     namespace mainnet
     {
         const CBigNum bnProofOfWorkLimit(~uint256(0) >> 20);                // "standard" scrypt target limit for proof of work, results with 0.000244140625 proof of work difficulty
@@ -45,7 +47,6 @@ namespace diff
     {
     public:
         static bool CheckProofOfWork(uint256 hash, unsigned int nBits); // [only compare nBits] old_chain(v1,v2,v3) or registered after mapBlockLyraHeight(ReadFromDisk and CheckDisk)
-        static bool CheckProofOfWork2(int32_t height, int32_t nonce_zero_value, const CBlockHeader_impl &header, int &type); // [confirm type and compare nBits] new_chain(after v4)
     };
 
     //  miner's coin reward based on nBits

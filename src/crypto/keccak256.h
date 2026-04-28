@@ -50,8 +50,6 @@ public:
 
 } // namespace keccak256_lib
 
-namespace latest_crypto {
-
 /** A hasher class for KECCAK256. */
 class CKECCAK256
 {
@@ -71,7 +69,5 @@ public:
         keccak.Clean();
     }
 };
-
-} // namespace latest_crypto
 
 #endif // BITCOIN_CRYPTO_KECCAK256_H

@@ -85,7 +85,7 @@ public:
             unsigned char buf[18]={0};
             for(int k=0; k<=i%17; ++k) {
                 unsigned char ch;
-                latest_crypto::random::GetStrongRandBytes(&ch, 1);
+                random::GetStrongRandBytes(&ch, 1);
                 buf[k] = table[(int)ch%(::strlen(table))];
             }
             CMString strg(CMString(std::string("fes").c_str()) + (char *)buf);

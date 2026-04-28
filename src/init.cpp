@@ -305,71 +305,104 @@ void entry::SetupServerArgs()
     arginit::SetupHelpOptions(ARGS);
     ARGS.AddArg("-help-debug", "Print help message with debugging options and exit", false, OptionsCategory::DEBUG_TEST); // server-only for now
 
-    const auto defaultBaseParams = chainparamsbase::CreateBaseChainParams(chainparamsbase::CBaseChainParams::MAIN());
-    const auto testnetBaseParams = chainparamsbase::CreateBaseChainParams(chainparamsbase::CBaseChainParams::TESTNET());
-    const auto regtestBaseParams = chainparamsbase::CreateBaseChainParams(chainparamsbase::CBaseChainParams::REGTEST());
-    const auto defaultChainParams = Chain_info::CreateChainParams(chainparamsbase::CBaseChainParams::MAIN());
-    const auto testnetChainParams = Chain_info::CreateChainParams(chainparamsbase::CBaseChainParams::TESTNET());
-    const auto regtestChainParams = Chain_info::CreateChainParams(chainparamsbase::CBaseChainParams::REGTEST());
+    // hidden args
+    {
+        std::vector<std::string> hidden_args = {
+            "-dbcrashratio",
+            "-forcecompactdb",
 
-    // Hidden Options
-    std::vector<std::string> hidden_args = {
-        "-dbcrashratio", "-forcecompactdb",
-        // GUI args. These will be overwritten by SetupUIArgs for the GUI
-        "-allowselfsignedrootcertificates", "-choosedatadir", "-lang=<lang>", "-min", "-resetguisettings", "-rootcertificates=<file>", "-splash", "-uiplatform"};
+            // GUI args. These will be overwritten by SetupUIArgs for the GUI
+            "-allowselfsignedrootcertificates",
+            "-choosedatadir",
+            "-lang=<lang>",
+            "-min",
+            "-resetguisettings",
+            "-rootcertificates=<file>",
+            "-splash",
+            "-uiplatform"
+        };
+#ifndef WIN32
+        ARGS.AddArg("-sysperms", "Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)", false, OptionsCategory::OPTIONS);
+#else
+        hidden_args.emplace_back("-sysperms");
+#endif
+#ifdef USE_UPNP
+# if USE_UPNP
+        ARGS.AddArg("-upnp", "Use UPnP to map the listening port (default: 1 when listening and no -proxy)", false, OptionsCategory::CONNECTION);
+# else
+        ARGS.AddArg("-upnp", tfm::format("Use UPnP to map the listening port (default: %u)", 0), false, OptionsCategory::CONNECTION);
+# endif
+#else
+        hidden_args.emplace_back("-upnp");
+#endif
+#if ENABLE_ZMQ
+        ARGS.AddArg("-zmqpubhashblock=<address>", "Enable publish hash block in <address>", false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubhashtx=<address>", "Enable publish hash transaction in <address>", false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubrawblock=<address>", "Enable publish raw block in <address>", false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubrawtx=<address>", "Enable publish raw transaction in <address>", false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubhashblockhwm=<n>", tfm::format("Set publish hash block outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubhashtxhwm=<n>", tfm::format("Set publish hash transaction outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubrawblockhwm=<n>", tfm::format("Set publish raw block outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
+        ARGS.AddArg("-zmqpubrawtxhwm=<n>", tfm::format("Set publish raw transaction outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
+#else
+        hidden_args.emplace_back("-zmqpubhashblock=<address>");
+        hidden_args.emplace_back("-zmqpubhashtx=<address>");
+        hidden_args.emplace_back("-zmqpubrawblock=<address>");
+        hidden_args.emplace_back("-zmqpubrawtx=<address>");
+        hidden_args.emplace_back("-zmqpubhashblockhwm=<n>");
+        hidden_args.emplace_back("-zmqpubhashtxhwm=<n>");
+        hidden_args.emplace_back("-zmqpubrawblockhwm=<n>");
+        hidden_args.emplace_back("-zmqpubrawtxhwm=<n>");
+#endif
+#if HAVE_DECL_DAEMON
+        ARGS.AddArg("-daemon", "Run in the background as a daemon and accept commands", false, OptionsCategory::OPTIONS);
+#else
+        hidden_args.emplace_back("-daemon");
+#endif
+        ARGS.AddHiddenArgs(hidden_args);
+    }
 
-    // old core is only options
     ARGS.AddArg("-irc", "Find peers using internet relay chat (default: 0)", false, OptionsCategory::OPTIONS);
-
     ARGS.AddArg("-version", "Print version and exit", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-alertnotify=<cmd>", "Execute command when a relevant alert is received or we see a really long fork (%s in cmd is replaced by message)", false, OptionsCategory::OPTIONS);
-    ARGS.AddArg("-assumevalid=<hex>", tfm::format("If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all, default: %s, testnet: %s)", defaultChainParams->GetConsensus().defaultAssumeValid.GetHex(), testnetChainParams->GetConsensus().defaultAssumeValid.GetHex()), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-assumevalid=<hex>", tfm::format("If this block is in the chain assume that it and its ancestors are valid and potentially skip their script verification (0 to verify all, default: %s, testnet: %s)", 1, 1), false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blocksdir=<dir>", "Specify blocks directory (default: <datadir>/blocks)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blocknotify=<cmd>", "Execute command when the best block changes (%s in cmd is replaced by block hash)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blockreconstructionextratxn=<n>", tfm::format("Extra transactions to keep in memory for compact block reconstructions (default: %u)", DEFAULT_BLOCK_RECONSTRUCTION_EXTRA_TXN), false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-blocksonly", tfm::format("Whether to reject transactions from network peers. Transactions from the wallet or RPC are not affected. (default: %u)", DEFAULT_BLOCKSONLY), false, OptionsCategory::OPTIONS);
-    ARGS.AddArg("-conf=<file>", tfm::format("Specify configuration file. Relative paths will be prefixed by datadir location. (default: %s)", lutil::BITCOIN_CONF_FILENAME().c_str()), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-conf=<file>", "Specify configuration file. Relative paths will be prefixed by datadir location. (default: SorachanCoin.conf)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-datadir=<dir>", "Specify data directory", false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-dbbatchsize", tfm::format("Maximum database write batch size in bytes (default: %u)", nDefaultDbBatchSize), true, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-dbcache=<n>", tfm::format("Maximum database cache size <n> MiB (%d to %d, default: %d). In addition, unused mempool memory is shared for this cache (see -maxmempool).", nMinDbCache, nMaxDbCache, nDefaultDbCache), false, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-dbbatchsize", "Maximum database write batch size in bytes (only auto)", true, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-dbcache=<n>", "Maximum database cache size (only auto). In addition, unused mempool memory is shared for this cache (see -maxmempool).", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-debuglogfile=<file>", tfm::format("Specify location of debug log file. Relative paths will be prefixed by a net-specific datadir location. (-nodebuglogfile to disable; default: %s)", DEFAULT_DEBUGLOGFILE), false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-feefilter", tfm::format("Tell other nodes to filter invs to us by our mempool min fee (default: %u)", DEFAULT_FEEFILTER), true, OptionsCategory::OPTIONS);
+    ARGS.AddArg("-feefilter", "Tell other nodes to filter invs to us by our mempool min fee (only auto)", true, OptionsCategory::OPTIONS);
     ARGS.AddArg("-includeconf=<file>", "Specify additional configuration file, relative to the -datadir path (only useable from configuration file, not command line)", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-loadblock=<file>", "Imports blocks from external blk000??.dat file on startup", false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-maxmempool=<n>", tfm::format("Keep the transaction memory pool below <n> megabytes (default: %u)", DEFAULT_MAX_MEMPOOL_SIZE), false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-maxorphantx=<n>", tfm::format("Keep at most <n> unconnectable transactions in memory (default: %u)", DEFAULT_MAX_ORPHAN_TRANSACTIONS), false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-mempoolexpiry=<n>", tfm::format("Do not keep transactions in the mempool longer than <n> hours (default: %u)", DEFAULT_MEMPOOL_EXPIRY), false, OptionsCategory::OPTIONS);
-    ARGS.AddArg("-minimumchainwork=<hex>", tfm::format("Minimum work assumed to exist on a valid chain in hex (default: %s, testnet: %s)", defaultChainParams->GetConsensus().nMinimumChainWork.GetHex(), testnetChainParams->GetConsensus().nMinimumChainWork.GetHex()), true, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-par=<n>", tfm::format("Set the number of script verification threads (%u to %d, 0 = auto, <0 = leave that many cores free, default: %d)",
-    //    -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS), false, OptionsCategory::OPTIONS);
+    //ARGS.AddArg("-minimumchainwork=<hex>", tfm::format("Minimum work assumed to exist on a valid chain in hex (default: %s, testnet: %s)", defaultChainParams->GetConsensus().nMinimumChainWork.GetHex(), testnetChainParams->GetConsensus().nMinimumChainWork.GetHex()), true, OptionsCategory::OPTIONS);
+    //ARGS.AddArg("-par=<n>", tfm::format("Set the number of script verification threads (%u to %d, 0 = auto, <0 = leave that many cores free, default: %d)", -GetNumCores(), MAX_SCRIPTCHECK_THREADS, DEFAULT_SCRIPTCHECK_THREADS), false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-persistmempool", tfm::format("Whether to save the mempool on shutdown and load on restart (default: %u)", DEFAULT_PERSIST_MEMPOOL), false, OptionsCategory::OPTIONS);
     //ARGS.AddArg("-pid=<file>", tfm::format("Specify pid file. Relative paths will be prefixed by a net-specific datadir location. (default: %s)", BITCOIN_PID_FILENAME), false, OptionsCategory::OPTIONS);
-    //ARGS.AddArg("-prune=<n>", tfm::format("Reduce storage requirements by enabling pruning (deleting) of old blocks. This allows the pruneblockchain RPC to be called to delete specific blocks, and enables automatic pruning of old blocks if a target size in MiB is provided. This mode is incompatible with -txindex and -rescan. "
-    //        "Warning: Reverting this setting requires re-downloading the entire blockchain. "
-    //        "(default: 0 = disable pruning blocks, 1 = allow manual pruning via RPC, >=%u = automatically prune block files to stay under the specified target size in MiB)", MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024), false, OptionsCategory::OPTIONS);
+    //ARGS.AddArg("-prune=<n>", tfm::format("Reduce storage requirements by enabling pruning (deleting) of old blocks. This allows the pruneblockchain RPC to be called to delete specific blocks, and enables automatic pruning of old blocks if a target size in MiB is provided. This mode is incompatible with -txindex and -rescan. Warning: Reverting this setting requires re-downloading the entire blockchain. (default: 0 = disable pruning blocks, 1 = allow manual pruning via RPC, >=%u = automatically prune block files to stay under the specified target size in MiB)", MIN_DISK_SPACE_FOR_BLOCK_FILES / 1024 / 1024), false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-reindex", "Rebuild chain state and block index from the blk*.dat files on disk", false, OptionsCategory::OPTIONS);
     ARGS.AddArg("-reindex-chainstate", "Rebuild chain state from the currently indexed blocks. When in pruning mode or if blocks on disk might be corrupted, use full -reindex instead.", false, OptionsCategory::OPTIONS);
-#ifndef WIN32
-    ARGS.AddArg("-sysperms", "Create new files with system default permissions, instead of umask 077 (only effective with disabled wallet functionality)", false, OptionsCategory::OPTIONS);
-#else
-    hidden_args.emplace_back("-sysperms");
-#endif
     ARGS.AddArg("-txindex", tfm::format("Maintain a full transaction index, used by the getrawtransaction rpc call (default: %u)", DEFAULT_TXINDEX), false, OptionsCategory::OPTIONS);
-
     ARGS.AddArg("-addnode=<ip>", "Add a node to connect to and attempt to keep the connection open (see the `addnode` RPC command help for more info). This option can be specified multiple times to add multiple nodes.", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-banscore=<n>", tfm::format("Threshold for disconnecting misbehaving peers (default: %u)", DEFAULT_BANSCORE_THRESHOLD), false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-bantime=<n>", tfm::format("Number of seconds to keep misbehaving peers from reconnecting (default: %u)", DEFAULT_MISBEHAVING_BANTIME), false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-bind=<addr>", "Bind to given address and always listen on it. Use [host]:port notation for IPv6", false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-connect=<ip>", "Connect only to the specified node; -noconnect disables automatic connections (the rules for this peer are the same as for -addnode). This option can be specified multiple times to connect to multiple nodes.", false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-discover", "Discover own IP addresses (default: 1 when listening and no -externalip or -proxy)", false, OptionsCategory::CONNECTION);
-    //ARGS.AddArg("-dns", tfm::format("Allow DNS lookups for -addnode, -seednode and -connect (default: %u)", DEFAULT_NAME_LOOKUP), false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-dns", "Allow DNS lookups for -addnode, -seednode and -connect (only auto)", false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-dnsseed", "Query for peer addresses via DNS lookup, if low on addresses (default: 1 unless -connect used)", false, OptionsCategory::CONNECTION);
-    //ARGS.AddArg("-enablebip61", tfm::format("Send reject messages per BIP61 (default: %u)", DEFAULT_ENABLE_BIP61), false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-enablebip61", "Send reject messages per BIP61 (only auto)", false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-externalip=<ip>", "Specify your own public address", false, OptionsCategory::CONNECTION);
-    //ARGS.AddArg("-forcednsseed", tfm::format("Always query for peer addresses via DNS lookup (default: %u)", DEFAULT_FORCEDNSSEED), false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-forcednsseed", "Always query for peer addresses via DNS lookup (only auto)", false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-listen", "Accept connections from outside (default: 1 if no -proxy or -connect)", false, OptionsCategory::CONNECTION);
-    //ARGS.AddArg("-listenonion", tfm::format("Automatically create Tor hidden service (default: %d)", DEFAULT_LISTEN_ONION), false, OptionsCategory::CONNECTION);
-    //ARGS.AddArg("-maxconnections=<n>", tfm::format("Maintain at most <n> connections to peers (default: %u)", DEFAULT_MAX_PEER_CONNECTIONS), false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-listenonion", "Automatically create Tor hidden service (only auto)", false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-maxconnections=<n>", "Maintain at most <n> connections to peers (only auto)", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-maxreceivebuffer=<n>", tfm::format("Maximum per-connection receive buffer, <n>*1000 bytes (default: %u)", DEFAULT_MAXRECEIVEBUFFER), false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-maxsendbuffer=<n>", tfm::format("Maximum per-connection send buffer, <n>*1000 bytes (default: %u)", DEFAULT_MAXSENDBUFFER), false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-maxtimeadjustment", tfm::format("Maximum allowed median peer time offset adjustment. Local perspective of time may be influenced by peers forward or backward by this amount. (default: %u seconds)", DEFAULT_MAX_TIME_ADJUSTMENT), false, OptionsCategory::CONNECTION);
@@ -378,7 +411,7 @@ void entry::SetupServerArgs()
     ARGS.AddArg("-onlynet=<net>", "Make outgoing connections only through network <net> (ipv4, ipv6 or onion). Incoming connections are not affected by this option. This option can be specified multiple times to allow multiple networks.", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-peerbloomfilters", tfm::format("Support filtering of blocks and transaction with bloom filters (default: %u)", DEFAULT_PEERBLOOMFILTERS), false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-permitbaremultisig", tfm::format("Relay non-P2SH multisig (default: %u)", DEFAULT_PERMIT_BAREMULTISIG), false, OptionsCategory::CONNECTION);
-    ARGS.AddArg("-port=<port>", tfm::format("Listen for connections on <port> (default: %u, testnet: %u, regtest: %u)", defaultChainParams->GetDefaultPort(), testnetChainParams->GetDefaultPort(), regtestChainParams->GetDefaultPort()), false, OptionsCategory::CONNECTION);
+    ARGS.AddArg("-port=<port>", tfm::format("Listen for connections on <port> (default: %u, testnet: %u)", 21587, 31587), false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-proxy=<ip:port>", "Connect through SOCKS5 proxy, set -noproxy to disable (default: disabled)", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-proxyrandomize", tfm::format("Randomize credentials for every proxy connection. This enables Tor stream isolation (default: %u)", DEFAULT_PROXYRANDOMIZE), false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-seednode=<ip>", "Connect to a node to retrieve peer addresses, and disconnect. This option can be specified multiple times to connect to multiple nodes.", false, OptionsCategory::CONNECTION);
@@ -386,52 +419,12 @@ void entry::SetupServerArgs()
     //ARGS.AddArg("-peertimeout=<n>", tfm::format("Specify p2p connection timeout in seconds. This option determines the amount of time a peer may be inactive before the connection to it is dropped. (minimum: 1, default: %d)", DEFAULT_PEER_CONNECT_TIMEOUT), true, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-torcontrol=<ip>:<port>", tfm::format("Tor control port to use if onion listening enabled (default: %s)", DEFAULT_TOR_CONTROL), false, OptionsCategory::CONNECTION);
     ARGS.AddArg("-torpassword=<pass>", "Tor control port password (default: empty)", false, OptionsCategory::CONNECTION);
-#ifdef USE_UPNP
-#if USE_UPNP
-    ARGS.AddArg("-upnp", "Use UPnP to map the listening port (default: 1 when listening and no -proxy)", false, OptionsCategory::CONNECTION);
-#else
-    ARGS.AddArg("-upnp", tfm::format("Use UPnP to map the listening port (default: %u)", 0), false, OptionsCategory::CONNECTION);
-#endif
-#else
-    hidden_args.emplace_back("-upnp");
-#endif
     ARGS.AddArg("-whitebind=<addr>", "Bind to given address and whitelist peers connecting to it. Use [host]:port notation for IPv6", false, OptionsCategory::CONNECTION);
-    ARGS.AddArg("-whitelist=<IP address or network>", "Whitelist peers connecting from the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times."
-        " Whitelisted peers cannot be DoS banned", false, OptionsCategory::CONNECTION);
-
-    //g_wallet_init_interface.AddWalletOptions();
-
-#if ENABLE_ZMQ
-    ARGS.AddArg("-zmqpubhashblock=<address>", "Enable publish hash block in <address>", false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubhashtx=<address>", "Enable publish hash transaction in <address>", false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubrawblock=<address>", "Enable publish raw block in <address>", false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubrawtx=<address>", "Enable publish raw transaction in <address>", false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubhashblockhwm=<n>", tfm::format("Set publish hash block outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubhashtxhwm=<n>", tfm::format("Set publish hash transaction outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubrawblockhwm=<n>", tfm::format("Set publish raw block outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
-    ARGS.AddArg("-zmqpubrawtxhwm=<n>", tfm::format("Set publish raw transaction outbound message high water mark (default: %d)", CZMQAbstractNotifier::DEFAULT_ZMQ_SNDHWM), false, OptionsCategory::ZMQ);
-#else
-    hidden_args.emplace_back("-zmqpubhashblock=<address>");
-    hidden_args.emplace_back("-zmqpubhashtx=<address>");
-    hidden_args.emplace_back("-zmqpubrawblock=<address>");
-    hidden_args.emplace_back("-zmqpubrawtx=<address>");
-    hidden_args.emplace_back("-zmqpubhashblockhwm=<n>");
-    hidden_args.emplace_back("-zmqpubhashtxhwm=<n>");
-    hidden_args.emplace_back("-zmqpubrawblockhwm=<n>");
-    hidden_args.emplace_back("-zmqpubrawtxhwm=<n>");
-#endif
-
+    ARGS.AddArg("-whitelist=<IP address or network>", "Whitelist peers connecting from the given IP address (e.g. 1.2.3.4) or CIDR notated network (e.g. 1.2.3.0/24). Can be specified multiple times. Whitelisted peers cannot be DoS banned", false, OptionsCategory::CONNECTION);
     //ARGS.AddArg("-checkblocks=<n>", tfm::format("How many blocks to check at startup (default: %u, 0 = all)", DEFAULT_CHECKBLOCKS), true, OptionsCategory::DEBUG_TEST);
-    //ARGS.AddArg("-checklevel=<n>", tfm::format("How thorough the block verification of -checkblocks is: "
-    //    "level 0 reads the blocks from disk, "
-    //    "level 1 verifies block validity, "
-    //    "level 2 verifies undo data, "
-    //    "level 3 checks disconnection of tip blocks, "
-    //    "and level 4 tries to reconnect the blocks, "
-    //    "each level includes the checks of the previous levels "
-    //    "(0-4, default: %u)", DEFAULT_CHECKLEVEL), true, OptionsCategory::DEBUG_TEST);
-    ARGS.AddArg("-checkblockindex", tfm::format("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. (default: %u, regtest: %u)", defaultChainParams->DefaultConsistencyChecks(), regtestChainParams->DefaultConsistencyChecks()), true, OptionsCategory::DEBUG_TEST);
-    ARGS.AddArg("-checkmempool=<n>", tfm::format("Run checks every <n> transactions (default: %u, regtest: %u)", defaultChainParams->DefaultConsistencyChecks(), regtestChainParams->DefaultConsistencyChecks()), true, OptionsCategory::DEBUG_TEST);
+    //ARGS.AddArg("-checklevel=<n>", tfm::format("How thorough the block verification of -checkblocks is: level 0 reads the blocks from disk, level 1 verifies block validity, level 2 verifies undo data, level 3 checks disconnection of tip blocks, and level 4 tries to reconnect the blocks, each level includes the checks of the previous levels (0-4, default: %u)", DEFAULT_CHECKLEVEL), true, OptionsCategory::DEBUG_TEST);
+    //ARGS.AddArg("-checkblockindex", tfm::format("Do a full consistency check for mapBlockIndex, setBlockIndexCandidates, chainActive and mapBlocksUnlinked occasionally. (default: %u)", defaultChainParams->DefaultConsistencyChecks()), true, OptionsCategory::DEBUG_TEST);
+    //ARGS.AddArg("-checkmempool=<n>", tfm::format("Run checks every <n> transactions (default: %u)", defaultChainParams->DefaultConsistencyChecks()), true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-checkpoints", tfm::format("Disable expensive verification for known chain history (default: %u)", DEFAULT_CHECKPOINTS_ENABLED), true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-deprecatedrpc=<method>", "Allows deprecated RPC method(s) to be used", true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-dropmessagestest=<n>", "Randomly drop 1 of every <n> network messages", true, OptionsCategory::DEBUG_TEST);
@@ -442,63 +435,47 @@ void entry::SetupServerArgs()
     //ARGS.AddArg("-limitdescendantcount=<n>", tfm::format("Do not accept transactions if any ancestor would have <n> or more in-mempool descendants (default: %u)", DEFAULT_DESCENDANT_LIMIT), true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-limitdescendantsize=<n>", tfm::format("Do not accept transactions if any ancestor would have more than <n> kilobytes of in-mempool descendants (default: %u).", DEFAULT_DESCENDANT_SIZE_LIMIT), true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-addrmantest", "Allows to test address relay on localhost", true, OptionsCategory::DEBUG_TEST);
-    ARGS.AddArg("-debug=<category>", "Output debugging information (default: -nodebug, supplying <category> is optional). "
-        "If <category> is not supplied or if <category> = 1, output all debugging information. <category> can be: " + ListLogCategories() + ".", false, OptionsCategory::DEBUG_TEST);
-    ARGS.AddArg("-debugexclude=<category>", tfm::format("Exclude debugging information for a category. Can be used in conjunction with -debug=1 to output debug logs for all categories except one or more specified categories."), false, OptionsCategory::DEBUG_TEST);
+    ARGS.AddArg("-debug=<category>", "Output debugging information (default: -nodebug, supplying <category> is optional). If <category> is not supplied or if <category> = 1, output all debugging information. <category> can be: " + ListLogCategories() + ".", false, OptionsCategory::DEBUG_TEST);
+    ARGS.AddArg("-debugexclude=<category>", "Exclude debugging information for a category. Can be used in conjunction with -debug=1 to output debug logs for all categories except one or more specified categories.", false, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-logips", tfm::format("Include IP addresses in debug output (default: %u)", DEFAULT_LOGIPS), false, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-logtimestamps", tfm::format("Prepend debug output with timestamp (default: %u)", DEFAULT_LOGTIMESTAMPS), false, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-logtimemicros", tfm::format("Add microsecond precision to debug timestamps (default: %u)", DEFAULT_LOGTIMEMICROS), true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-mocktime=<n>", "Replace actual time with <n> seconds since epoch (default: 0)", true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-maxsigcachesize=<n>", tfm::format("Limit sum of signature cache and script execution cache sizes to <n> MiB (default: %u)", DEFAULT_MAX_SIG_CACHE_SIZE), true, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-maxtipage=<n>", tfm::format("Maximum tip age in seconds to consider node in initial block download (default: %u)", DEFAULT_MAX_TIP_AGE), true, OptionsCategory::DEBUG_TEST);
-    //ARGS.AddArg("-maxtxfee=<amt>", tfm::format("Maximum total fees (in %s) to use in a single wallet transaction or raw transaction; setting this too low may abort large transactions (default: %s)",
-    //    CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_TRANSACTION_MAXFEE)), false, OptionsCategory::DEBUG_TEST);
+    //ARGS.AddArg("-maxtxfee=<amt>", tfm::format("Maximum total fees (in %s) to use in a single wallet transaction or raw transaction; setting this too low may abort large transactions (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_TRANSACTION_MAXFEE)), false, OptionsCategory::DEBUG_TEST);
     //ARGS.AddArg("-printpriority", tfm::format("Log transaction fee per kB when mining blocks (default: %u)", DEFAULT_PRINTPRIORITY), true, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-printtoconsole", "Send trace/debug info to console (default: 1 when no -daemon. To disable logging to file, set -nodebuglogfile)", false, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-shrinkdebugfile", "Shrink debug.log file on client startup (default: 1 when no -debug)", false, OptionsCategory::DEBUG_TEST);
     ARGS.AddArg("-uacomment=<cmt>", "Append comment to the user agent string", false, OptionsCategory::DEBUG_TEST);
-
-    chainparamsbase::SetupChainParamsBaseOptions();
-
-    ARGS.AddArg("-acceptnonstdtxn", tfm::format("Relay and mine \"non-standard\" transactions (%sdefault: %u)", "testnet/regtest only; ", !testnetChainParams->RequireStandard()), true, OptionsCategory::NODE_RELAY);
+    ARGS.AddArg("-testnet", "Use the test chain", false, OptionsCategory::CHAINPARAMS);
+    ARGS.AddArg("-vbparams=deployment:start:end", "Use given start/end times for specified version bits deployment (regtest-only)", true, OptionsCategory::CHAINPARAMS);
+    ARGS.AddArg("-acceptnonstdtxn", tfm::format("Relay and mine \"non-standard\" transactions (testnet only, default: %u)", args_bool::fTestNet ? 1: 0), true, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-incrementalrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to define cost of relay, used for mempool limiting and BIP 125 replacement. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_INCREMENTAL_RELAY_FEE)), true, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-dustrelayfee=<amt>", tfm::format("Fee rate (in %s/kB) used to defined dust, the value of an output such that it will cost more than its value in fees at this fee rate to spend it. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DUST_RELAY_TX_FEE)), true, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-bytespersigop", tfm::format("Equivalent bytes per sigop in transactions for relay and mining (default: %u)", DEFAULT_BYTES_PER_SIGOP), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-datacarrier", tfm::format("Relay and mine data carrier transactions (default: %u)", DEFAULT_ACCEPT_DATACARRIER), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-datacarriersize", tfm::format("Maximum size of data in data carrier transactions we relay and mine (default: %u)", MAX_OP_RETURN_RELAY), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-mempoolreplacement", tfm::format("Enable transaction replacement in the memory pool (default: %u)", DEFAULT_ENABLE_REPLACEMENT), false, OptionsCategory::NODE_RELAY);
-    //ARGS.AddArg("-minrelaytxfee=<amt>", tfm::format("Fees (in %s/kB) smaller than this are considered zero fee for relaying, mining and transaction creation (default: %s)",
-    //    CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)), false, OptionsCategory::NODE_RELAY);
+    //ARGS.AddArg("-minrelaytxfee=<amt>", tfm::format("Fees (in %s/kB) smaller than this are considered zero fee for relaying, mining and transaction creation (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_MIN_RELAY_TX_FEE)), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-whitelistforcerelay", tfm::format("Force relay of transactions from whitelisted peers even if the transactions were already in the mempool or violate local relay policy (default: %d)", DEFAULT_WHITELISTFORCERELAY), false, OptionsCategory::NODE_RELAY);
     //ARGS.AddArg("-whitelistrelay", tfm::format("Accept relayed transactions received from whitelisted peers even when not relaying transactions (default: %d)", DEFAULT_WHITELISTRELAY), false, OptionsCategory::NODE_RELAY);
-
-
     //ARGS.AddArg("-blockmaxweight=<n>", tfm::format("Set maximum BIP141 block weight (default: %d)", DEFAULT_BLOCK_MAX_WEIGHT), false, OptionsCategory::BLOCK_CREATION);
     //ARGS.AddArg("-blockmintxfee=<amt>", tfm::format("Set lowest fee rate (in %s/kB) for transactions to be included in block creation. (default: %s)", CURRENCY_UNIT, strenc::FormatMoney(DEFAULT_BLOCK_MIN_TX_FEE)), false, OptionsCategory::BLOCK_CREATION);
     ARGS.AddArg("-blockversion=<n>", "Override block version to test forking scenarios", true, OptionsCategory::BLOCK_CREATION);
-
     //ARGS.AddArg("-rest", tfm::format("Accept public REST requests (default: %u)", DEFAULT_REST_ENABLE), false, OptionsCategory::RPC);
     ARGS.AddArg("-rpcallowip=<ip>", "Allow JSON-RPC connections from specified source. Valid for <ip> are a single IP (e.g. 1.2.3.4), a network/netmask (e.g. 1.2.3.4/255.255.255.0) or a network/CIDR (e.g. 1.2.3.4/24). This option can be specified multiple times", false, OptionsCategory::RPC);
     ARGS.AddArg("-rpcauth=<userpw>", "Username and HMAC-SHA-256 hashed password for JSON-RPC connections. The field <userpw> comes in the format: <USERNAME>:<SALT>$<HASH>. A canonical python script is included in share/rpcauth. The client then connects normally using the rpcuser=<USERNAME>/rpcpassword=<PASSWORD> pair of arguments. This option can be specified multiple times", false, OptionsCategory::RPC);
     ARGS.AddArg("-rpcbind=<addr>[:port]", "Bind to given address to listen for JSON-RPC connections. Do not expose the RPC server to untrusted networks such as the public internet! This option is ignored unless -rpcallowip is also passed. Port is optional and overrides -rpcport. Use [host]:port notation for IPv6. This option can be specified multiple times (default: 127.0.0.1 and ::1 i.e., localhost)", false, OptionsCategory::RPC);
     ARGS.AddArg("-rpccookiefile=<loc>", "Location of the auth cookie. Relative paths will be prefixed by a net-specific datadir location. (default: data dir)", false, OptionsCategory::RPC);
     ARGS.AddArg("-rpcpassword=<pw>", "Password for JSON-RPC connections", false, OptionsCategory::RPC);
-    ARGS.AddArg("-rpcport=<port>", tfm::format("Listen for JSON-RPC connections on <port> (default: %u, testnet: %u, regtest: %u)", defaultBaseParams->RPCPort(), testnetBaseParams->RPCPort(), regtestBaseParams->RPCPort()), false, OptionsCategory::RPC);
+    ARGS.AddArg("-rpcport=<port>", tfm::format("Listen for JSON-RPC connections on <port> (default: %u, testnet: %u)", 21587, 31587), false, OptionsCategory::RPC);
     //ARGS.AddArg("-rpcserialversion", tfm::format("Sets the serialization of raw transaction or block hex returned in non-verbose mode, non-segwit(0) or segwit(1) (default: %d)", DEFAULT_RPC_SERIALIZE_VERSION), false, OptionsCategory::RPC);
     //ARGS.AddArg("-rpcservertimeout=<n>", tfm::format("Timeout during HTTP requests (default: %d)", DEFAULT_HTTP_SERVER_TIMEOUT), true, OptionsCategory::RPC);
     //ARGS.AddArg("-rpcthreads=<n>", tfm::format("Set the number of threads to service RPC calls (default: %d)", DEFAULT_HTTP_THREADS), false, OptionsCategory::RPC);
     ARGS.AddArg("-rpcuser=<user>", "Username for JSON-RPC connections", false, OptionsCategory::RPC);
     //ARGS.AddArg("-rpcworkqueue=<n>", tfm::format("Set the depth of the work queue to service RPC calls (default: %d)", DEFAULT_HTTP_WORKQUEUE), true, OptionsCategory::RPC);
     ARGS.AddArg("-server", "Accept command line and JSON-RPC commands", false, OptionsCategory::RPC);
-
-#if HAVE_DECL_DAEMON
-    ARGS.AddArg("-daemon", "Run in the background as a daemon and accept commands", false, OptionsCategory::OPTIONS);
-#else
-    hidden_args.emplace_back("-daemon");
-#endif
-
-    // Add the hidden options
-    ARGS.AddHiddenArgs(hidden_args);
 }
 
 // Core-specific options shared between UI and daemon
@@ -641,9 +618,11 @@ static std::vector<std::string> GetAddnodes() {
 static std::vector<std::string> GetAddnodesTestnet() {
     std::vector<std::string> addr = {
         "202.229.98.202",
-        "66.42.37.74",
-        "45.76.195.225",
-        "45.76.210.121"
+        "45.76.210.121",
+        "49.212.13.134",
+        "149.28.200.62",
+        "139.180.169.48",
+        "199.247.2.125"
     };
 
     return addr;

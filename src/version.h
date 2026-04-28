@@ -1,5 +1,5 @@
 // Copyright (c) 2012 The Bitcoin developers
-// Copyright (c) 2018-2024 The SorachanCoin developers
+// Copyright (c) 2018-2025 The SorachanCoin developers
 // Distributed under the MIT/X11 software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -84,7 +84,7 @@ public:
 
 // display version
 #define DISPLAY_VERSION_MAJOR        3
-#define DISPLAY_VERSION_MINOR        95
-#define DISPLAY_VERSION_REVISION     15
+#define DISPLAY_VERSION_MINOR        120
+#define DISPLAY_VERSION_REVISION     16
 
 #endif
