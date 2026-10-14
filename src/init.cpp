@@ -716,7 +716,7 @@ bool entry::AppInit2(bool restart/*=false*/)
     args_uint::nNodeLifespan = map_arg::GetArgUInt("-addrlifespan", 7);
     args_bool::fUseFastIndex = map_arg::GetBoolArg("-fastindex", true);
     args_bool::fUseMemoryLog = map_arg::GetBoolArg("-memorylog", true);
-    args_bool::fMemoryLockPermissive = map_arg::GetBoolArg("-memorylockpermissive", false);
+    args_bool::fMemoryLockPermissive = map_arg::GetBoolArg("-memorylockpermissive", true);
 
     // Ping and address broadcast intervals
     block_process::manage::nPingInterval = std::max<int64_t>(10 * 60, map_arg::GetArg("-keepalive", 30 * 60));

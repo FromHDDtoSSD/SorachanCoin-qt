@@ -84,7 +84,7 @@ public:
 
 // display version
 #define DISPLAY_VERSION_MAJOR        3
-#define DISPLAY_VERSION_MINOR        120
-#define DISPLAY_VERSION_REVISION     16
+#define DISPLAY_VERSION_MINOR        121
+#define DISPLAY_VERSION_REVISION     17
 
 #endif
