@@ -2758,10 +2758,10 @@ bool CWallet::CreateTransaction(const std::vector<std::pair<CScript, int64_t> > 
 
                 // Limit size
                 unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
-                if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 2) {
-                    if(wtxNew.get_vin().size() >= 30)
-                        return false;
-                }
+                //if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 2) {
+                //    if(wtxNew.get_vin().size() >= 30)
+                //        return false;
+                //}
                 //unsigned int nBytes = ::GetSerializeSize(*(CTransaction *)&wtxNew);
                 //if (nBytes >= block_params::MAX_BLOCK_SIZE_GEN / 5) {
                 //    return false;

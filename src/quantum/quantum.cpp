@@ -20,116 +20,6 @@
 # define MAP_NOCORE 0
 #endif
 
-bool quantum_lib::manage::readonly() const {
-#if defined(WIN32)
-    DWORD old;
-    fUnlock = ::VirtualProtect(ptr, size, PAGE_READONLY, &old) ? true: false;
-#else
-    fUnlock = (::mprotect(ptr, size, PROT_READ) == 0) ? true: false;
-#endif
-    return fUnlock;
-}
-
-bool quantum_lib::manage::readwrite() const {
-#if defined(WIN32)
-    DWORD old;
-    fUnlock = ::VirtualProtect(ptr, size, PAGE_READWRITE, &old) ? true: false;
-#else
-    fUnlock = (::mprotect(ptr, size, PROT_READ | PROT_WRITE) == 0) ? true: false;
-#endif
-    return fUnlock;
-}
-
-bool quantum_lib::manage::noaccess() const {
-    if(! fUnlock) return true;
-#if defined(WIN32)
-    DWORD old;
-    fUnlock = ::VirtualProtect(ptr, size, PAGE_NOACCESS, &old) ? false: true;
-#else
-    fUnlock = (::mprotect(ptr, size, PROT_NONE) == 0) ? false: true;
-#endif
-    return !fUnlock;
-}
-
-quantum_lib::manage::~manage() {
-    noaccess();
-}
-
-void *quantum_lib::secure_malloc(size_t sizeIn) {
-#if defined(WIN32)
-    void *ptr = ::VirtualAlloc(nullptr, sizeIn + alloc_info_size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
-#else
-    void *ptr = nullptr;
-    if ((ptr = ::mmap(nullptr, sizeIn + alloc_info_size, PROT_READ | PROT_WRITE, MAP_ANON | MAP_PRIVATE | MAP_NOCORE, -1, 0)) == MAP_FAILED) {
-        ptr = nullptr;
-    }
-#endif
-    if (! ptr) throw std::runtime_error("quantumlib::secure_alloc memory allocate failure.");
-
-    bool lock_ret = false;
-#if defined(WIN32)
-    lock_ret = (::VirtualLock(ptr, sizeIn + alloc_info_size) != FALSE) ? true : false;
-#else
-    lock_ret = (::mlock(ptr, sizeIn + alloc_info_size) == 0) ? true : false;
-#endif
-
-    if (! lock_ret) {
-        // args_bool::fMemoryLockPermissive
-        // default setting is false (enable lock, readonly, readwrite)
-        // throw std::runtime_error("quantumlib::secure_alloc virtual lock failure.");
-        args_bool::fMemoryLockPermissive = true;
-    }
-
-    alloc_info *pinfo = reinterpret_cast<alloc_info *>(ptr);
-    pinfo->type = LOCK_UNLOCK;
-    pinfo->size = (int32_t)sizeIn;
-    pinfo->fMemoryLocked = lock_ret;
-    return reinterpret_cast<void *>((byte *)ptr + alloc_info_size);
-}
-
-void quantum_lib::secure_free(void *ptr, bool fRandom /*= false*/) {
-    void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
-    size_t size;
-    //bool fMemoryLocked;
-    {
-        manage mem(fptr, alloc_info_size);
-        if(! mem.readonly())
-            throw std::runtime_error("quantum_lib::secure_free readonly failure");
-        const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-        size = pinfo->size;
-        //fMemoryLocked = pinfo->fMemoryLocked;
-        if(! mem.noaccess())
-            throw std::runtime_error("quantum_lib::secure_free noaccess failure");
-    }
-    {
-        manage mem(fptr, size + alloc_info_size);
-        if(! mem.readwrite())
-            throw std::runtime_error("quantum_lib::secure_free readonly failure");
-        fRandom ? secure_memrandom(fptr, size + alloc_info_size) : secure_memzero(fptr, size + alloc_info_size);
-        /* unused
-        if(fMemoryLocked) {
-#if defined(WIN32)
-            if(! ::VirtualUnlock(fptr, size + alloc_info_size))
-                throw std::runtime_error("quantum_lib::secure_free VirtualUnlock failure");
-#else
-            if(::munlock(fptr, size + alloc_info_size)!=0)
-                throw std::runtime_error("quantum_lib::secure_free munlock failure");
-#endif
-        }
-        */
-        if(! mem.noaccess())
-            throw std::runtime_error("quantum_lib::secure_free noaccess failure");
-    }
-
-#if defined(WIN32)
-    if(! ::VirtualFree(fptr, 0U, MEM_RELEASE))
-        throw std::runtime_error("quantum_lib::secure_free munmap failure");
-#else
-    if(::munmap(fptr, size + alloc_info_size)!=0)
-        throw std::runtime_error("quantum_lib::secure_free munmap failure");
-#endif
-}
-
 void quantum_lib::secure_memzero(void *ptr, size_t sizeIn) {
     cleanse::memory_cleanse(ptr, sizeIn);
 }
@@ -159,94 +49,12 @@ void quantum_lib::secure_stackrandom(const size_t sizeIn) {
 #endif
 }
 
-bool quantum_lib::secure_mprotect_noaccess(const void *ptr) {
-    if(args_bool::fMemoryLockPermissive)
-        return true;
-
-    size_t size;
-    //bool fMemoryLocked;
-    void *__ptr = const_cast<void *>(ptr);
-    {
-        void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
-        manage mem(fptr, alloc_info_size);
-        if(! mem.readonly())
-            throw std::runtime_error("quantum_lib::secure_mprotect_noaccess readonly failure");
-        const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-        size = pinfo->size;
-        //fMemoryLocked = pinfo->fMemoryLocked;
-        if(! mem.noaccess())
-            throw std::runtime_error("quantum_lib::secure_mprotect_noaccess noaccess failure");
-    }
-#if defined(WIN32)
-    DWORD old;
-    int ret = ::VirtualProtect(__ptr, size, PAGE_NOACCESS, &old) ? 0 : -1;
-#else
-    int ret = ::mprotect(__ptr, size, PROT_NONE);
-#endif
-
-    return ret == 0;
-}
-
-bool quantum_lib::secure_mprotect_readonly(const void *ptr) {
-    if(args_bool::fMemoryLockPermissive)
-        return true;
-
-    size_t size;
-    //bool fMemoryLocked;
-    void *__ptr = const_cast<void *>(ptr);
-    {
-        void *fptr = reinterpret_cast<void *>((byte *)__ptr - alloc_info_size);
-        manage mem(fptr, alloc_info_size);
-        if(! mem.readonly())
-            throw std::runtime_error("quantum_lib::secure_mprotect_readonly readonly failure");
-        const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-        size = pinfo->size;
-        //fMemoryLocked = pinfo->fMemoryLocked;
-        if(! mem.noaccess())
-            throw std::runtime_error("quantum_lib::secure_mprotect_readonly noaccess failure");
-    }
-#if defined(WIN32)
-    DWORD old;
-    int ret = ::VirtualProtect(__ptr, size, PAGE_READONLY, &old) ? 0 : -1;
-#else
-    int ret = ::mprotect(__ptr, size, PROT_READ);
-#endif
-
-    return ret == 0;
-}
-
-bool quantum_lib::secure_mprotect_readwrite(void *ptr) {
-    if(args_bool::fMemoryLockPermissive)
-        return true;
-
-    int32_t size;
-    //bool fMemoryLocked;
-    {
-        void *fptr = reinterpret_cast<void *>((byte *)ptr - alloc_info_size);
-        manage mem(fptr, alloc_info_size);
-        if(! mem.readonly())
-            throw std::runtime_error("quantum_lib::secure_mprotect_readwrite readonly failure");
-        const alloc_info *pinfo = reinterpret_cast<const alloc_info *>(fptr);
-        size = pinfo->size;
-        //fMemoryLocked = pinfo->fMemoryLocked;
-        if(! mem.noaccess())
-            throw std::runtime_error("quantum_lib::secure_mprotect_readwrite noaccess failure");
-    }
-#if defined(WIN32)
-    DWORD old;
-    int ret = ::VirtualProtect(ptr, size, PAGE_READWRITE, &old) ? 0 : -1;
-#else
-    int ret = ::mprotect(ptr, size, PROT_READ | PROT_WRITE);
-#endif
-
-    return ret == 0;
-}
-
 void quantum_lib::secure_randombytes_buf(unsigned char *data, size_t sizeIn) {
     random::GetStrongRandBytes(data, sizeIn);
 }
 
 namespace quantum_hash {
+
 void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data)  {
     static constexpr size_t buffer_length = 32768;
     blake2s_hash::blake2s_state S;
@@ -267,15 +75,6 @@ void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t
     } while (i++ < count);
     blake2s_hash::blake2s_final(&S, hash, size_hash);
 }
-
-/*
-void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data)  {
-    assert(Lamport::BLAKE2KeyHash::Size()==CBLAKE2S::Size());
-    CBLAKE2S ctx;
-    ctx.Write(data, size_data);
-    ctx.Finalize(hash);
-}
-*/
 
 } // quantum_hash
 
@@ -340,26 +139,6 @@ std::shared_ptr<CPublicKey> CPrivateKey::derivePublicKey() const {
         return std::shared_ptr<CPublicKey>(nullptr);
     }
 }
-
-/*
-BLAKE2KeyHash::BLAKE2KeyHash(const CPrivateKey &key) {
-    CSecureSegmentRW<byte> guard = key.get_secure()->unlockAndInitRW(true);
-    quantum_hash::blake2_hash(data, guard.get_addr(), key.get_size());
-}
-
-BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPrivateKey> key) {
-    CSecureSegmentRW<byte> guard = key->get_secure()->unlockAndInitRW(true);
-    quantum_hash::blake2_hash(data, guard.get_addr(), key->get_size());
-}
-
-BLAKE2KeyHash::BLAKE2KeyHash(std::shared_ptr<CPublicKey> key) {
-    quantum_hash::blake2_hash(data, key->get_addr(), key->get_size());
-}
-
-BLAKE2KeyHash::BLAKE2KeyHash(byte *buffer) {
-    std::memcpy(data, buffer, kBytesSize);
-}
-*/
 
 void CSignature::collectSignature(byte *signature, const byte *key, const byte *messageHash) {
     byte *signatureOffset = signature;

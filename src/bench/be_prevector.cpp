@@ -108,21 +108,6 @@ PREVECTOR_TEST(Destructor, 28800, 88900)
 PREVECTOR_TEST(Resize, 28900, 90300)
 PREVECTOR_TEST(Deserialize, 6800, 52000)
 
-#define PREVECTOR_S_TEST(name, nontrivops, trivops)                                             \
-    void Prevector_s_ ## name ## Nontrivial(benchmark::State& state) {                          \
-        Prevector ## name<nontrivial_t, prevector_s<PREVECTOR_S_N, nontrivial_t> >(state);      \
-    }                                                                                           \
-    BENCHMARK(Prevector_s_ ## name ## Nontrivial, nontrivops);                                  \
-    void Prevector_s_ ## name ## Trivial(benchmark::State& state) {                             \
-        Prevector ## name<trivial_t, prevector_s<PREVECTOR_S_N, trivial_t> >(state);            \
-    }                                                                                           \
-    BENCHMARK(Prevector_s_ ## name ## Trivial, trivops);
-
-PREVECTOR_S_TEST(Clear, 28300, 88600)
-PREVECTOR_S_TEST(Destructor, 28800, 88900)
-PREVECTOR_S_TEST(Resize, 28900, 90300)
-PREVECTOR_S_TEST(Deserialize, 6800, 52000)
-
 #define STDVECTOR_TEST(name, nontrivops, trivops)                           \
     void Stdvector ## name ## Nontrivial(benchmark::State& state) {         \
         Prevector ## name<nontrivial_t, std::vector<nontrivial_t> >(state); \
@@ -178,54 +163,6 @@ static void PrevectorAssertcheck(benchmark::State& state)
     }
 }
 
-template <int rsv, typename T>
-static void Prevector_s_Assertcheck(benchmark::State& state)
-{
-    const int n = 10;
-    const int m = rsv;
-    while(state.KeepRunning()) {
-        for(int i = 0; i < n; ++i)
-        {
-            prevector<rsv, T> v(10, T());
-            prevector_s<rsv, T> vchs(10, T());
-            std::vector<T> vv(10, T());
-
-            for(int j = 0; j < m; ++j)
-            {
-                if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
-                    const T *p = reinterpret_cast<const T *>(&j);
-                    v.push_back(*p);
-                    vchs.push_back(*p);
-                    vv.push_back(*p);
-                } else {
-                    v.push_back(T());
-                    vchs.push_back(T());
-                    vv.push_back(T());
-                }
-            }
-
-            for(int j = 0; j < m / 2; ++j)
-            {
-                typename prevector<rsv, T>::iterator ite = v.begin();
-                v.erase(ite);
-                typename prevector_s<rsv, T>::iterator vite = vchs.begin();
-                vchs.erase(vite);
-                typename std::vector<T>::iterator vvite = vv.begin();
-                vv.erase(vvite);
-            }
-
-            for(int j = 0; j < m / 2; ++j)
-            {
-                typename prevector_s<rsv, T>::raw_pointer ptr = vchs.data();
-                assert(vv[j] == *((T *)ptr + j));
-
-                std::vector<T> comp = (std::vector<T>)v.get_std_vector();
-                assert(v[j] == comp[j]);
-            }
-        }
-    }
-}
-
 #define VECTOR_ASSERTCHECK(name, rsv, nontrivops, trivops)           \
     void name ## AssertcheckNontrivial(benchmark::State& state) {    \
         name ## Assertcheck<rsv, nontrivial_t>(state);               \
@@ -237,7 +174,6 @@ static void Prevector_s_Assertcheck(benchmark::State& state)
     BENCHMARK(name ## AssertcheckTrivial, trivops);
 
 VECTOR_ASSERTCHECK(Prevector, PREVECTOR_N, 28300, 88600)
-VECTOR_ASSERTCHECK(Prevector_s_, PREVECTOR_S_N, 28300, 88600)
 
 template <typename T>
 static void SecurevectorAssertcheck(benchmark::State& state)
@@ -250,13 +186,6 @@ static void SecurevectorAssertcheck(benchmark::State& state)
         } else {
             const T obj[] = { T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T(), T() };
             data.insert(data.end(), (const T *)std::begin(obj), (const T *)std::end(obj));
-        }
-        secure_segment::vector<T> vch(data.begin(), data.end());
-        auto ite = vch.begin();
-        if(IS_TRIVIALLY_CONSTRUCTIBLE<T>::value) {
-            assert(*ite == *((T *)(&ch[0])) && *(ite + 6) == *((T *)&ch[6]));
-        } else {
-            assert(*ite == T() && *(ite + 6) == T());
         }
     }
 }

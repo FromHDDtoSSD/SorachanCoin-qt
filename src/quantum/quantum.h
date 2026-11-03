@@ -62,35 +62,11 @@ private:
 
     static constexpr size_t alloc_info_size = sizeof(alloc_info);
 
-private:
-    class manage
-    {
-        manage()=delete;
-        manage(const manage &)=delete;
-        manage(manage &&)=delete;
-        manage &operator=(const manage &)=delete;
-        manage &operator=(manage &&)=delete;
-    public:
-        explicit manage(void *ptrIn, size_t sizeIn)  : ptr(ptrIn), size(sizeIn), fUnlock(false) {}
-        bool readonly() const;
-        bool readwrite() const;
-        bool noaccess() const;
-        ~manage();
-    private:
-        void *ptr;
-        size_t size;
-        mutable bool fUnlock;
-    };
 public:
-    static void *secure_malloc(size_t sizeIn);
-    static void secure_free(void *ptr, bool fRandom = false);
     static void secure_memzero(void *ptr, size_t sizeIn);
     static void secure_memrandom(void *ptr, size_t sizeIn);
     static void secure_stackzero(const size_t sizeIn);
     static void secure_stackrandom(const size_t sizeIn);
-    NODISCARD static bool secure_mprotect_noaccess(const void *ptr);
-    NODISCARD static bool secure_mprotect_readonly(const void *ptr);
-    NODISCARD static bool secure_mprotect_readwrite(void *ptr);
     static void secure_randombytes_buf(unsigned char *data, size_t sizeIn);
 };
 
@@ -100,7 +76,6 @@ public:
 namespace quantum_hash // checked: size_hash is only 32 bytes
 {
     void blake2_generichash(std::uint8_t *hash, size_t size_hash, const std::uint8_t *data, size_t size_data);
-    //void blake2_hash(std::uint8_t hash[CBLAKE2S::Size()], const std::uint8_t *data, size_t size_data);
 }
 
 //
@@ -118,32 +93,13 @@ private:
     //CSecureSegmentRW &operator=(CSecureSegmentRW &&)=delete;
     CSecureSegment<T> *segment;
 public:
-    //explicit CSecureSegmentRW(CSecureSegment<T> &obj, bool readonly)  : segment(&obj) {
-    //    readonly ? unlock_readonly(): unlock();
-    //}
     explicit CSecureSegmentRW(const CSecureSegment<T> *p, bool readonly)  : segment(nullptr) {
         segment = const_cast<CSecureSegment<T> *>(p);
-        readonly ? unlock_readonly() : unlock();
     }
     CSecureSegmentRW(const CSecureSegmentRW<T> &obj)  : segment(nullptr) {
         *this = obj;
     }
-    ~CSecureSegmentRW() {
-        lock();
-    }
-
-    void unlock() const {
-        if(! quantum_lib::secure_mprotect_readwrite(segment->get_addr()))
-            throw std::runtime_error("CSecureSegmentRW: failed to unlock memory");
-    }
-    void unlock_readonly() const {
-        if(! quantum_lib::secure_mprotect_readonly(segment->get_addr()))
-            throw std::runtime_error("CSecureSegmentRW: failed to readonly memory");
-    }
-    void lock() const {
-        if(! quantum_lib::secure_mprotect_noaccess(segment->get_addr()))
-            throw std::runtime_error("CSecureSegmentRW: failed to lock memory");
-    }
+    ~CSecureSegmentRW() {}
 
     size_t get_size() const  {
         return segment->get_size();
@@ -167,32 +123,26 @@ private:
     CSecureSegment &operator=(const CSecureSegment &)=delete;
     CSecureSegment &operator=(CSecureSegment &&)=delete;
 
-    size_t size;
-    T *data;
+    std::vector<unsigned char> data;
     size_t get_size() const  {
-        return size;
+        return data.size();
     }
     const T *get_addr() const  {
-        return data;
+        return data.data();
     }
     T *get_addr()  {
-        return data;
+        return &data.front();
     }
 public:
-    explicit CSecureSegment(size_t sizeIn) : size(0), data(nullptr) {
-        data = static_cast<T *>(quantum_lib::secure_malloc(sizeIn));
-        if(! quantum_lib::secure_mprotect_noaccess(data))
-            throw std::runtime_error("CSecureSegment: failed to CSecureSegment(size_t)");
-        size = sizeIn;
+    explicit CSecureSegment(size_t sizeIn) {
+        data.resize(sizeIn);
     }
     ~CSecureSegment() {
         release();
     }
 
     void release()  {
-        if (data) quantum_lib::secure_free(data);
-        data = nullptr;
-        size = 0;
+        quantum_lib::secure_memzero(&data.front(), data.size());
     }
 
     //
@@ -202,113 +152,6 @@ public:
         return CSecureSegmentRW<T>(this, readonly);
     }
 };
-
-//
-// Secure Segment vector, map, string
-//
-namespace secure_segment
-{
-
-    template <typename T>
-    class secure_protect_allocator : public std::allocator<T>
-    {
-    public:
-        typedef typename std::allocator<T>::pointer pointer;
-        typedef typename std::allocator<T>::const_pointer const_pointer;
-        typedef typename std::allocator<T>::size_type size_type;
-        secure_protect_allocator()  {}
-        secure_protect_allocator(const secure_protect_allocator &)  {}
-
-#ifdef _MSC_VER
-        pointer allocate(size_type sizeIn) {
-#else
-        pointer allocate(size_type sizeIn, const_pointer inp = nullptr) {
-#endif
-            void *ptr = quantum_lib::secure_malloc(sizeIn);
-            return static_cast<pointer>(ptr);
-        }
-        void deallocate(pointer ptr, size_type)  {
-            quantum_lib::secure_free(ptr);
-        }
-
-        template <typename U>
-        secure_protect_allocator(const secure_protect_allocator<U> &) {}
-
-        template <typename U>
-        struct rebind
-        {
-            typedef secure_protect_allocator<U> other;
-        };
-    };
-
-    template <typename T>
-    class vector
-    {
-    private:
-        typedef typename std::vector<T, secure_protect_allocator<T> > vector_t;
-        mutable std::vector<T, secure_protect_allocator<T> > vec; // Note: Can not inherits std. (No virtual)
-
-        void readonly() const {
-            T *ptr = vec.data();
-            if(! quantum_lib::secure_mprotect_readonly(ptr))
-                throw std::runtime_error("secure vector: failed to readonly");
-        }
-        void readwrite() const {
-            T *ptr = vec.data();
-            if(! quantum_lib::secure_mprotect_readwrite(ptr))
-                throw std::runtime_error("secure vector: failed to readwrite");
-        }
-        void noaccess() const {
-            T *ptr = vec.data();
-            if(! quantum_lib::secure_mprotect_noaccess(ptr))
-                throw std::runtime_error("secure vector: failed to noaccess");
-        }
-    public:
-        vector()  : vec() {
-            noaccess();
-        }
-        explicit vector(const T *begin, const T *end) : vec(begin, end) {
-            noaccess();
-        }
-        explicit vector(const typename vector_t::const_iterator &begin, const typename vector_t::const_iterator &end) : vec(begin, end) {
-            noaccess();
-        }
-#ifndef _MSC_VER
-        explicit vector(const typename std::vector<T>::const_iterator &begin, const typename std::vector<T>::const_iterator &end) : vec(begin, end) {
-            noaccess();
-        }
-#endif
-
-        vector(const vector &obj) {
-            operator =(obj);
-        }
-        vector &operator=(const vector &obj) {
-            readwrite();
-            obj.readonly();
-            this->vec = obj.vec;
-            noaccess();
-            obj.noaccess();
-        }
-
-        typename vector_t::const_iterator begin() const {
-            readonly();
-            return vec.begin();
-        }
-        typename vector_t::const_iterator end() const {
-            return vec.end();
-        }
-
-        T &at(std::size_t n) {
-            readwrite();
-            return vec.at(n);
-        }
-        const T &at(std::size_t n) const {
-            readonly();
-            return vec.at(n);
-        }
-    };
-
-} // secure_segment
 
 //
 // Lamport Sigunature

@@ -339,8 +339,6 @@ template<typename Stream, typename T, typename A>
 inline void Serialize(Stream &os, const std::vector<T, A> &v);
 template<unsigned int N, typename Stream, typename T>
 inline void Serialize(Stream &os, const prevector<N, T> &v);
-template<unsigned int N, typename Stream, typename T>
-inline void Serialize(Stream &os, const prevector_s<N, T> &v);
 template<typename Stream, typename T0, typename T1, typename T2>
 inline void Serialize(Stream &os, const std::tuple<T0, T1, T2> &item);
 template<typename Stream, typename T0, typename T1, typename T2, typename T3>
@@ -763,78 +761,6 @@ inline void Unserialize_impl(Stream &is, prevector<N, T> &v, const std::false_ty
 
 template<unsigned int N, typename Stream, typename T>
 inline void Unserialize(Stream &is, prevector<N, T> &v)
-{
-    ::Unserialize_impl(is, v, std::is_fundamental<T>());
-}
-
-// prevector_s<N, T>
-template<unsigned int N, typename Stream, typename T>
-inline void Serialize_impl(Stream &os, const prevector_s<N, T> &v, const std::true_type &)
-{
-    compact_size::manage::WriteCompactSize(os, v.size());
-    if(! v.empty()) {
-        typename prevector_s<N, T>::const_raw_pointer ptr = v.data();
-        os.write((const char *)((const T *)ptr), (int)(v.size() * sizeof(T)));
-    }
-}
-
-template<unsigned int N, typename Stream, typename T>
-inline void Serialize_impl(Stream &os, const prevector_s<N, T> &v, const std::false_type &)
-{
-    compact_size::manage::WriteCompactSize(os, v.size());
-    for(typename prevector_s<N, T>::const_iterator vi = v.begin(); vi != v.end(); ++vi)
-    {
-        ::Serialize(os, (*vi));
-    }
-}
-
-template<unsigned int N, typename Stream, typename T>
-inline void Serialize(Stream &os, const prevector_s<N, T> &v)
-{
-    ::Serialize_impl(os, v, std::is_fundamental<T>());
-}
-
-template<unsigned int N, typename Stream, typename T>
-inline void Unserialize_impl(Stream &is, prevector_s<N, T> &v, const std::true_type &)
-{
-    // Limit size per read so bogus size value won't cause out of memory
-    v.clear();
-    unsigned int nSize = (unsigned int)(compact_size::manage::ReadCompactSize(is));
-    unsigned int i = 0;
-    while(i < nSize)
-    {
-        unsigned int blk = (std::min)(nSize - i, (unsigned int)(1 + 4999999 / sizeof(T)));
-        v.resize(i + blk);
-        typename prevector_s<N, T>::raw_pointer ptr = v.data();
-        is.read((char *)((T *)ptr + i), blk * sizeof(T));
-        i += blk;
-    }
-}
-
-template<unsigned int N, typename Stream, typename T>
-inline void Unserialize_impl(Stream &is, prevector_s<N, T> &v, const std::false_type &)
-{
-    v.clear();
-    unsigned int nSize = (unsigned int)(compact_size::manage::ReadCompactSize(is));
-    unsigned int i = 0;
-    unsigned int nMid = 0;
-    while(nMid < nSize)
-    {
-        nMid += 5000000 / sizeof(T);
-        if(nMid > nSize) {
-            nMid = nSize;
-        }
-        v.resize(nMid);
-        for(; i < nMid; ++i)
-        {
-            typename prevector_s<N, T>::raw_pointer ptr = v.data();
-            ::Unserialize(is, *((T *)ptr + i));
-        }
-    }
-}
-
-template<unsigned int N, typename Stream, typename T>
-inline void Unserialize(Stream &is, prevector_s<N, T> &v)
 {
     ::Unserialize_impl(is, v, std::is_fundamental<T>());
 }
