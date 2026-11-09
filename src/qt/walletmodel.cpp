@@ -387,6 +387,7 @@ static void NotifyKeyStoreStatusChanged(WalletModel *walletmodel, CCryptoKeyStor
 static void NotifyAddressBookChanged(WalletModel *walletmodel, CWallet *wallet, const CBitcoinAddress &address, const std::string &label, bool isMine, ChangeType status)
 {
     logging::LogPrintf("NotifyAddressBookChanged %s %s isMine=%i status=%i\n", address.ToString().c_str(), label.c_str(), isMine, status);
+    debugcs::instance() << "NotifyAddressBookChanged: " << address.ToString() << " : " << label << debugcs::endl();
     QMetaObject::invokeMethod(walletmodel, "updateAddressBook", Qt::QueuedConnection,
                               Q_ARG(QString, QString::fromStdString(address.ToString())),
                               Q_ARG(QString, QString::fromStdString(label)),

@@ -337,6 +337,11 @@ CqSecretKey hd_wallet::GetSecretKey() {
     return qsecretkey;
 }
 
+CqPubKey_fips204 hd_wallet::GetPubKeyFips204() {
+    CqKey_fips204 qkey(hd_wallet::GetSecretKey());
+    return qkey.GetPubKey();
+}
+
 CqKeyID hd_wallet::GetKeyID() { // get a compact pubkey keyid (1024 bytes)
     return GetPubKey().GetID();
 }
@@ -619,6 +624,7 @@ bool hd_create::CreateHDWallet(bool fFirstcreation_wallet, const CSeedSecret &se
                 json_spirit::Array obj;
                 CRPCTable::getnewqaiaddress(obj, false);
                 CRPCTable::getnewschnorraddress(obj, false);
+                CRPCTable::getnewfips204address(obj, false);
             }
         }
         catch (const json_spirit::Object &err) {

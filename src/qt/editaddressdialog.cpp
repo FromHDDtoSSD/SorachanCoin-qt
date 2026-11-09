@@ -43,6 +43,8 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->radioButtonQaiv1->setVisible(true);
             ui->radioButtonQaiV2->setEnabled(true);
             ui->radioButtonQaiV2->setVisible(true);
+            ui->radioButtonQaiML1->setEnabled(true);
+            ui->radioButtonQaiML1->setVisible(true);
             ui->radioButtonEthStyle->setEnabled(true);
             ui->radioButtonEthStyle->setVisible(true);
             break;
@@ -62,6 +64,8 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->radioButtonQaiv1->setVisible(false);
             ui->radioButtonQaiV2->setEnabled(false);
             ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonQaiML1->setEnabled(false);
+            ui->radioButtonQaiML1->setVisible(false);
             ui->radioButtonEthStyle->setEnabled(false);
             ui->radioButtonEthStyle->setVisible(false);
             break;
@@ -81,6 +85,8 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->radioButtonQaiv1->setVisible(false);
             ui->radioButtonQaiV2->setEnabled(false);
             ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonQaiML1->setEnabled(false);
+            ui->radioButtonQaiML1->setVisible(false);
             ui->radioButtonEthStyle->setEnabled(false);
             ui->radioButtonEthStyle->setVisible(false);
             break;
@@ -100,6 +106,8 @@ EditAddressDialog::EditAddressDialog(Mode mode, QWidget *parent) :
             ui->radioButtonQaiv1->setVisible(false);
             ui->radioButtonQaiV2->setEnabled(false);
             ui->radioButtonQaiV2->setVisible(false);
+            ui->radioButtonQaiML1->setEnabled(false);
+            ui->radioButtonQaiML1->setVisible(false);
             ui->radioButtonEthStyle->setEnabled(false);
             ui->radioButtonEthStyle->setVisible(false);
             break;
@@ -170,6 +178,9 @@ bool EditAddressDialog::saveCurrentRow()
                 return true;
             } else if (ui->radioButtonQaiV2->isChecked()) {
                 model->addQai_v2(ui->labelEdit->text());
+                return true;
+            } else if (ui->radioButtonQaiML1->isChecked()) {
+                model->addQai_ml1(ui->labelEdit->text());
                 return true;
             } else if (ui->radioButtonEthStyle->isChecked()) {
                 model->addQai_eth(ui->labelEdit->text());

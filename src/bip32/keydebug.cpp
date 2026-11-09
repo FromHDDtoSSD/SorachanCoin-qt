@@ -24,6 +24,8 @@
 #include <crypto/sha3_512.h>
 #include <crypto/hmac_sha3_256.h>
 #include <crypto/hmac_sha3_512.h>
+#include <quantum/mldsa_fips204/sign_fips204.h>
+#include <quantum/quantum_fips204.h>
 
 template <typename T>
 class optional {
@@ -52,8 +54,90 @@ private:
     T value;
 };
 
+//#define DEBUG_CHECKE
+
+#ifdef DEBUG_CHECKE
+
 // called AppInit2
 void Debug_checking_sign_verify() {
+    unsigned char seed32[32];
+    random::GetStrongRandBytes(seed32, 32);
+    CqSecretKey seed;
+    seed.resize(32);
+    memcpy(&seed.front(), seed32, 32);
+    CqKey_fips204 key(seed);
+    CqPubKey_fips204 pubkey = key.GetPubKey();
+
+    for(int i=0; i < 1000; ++i) {
+        uint256 hash;
+        random::GetStrongRandBytes(hash.begin(), 32);
+        qkey_vector sig;
+        bool ret1 = key.Sign(hash, sig);
+        if(i == 555) {
+            sig[0] ^= 1;
+        }
+        bool ret2 = pubkey.Verify(hash, sig);
+        if(ret1 == false || ret2 == false) {
+# ifdef WIN32
+            MessageBoxA(nullptr, "Sign and Verify - Error", "mldsa - fips204 debug", MB_OK);
+# endif
+        }
+    }
+}
+
+void Debug_checking_sign_verify_complete2() {
+
+    /// checking mldsa - fips204 (Quantum Resistance)
+
+    uint8_t pk[CRYPTO_PUBLICKEYBYTES];
+    uint8_t sk[CRYPTO_SECRETKEYBYTES];
+    uint8_t sig[CRYPTO_BYTES];
+    uint8_t message[] = "Hello, SORA!";
+    const size_t message_len = sizeof(message) - 1; /* exclude NUL */
+    const uint8_t context[] = "";
+    size_t sig_len = 0;
+    int result = 1;
+    std::ostringstream ss;
+
+    unsigned char seed32[32];
+    random::GetStrongRandBytes(seed32, 32);
+
+    /* 1. Key generation: pk = public key, sk = secret key. */
+    if (crypto_sign_seed_keypair(pk, sk, seed32) != 0) goto cleanup;
+
+    /* 2. Sign using the secret key. sig is a detached signature. */
+    if (crypto_sign_signature(sig, &sig_len, message, message_len, context, 0, sk) != 0) goto cleanup;
+
+    /* 3. Verify using only the public key. 0 = valid, -1 = invalid. */
+    if (crypto_sign_verify(sig, sig_len, message, message_len, context, 0, pk) != 0) goto cleanup;
+
+    ss << "Public key: " << sizeof(pk) << " bytes\n";
+    ss << "Secret key: " << sizeof(sk) << " bytes\n";
+    ss << "Signature : " << sig_len << " bytes\n";
+    ss << "Verify original: OK";
+
+    /* 4. A changed message must fail verification. */
+    message[0] ^= 1;
+    if (crypto_sign_verify(sig, sig_len, message, message_len, context, 0, pk) == 0) goto cleanup;
+    ss << "Verify tampered: rejected (expected)";
+    result = 0;
+
+cleanup:
+    /* Erases this caller-owned key buffer, not all internal temporaries. */
+    {
+        volatile uint8_t *wipe = sk;
+        size_t i;
+        for (i = 0; i < sizeof(sk); ++i) wipe[i] = 0;
+    }
+    if (result != 0)
+        ss << "ML-DSA example failed.\n";
+
+# ifdef WIN32
+    MessageBoxA(nullptr, ss.str().c_str(), "mldsa - fips204 debug", MB_OK);
+# endif
+}
+
+void Debug_checking_sign_verify_complete() {
     std::vector<uint8_t> data;
     data.resize(0);
 
@@ -102,6 +186,12 @@ void Debug_checking_sign_verify() {
 }
 
 // called AppInit2
-void Debug_checking_sign_verify2() {
+void Debug_checking_sign_verify2() {}
 
-}
+#else
+
+void Debug_checking_sign_verify() {}
+
+void Debug_checking_sign_verify2() {}
+
+#endif

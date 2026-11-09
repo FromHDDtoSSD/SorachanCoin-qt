@@ -13,6 +13,7 @@
 #include <crypto/hmac_sha256.h>
 #include <crypto/aes.h>
 #include <quantum/quantum.h>
+#include <quantum/quantum_fips204.h>
 #include <key/pubkey.h>
 
 #ifdef DEBUG
@@ -71,6 +72,7 @@ public:
 
     // quantum resistance
     CqSecretKey GetSecretKey();
+    CqPubKey_fips204 GetPubKeyFips204();
     CqPubKey GetPubKey();
     CqPubKey GetPubKeyQai();
     CqKeyID GetKeyID();

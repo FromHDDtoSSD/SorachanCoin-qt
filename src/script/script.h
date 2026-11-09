@@ -17,6 +17,8 @@
 #include <bignum.h>
 #include <address/base58.h>
 
+#include <quantum/quantum_fips204.h>
+
 template <typename ENC> class CBitcoinAddress_impl;
 class CBase58Data;
 using CBitcoinAddress = CBitcoinAddress_impl<CBase58Data>;
@@ -470,6 +472,22 @@ public:
             (*this) << vchChunk2;
             (*this) << vchChunk;
         }
+        return *this;
+    }
+
+    CScript &operator<<(const CqPubKey_fips204 &qpubkey) {
+        script_vector vchqpubKey = qpubkey.GetVch();
+
+        script_vector vchChunk(&vchqpubKey[0], &vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE]);
+        script_vector vchChunk2(&vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE], &vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE * 2]);
+        script_vector vchChunk3(&vchqpubKey[Script_const::MAX_SCRIPT_ELEMENT_SIZE * 2], &vchqpubKey.back() + 1);
+        (*this) << vchChunk;
+        (*this) << vchChunk2;
+        (*this) << vchChunk3;
+
+        //script_vector vchqpubKey = qpubkey.GetVch();
+        //(*this) << vchqpubKey;
+
         return *this;
     }
 

@@ -754,7 +754,7 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                 return false;
             }
             if (vchPushValue.size() > Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
-                //debugcs::instance() << "EvalScript Failure B." << debugcs::endl();
+                debugcs::instance() << "EvalScript Failure B." << debugcs::endl();
                 return false;
             }
             if (opcode > OP_16 && ++nOpCount > Script_const::MAX_OPS_PER_SCRIPT) {
@@ -1527,17 +1527,19 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                         }
 
                         if(args_bool::fTestNet) { // skip verify (blockHeight)
-                            if(block_info::nBestHeight < 227400)
-                                fQaimode = false;
+                            //if(block_info::nBestHeight < 227400)
+                            //    fQaimode = false;
                         } else {
                             // do nothing
                         }
+
+                        debugcs::instance() << "QAI_CHECKMULTISIG stack size: " << stack.size() << debugcs::endl();
 
                         if(fQaimode) {
                             if(stack.size() < 10)
                                 return false;
 
-                            debugcs::instance() << "QAI_CHECKMULTISIG stack size: " << stack.size() << debugcs::endl();
+                            //debugcs::instance() << "QAI_CHECKMULTISIG stack size: " << stack.size() << debugcs::endl();
 
                             // QAI version
                             const valtype &qairand = stacktop(-2);
@@ -1772,9 +1774,80 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
 
                                 debugcs::instance() << "Cipher QAI_CHECKMULTISIG Schnorr Verify OK" << debugcs::endl();
 
+                            } else if (CurrentQaiVersion == (unsigned char)0x04) {
+                                // MLDSA - fips204
+                                debugcs::instance() << "MLDSA - Fips204 Verify Start" << debugcs::endl();
+                                const valtype &qaihashvch = stacktop(-3);
+                                if(!CqPubKey_fips204::IsQaiHash(qaihashvch))
+                                    return false;
+
+                                // QAI publickey recover
+                                const valtype &qpubvch3 = stacktop(-8);
+                                const valtype &qpubvch2 = stacktop(-9);
+                                const valtype &qpubvch1 = stacktop(-10);
+                                valtype pubvch;
+                                pubvch.insert(pubvch.end(), qpubvch1.begin(), qpubvch1.end());
+                                pubvch.insert(pubvch.end(), qpubvch2.begin(), qpubvch2.end());
+                                pubvch.insert(pubvch.end(), qpubvch3.begin(), qpubvch3.end());
+                                CqPubKey_fips204 qpubkey;
+                                if(!qpubkey.RecoverCompact(pubvch))
+                                    return false;
+                                if(!qpubkey.IsFullyValid_BIP66())
+                                    return false;
+
+                                debugcs::instance() << "MLDSA - Fips204 Verify 1" << debugcs::endl();
+
+                                // scriptPubKey QAI hash compare
+                                if(!qpubkey.CmpQaiHash(qaihashvch))
+                                    return false;
+
+                                debugcs::instance() << "MLDSA - Fips204 Verify 2" << debugcs::endl();
+
+                                // load signature, ecdsahash QAI
+                                const valtype &qaisig5 = stacktop(-12);
+                                const valtype &qaisig4 = stacktop(-13);
+                                const valtype &qaisig3 = stacktop(-14);
+                                const valtype &qaisig2 = stacktop(-15);
+                                const valtype &qaisig1 = stacktop(-16);
+                                valtype sigvch;
+                                sigvch.insert(sigvch.end(), qaisig1.begin(), qaisig1.end());
+                                sigvch.insert(sigvch.end(), qaisig2.begin(), qaisig2.end());
+                                sigvch.insert(sigvch.end(), qaisig3.begin(), qaisig3.end());
+                                sigvch.insert(sigvch.end(), qaisig4.begin(), qaisig4.end());
+                                sigvch.insert(sigvch.end(), qaisig5.begin(), qaisig5.end());
+                                const valtype &ecdsahash = stacktop(-11);
+                                if(ecdsahash.size() != sizeof(uint256))
+                                    return false;
+
+                                debugcs::instance() << "MLDSA - Fips204 Verify 3" << debugcs::endl();
+
+                                // signature QAI target hash
+                                const valtype &ecdsaPubkey = stacktop(-4);
+                                const valtype &ecdsaSig = stacktop(-6);
+                                const int32_t nHashType = (int32_t)sigvch.back();
+                                const int32_t nCurrentQaiVersion = (int32_t)CurrentQaiVersion;
+                                CScript qaistream;
+                                qaistream.reserve(4096);
+                                qaistream << ecdsaSig;
+                                qaistream << ecdsaPubkey;
+                                qaistream << qaihashvch;
+                                qaistream << qairand;
+                                qaistream << ecdsahash;
+                                qaistream << nCurrentQaiVersion;
+                                qaistream << nHashType;
+                                CHashWriter qaihash(SER_GETHASH, 0);
+                                qaihash << qaistream;
+
+                                // signature QAI verify
+                                sigvch.pop_back();
+                                if(!qpubkey.VerifyQai(qaihash.GetHash(), sigvch))
+                                    return false;
+
+                                qaiVersion = nCurrentQaiVersion;
+                                debugcs::instance() << "MLDSA - Fips204 Verify OK" << debugcs::endl();
                             } else {
                                 qaiVersion = (int32_t)CurrentQaiVersion;
-                                // CurrentQaiVersion 0x04 ... 0xFF
+                                // CurrentQaiVersion 0x05 ... 0xFF
                             }
                         } // fQaimode
 
@@ -1973,6 +2046,16 @@ bool Script_util::EvalScript(statype &stack, const CScript &script, const CTrans
                                 }
                             } else if(qaiVersion == 3) {
                                 for(int i=0; i < 18; ++i) {
+                                    popstack(stack);
+                                }
+                                if(opcode == OP_CHECKMULTISIG) { // if OP_CHECKMULTISIG, stack size should be zero after popstack
+                                    debugcs::instance() << "QAI removing OP_CHECKMULTISIG stack size: " << std::to_string(stack.size()) << debugcs::endl();
+                                    if(stack.size() > 0) {
+                                        return false;
+                                    }
+                                }
+                            } else if(qaiVersion == 4) {
+                                for(int i=0; i < 9; ++i) {
                                     popstack(stack);
                                 }
                                 if(opcode == OP_CHECKMULTISIG) { // if OP_CHECKMULTISIG, stack size should be zero after popstack
@@ -2618,6 +2701,29 @@ bool Script_util::SignQAI2(const CqKey &qkey, const uint256 &qaihash, int nHashT
     return true;
 }
 
+bool Script_util::SignFips204(const CqKey_fips204 &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet) {
+    if(!hd_wallet::get().enable)
+        return false;
+
+    key_vector vchSig;
+    qkey.SignQai(qaihash, vchSig);
+    vchSig.push_back((unsigned char)nHashType);
+
+    for (size_t size = 0; size < 2421; size += Script_const::MAX_SCRIPT_ELEMENT_SIZE) {
+        key_vector vch;
+        if(vchSig.size() - size >= Script_const::MAX_SCRIPT_ELEMENT_SIZE)
+            vch.insert(vch.end(), vchSig.begin() + size, vchSig.begin() + size + Script_const::MAX_SCRIPT_ELEMENT_SIZE);
+        else
+            vch.insert(vch.end(), vchSig.begin() + size, vchSig.end());
+
+        scriptSigRet << vch;
+    }
+    //scriptSigRet << vchSig;
+
+    scriptSigRet << ecdsahash;
+    return true;
+}
+
 bool Script_util::SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet) {
     CFirmKey key;
     if (! keystore.CreatePrivKey(pubKey, R, key)) {
@@ -2814,6 +2920,62 @@ static bool VerifySignatureQAI2(const CScript &scriptSigQAI, const CScript &Scri
     debugcs::instance() << "QAI verify hashtype ok" << debugcs::endl();
 
     qsig.erase(qsig.begin() + 128, qsig.end());
+    return qpubkey.VerifyQai(hash.GetHash(), qsig);
+}
+
+static bool VerifySignatureFips204(const CScript &scriptSigQAI, const CScript &ScriptSigECDSA) {
+    CqPubKey_fips204 qpubkey;
+    CScript::const_iterator pc = scriptSigQAI.begin();
+    script_vector ecdsahash;
+    script_vector qsig;
+    unsigned char hashType;
+    int counter = 0;
+    script_vector pubkeyvch;
+    while(pc != scriptSigQAI.end()) {
+        ScriptOpcodes::opcodetype code;
+        script_vector vch;
+        if(!scriptSigQAI.GetOp(pc, code, vch))
+            return false;
+        if(counter == 8) {
+            pubkeyvch.insert(pubkeyvch.end(), vch.begin(), vch.end());
+            assert(pubkeyvch.size() == 1312);
+            if(!qpubkey.RecoverCompact(pubkeyvch))
+                return false;
+            if(!qpubkey.IsFullyValid_BIP66())
+                return false;
+            if(qpubkey.GetVch() != pubkeyvch)
+                return false;
+            debugcs::instance() << "Fips204 verify pubkey ok" << debugcs::endl();
+        } else if (counter == 6 || counter == 7) {
+            assert(vch.size() == Script_const::MAX_SCRIPT_ELEMENT_SIZE);
+            pubkeyvch.insert(pubkeyvch.end(), vch.begin(), vch.end());
+        } else if (counter == 5) {
+            ecdsahash = vch;
+            if(ecdsahash.size() != sizeof(uint256))
+                return false;
+            debugcs::instance() << "Fips204 verify ecdsahash ok" << debugcs::endl();
+        } else if (counter == 0 || counter == 1 || counter == 2 || counter == 3) {
+            assert(vch.size() == Script_const::MAX_SCRIPT_ELEMENT_SIZE);
+            qsig.insert(qsig.end(), vch.begin(), vch.end());
+        } else if (counter == 4) {
+            qsig.insert(qsig.end(), vch.begin(), vch.end());
+            assert(qsig.size() == 2421);
+            hashType = (unsigned char)qsig.back();
+            debugcs::instance() << "Fips204 verify signature ok" << debugcs::endl();
+        } else {
+            return false;
+        }
+
+        ++counter;
+    }
+
+    CHashWriter hash(SER_GETHASH, 0);
+    hash << ScriptSigECDSA;
+    if((int)hashType != Script_param::SIGHASH_ALL)
+        return false;
+    debugcs::instance() << "Fips204 verify hashtype ok" << debugcs::endl();
+
+    qsig.pop_back(); // remove hashType
     return qpubkey.VerifyQai(hash.GetHash(), qsig);
 }
 
@@ -3047,6 +3209,48 @@ bool Script_util::Solver(const CKeyStore &keystore, const CScript &scriptPubKey,
                 scriptSigRet += qaiSig;
                 scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
                 scriptSigRet += ecdsaScriptSig;
+            } else if (fQaiTransaction && qaihash.size() == 33 && ecdsapub.size() == 33 && qairand.size() == 33 && qairand[1] == 0x04 && hd_wallet::get().enable) {
+                //! [Version 4] OP_CHECKMULTISIG for MLDSA - fips204 Transaction
+                CScript ecdsaScriptSig;
+                if(!SignN(vSolutions, keystore, hash, nHashType, ecdsaScriptSig))
+                    return false;
+
+                const int32_t nCurrentQaiVersion = (int32_t)qairand[1];
+                const int32_t nHashType32 = (int32_t)nHashType;
+                CScript qaiVerifySig;
+                qaiVerifySig.reserve(256);
+                qaiVerifySig += ecdsaScriptSig;
+                qaiVerifySig << ecdsapub;
+                qaiVerifySig << qaihash;
+                qaiVerifySig << qairand;
+                qaiVerifySig << hash;
+                qaiVerifySig << nCurrentQaiVersion;
+                qaiVerifySig << nHashType32;
+
+                CqKey_fips204 qkey(hd_wallet::get().GetSecretKey());
+                if(!qkey.IsValid())
+                    return false;
+
+                CHashWriter qaihash(SER_GETHASH, 0);
+                qaihash << qaiVerifySig;
+                CScript qaiSig;
+                if(!SignFips204(qkey, qaihash.GetHash(), hash, nHashType, qaiSig))
+                    return false;
+
+                CqPubKey_fips204 qpubkey = hd_wallet::get().GetPubKeyFips204();
+                if(!qpubkey.IsFullyValid_BIP66())
+                    return false;
+                qaiSig << qpubkey;
+
+                // Fips204 signature verify check
+                if(!VerifySignatureFips204(qaiSig, qaiVerifySig))
+                    return false;
+
+                debugcs::instance() << "MLDSA - fips204 creation OK" << debugcs::endl();
+
+                scriptSigRet += qaiSig;
+                scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
+                scriptSigRet += ecdsaScriptSig;
             } else {
                 //! OP_CHECKMULTISIG for P2SH BASE
                 scriptSigRet << ScriptOpcodes::OP_0; // workaround CHECKMULTISIG bug
@@ -3140,6 +3344,9 @@ int Script_util::ScriptSigArgsExpected(TxnOutputType::txnouttype t, const statyp
                     } else if (vch[1] == 0x03) {
                         addstack = 18;
                         break;
+                    } else if (vch[1] == 0x04) {
+                        addstack = 9;
+                        break;
                     } else
                         return -1;
                 }
@@ -3225,6 +3432,8 @@ unsigned int Script_util::HaveKeys(const std::vector<valtype> &pubkeys, const CK
         } else if(hd_wallet::get().enable) {
             try {
                 if(hd_wallet::get().GetPubKeyQai().CmpQaiHash(pubkey))
+                    ++nResult;
+                else if(hd_wallet::get().GetPubKeyFips204().CmpQaiHash(pubkey))
                     ++nResult;
                 else if(CqPubKey::IsRandHash(pubkey))
                     ++nResult;
@@ -3464,6 +3673,11 @@ bool Script_util::ExtractDestinations(const CScript &scriptPubKey, TxnOutputType
 */
 
 bool Script_util::VerifyScript(const CScript &scriptSig, const CScript &scriptPubKey, const CTransaction &txTo, unsigned int nIn, unsigned int flags, int nHashType) {
+
+    debugcs::instance() << "VerifyScript checking 1 ..." << debugcs::endl();
+    debugcs::instance() << "scriptSig size: " << scriptSig.size() << debugcs::endl();
+    debugcs::instance() << "scriptPubKey size: " << scriptPubKey.size() << debugcs::endl();
+
     statype stack, stackCopy;
     if (! Script_util::EvalScript(stack, scriptSig, txTo, nIn, flags, nHashType)) {
         return false;
@@ -3481,6 +3695,8 @@ bool Script_util::VerifyScript(const CScript &scriptSig, const CScript &scriptPu
     if (CastToBool(stack.back()) == false) {
         return false;
     }
+
+    debugcs::instance() << "VerifyScript checking 2 ..." << debugcs::endl();
 
     // Additional validation for spend-to-script-hash transactions:
     if ((flags & Script_param::SCRIPT_VERIFY_P2SH) && scriptPubKey.IsPayToScriptHash()) {

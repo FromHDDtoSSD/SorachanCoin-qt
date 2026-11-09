@@ -279,7 +279,7 @@ private:
         bool okSafeMode;
         bool unlocked;
     };
-    static const CRPCCommand vRPCCommands[111];    // Bitcoin RPC Command
+    static const CRPCCommand vRPCCommands[113];    // Bitcoin RPC Command
 
     //
     // map command
@@ -303,10 +303,12 @@ private:
     static void WalletTxToJSON(const CWalletTx &wtx, json_spirit::Object &entry);
     static std::string AccountFromValue(const json_spirit::Value &value);
     static CBitcoinAddress CreateNewQaiAddress(CScript *create_redeem = nullptr);
+    static CBitcoinAddress CreateNewFips204Address(CScript *create_redeem = nullptr);
     static CBitcoinAddress GetAccountAddress(std::string strAccount, bool bForceNew=false);
     static CBitcoinAddress CreateNewSchnorrAddress(size_t agg_size = XOnlyAggWalletInfo::DEF_AGG_XONLY_KEYS, CScript *create_redeem = nullptr);
     static CBitcoinAddress CreateNewCipherAddress(const std::string &recipient_pubkey, const SecureString &cipher, bool stealth);
     static CBitcoinAddress GetAccountQaiAddress(std::string strAccount, bool bForceNew=false);
+    static CBitcoinAddress GetAccountFips204Address(std::string strAccount, bool bForceNew =false);
     static CBitcoinAddress GetAccountSchnorrAddress(std::string strAccount, bool bForceNew = false);
     static void GetAccountAddresses(std::string strAccount, std::set<CBitcoinAddress> &setAddress);
     static int64_t GetAccountBalance(CWalletDB &walletdb, const std::string &strAccount, int nMinDepth, const isminefilter &filter);
@@ -397,6 +399,7 @@ public:
     static json_spirit::Value getnewaddress(const json_spirit::Array &params, bool fHelp); // in rpcwallet.cpp
     static json_spirit::Value getnewethaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewqaiaddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getnewfips204address(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewschnorraddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getnewcipheraddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getmysentmessages(const json_spirit::Array &params, bool fHelp);
@@ -409,6 +412,7 @@ public:
     static json_spirit::Value restorehdwallet(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getaccountaddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getaccountqaiaddress(const json_spirit::Array &params, bool fHelp);
+    static json_spirit::Value getaccountfips204address(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getaccountschnorraddress(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value setaccount(const json_spirit::Array &params, bool fHelp);
     static json_spirit::Value getaccount(const json_spirit::Array &params, bool fHelp);

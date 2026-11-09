@@ -94,6 +94,17 @@ SorachanCoind_SOURCES = \
  miner/diff.cpp \
  prime/autocheckpoint.cpp \
  quantum/quantum.cpp \
+ quantum/quantum_fips204.cpp \
+ quantum/mldsa_fips204/fips202.cpp \
+ quantum/mldsa_fips204/ntt.cpp \
+ quantum/mldsa_fips204/packing.cpp \
+ quantum/mldsa_fips204/poly.cpp \
+ quantum/mldsa_fips204/polyvec.cpp \
+ quantum/mldsa_fips204/randombytes.cpp \
+ quantum/mldsa_fips204/reduce.cpp \
+ quantum/mldsa_fips204/rounding.cpp \
+ quantum/mldsa_fips204/sign_fips204.cpp \
+ quantum/mldsa_fips204/symmetric-shake.cpp \
  random/random.cpp \
  rpc/bitcoinrpc.cpp \
  rpc/rpcblockchain.cpp \
@@ -225,6 +236,17 @@ SorachanCoin_cli_SOURCES = \
  miner/diff.cpp \
  prime/autocheckpoint.cpp \
  quantum/quantum.cpp \
+ quantum/quantum_fips204.cpp \
+ quantum/mldsa_fips204/fips202.cpp \
+ quantum/mldsa_fips204/ntt.cpp \
+ quantum/mldsa_fips204/packing.cpp \
+ quantum/mldsa_fips204/poly.cpp \
+ quantum/mldsa_fips204/polyvec.cpp \
+ quantum/mldsa_fips204/randombytes.cpp \
+ quantum/mldsa_fips204/reduce.cpp \
+ quantum/mldsa_fips204/rounding.cpp \
+ quantum/mldsa_fips204/sign_fips204.cpp \
+ quantum/mldsa_fips204/symmetric-shake.cpp \
  random/random.cpp \
  rpc/bitcoinrpc.cpp \
  rpc/rpcblockchain.cpp \

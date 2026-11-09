@@ -1,5 +1,5 @@
 TEMPLATE = app
-VERSION = 3.123.17
+VERSION = 3.124.17
 
 INCLUDEPATH += src src/json src/qt
 QT += core gui network
@@ -728,6 +728,20 @@ HEADERS += \
     src/prevector/prevector.h \
     src/prevector/prevector_s.h \
     src/quantum/quantum.h \
+    src/quantum/quantum_fips204.h \
+    src/quantum/mldsa_fips204/api.h \
+    src/quantum/mldsa_fips204/config.h \
+    src/quantum/mldsa_fips204/fips202.h \
+    src/quantum/mldsa_fips204/ntt.h \
+    src/quantum/mldsa_fips204/packing.h \
+    src/quantum/mldsa_fips204/params.h \
+    src/quantum/mldsa_fips204/poly.h \
+    src/quantum/mldsa_fips204/polyvec.h \
+    src/quantum/mldsa_fips204/randombytes.h \
+    src/quantum/mldsa_fips204/reduce.h \
+    src/quantum/mldsa_fips204/rounding.h \
+    src/quantum/mldsa_fips204/sign_fips204.h \
+    src/quantum/mldsa_fips204/symmetric.h \
     src/debugcs/debugcs.h \
     src/compat/compat.h \
     src/compat/byteswap.h \
@@ -896,6 +910,17 @@ SOURCES += \
     src/ipcollector.cpp \
     src/hash.cpp \
     src/quantum/quantum.cpp \
+    src/quantum/quantum_fips204.cpp \
+    src/quantum/mldsa_fips204/fips202.cpp \
+    src/quantum/mldsa_fips204/ntt.cpp \
+    src/quantum/mldsa_fips204/packing.cpp \
+    src/quantum/mldsa_fips204/poly.cpp \
+    src/quantum/mldsa_fips204/polyvec.cpp \
+    src/quantum/mldsa_fips204/randombytes.cpp \
+    src/quantum/mldsa_fips204/reduce.cpp \
+    src/quantum/mldsa_fips204/rounding.cpp \
+    src/quantum/mldsa_fips204/sign_fips204.cpp \
+    src/quantum/mldsa_fips204/symmetric-shake.cpp \
     src/bench/be_bench.cpp \
     src/bench/be_prevector.cpp \
     src/bench/be_aes.cpp \

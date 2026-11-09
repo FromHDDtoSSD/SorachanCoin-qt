@@ -3210,6 +3210,8 @@ bool CWallet::CreateCoinStake(uint256 &hashTx, uint32_t nOut, uint32_t nGenerati
 // Call after CreateTransaction unless you want to abort
 bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey)
 {
+    debugcs::instance() << "CommitTransaction: step 1" << debugcs::endl();
+
     {
         logging::LogPrintf("CommitTransaction:\n%s", wtxNew.ToString().c_str());
 
@@ -3222,6 +3224,8 @@ bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey)
             logging::LogPrintf("CommitTransaction() : Error: Transaction not valid");
             return false;
         }
+
+        debugcs::instance() << "CommitTransaction: step 2" << debugcs::endl();
 
         wtxNew.RelayWalletTransaction();
 
@@ -3236,6 +3240,8 @@ bool CWallet::CommitTransaction(CWalletTx &wtxNew, CReserveKey &reservekey)
                 logging::LogPrintf("CommitTransaction() : Error: Transaction memory allocate failure.");
                 return false;
             }
+
+            debugcs::instance() << "CommitTransaction: step 3" << debugcs::endl();
 
             // Take key pair from key pool so it won't be used again
             reservekey.KeepKey();
@@ -3392,7 +3398,7 @@ bool CWallet::SetAddressBookName(const CBitcoinAddress &address, const std::stri
     std::map<CBitcoinAddress, std::string>::iterator mi = mapAddressBook.find(address);
     mapAddressBook[address] = strName;
 
-    // debugcs::instance() << address.ToString() << ":" << strName << debugcs::endl();
+    //debugcs::instance() << "SetAddressBookName : " << address.ToString() << " : " << strName << debugcs::endl();
 
     // NotifyAddressBookChanged(this, address, strName, ::IsMine(*this, address) != MINE_NO, (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED);
     NotifyAddressBookChanged(this, address, strName, Script_util::IsMine(*this, address) != MINE_NO, (mi == mapAddressBook.end()) ? CT_NEW : CT_UPDATED);

@@ -18,6 +18,7 @@
 #include <string>
 
 class CPubKey;
+class CqKey_fips204;
 class CScript;
 class uint256;
 
@@ -61,6 +62,7 @@ private:
     static bool Sign1(const CKeyID &address, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignQAI(const CqKey &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet);
     static bool SignQAI2(const CqKey &qkey, const uint256 &qaihash, int nHashType, CScript &scriptSigRet);
+    static bool SignFips204(const CqKey_fips204 &qkey, const uint256 &qaihash, const uint256 &ecdsahash, int nHashType, CScript &scriptSigRet);
     static bool SignR(const CPubKey &pubKey, const CPubKey &R, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignN(const statype &multisigdata, const CKeyStore &keystore, const uint256 &hash, int nHashType, CScript &scriptSigRet);
     static bool SignSchnorr(const CKeyID &keyid, const uint256 &hash, XOnlyPubKeys &xonly_pubkeys, CScript &schnorrSig);

@@ -245,6 +245,28 @@ json_spirit::Value CRPCTable::getnewqaiaddress(const json_spirit::Array &params,
     return address.ToString();
 }
 
+json_spirit::Value CRPCTable::getnewfips204address(const json_spirit::Array &params, bool fHelp)
+{
+    using namespace ScriptOpcodes;
+    if (fHelp || params.size() > 1) {
+        throw std::runtime_error(
+            "getnewfips204address [account]\n"
+            "Returns a new sora quantum and AI resistance style address for receiving payments.  "
+            "If [account] is specified (recommended), it is added to the address book "
+            "so payments received with the address will be credited to [account].");
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount;
+    if (params.size() > 0) {
+        strAccount = AccountFromValue(params[0]);
+    }
+
+    CBitcoinAddress address = CreateNewFips204Address();
+    entry::pwalletMain->SetAddressBookName(address, strAccount);
+    return address.ToString();
+}
+
 json_spirit::Value CRPCTable::getnewschnorraddress(const json_spirit::Array &params, bool fHelp)
 {
     using namespace ScriptOpcodes;
@@ -498,6 +520,48 @@ CBitcoinAddress CRPCTable::CreateNewQaiAddress(CScript *create_redeem/* = nullpt
             throw bitjson::JSONRPCError(RPC_INTERNAL_ERROR, "Error: quantum and AI public sig size is invalid");
         }
     }
+
+    return address;
+}
+
+CBitcoinAddress CRPCTable::CreateNewFips204Address(CScript *create_redeem/* = nullptr */) {
+    using namespace ScriptOpcodes;
+
+    if(! hd_wallet::get().enable)
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet disable");
+    if (entry::pwalletMain->IsLocked())
+        throw bitjson::JSONRPCError(RPC_INVALID_REQUEST, "Error: HD Wallet locked");
+
+    //
+    // Generate a new key that is added to wallet
+    //
+    CPubKey newKey;
+    if (! entry::pwalletMain->GetKeyFromPool(newKey, false)) {
+        throw bitjson::JSONRPCError(RPC_WALLET_KEYPOOL_RAN_OUT, "Error: Keypool ran out, please call keypoolrefill first");
+    }
+    newKey.Compress();
+    if(newKey.size() != CPubKey::COMPRESSED_PUBLIC_KEY_SIZE)
+        throw bitjson::JSONRPCError(RPC_INVALID_PARAMS, "Error: public key is invalid");
+
+    script_vector qhashvch = hd_wallet::get().GetPubKeyFips204().GetQaiHash();
+    script_vector qrandvch = hd_wallet::get().GetPubKeyFips204().GetRandHash();
+
+    // SORA L1 Quantum and AI resistance transaction:
+    // CScript() << OP_1 << ECDSA public key << Quantum and AI resistance public key hash << QAI rand hash << OP_3 << OP_CHECKMULTISIG
+    CScript redeemScript = CScript() << OP_1 << newKey.GetPubVch() << qhashvch << qrandvch << OP_3 << OP_CHECKMULTISIG;
+    if(! entry::pwalletMain->AddCScript(redeemScript, newKey)) {
+        debugcs::instance() << "ERROR: MLDSA - FIPS 204 Address generated." << debugcs::endl();
+        return CBitcoinAddress();
+    }
+
+    CBitcoinAddress address(redeemScript.GetID());
+    if(create_redeem)
+        *create_redeem = redeemScript;
+
+    //debugcs::instance() << "MLDSA - FIPS 204 Address generated." << debugcs::endl();
+    //if(redeemScript.IsPayToQAIResistance()) {
+    //    debugcs::instance() << "MLDSA - FIPS 204 QAI Address checked." << debugcs::endl();
+    //}
 
     return address;
 }
@@ -844,6 +908,44 @@ CBitcoinAddress CRPCTable::GetAccountQaiAddress(std::string strAccount, bool bFo
     return CBitcoinAddress(account.redeemScript.GetID());
 }
 
+CBitcoinAddress CRPCTable::GetAccountFips204Address(std::string strAccount, bool bForceNew/* =false */)
+{
+    CWalletDB walletdb(entry::pwalletMain->strWalletFile, entry::pwalletMain->strWalletLevelDB, entry::pwalletMain->strWalletSqlFile);
+    CAccountqai account;
+
+    walletdb.ReadQaiAccount(strAccount, account);
+    bool bKeyUsed = false;
+
+    // Check if the current key has been used
+    if (account.redeemScript != CScript()) {
+        CScript scriptPubKey;
+        scriptPubKey.SetDestination(account.redeemScript.GetID());
+        for (std::map<uint256, CWalletTx>::iterator it = entry::pwalletMain->mapWallet.begin(); it != entry::pwalletMain->mapWallet.end(); ++it)
+        {
+            const CWalletTx &wtx = (*it).second;
+            for(const CTxOut &txout: wtx.get_vout())
+            {
+                if (scriptPubKey == txout.get_scriptPubKey()) {
+                    bKeyUsed = true;
+                    break;
+                }
+            }
+            if(bKeyUsed)
+                break;
+        }
+    }
+
+    // Generate a new key
+    if (account.redeemScript == CScript() || bForceNew || bKeyUsed) {
+        CBitcoinAddress address = CreateNewFips204Address(&account.redeemScript);
+        entry::pwalletMain->SetAddressBookName(address, strAccount);
+        walletdb.WriteQaiAccount(strAccount, account);
+        return address;
+    }
+
+    return CBitcoinAddress(account.redeemScript.GetID());
+}
+
 json_spirit::Value CRPCTable::getaccountqaiaddress(const json_spirit::Array &params, bool fHelp)
 {
     if (fHelp || params.size() != 1) {
@@ -857,6 +959,23 @@ json_spirit::Value CRPCTable::getaccountqaiaddress(const json_spirit::Array &par
 
     json_spirit::Value ret;
     ret = GetAccountQaiAddress(strAccount).ToString();
+
+    return ret;
+}
+
+json_spirit::Value CRPCTable::getaccountfips204address(const json_spirit::Array &params, bool fHelp)
+{
+    if (fHelp || params.size() != 1) {
+        throw std::runtime_error(
+            ("getaccountfips204address <account>\n"
+            "Returns the current " + std::string(strCoinName) + " address for receiving payments to this account.").c_str());
+    }
+
+    // Parse the account first so we don't generate a key if there's an error
+    std::string strAccount = AccountFromValue(params[0]);
+
+    json_spirit::Value ret;
+    ret = GetAccountFips204Address(strAccount).ToString();
 
     return ret;
 }

@@ -71,6 +71,7 @@ public:
     void addQai_eth(const QString &label);
     void addQai_v1(const QString &label);
     void addQai_v2(const QString &label);
+    void addQai_ml1(const QString &label);
     bool addQai_v3(bool &mintflag);
     void addQai_v3_wallet_tolock(bool mintflag);
 

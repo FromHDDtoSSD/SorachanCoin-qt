@@ -78,6 +78,7 @@ public:
     }
 
     void updateEntry(const QString &address, const QString &label, bool isMine, int status) {
+        //debugcs::instance() << "updateEntry: " << address.toStdString() << " : " << label.toStdString() << " : status " << status << debugcs::endl();
         // Find address / label in model
         QList<AddressTableEntry>::iterator lower = qLowerBound(cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
         QList<AddressTableEntry>::iterator upper = qUpperBound(cachedAddressTable.begin(), cachedAddressTable.end(), address, AddressTableEntryLessThan());
@@ -90,6 +91,7 @@ public:
         {
         case CT_NEW:
             if(inModel) {
+                debugcs::instance() << "Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model" << debugcs::endl();
                 logging::LogPrintf("Warning: AddressTablePriv::updateEntry: Got CT_NOW, but entry is already in model\n");
                 break;
             }
@@ -329,6 +331,18 @@ void AddressTableModel::addQai_v2(const QString &label) {
     json_spirit::Array obj;
     obj.push_back(label.toStdString());
     CRPCTable::getnewschnorraddress(obj, false);
+}
+
+void AddressTableModel::addQai_ml1(const QString &label) {
+    WalletModel::UnlockContext ctx(walletModel->requestUnlock());
+    if(!ctx.isValid()) {
+        editStatus = WALLET_UNLOCK_FAILURE;
+        return;
+    }
+
+    json_spirit::Array obj;
+    obj.push_back(label.toStdString());
+    CRPCTable::getnewfips204address(obj, false);
 }
 
 bool AddressTableModel::addQai_v3(bool &mintflag) {
