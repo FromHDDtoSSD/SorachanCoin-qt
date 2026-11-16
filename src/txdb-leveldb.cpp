@@ -521,6 +521,8 @@ static CBlockIndex *InsertBlockIndex(const uint256 &hash, std::unordered_map<uin
     return pindexNew;
 }
 
+extern void progviewLoadBlockIndex(const std::string &log);
+
 bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyHasher> &mapBlockIndex,
         std::set<std::pair<COutPoint, unsigned int> > &setStakeSeen,
         CBlockIndex *&pindexGenesisBlock,
@@ -618,8 +620,11 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
 
     // Now read each entry.
+    int counter = 0;
     for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
     {
+        progviewLoadBlockIndex(std::string("Load Block Index counter: ") + std::to_string(counter++));
+
         // Unpack keys and values.
         CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
         CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());

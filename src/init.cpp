@@ -631,6 +631,15 @@ static std::vector<std::string> GetAddnodesTestnet() {
 extern void Debug_checking_sign_verify();
 extern void Debug_checking_sign_verify2();
 
+// extern: GUI message
+void progviewLoadBlockIndex(const std::string &log) {
+#ifdef QT_GUI
+    CClientUIInterface::get().InitMessage(_(log.c_str()));
+#else
+    (void)log;
+#endif
+}
+
 //
 // Initialize bitcoin.
 // @pre Parameters should be parsed and config file should be read.

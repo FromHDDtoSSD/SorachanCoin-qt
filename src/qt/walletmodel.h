@@ -43,7 +43,7 @@ public:
 };
 
 /** Interface to Bitcoin wallet from Qt view code. */
-const QString qaiTransaction("QAI_scriptPubKey_Transaction");
+const QString qaiTransaction("NIST_PQC_Tx_ML-DSA-44");
 class WalletModel : public QObject
 {
     Q_OBJECT

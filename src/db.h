@@ -105,7 +105,11 @@ class IDBEnv
 private:
     mutable CCriticalSection cs_env;
 protected:
-    static constexpr int dbcache_size = 25;
+    static constexpr int dbcache_size = 512;
+    static constexpr int max_open_files = 8192;
+    static constexpr bool fill_cache = false;
+    static constexpr bool verify_checksums = false;
+    static constexpr int block_size = 32 * 1024;
     static constexpr int retry_counter = 10; // Create retry counter
     static constexpr bool fMockDb = false; // no using MockDB
 

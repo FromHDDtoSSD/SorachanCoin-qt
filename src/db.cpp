@@ -454,8 +454,15 @@ leveldb::Options CLevelDBEnv::GetOptions() {
     LOCK(cs_leveldb);
     leveldb::Options options;
     const int nCacheSizeMB = map_arg::GetArgInt("-dbcache", IDBEnv::dbcache_size);
+    const int nMaxOpenFiles = map_arg::GetArgInt("-maxopenfiles", IDBEnv::max_open_files);
+    //const bool fFillCache = map_arg::GetBoolArg("-fillcache", IDBEnv::fill_cache);
+    //const bool fVerifyCheckSum = map_arg::GetBoolArg("-verifychecksum", IDBEnv::verify_checksums);
+    const int nBlockSize = map_arg::GetArgInt("-blocksize", IDBEnv::block_size);
 
     options.block_cache = leveldb::NewLRUCache(nCacheSizeMB * 1048576);
+    options.max_open_files = nMaxOpenFiles;
+    options.block_size = nBlockSize;
+
     options.filter_policy = leveldb::NewBloomFilterPolicy(10);
     if(!options.block_cache || !options.filter_policy)
         throw std::runtime_error("leveldb GetOptions(): failure");
