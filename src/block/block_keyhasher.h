@@ -13,8 +13,8 @@
 // for std::unordered_map inner HASH
 class CCoinsKeyHasher
 {
-//private:
-//    uint256b salt;
+private:
+    uint256b salt;
 
 public:
     CCoinsKeyHasher();
@@ -25,10 +25,7 @@ public:
      * uint64_t, resulting in failures when syncing the chain (#4634).
      */
     std::size_t operator()(const uint256b &key) const {
-        //return key.GetHash(salt);
-        uint64_t hash;
-        CSORA2_64().Write(key.begin(), key.size()).Finalize((unsigned char *)&hash);
-        return (std::size_t)hash;
+        return (std::size_t)key.GetHash(salt);
     }
 };
 

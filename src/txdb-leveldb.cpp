@@ -619,11 +619,76 @@ bool CTxDB::LoadBlockIndex(std::unordered_map<uint256, CBlockIndex *, CCoinsKeyH
     if(! this->seek(std::string("blockindex"), uint256(0)))
         return logging::error("LoadBlockIndex() Error: memory allocate failure.");
 
-    // Now read each entry.
+    // [DEBUG OK] checking: performance
+    /**
+    mapBlockIndex.reserve(20000000);
     int counter = 0;
     for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
     {
-        progviewLoadBlockIndex(std::string("Load Block Index counter: ") + std::to_string(counter++));
+        if(counter % 1000 == 0)
+            progviewLoadBlockIndex(std::string("[DEBUG] Load Block Index counter: ") + std::to_string(counter));
+        ++counter;
+
+        // Unpack keys and values.
+        CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());
+        CDBStream ssValue(const_cast<char *>(iterator->value().data()), iterator->value().size());
+
+        std::string strType;
+        ::Unserialize(ssKey, strType);
+
+        // Did we reach the end of the data to read?
+        if (args_bool::fRequestShutdown || strType != "blockindex")
+            break;
+
+        CDiskBlockIndex diskindex;
+        ::Unserialize(ssValue, diskindex);
+
+        uint256 blockHash = diskindex.GetBlockHash();
+
+
+        // Construct block index object
+        CBlockIndex *pindexNew = InsertBlockIndex(blockHash, mapBlockIndex);
+        pindexNew->set_pprev(InsertBlockIndex(diskindex.get_hashPrev(), mapBlockIndex));
+        pindexNew->set_pnext(InsertBlockIndex(diskindex.get_hashNext(), mapBlockIndex));
+        pindexNew->set_nFile(diskindex.get_nFile());
+        pindexNew->set_nBlockPos(diskindex.get_nBlockPos());
+        pindexNew->set_nHeight(diskindex.get_nHeight());
+        pindexNew->set_nMint(diskindex.get_nMint());
+        pindexNew->set_nMoneySupply(diskindex.get_nMoneySupply());
+        pindexNew->set_nFlags(diskindex.get_nFlags());
+        pindexNew->set_nStakeModifier(diskindex.get_nStakeModifier());
+        pindexNew->set_prevoutStake(diskindex.get_prevoutStake());
+        pindexNew->set_nStakeTime(diskindex.get_nStakeTime());
+        pindexNew->set_hashProofOfStake(diskindex.get_hashProofOfStake());
+        pindexNew->set_nVersion(diskindex.get_nVersion());
+        pindexNew->set_hashMerkleRoot(diskindex.get_hashMerkleRoot());
+        pindexNew->set_nTime(diskindex.get_nTime());
+        pindexNew->set_nBits(diskindex.get_nBits());
+        pindexNew->set_nNonce(diskindex.get_nNonce());
+        pindexNew->set_hashPrevBlock(diskindex.get_hashPrev()); // fixed: prevHash
+
+        // Watch for genesis block
+        if (pindexGenesisBlock == nullptr && blockHash == (!args_bool::fTestNet ? block_params::hashGenesisBlock : block_params::hashGenesisBlockTestNet))
+            pindexGenesisBlock = pindexNew;
+
+        if (! pindexNew->CheckIndex())
+            return logging::error("LoadBlockIndex() : CheckIndex failed at %d", pindexNew->get_nHeight());
+
+        // ppcoin: build setStakeSeen
+        if (pindexNew->IsProofOfStake())
+            setStakeSeen.insert(std::make_pair(pindexNew->get_prevoutStake(), pindexNew->get_nStakeTime()));
+    }
+    assert(!"Checking Only: Stop");
+    **/
+
+    // Now read each entry.
+    mapBlockIndex.reserve(3000000);
+    int counter = 0;
+    for(const_iterator iterator=this->begin(); iterator!=this->end(); ++iterator)
+    {
+        if(counter % 10000 == 0)
+            progviewLoadBlockIndex(std::string("Load Block Index loaded: ") + std::to_string(counter));
+        ++counter;
 
         // Unpack keys and values.
         CDBStream ssKey(const_cast<char *>(iterator->key().data()), iterator->key().size());

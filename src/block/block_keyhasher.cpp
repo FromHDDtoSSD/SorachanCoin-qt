@@ -4,8 +4,6 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <block/block_keyhasher.h>
-//#include <random/random.h>
+#include <random/random.h>
 
-//CCoinsKeyHasher::CCoinsKeyHasher() : salt(random::GetRandHash()) {}
-
-CCoinsKeyHasher::CCoinsKeyHasher() {}
+CCoinsKeyHasher::CCoinsKeyHasher() : salt(random::GetRandHash()) {}

@@ -120,12 +120,12 @@ public:
     static int GetRandInt(int nMax) {
         return GetRand(nMax);
     }
+    */
     static uint256 GetRandHash() {
         uint256 hash;
         GetRandBytes((unsigned char *)&hash, sizeof(hash));
         return hash;
     }
-    */
 
     /**
      * Gather entropy from various sources, feed it into the internal PRNG, and

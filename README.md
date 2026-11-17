@@ -24,7 +24,7 @@ Discord:<br>
 https://discord.gg/ThMeemM
 
 X:<br>
-https://twitter.com/DataRescueCoin
+https://x.com/DataRescueCoin
 
 How to build?
 ===========================
