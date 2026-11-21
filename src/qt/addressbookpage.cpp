@@ -322,8 +322,8 @@ void AddressBookPage::exportClicked() {
     }
 }
 
-void AddressBookPage::onShowQRCode_clicked() {
 #ifdef USE_QRCODE
+void AddressBookPage::onShowQRCode_clicked() {
     QTableView *table = ui->tableView;
     QModelIndexList indexes = table->selectionModel()->selectedRows(AddressTableModel::Address);
     foreach (QModelIndex index, indexes) {
@@ -340,8 +340,8 @@ void AddressBookPage::onShowQRCode_clicked() {
             dialog->show();
         }
     }
-#endif
 }
+#endif
 
 void AddressBookPage::contextualMenu(const QPoint &point) {
     QModelIndex index = ui->tableView->indexAt(point);

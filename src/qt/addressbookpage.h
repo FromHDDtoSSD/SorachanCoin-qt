@@ -82,7 +82,9 @@ private slots:
     void on_signMessage_clicked();
     void on_verifyMessage_clicked();
     void selectionChanged();
+#ifdef USE_QRCODE
     void onShowQRCode_clicked();
+#endif
 
     /** Spawn contextual menu (right mouse menu) for address book entry */
     void contextualMenu(const QPoint &point);

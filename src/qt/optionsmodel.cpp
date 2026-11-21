@@ -109,7 +109,7 @@ void OptionsModel::beginSmartFee() {
 void OptionsModel::stopSmartFee() {
     fEnableComputeSmartFeeThread.store(false);
     QSettings settings;
-    block_info::nTransactionFee = settings.value("nTransactionFee", QVariant(block_params::MIN_TX_FEE)).toLongLong();
+    block_info::nTransactionFee = settings.value("nTransactionFee", QVariant((int)block_params::MIN_TX_FEE)).toLongLong();
 }
 
 OptionsModel::OptionsModel(QObject *parent) :

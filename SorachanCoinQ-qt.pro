@@ -94,10 +94,17 @@ BITCOIN_NEED_QT_PLUGINS=0
 # O3 and indicate libraries
 # there is no probrem, all set 1.
 #
-USE_O3=1
-USE_UPNP=1
-USE_IPV6=1
-USE_QRCODE=1
+windows: {
+  USE_O3=1
+  USE_UPNP=1
+  USE_IPV6=1
+  USE_QRCODE=1
+} else {
+  USE_O3=1
+  USE_UPNP=-
+  USE_IPV6=1
+  USE_QRCODE=-
+}
 
 #
 # This is a flag to determine whether to use SQLite for the blockchain map.
@@ -212,7 +219,7 @@ windows: {
     }
 }
 
-windows : {
+windows: {
   BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
   BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}
   BOOST_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
@@ -231,7 +238,7 @@ windows : {
 } else {
   BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
   BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}/boost_1_$${BOOST_PATH_SUFFIX}/include
-  BOOST_LIB_PATH=$${LIB_CURRENT_PATH}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
+  BOOST_LIB_PATH=$${LIB_CURRENT_PATH}/boost_1_$${BOOST_PATH_SUFFIX}/lib
   BDB_INCLUDE_PATH=$${LIB_CURRENT_PATH}/db-4.8.30/include
   BDB_LIB_PATH=$${LIB_CURRENT_PATH}/db-4.8.30/lib/libdb_cxx$${BDB_LIB_SUFFIX}.a
   OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}/libressl-2.8.2/include
@@ -336,8 +343,14 @@ contains(BITCOIN_NEED_QT_PLUGINS, 1) {
 #
 contains(USE_LEVELDB, 1) {
     message(Building with LevelDB)
-    INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
-    LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
+    windows: {
+      INCLUDEPATH += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/include $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/helpers
+      LIBS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libmemenv.a
+    } else {
+      INCLUDEPATH += ./src/leveldb/include ./src/leveldb/helpers
+      LIBS += ./src/leveldb/libleveldb.a ./src/leveldb/libmemenv.a
+    }
+
     genleveldb.target = $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
     genleveldb.depends = FORCE
     PRE_TARGETDEPS += $${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/leveldb-1.2/libleveldb.a
@@ -507,7 +520,11 @@ contains(LIMIT_NOMP_MODE, 0) {
 #
 # warning(-W -Wno) and error(-Werror=) flags setting
 #
-QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-local-addr -Werror=write-strings -Werror=return-type -Werror=unused-result -Werror=comment -Wno-switch -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+windows: {
+  QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-local-addr -Werror=write-strings -Werror=return-type -Werror=unused-result -Werror=comment -Wno-switch -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wformat-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wstack-protector -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+} else {
+  QMAKE_CXXFLAGS_WARN_ON = -fdiagnostics-show-option -Wall -Wextra -Werror=return-local-addr -Werror=write-strings -Werror=return-type -Wno-unused-result -Wno-nonnull -Wno-overloaded-virtual -Wno-pessimizing-move -Wno-class-conversion -Wno-array-bounds -Wno-stack-protector -Wno-restrict -Wno-range-loop-construct -Wno-unused-but-set-variable -Wno-sign-compare -Werror=comment -Wno-switch -Wno-stringop-overflow -Wno-ignored-qualifiers -Wformat -Wno-format-security -Wno-misleading-indentation -Wno-strict-aliasing -Wno-cpp -Wno-extra -Wno-reorder -Wno-expansion-to-defined -Wno-unused-local-typedefs -Wno-unused-function -Wno-unused-parameter -Wno-delete-incomplete -Wno-deprecated-declarations -Wno-placement-new
+}
 
 #
 # target source codes

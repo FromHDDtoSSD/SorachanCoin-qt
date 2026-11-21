@@ -36,20 +36,27 @@ generated under ./src, "soracoind" "soracoin-cli"
 GUI(Qt5) version<br>
 chmod +x sora_builder_gui.sh autogen.sh<br>
 ./sora_builder_gui.sh<br>
-generated under ./build, "SorachanCoin-Core"
+generated under ./, "SorachanCoin-Core"
 
 Development tools necessary for building
 ===========================
-CentOS / AlmaLinux<br>
+CentOS / AlmaLinux: Server<br>
 dnf groupinstall "Development Tools"<br>
 dnf install git<br>
+dnf install zlib-devel<br>
 dnf install wget
 
-Ubuntu / Debian<br>
+Ubuntu / Debian: Server<br>
 sudo apt install build-essential<br>
 sudo apt install git<br>
 sudo apt install zlib1g-dev<br>
 sudo apt install autoconf automake
+
+Ubuntu: GUI(Qt5)<br>
+sudo apt install build-essential qtbase5-dev qt5-qmake qttools5-dev-tools<br>
+sudo apt install git<br>
+sudo apt install zlib1g-dev<br>
+sudo apt install autoconf automake libtool
 
 How to use soracoin-cli?
 ===========================
