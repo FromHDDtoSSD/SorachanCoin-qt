@@ -29,7 +29,7 @@
 #include <ui_interface.h>
 #include <qt/rpcconsole.h>
 #include <qt/mintingview.h>
-#include <winapi/p2pwebsorara.h>
+//#include <winapi/p2pwebsorara.h>
 #include <qt/syncwait.h>
 #include <qt/autocheckpoints.h>
 #include <qt/benchmarkpage.h>
@@ -147,7 +147,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
 
         multisigPage = new MultisigDialog(nullptr);
 
-        soraraWidget = new SoraraWidget(nullptr);
+        //soraraWidget = new SoraraWidget(nullptr);
 
         syncWidget = new SyncWidget(nullptr);
 
@@ -162,7 +162,7 @@ BitcoinGUI::BitcoinGUI(QWidget *parent):
         centralWidget->addWidget(addressBookPage);
         centralWidget->addWidget(receiveCoinsPage);
         centralWidget->addWidget(sendCoinsPage);
-        centralWidget->addWidget(soraraWidget);
+        //centralWidget->addWidget(soraraWidget);
         centralWidget->addWidget(syncWidget);
         centralWidget->addWidget(autocheckpointsWidget);
         centralWidget->addWidget(benchmarkWidget);
@@ -256,7 +256,7 @@ BitcoinGUI::~BitcoinGUI() {
     delete multisigPage;
     delete secondAuthDialog;
     delete signVerifyMessageDialog;
-    delete soraraWidget;
+    //delete soraraWidget;
     delete syncWidget;
     delete autocheckpointsWidget;
     delete benchmarkWidget;
@@ -303,11 +303,11 @@ void BitcoinGUI::createActions() {
     addressBookAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_6));
     tabGroup->addAction(addressBookAction);
 
-    soraraAction = new QAction(QIcon(":/icons/address-book"), tr("&SORARA"), this);
-    soraraAction->setToolTip(tr("Welcome to SORARA"));
-    soraraAction->setCheckable(true);
-    soraraAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
-    tabGroup->addAction(soraraAction);
+    //soraraAction = new QAction(QIcon(":/icons/address-book"), tr("&SORARA"), this);
+    //soraraAction->setToolTip(tr("Welcome to SORARA"));
+    //soraraAction->setCheckable(true);
+    //soraraAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_7));
+    //tabGroup->addAction(soraraAction);
 
     syncAction = new QAction(QIcon(":/icons/history"), tr("&Sync"), this);
     syncAction->setToolTip(tr("Synchronizing ... information"));
@@ -343,8 +343,8 @@ void BitcoinGUI::createActions() {
     connect(mintingAction, SIGNAL(triggered()), this, SLOT(gotoMintingPage()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(addressBookAction, SIGNAL(triggered()), this, SLOT(gotoAddressBookPage()));
-    connect(soraraAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
-    connect(soraraAction, SIGNAL(triggered()), this, SLOT(gotoSoraraWidget()));
+    //connect(soraraAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
+    //connect(soraraAction, SIGNAL(triggered()), this, SLOT(gotoSoraraWidget()));
     connect(syncAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
     connect(syncAction, SIGNAL(triggered()), this, SLOT(gotoSyncWidget()));
     connect(autocheckpointsAction, SIGNAL(triggered()), this, SLOT(showNormalIfMinimized()));
@@ -1031,6 +1031,7 @@ void BitcoinGUI::gotoAddressBookPage() {
     connect(exportAction, SIGNAL(triggered()), addressBookPage, SLOT(exportClicked()));
 }
 
+/*
 void BitcoinGUI::gotoSoraraWidget() {
     soraraAction->setChecked(true);
     centralWidget->setCurrentWidget(soraraWidget);
@@ -1039,6 +1040,7 @@ void BitcoinGUI::gotoSoraraWidget() {
     disconnect(exportAction, SIGNAL(triggered()), 0, 0);
     connect(exportAction, SIGNAL(triggered()), soraraWidget, SLOT(exportClicked()));
 }
+*/
 
 void BitcoinGUI::gotoSyncWidget() {
     syncAction->setChecked(true);

@@ -93,7 +93,7 @@ private:
     SignVerifyMessageDialog *signVerifyMessageDialog;
     SecondAuthDialog *secondAuthDialog;
     MultisigDialog *multisigPage;
-    SoraraWidget *soraraWidget;
+    //SoraraWidget *soraraWidget;
     SyncWidget *syncWidget;
     AutocheckpointsWidget *autocheckpointsWidget;
     BenchmarkWidget *benchmarkWidget;
@@ -112,7 +112,7 @@ private:
     QAction *quitAction;
     QAction *sendCoinsAction;
     QAction *addressBookAction;
-    QAction *soraraAction;
+    //QAction *soraraAction;
     QAction *syncAction;
     QAction *autocheckpointsAction;
     QAction *benchmarkAction;
@@ -199,7 +199,7 @@ private slots:
     /** Switch to address book page */
     void gotoAddressBookPage();
     /** Switch to SORARA page */
-    void gotoSoraraWidget();
+    //void gotoSoraraWidget();
     /** Open to Sync page (no sync) */
     void gotoSyncWidget();
     /** Switch to Autocheckpoints page */

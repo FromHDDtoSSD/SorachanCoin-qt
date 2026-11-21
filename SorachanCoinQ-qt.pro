@@ -139,7 +139,7 @@ USE_KNOWLEDGE_DB=-
 win32: LIB_CURRENT_PATH=E:/cointools
 else {
     macx: LIB_CURRENT_PATH=/develop/SorachanCoin-qt/cointools
-    else: LIB_CURRENT_PATH=/opt/cointools
+    else: LIB_CURRENT_PATH=./library
 }
 BOOST_PATH_SUFFIX=68_0
 BDB_LIB_SUFFIX=-4.8
@@ -211,21 +211,40 @@ windows: {
         BOOST_LIB_SUFFIX=-mgw73-mt-x32-1_68
     }
 }
-BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
-BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}
-BOOST_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
-BDB_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix
-BDB_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix/.libs/libdb_cxx$${BDB_LIB_SUFFIX}.a
-OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2/include
-OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2
-QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/include
-QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/lib/libqrencode.a
-UPNP_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc
-UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
-#BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
-#BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
-SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
-SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs/libsqlite3.a
+
+windows : {
+  BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
+  BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}
+  BOOST_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
+  BDB_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix
+  BDB_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/db-4.8.30/build_unix/.libs/libdb_cxx$${BDB_LIB_SUFFIX}.a
+  OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2/include
+  OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/libressl-2.8.2
+  QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/include
+  QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/qrencode-4.0.2/lib/libqrencode.a
+  UPNP_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc
+  UPNP_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/miniupnpc/libminiupnpc.a
+  #BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
+  #BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
+  SQLITE_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite
+  SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/sqlite/.libs/libsqlite3.a
+} else {
+  BOOST_THREAD_LIB_SUFFIX = $$BOOST_LIB_SUFFIX
+  BOOST_INCLUDE_PATH=$${LIB_CURRENT_PATH}/boost_1_$${BOOST_PATH_SUFFIX}/include
+  BOOST_LIB_PATH=$${LIB_CURRENT_PATH}/boost_1_$${BOOST_PATH_SUFFIX}/stage/lib
+  BDB_INCLUDE_PATH=$${LIB_CURRENT_PATH}/db-4.8.30/include
+  BDB_LIB_PATH=$${LIB_CURRENT_PATH}/db-4.8.30/lib/libdb_cxx$${BDB_LIB_SUFFIX}.a
+  OPENSSL_INCLUDE_PATH=$${LIB_CURRENT_PATH}/libressl-2.8.2/include
+  OPENSSL_LIB_PATH=$${LIB_CURRENT_PATH}/libressl-2.8.2/lib
+  #QRENCODE_INCLUDE_PATH=$${LIB_CURRENT_PATH}/qrencode-4.0.2/include
+  #QRENCODE_LIB_PATH=$${LIB_CURRENT_PATH}/qrencode-4.0.2/lib/libqrencode.a
+  #UPNP_INC_PATH=$${LIB_CURRENT_PATH}/miniupnpc/include
+  #UPNP_LIB_PATH=$${LIB_CURRENT_PATH}/miniupnpc/lib/libminiupnpc.a
+  #BLAKE2_INC_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src
+  #BLAKE2_LIB_PATH=$${LIB_CURRENT_PATH}$${64BIT_SUFFIX}/blake2/src/.libs/libb2.a
+  SQLITE_INC_PATH=$${LIB_CURRENT_PATH}/sqlite/include
+  SQLITE_LIB_PATH=$${LIB_CURRENT_PATH}/sqlite/lib/libsqlite3.a
+}
 
 #
 # Build setting
@@ -545,29 +564,7 @@ contains(GUI_MODE, 1) {
         src/qt/multisiginputentry.h \
         src/qt/multisigdialog.h \
         src/qt/secondauthdialog.h \
-        src/qt/getciphermessageswidget.h \
-        #src/winapi/winguimain.h \
-        #src/winapi/drivebase.h \
-        #src/winapi/drivewin.h \
-        #src/winapi/sectorbase.h \
-        #src/winapi/sectorwin.h \
-        #src/winapi/miniwindow.h \
-        #src/winapi/common.h \
-        src/winapi/p2pwebsorara.h \
-        src/sorara/soraramodel.h \
-        src/sorara/drivemodel.h \
-        src/sorara/soraradb.h \
-        src/sorara/soraranet.h
-
-    win32 {
-        HEADERS += src/winapi/winguimain.h \
-                   src/winapi/drivebase.h \
-                   src/winapi/drivewin.h \
-                   src/winapi/sectorbase.h \
-                   src/winapi/sectorwin.h \
-                   src/winapi/miniwindow.h \
-                   src/winapi/common.h
-    }
+        src/qt/getciphermessageswidget.h
 
     SOURCES += \
         src/qt/bitcoin.cpp \
@@ -620,27 +617,7 @@ contains(GUI_MODE, 1) {
         src/qt/notificator.cpp \
         src/qt/qtipcserver.cpp \
         src/qt/rpcconsole.cpp \
-        src/qt/getciphermessageswidget.cpp \
-        #src/winapi/winguimain.cpp \
-        #src/winapi/drivebase.cpp \
-        #src/winapi/drivewin.cpp \
-        #src/winapi/sectorbase.cpp \
-        #src/winapi/sectorwin.cpp \
-        #src/winapi/miniwindow.cpp \
-        src/winapi/p2pwebsorara.cpp \
-        src/sorara/soraramodel.cpp \
-        src/sorara/drivemodel.cpp \
-        src/sorara/soraradb.cpp \
-        src/sorara/soraranet.cpp
-
-    win32 {
-        SOURCES += src/winapi/winguimain.cpp \
-                   src/winapi/drivebase.cpp \
-                   src/winapi/drivewin.cpp \
-                   src/winapi/sectorbase.cpp \
-                   src/winapi/sectorwin.cpp \
-                   src/winapi/miniwindow.cpp
-    }
+        src/qt/getciphermessageswidget.cpp
 
     FORMS += \
         src/qt/forms/intro.ui \
@@ -1026,6 +1003,35 @@ SOURCES += \
     src/Lyra2RE/keccak.c \
     src/Lyra2RE/skein.c
 
+contains(GUI_MODE, 1) {
+    windows: HEADERS += \
+        src/winapi/p2pwebsorara.h \
+        src/sorara/soraramodel.h \
+        src/sorara/drivemodel.h \
+        src/sorara/soraradb.h \
+        src/sorara/soraranet.h \
+        src/winapi/winguimain.h \
+        src/winapi/drivebase.h \
+        src/winapi/drivewin.h \
+        src/winapi/sectorbase.h \
+        src/winapi/sectorwin.h \
+        src/winapi/miniwindow.h \
+        src/winapi/common.h
+
+    windows: SOURCES += \
+        src/winapi/p2pwebsorara.cpp \
+        src/sorara/soraramodel.cpp \
+        src/sorara/drivemodel.cpp \
+        src/sorara/soraradb.cpp \
+        src/sorara/soraranet.cpp \
+        src/winapi/winguimain.cpp \
+        src/winapi/drivebase.cpp \
+        src/winapi/drivewin.cpp \
+        src/winapi/sectorbase.cpp \
+        src/winapi/sectorwin.cpp \
+        src/winapi/miniwindow.cpp
+}
+
 RESOURCES += \
     src/qt/bitcoin.qrc
 
@@ -1077,7 +1083,7 @@ QMAKE_EXTRA_COMPILERS += TSQM
 # "Other files" to show in Qt Creator
 #
 OTHER_FILES += doc/*.rst doc/*.txt doc/README README.md res/bitcoin-qt.rc
-OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh configure.ac sora_builder.sh
+OTHER_FILES += src/Makefile.am.library src/Makefile.am.pac src/Makefile.am.sqlite autogen.sh configure.ac sora_builder.sh sora_builder_gui.sh
 
 #
 # windows: indicate define

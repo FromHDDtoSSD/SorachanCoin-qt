@@ -28,13 +28,19 @@ https://x.com/DataRescueCoin
 
 How to build?
 ===========================
+Server version<br>
 chmod +x sora_builder.sh autogen.sh<br>
 ./sora_builder.sh<br>
 generated under ./src, "soracoind" "soracoin-cli"
 
+GUI(Qt5) version<br>
+chmod +x sora_builder_gui.sh autogen.sh<br>
+./sora_builder_gui.sh<br>
+generated under ./build, "SorachanCoin-Core"
+
 Development tools necessary for building
 ===========================
-AlmaLinux<br>
+CentOS / AlmaLinux<br>
 dnf groupinstall "Development Tools"<br>
 dnf install git<br>
 dnf install wget
@@ -45,7 +51,7 @@ sudo apt install git<br>
 sudo apt install zlib1g-dev<br>
 sudo apt install autoconf automake
 
-soracoin-cli
+How to use soracoin-cli?
 ===========================
 e.g. using -datadir<br>
 soracoin-cli -datadir=/coins/sora getinfo
