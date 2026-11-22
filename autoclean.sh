@@ -25,6 +25,8 @@ rm -f config.h
 rm -f config.h.in
 rm -f config.log
 rm -f config.status
+rm -f config.guess
+rm -f config.sub
 rm -f depcomp
 rm -f install-sh
 rm -f missing

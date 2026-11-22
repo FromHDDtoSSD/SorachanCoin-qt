@@ -35,7 +35,7 @@ generated under ./src, "soracoind" "soracoin-cli"
 
 GUI(Qt5) version<br>
 ./sora_builder_gui.sh -j[cpu]<br>
-(e.g. sora_builder_gui.sh -j2)<br>
+(e.g. ./sora_builder_gui.sh -j2)<br>
 generated under ./, "SorachanCoin-Core"
 
 Development tools necessary for building
