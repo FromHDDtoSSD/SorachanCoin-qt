@@ -29,13 +29,13 @@ https://x.com/DataRescueCoin
 How to build?
 ===========================
 Server version<br>
-chmod +x sora_builder.sh autogen.sh<br>
-./sora_builder.sh<br>
+./sora_builder.sh -j[cpu]<br>
+(e.g. ./sora_builder.sh -j2)<br>
 generated under ./src, "soracoind" "soracoin-cli"
 
 GUI(Qt5) version<br>
-chmod +x sora_builder_gui.sh autogen.sh<br>
-./sora_builder_gui.sh<br>
+./sora_builder_gui.sh -j[cpu]<br>
+(e.g. sora_builder_gui.sh -j2)<br>
 generated under ./, "SorachanCoin-Core"
 
 Development tools necessary for building
