@@ -27,6 +27,7 @@ rm -f config.log
 rm -f config.status
 rm -f config.guess
 rm -f config.sub
+rm -f SorachanCoin-Core
 rm -f depcomp
 rm -f install-sh
 rm -f missing
